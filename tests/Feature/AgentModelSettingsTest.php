@@ -1,21 +1,29 @@
 <?php
 
-use App\Ai\AgentRunner;
+use App\Ai\Agents\WebsiteAnalyst;
+use App\Ai\AgentSettings;
 use App\Enums\AgentType;
+use App\Models\Project;
 use App\Support\Settings;
 
 /**
  * ADR-026: the mapping lives in the database so the operator can change a model
  * from the settings screen. Config only supplies the shipped default.
  */
+function mapping(AgentType $type = AgentType::Planner): array
+{
+    $agents = app(AgentSettings::class);
+
+    return [$agents->provider($type), $agents->model($type)];
+}
 it('falls back to the shipped default when nothing is stored', function () {
-    expect(app(AgentRunner::class)->resolve(AgentType::Planner))->toBe(['anthropic', 'claude-opus-5']);
+    expect(mapping())->toBe(['anthropic', 'claude-opus-5']);
 });
 
 it('lets a stored mapping win over the default', function () {
     app(Settings::class)->set('agents.planner', ['provider' => 'anthropic', 'model' => 'claude-sonnet-5']);
 
-    expect(app(AgentRunner::class)->resolve(AgentType::Planner))->toBe(['anthropic', 'claude-sonnet-5']);
+    expect(mapping())->toBe(['anthropic', 'claude-sonnet-5']);
 });
 
 it('merges a partial override onto the default', function () {
@@ -23,14 +31,14 @@ it('merges a partial override onto the default', function () {
     // thinking model from dying on the 60s HTTP default.
     app(Settings::class)->set('agents.planner', ['model' => 'claude-sonnet-5']);
 
-    expect(app(AgentRunner::class)->resolve(AgentType::Planner))->toBe(['anthropic', 'claude-sonnet-5'])
-        ->and(app(AgentRunner::class)->timeout(AgentType::Planner))->toBe(300);
+    expect(mapping())->toBe(['anthropic', 'claude-sonnet-5'])
+        ->and(app(AgentSettings::class)->timeout(AgentType::Planner))->toBe(300);
 });
 
 it('ignores a stored value of the wrong shape', function () {
     app(Settings::class)->set('agents.planner', 'claude-sonnet-5');
 
-    expect(app(AgentRunner::class)->resolve(AgentType::Planner))->toBe(['anthropic', 'claude-opus-5']);
+    expect(mapping())->toBe(['anthropic', 'claude-opus-5']);
 });
 
 it('changes the model from the command line', function () {
@@ -38,7 +46,7 @@ it('changes the model from the command line', function () {
         ->expectsOutputToContain('claude-sonnet-5')
         ->assertSuccessful();
 
-    expect(app(AgentRunner::class)->resolve(AgentType::Planner))->toBe(['anthropic', 'claude-sonnet-5']);
+    expect(mapping())->toBe(['anthropic', 'claude-sonnet-5']);
 });
 
 it('warns that the credit grid is calibrated on the model mix', function () {
@@ -52,7 +60,7 @@ it('resets back to the shipped default', function () {
 
     $this->artisan('eveil:agent-model', ['agent' => 'planner', '--reset' => true])->assertSuccessful();
 
-    expect(app(AgentRunner::class)->resolve(AgentType::Planner))->toBe(['anthropic', 'claude-opus-5']);
+    expect(mapping())->toBe(['anthropic', 'claude-opus-5']);
 });
 
 it('lists every agent with where its mapping came from', function () {
@@ -71,12 +79,24 @@ it('rejects an agent that does not exist', function () {
 });
 
 it('sees a change made in another process', function () {
-    app(AgentRunner::class)->resolve(AgentType::Planner);
+    mapping();
 
     // Settings are cached forever because they are read on every agent call;
     // a write from the settings screen has to invalidate that cache or the
     // change appears to do nothing until the next deploy.
     app(Settings::class)->set('agents.planner', ['model' => 'claude-sonnet-5']);
 
-    expect(app(AgentRunner::class)->resolve(AgentType::Planner)[1])->toBe('claude-sonnet-5');
+    expect(mapping()[1])->toBe('claude-sonnet-5');
+});
+
+it('feeds the mapping straight into the agent laravel/ai asks', function () {
+    app(Settings::class)->set('agents.planner', ['model' => 'claude-sonnet-5', 'timeout' => 200]);
+
+    // `Promptable` consults these before its own attributes, which is what
+    // makes a model change a settings change rather than a deploy.
+    $agent = new WebsiteAnalyst(Project::factory()->create());
+
+    expect($agent->model())->toBe('claude-sonnet-5')
+        ->and($agent->provider())->toBe('anthropic')
+        ->and($agent->timeout())->toBe(200);
 });

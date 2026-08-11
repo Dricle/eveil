@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Ai\AgentRunner;
+use App\Ai\AgentSettings;
 use App\Ai\AnalyzeWebsite;
 use App\Discovery\Url;
 use App\Enums\AgentType;
@@ -78,7 +78,7 @@ class AnalyzeCommand extends Command
      */
     private function missingProviderKey(): ?string
     {
-        [$provider] = app(AgentRunner::class)->resolve(AgentType::Planner);
+        $provider = app(AgentSettings::class)->provider(AgentType::Planner);
 
         return config("ai.providers.{$provider}.key") ? null : $provider;
     }

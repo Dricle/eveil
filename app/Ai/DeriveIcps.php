@@ -3,7 +3,6 @@
 namespace App\Ai;
 
 use App\Ai\Agents\IcpDeriver;
-use App\Enums\AgentType;
 use App\Enums\IcpSource;
 use App\Models\Icp;
 use App\Models\Project;
@@ -18,8 +17,6 @@ use RuntimeException;
  */
 class DeriveIcps
 {
-    public function __construct(private AgentRunner $runner) {}
-
     /**
      * @return Collection<int, Icp>
      */
@@ -33,12 +30,7 @@ class DeriveIcps
         }
 
         /** @var StructuredAgentResponse $response */
-        $response = $this->runner->run(
-            $project,
-            AgentType::Planner,
-            new IcpDeriver,
-            $this->prompt($project),
-        );
+        $response = (new IcpDeriver($project))->prompt($this->prompt($project));
 
         /** @var array<int, array<string, mixed>> $profiles */
         $profiles = $response->structured['profiles'] ?? [];

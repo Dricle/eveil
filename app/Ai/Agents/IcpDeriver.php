@@ -2,10 +2,9 @@
 
 namespace App\Ai\Agents;
 
+use App\Enums\AgentType;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
-use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\HasStructuredOutput;
-use Laravel\Ai\Promptable;
 use Stringable;
 
 /**
@@ -16,9 +15,12 @@ use Stringable;
  * one average profile targets nobody. But a segment nobody can be found for is
  * worse than no segment, so each one has to be searchable.
  */
-class IcpDeriver implements Agent, HasStructuredOutput
+class IcpDeriver extends EveilAgent implements HasStructuredOutput
 {
-    use Promptable;
+    public function type(): AgentType
+    {
+        return AgentType::Planner;
+    }
 
     public function instructions(): Stringable|string
     {

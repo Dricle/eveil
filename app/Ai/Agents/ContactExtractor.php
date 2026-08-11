@@ -2,10 +2,9 @@
 
 namespace App\Ai\Agents;
 
+use App\Enums\AgentType;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
-use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\HasStructuredOutput;
-use Laravel\Ai\Promptable;
 use Stringable;
 
 /**
@@ -15,9 +14,12 @@ use Stringable;
  * per company. Structured output is non-negotiable here — a model that cannot
  * hold the schema produces broken extractions, not merely worse ones (ADR-026).
  */
-class ContactExtractor implements Agent, HasStructuredOutput
+class ContactExtractor extends EveilAgent implements HasStructuredOutput
 {
-    use Promptable;
+    public function type(): AgentType
+    {
+        return AgentType::Extractor;
+    }
 
     public function instructions(): Stringable|string
     {

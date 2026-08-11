@@ -5,7 +5,6 @@ namespace App\Ai;
 use App\Ai\Agents\WebsiteAnalyst;
 use App\Discovery\ParsedPage;
 use App\Discovery\SiteCrawler;
-use App\Enums\AgentType;
 use App\Enums\AnalysisStatus;
 use App\Enums\AnalysisType;
 use App\Models\Project;
@@ -27,10 +26,7 @@ class AnalyzeWebsite
      */
     private const MAX_CHARS = 60_000;
 
-    public function __construct(
-        private SiteCrawler $crawler,
-        private AgentRunner $runner,
-    ) {}
+    public function __construct(private SiteCrawler $crawler) {}
 
     public function handle(Project $project, ?int $maxPages = null): ProjectAnalysis
     {
@@ -54,12 +50,7 @@ class AnalyzeWebsite
 
         try {
             /** @var StructuredAgentResponse $response */
-            $response = $this->runner->run(
-                $project,
-                AgentType::Planner,
-                new WebsiteAnalyst,
-                $this->prompt($project, $pages),
-            );
+            $response = (new WebsiteAnalyst($project))->prompt($this->prompt($project, $pages));
         } catch (Throwable $e) {
             $analysis->update(['status' => AnalysisStatus::Failed, 'error' => $e->getMessage()]);
 

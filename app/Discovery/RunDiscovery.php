@@ -2,11 +2,9 @@
 
 namespace App\Discovery;
 
-use App\Ai\AgentRunner;
 use App\Ai\Agents\CompanyQualifier;
 use App\Ai\Agents\DiscoveryPlanner;
 use App\Discovery\Sources\DiscoverySource;
-use App\Enums\AgentType;
 use App\Enums\DiscoveryDiagnosis;
 use App\Enums\DiscoveryRunStatus;
 use App\Models\Company;
@@ -35,7 +33,6 @@ class RunDiscovery
     private array $candidateFailures = [];
 
     public function __construct(
-        private AgentRunner $runner,
         private PageFetcher $fetcher,
         private HtmlText $html,
         Sources\OverpassSource $overpass,
@@ -100,10 +97,7 @@ class RunDiscovery
     private function plan(Icp $icp): array
     {
         /** @var StructuredAgentResponse $response */
-        $response = $this->runner->run(
-            $icp->project,
-            AgentType::Planner,
-            new DiscoveryPlanner,
+        $response = (new DiscoveryPlanner($icp->project))->prompt(
             "Customer profile [{$icp->name}]:\n\n".json_encode(
                 $icp->criteria,
                 JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
@@ -232,10 +226,7 @@ class RunDiscovery
         }
 
         /** @var StructuredAgentResponse $verdict */
-        $verdict = $this->runner->run(
-            $icp->project,
-            AgentType::Qualifier,
-            new CompanyQualifier,
+        $verdict = (new CompanyQualifier($icp->project))->prompt(
             "Customer profile [{$icp->name}]:\n{$criteria}\n\n"
             ."Company website ({$candidate->website}):\n".mb_substr($parsed->text, 0, 8_000),
         );

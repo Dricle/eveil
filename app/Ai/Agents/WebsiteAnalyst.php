@@ -2,10 +2,9 @@
 
 namespace App\Ai\Agents;
 
+use App\Enums\AgentType;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
-use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\HasStructuredOutput;
-use Laravel\Ai\Promptable;
 use Stringable;
 
 /**
@@ -15,9 +14,12 @@ use Stringable;
  * This is the knowledge base of ADR-021 and story 3.2, not an SEO audit: we are
  * deliberately not building a site-audit product on the side.
  */
-class WebsiteAnalyst implements Agent, HasStructuredOutput
+class WebsiteAnalyst extends EveilAgent implements HasStructuredOutput
 {
-    use Promptable;
+    public function type(): AgentType
+    {
+        return AgentType::Planner;
+    }
 
     public function instructions(): Stringable|string
     {

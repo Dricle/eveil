@@ -2,9 +2,7 @@
 
 namespace App\Discovery;
 
-use App\Ai\AgentRunner;
 use App\Ai\Agents\ContactExtractor;
-use App\Enums\AgentType;
 use App\Enums\EmailSource;
 use App\Enums\EmailStatus;
 use App\Models\Company;
@@ -24,7 +22,6 @@ class FindContacts
     public function __construct(
         private PageFetcher $fetcher,
         private HtmlText $html,
-        private AgentRunner $runner,
         private EmailVerifier $verifier,
     ) {}
 
@@ -46,12 +43,7 @@ class FindContacts
         }
 
         /** @var StructuredAgentResponse $extracted */
-        $extracted = $this->runner->run(
-            $company->project,
-            AgentType::Extractor,
-            new ContactExtractor,
-            $this->prompt($company, $pages),
-        );
+        $extracted = (new ContactExtractor($company->project))->prompt($this->prompt($company, $pages));
 
         $this->rememberPhone($company, $extracted->structured);
 

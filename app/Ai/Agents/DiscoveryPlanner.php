@@ -2,10 +2,9 @@
 
 namespace App\Ai\Agents;
 
+use App\Enums\AgentType;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
-use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\HasStructuredOutput;
-use Laravel\Ai\Promptable;
 use Stringable;
 
 /**
@@ -15,9 +14,12 @@ use Stringable;
  * The plan is returned before anything executes so the user can see it
  * (story 5.2) and, at the supervised notch, refuse it (ADR-009).
  */
-class DiscoveryPlanner implements Agent, HasStructuredOutput
+class DiscoveryPlanner extends EveilAgent implements HasStructuredOutput
 {
-    use Promptable;
+    public function type(): AgentType
+    {
+        return AgentType::Planner;
+    }
 
     public function instructions(): Stringable|string
     {

@@ -2,10 +2,9 @@
 
 namespace App\Ai\Agents;
 
+use App\Enums\AgentType;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
-use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\HasStructuredOutput;
-use Laravel\Ai\Promptable;
 use Stringable;
 
 /**
@@ -16,9 +15,12 @@ use Stringable;
  * The score belongs to the (company, profile) pair, never to the company: the
  * same firm is a 90 for one profile and a 20 for another (ADR-015).
  */
-class CompanyQualifier implements Agent, HasStructuredOutput
+class CompanyQualifier extends EveilAgent implements HasStructuredOutput
 {
-    use Promptable;
+    public function type(): AgentType
+    {
+        return AgentType::Qualifier;
+    }
 
     public function instructions(): Stringable|string
     {

@@ -24,7 +24,16 @@ Two per-project AI "agents": Website (scrapes site + optional GitHub repo → bu
 Ships in two editions from one codebase: free self-hosted (docker compose) and paid cloud. Scope lives in saas-outreach-tool-user-stories.md at repo root — read it before planning features.
 
 ## Stack: verified versions and traps
-Installed: Laravel 13, PHP 8.4, Inertia v3 + Vue 3, Wayfinder, Pest 5, Larastan, Pint, Boost. The starter shipped with SQLite — it is being replaced by PostgreSQL everywhere, tests included (ADR-010). Redis + Horizon for queues, cache and locks (ADR-011).
+Installed: Laravel 13, Inertia v3 + Vue 3, Wayfinder, Pest 5, Larastan, Pint, Boost. PostgreSQL everywhere, tests included (ADR-010) — the SQLite the starter shipped with is gone. Redis for queues, cache and locks; Horizon still to be added (ADR-011).
+
+## Local development runs on Laravel Sail
+Settled 2026-08-11. `compose.yaml` at the repo root is the SAIL dev stack (`laravel.test` on PHP 8.5, `pgsql`, `redis`). Host ports are deliberately shifted — app 8080, Postgres 5442, Redis 6382 — because other local projects already hold 80/5432/6379.
+
+Run PHP through Sail: `./vendor/bin/sail artisan …`, `sail composer lint`, `sail artisan test`. The host's default `php` is 8.3 and fails composer's platform check; Herd's 8.4 binary lives at `~/Library/Application Support/Herd/bin/php84` if a host-side command is unavoidable.
+
+Run JS tooling on the HOST (`npm run dev`, `npm run lint:check`). `node_modules` is installed with macOS-arm64 binaries and mounted into the Linux container, so eslint and Vite fail inside Sail. That is why `composer ci:check` fails in the container while every PHP check passes — run the PHP checks in Sail and the JS checks on the host.
+
+The self-hosted deployment compose promised by Epic 1 is a SEPARATE artifact from `compose.yaml`. Do not turn the Sail file into the shipped one.
 
 Planned, verified on packagist/npm 2026-08-10:
 - laravel/ai — latest v0.10.3. PRE-1.0, breaking changes between minors. Pin exact version, wrap calls behind our own service classes so an upgrade touches one place.

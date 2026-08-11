@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\CampaignLeadStatus;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
@@ -105,4 +106,20 @@ it('allows a new campaign once the previous membership is finished', function ()
     }
 
     expect(DB::table('campaign_leads')->where('lead_id', $leadId)->count())->toBe(2);
+});
+
+it('keeps CampaignLeadStatus::live() in step with the partial index', function () {
+    $definition = DB::table('pg_indexes')
+        ->where('schemaname', 'public')
+        ->where('indexname', 'campaign_leads_one_active_per_lead')
+        ->value('indexdef');
+
+    expect($definition)->not->toBeNull();
+
+    foreach (CampaignLeadStatus::cases() as $status) {
+        // The index is the enforcement; the enum is the readable copy. Drift
+        // between them would silently let a lead into two live campaigns.
+        expect(str_contains((string) $definition, "'{$status->value}'"))
+            ->toBe($status->isLive(), "status {$status->value} disagrees with the index");
+    }
 });

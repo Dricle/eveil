@@ -6,6 +6,16 @@ paths:
 
 # Models
 
+## Conventions established 2026-08-11 with the first model layer
+Follow these rather than reinventing per model — 19 models already do.
+
+- **House style is Laravel 13 attributes**: `#[Fillable([...])]`, `#[Hidden([...])]`, a `casts(): array` method, and a `@property` docblock listing every column. Larastan runs at level 7 and reads those docblocks.
+- **Statuses are PHP backed enums in `app/Enums/`**, cast on the model. The database stores plain strings on purpose (see `.ai/rules/database.md`), so the enum is the only place the allowed values exist. Enum keys are TitleCase.
+- **Anything with `project_id` uses `App\Models\Concerns\BelongsToProject`.** It adds a global scope and stamps `project_id` on create. The scope applies only while `App\Support\CurrentProject` is set: HTTP must always set it (that is where untrusted input reaches queries), while console commands, jobs and seeders opt in with `CurrentProject::run($project, fn () => …)`, which restores the previous context even on an exception. `tests/Feature/ProjectScopingTest.php` is the ADR-003 guard — keep it passing.
+- **User secrets use the `App\Casts\EncryptedCredential` cast**, never Laravel's built-in `encrypted`. It runs on `CREDENTIALS_KEY` via `App\Support\CredentialsCipher` (ADR-012) and resolves the cipher per call because Eloquent instantiates casts with `new`, so constructor injection does not work. Mark those columns `#[Hidden]` too — they are write-only from the UI's point of view.
+- **The canary is checked lazily**, the first time a credential is actually touched, not at boot: nothing to pay on requests that read no secrets, and it still fails loudly exactly when a secret would be misread. `php artisan eveil:credentials-key` generates the key and refuses to overwrite an existing one without `--force`; `composer setup` calls it after `key:generate`.
+- **Every model has a factory**, and `tests/Feature/FactoriesTest.php` creates all of them — it catches a broken definition long before a feature needs that model.
+
 ## Tenancy: three separate permission scopes
 Never collapse these into one role column — that is how permission holes get shipped:
 1. Instance scope: `users.is_super_admin` (bool). The person who ran the docker compose. Manages instance settings, AI provider key, registration on/off.

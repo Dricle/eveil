@@ -45,10 +45,11 @@ return new class extends Migration
 
             $table->string('status'); // pending|planning|running|succeeded|exhausted|aborted|failed
 
-            // Shape: array{max_tokens: int, max_pages: int, max_leads: int} hard ceiling; the run stops on it
+            // Shape: array{max_companies: int, max_qualified: int, max_pages: int, max_queries: int}
+            // Hard ceiling; the run stops on whichever limit it reaches first.
             $table->jsonb('budget');
 
-            // Shape: array{pages_fetched?: int, companies_found?: int, companies_qualified?: int, leads_found?: int, tokens_used?: int}
+            // Shape: counters plus `plan`, the explanation the agent gave before executing
             $table->jsonb('stats')->nullable();
 
             // Shape: array<int, array{axis: string, from: mixed, to: mixed, at: string}> widening log (ADR-020)

@@ -480,10 +480,10 @@ Opus 5 pour la planification, Haiku 4.5 pour extraction et qualification).
 
 | Action | Unité facturée | Crédits | Coût réel |
 |---|---|---|---|
-| `project.analyze` | par analyse de site | 150 | 0,15 $ |
-| `icp.derive` | par ICP | 60 | 0,06 $ |
+| `project.analyze` | par analyse de site | **200** | **0,19 $ — mesuré** |
+| `icp.derive` | par dérivation (tous profils) | **150** | **0,14 $ — mesuré** |
 | `discovery.plan` | par run | 500 | 0,53 $ |
-| `company.qualify` | par société évaluée | 4 | 0,0035 $ |
+| `company.qualify` | par société évaluée | **3** | **0,0025 $ — mesuré** |
 | `contact.extract` | par société retenue | 8 | 0,008 $ |
 | `sequence.generate` | par campagne | 100 | 0,10 $ |
 | `lead.personalize` | par lead | 3 | 0,003 $ |
@@ -492,6 +492,27 @@ Opus 5 pour la planification, Haiku 4.5 pour extraction et qualification).
 
 Campagne type de 100 leads ≈ **3 500 crédits**. Les actions non-IA à zéro crédit sont un argument
 commercial : la vérification d'email est facturée chez les concurrents.
+
+**Premières mesures réelles, 2026-08-11**, sur restogo.be :
+
+| Action | Estimé | Mesuré | Détail |
+|---|---|---|---|
+| `project.analyze` | 0,15 $ | **0,192 $** | 11 pages, 24 051 in / 2 877 out, 45 s |
+| `icp.derive` | 0,06 $ | **0,143 $** | 4 profils, 4 456 in / 4 833 out, 69 s |
+| `company.qualify` | 0,0035 $ | **0,0025 $** | moyenne sur 14 qualifications réelles |
+
+**Le biais n'est pas uniforme, et sa cause est la sortie.** Sur Opus 5 la sortie coûte 25 $/MTok
+contre 5 $ en entrée : les actions **génératives** confiées au planner produisent plus de tokens
+qu'elles n'en consomment (4 833 en sortie pour 4 456 en entrée sur la dérivation d'ICP) et coûtent
+donc **plus** que prévu. À l'inverse, les actions **d'extraction** confiées à Haiku rendent une sortie
+structurée courte et coûtent **moins** que prévu.
+
+La règle à appliquer aux lignes encore estimées : dimensionner la **sortie** d'abord, et se demander
+si l'action génère ou si elle extrait.
+
+Grille corrigée : `project.analyze` 150 → 200, `icp.derive` 60 → 150, `company.qualify` 4 → 3. C'est
+exactement le mécanisme prévu par cet ADR : un chiffre faux se corrige en base, sans redéploiement,
+sans que le tarif client bouge.
 
 **Facturation à l'unité de travail, jamais au « run ».** Un run qui évalue 400 sociétés ne coûte pas
 ce qu'en coûte un qui en évalue 40 ; un forfait par run perd de l'argent sur les gros et vole les
@@ -1067,6 +1088,8 @@ minimal, pour être opérationnel en quelques minutes.
 - Liste des providers et modèles fournie par `laravel/ai`, liste des agents issue du code
 - Défauts livrés : une install fraîche fonctionne sans ouvrir cet écran
 - Les agents exigeant une sortie structurée sont marqués comme tels
+- L'écran affiche, par agent, ce qu'il a déjà coûté et sur combien d'appels
+- **État** : la couche base est faite et pilotable en CLI (`eveil:agent-model`) ; l'écran reste à construire avec l'auth
 
 **1.4** En tant que superadmin, je veux désactiver les inscriptions via variable d'env.
 - `REGISTRATION_ENABLED=false` → la route register renvoie 404, pas un message d'erreur

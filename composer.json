@@ -11,6 +11,7 @@
     "require": {
         "php": "^8.3",
         "inertiajs/inertia-laravel": "^3.0",
+        "laravel/ai": "0.10.3",
         "laravel/framework": "^13.17",
         "laravel/tinker": "^3.0",
         "laravel/wayfinder": "^0.1.14"
@@ -45,6 +46,7 @@
             "composer install",
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
             "@php artisan key:generate",
+            "@php artisan eveil:credentials-key",
             "@php artisan migrate --force",
             "npm install",
             "npm run build"

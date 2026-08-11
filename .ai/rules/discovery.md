@@ -49,3 +49,34 @@ Market exhaustion is a RESULT, not a failure. "Your market is 40 companies, here
 Widening is indexed on `projects.autonomy_level` (ADR-009): supervised proposes and waits; semi_auto and autonomous widen alone and report what they relaxed. Shared bounds for all three: one axis at a time, two steps maximum, in this order — geography → size → adjacent sectors → job titles. Never two axes at once or you cannot tell what worked. Log and display every relaxation.
 
 Widening attempts count against the ORIGINAL run's budget and never open a new one — otherwise the loop burns credits producing nothing.
+
+## The crawler as built 2026-08-11
+`SiteCrawler` fetches the homepage, then follows a handful of links scored by path (`about`, `pricing`, `features`… ahead of `blog`, `news`, `tag`), same host only, bounded by `config('eveil.crawl.max_pages')`. A homepage alone rarely says what a product costs or who it is for.
+
+- Plain HTTP only. No headless browser until the JS-render failure rate is measured.
+- `RobotsPolicy` and `PageFetcher` are SINGLETONS: they hold the parsed robots.txt per host and the last-fetch timestamp the politeness delay is measured from. Resolving them per crawl re-fetches robots.txt and drops the throttle.
+- Pages land in `crawled_pages`, the one instance-wide shared table (ADR-014). Public content only, keyed on `Url::normalize()`'d URL — the same normalisation the dedupe uses, so it lives in `App\Discovery\Url` and nowhere else.
+- A missing `Content-Type` is accepted; only an explicitly non-HTML one is rejected. Small sites omit the header and refusing them would silently skip readable pages.
+- Pages are passed around as `App\Discovery\ParsedPage`, not array shapes: array shapes are not covariant inside a `Collection` and fight PHPStan for no benefit.
+- `Http::response('<html>…')` in tests sets NO Content-Type header — a fake that looks right can still be rejected by content sniffing. Remember it when writing crawler tests.
+
+## What the first live discovery run taught (2026-08-11)
+Four real Belgian friteries came back with usable fit reasons, so the no-purchased-database thesis holds. Four things nearly stopped it, all now covered by tests:
+
+- **Overpass answers HTTP 406 to Guzzle's default User-Agent.** It asks that clients identify themselves. Without the `EveilBot` header the source returns nothing, forever.
+- **Place names repeat across the world.** A probe on "Charleroi" without a country also returned a Subway in Pennsylvania. Every Overpass probe carries an ISO 3166-1 country, resolved first, with the town looked up inside it via `map_to_area`.
+- **A dead source and an empty market look identical.** The first run reported "no candidate at all, the sources were wrong" while the truth was a 406 on every probe. Sources record their failures (`ReportsFailures`), the run stores them in `stats.source_failures`, and the command prints them. Never let a source fail silently.
+- **PostgreSQL text columns reject NUL bytes and invalid UTF-8**, and real pages contain both — one mis-encoded restaurant site killed a whole run two thirds of the way through. `PageFetcher::storable()` strips them, and qualification is wrapped per candidate so one bad site can never cost the run everything already found.
+
+Cost measured: $0.0025 per qualification on Haiku, below the $0.0035 estimate. Extraction on the cheap model comes in under estimate; generation on the planner comes in over. Size the OUTPUT when estimating a new action.
+
+## Contact extraction: what the first live run actually returned (2026-08-11)
+Four qualified Belgian friteries went in. Out came **phone numbers on every one and not a single published email address** — one site named a person ("Ali, Owner/Chef") with no address. Guessing `info@` recovered two of the four; both came back `risky` because the domains are catch-all, so acceptance proved nothing.
+
+Read that as a finding about the segment, not a bug: **local micro-businesses publish a phone and a Facebook page, not an email.** Roughly half are email-reachable at all, and mostly through a guessed generic address. Any ICP of this shape should be expected to convert poorly into email leads — a dark kitchen, an agency or a SaaS will do far better. Say so to the user rather than reporting an empty run as a failure; `--guess-generic` is opt-in for exactly that reason.
+
+Mechanics worth remembering:
+- Port 25 is NOT blocked from the Sail container — the SMTP probe really ran and really detected catch-all domains. Do not assume the probe is decorative in dev.
+- Only `invalid` blocks a send. Catch-all is `risky`, a refused probe is `unknown`, and both stay sendable (ADR-007).
+- Guessed addresses are stored `inferred` and are only kept when the mail server accepts them — never guessed-and-stored blind.
+- The phone is kept on `companies.facts` even when no email exists: for this segment it is often the only way in, and a later channel will want it.

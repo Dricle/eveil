@@ -107,6 +107,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Credentials Encryption Key
+    |--------------------------------------------------------------------------
+    |
+    | User secrets — SMTP/IMAP passwords, the AI provider key — are encrypted
+    | with this key rather than APP_KEY (ADR-012). APP_KEY also protects cookies
+    | and sessions and should be rotated after a leak; coupling the two would
+    | mean rotating it destroys every stored mailbox credential, so in practice
+    | nobody would ever rotate it.
+    |
+    */
+
+    'credentials_key' => env('CREDENTIALS_KEY'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Maintenance Mode Driver
     |--------------------------------------------------------------------------
     |

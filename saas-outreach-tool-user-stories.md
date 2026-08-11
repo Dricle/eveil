@@ -10,7 +10,8 @@
 
 ### Vision finale
 
-> **Je donne l'URL et les infos de mon produit. L'app me trouve des clients.**
+> **Je donne l'URL et les infos de mon produit. L'app me trouve des clients** — directement, ou via
+> ceux qui les touchent déjà.
 
 Une entrée, une sortie. Tout le reste est de la plomberie que l'utilisateur ne devrait idéalement
 jamais avoir à toucher.
@@ -488,6 +489,8 @@ Opus 5 pour la planification, Haiku 4.5 pour extraction et qualification).
 | `sequence.generate` | par campagne | 100 | 0,10 $ |
 | `lead.personalize` | par lead | 3 | 0,003 $ |
 | `reply.classify` | par réponse | 1 | 0,001 $ |
+| `recommendations.generate` | par analyse | 120 | 0,12 $ — estimé |
+| `chat.message` | par message | 15 | 0,015 $ — estimé |
 | Vérification email, envoi SMTP, lecture IMAP | — | **0** | 0 $ |
 
 Campagne type de 100 leads ≈ **3 500 crédits**. Les actions non-IA à zéro crédit sont un argument
@@ -508,7 +511,9 @@ donc **plus** que prévu. À l'inverse, les actions **d'extraction** confiées �
 structurée courte et coûtent **moins** que prévu.
 
 La règle à appliquer aux lignes encore estimées : dimensionner la **sortie** d'abord, et se demander
-si l'action génère ou si elle extrait.
+si l'action génère ou si elle extrait. `recommendations.generate` et `chat.message` sont génératives
+et tournent sur le planner — donc probablement sous-estimées, comme les deux premières lignes l'ont
+été.
 
 Grille corrigée : `project.analyze` 150 → 200, `icp.derive` 60 → 150, `company.qualify` 4 → 3. C'est
 exactement le mécanisme prévu par cet ADR : un chiffre faux se corrige en base, sans redéploiement,
@@ -898,6 +903,79 @@ public — après, ça coûte le repo, la doc, les étoiles GitHub et le SEO acc
 **Tier C entièrement tranché** (ADR-024 à ADR-030). Le registre §9 est vide : plus aucune question
 ouverte bloquante.
 
+### ADR-031 — Un profil cible peut viser un partenaire, pas seulement un client
+*(tranché le 2026-08-11)*
+
+Les ICP portent un **type** : `customer` ou `partner`. Un profil partenaire décrit non pas qui achète,
+mais **qui touche déjà l'acheteur** — qui lui rend visite, qui le facture chaque mois, qui lui est
+légalement imposé.
+
+**Pourquoi ça mérite d'exister** : la première campagne réelle a mesuré le mur. Quatre friteries
+qualifiées ont donné deux leads, tous deux `info@` devinés et `risky` — les micro-commerces locaux
+publient un téléphone, pas un email. Or leurs intermédiaires — un grossiste, une brasserie, une
+fiduciaire spécialisée, une agence web sectorielle — sont des sociétés B2B avec un site, des personnes
+nommées et des adresses publiées. **Joignabilité proche de 100 %, et un levier sans commune mesure :
+une fiduciaire horeca, c'est cinquante restaurants d'un coup.**
+
+**Ce que ça coûte en code : presque rien**, et c'est ce qui rend la piste sérieuse.
+
+| Brique | Change ? |
+|---|---|
+| Knowledge base, découverte, qualification, contacts | non |
+| `icps.type` | ajouté |
+| Dérivation | un mode partenaire, avec ses propres critères |
+| Séquence d'envoi | **oui, en profondeur** |
+
+Le dernier point n'est pas cosmétique : le mail à un grossiste n'est pas « achetez ce produit », c'est
+« vos conseillers visitent 3 000 restaurants, voici le partage de revenus ». Autre proposition de
+valeur, autre séquence, autre définition d'une réponse positive.
+
+Un profil partenaire porte deux champs que le profil client n'a pas :
+- **`access_angle`** — par quoi cet acteur touche le client cible, et à quelle fréquence
+- **`partnership_angle`** — pourquoi l'accord est gagnant pour lui, ce qui devient l'accroche du mail
+
+**Le signal prioritaire est l'obligation.** Caisse blanche, HACCP, AFSCA, guichet d'entreprise : les
+acteurs légalement imposés ont une clientèle captive, sont peu nombreux et sont énumérables. C'est la
+meilleure première cible d'un profil partenaire.
+
+**Ce que la découverte partenaire n'a pas le droit de faire : citer une société sans l'avoir vérifiée.**
+Un LLM produit volontiers des noms plausibles et faux. Comme pour les clients, une société n'entre en
+base qu'après avoir été trouvée, son site récupéré et qualifiée.
+
+**Conséquence sur la boussole** (§1) : la formule devient « je donne l'URL, l'app me trouve des clients
+— directement, ou via ceux qui les touchent déjà ».
+
+### ADR-032 — Recommandations d'acquisition : ancrées, priorisées, avec un état
+*(tranché le 2026-08-11)*
+
+L'agent Website ne produit pas que des pistes d'amélioration du site : il propose aussi des **leviers
+d'acquisition absents** — programme de parrainage, contenu éditorial, présence sur un salon, offre aux
+écoles du secteur. Beaucoup de fondateurs n'y pensent tout simplement pas.
+
+**Ce n'est pas un document de stratégie.** Un rapport se lit une fois et ne fait rien. Trois règles le
+séparent du playbook générique qu'un LLM sort en trente secondes :
+
+- **Ancrage obligatoire.** Une recommandation cite la preuve tirée de la knowledge base ou du crawl.
+  « Faites du contenu » ne passe pas ; « ton site n'a pas de blog alors que les trois concurrents que
+  tu cites publient chaque semaine » passe. Sans preuve vérifiable, la recommandation n'est pas émise.
+- **Priorisation impact / effort**, comme les pistes de l'Epic 4.
+- **Un état, et il est respecté.** `proposed` → `done` ou `archived`. Une recommandation archivée ne
+  revient **jamais** — même règle que l'édition manuelle de la knowledge base et que le tombstone
+  d'effacement : quand l'utilisateur a tranché une fois, on ne le lui redemande pas.
+
+**Identité stable.** Chaque recommandation porte une clé, pas un libellé. Une ré-analyse qui
+reformulerait la même idée doit la reconnaître, sinon la liste se remplit de doublons à chaque passage.
+
+**Piloté par la conversation.** Une surface de chat par projet, dans laquelle l'utilisateur dit « c'est
+fait » ou « ça ne m'intéresse pas », et l'agent met l'état à jour. Personne ne gère un backlog à la
+main — c'est ce qui distingue cette liste d'un outil de tâches, explicitement hors scope (§8).
+`laravel/ai` fournit déjà la persistance des conversations (`RemembersConversations`), donc la
+plomberie est quasi gratuite ; ce qui reste à écrire, c'est l'outil que l'agent appelle pour changer un
+état.
+
+**Affichage** : liste latérale du chat, « propositions d'amélioration », les faites et archivées
+masquées par défaut.
+
 ---
 
 ## 4. Architecture
@@ -992,8 +1070,15 @@ projects               organization_id, name, url, github_repo, knowledge_base (
 project_user           droit d'accès
 
 project_analyses       project_id, type: website|repo, raw, summary, status, agent_run_id
-icps                   project_id, name, criteria (json), source: agent|human, active
+icps                   project_id, name, type: customer|partner, criteria (json),
+                       source: agent|human, active
                        ← autant que l'agent en déduit, CRUD libre (ADR-015)
+                       ← un profil partenaire porte access_angle et partnership_angle (ADR-031)
+
+recommendations        project_id, key (identité stable), title, rationale, evidence,
+                       category, impact, effort, status: proposed|done|archived,
+                       decided_at, agent_run_id
+                       ← archivée = ne réapparaît jamais (ADR-032)
 
 discovery_runs         project_id, icp_id, status, budget (json), stats
 companies              project_id, domain (unique/projet), name, website, industry, size,
@@ -1133,11 +1218,28 @@ automatiquement.
 **3.4** En tant qu'utilisateur, je veux que cette analyse serve de contexte aux deux agents.
 - Un seul objet knowledge base, référencé par Website et Sales, jamais dupliqué
 
-### Epic 4 — Agent Website `v1`
+### Epic 4 — Agent Website : pistes d'amélioration et d'acquisition `v1`
 
 **4.1** En tant qu'utilisateur, je veux une liste de pistes d'amélioration du site.
 - Chaque suggestion : catégorie, impact estimé, justification, effort
 - Tri par impact par défaut
+
+**4.4** En tant qu'utilisateur, je veux qu'on me signale les leviers d'acquisition qui me manquent (ADR-032).
+- Parrainage, contenu éditorial, salons, écoles du secteur, programme revendeur…
+- **Chaque recommandation cite sa preuve** dans la knowledge base ou le crawl ; sans preuve, pas de
+  recommandation — c'est ce qui la sépare d'un conseil générique
+- Priorisée par impact et effort
+
+**4.5** En tant qu'utilisateur, je veux marquer une recommandation faite ou sans intérêt, en le disant.
+- États : `proposed` → `done` ou `archived`
+- Une recommandation archivée ne réapparaît **jamais**, même après une ré-analyse
+- Identité par clé stable, pas par libellé, sinon une reformulation crée un doublon
+- Mise à jour depuis la conversation : l'utilisateur ne gère aucun backlog
+
+**4.6** En tant qu'utilisateur, je veux discuter de mon projet avec l'agent.
+- Une conversation par projet, avec la knowledge base pour contexte
+- Les propositions d'amélioration en liste latérale, faites et archivées masquées par défaut
+- Persistance fournie par `laravel/ai` (`RemembersConversations`)
 
 **4.2** En tant qu'utilisateur, je veux relancer une analyse à la demande.
 - L'écart avec l'analyse précédente est visible : résolu / toujours ouvert / nouveau
@@ -1149,6 +1251,15 @@ automatiquement.
 **5.1** En tant qu'utilisateur, je veux que l'ICP soit déduit de mon produit, sans le saisir.
 - Critères structurés : secteurs, taille, géographie, intitulés de poste, technologies, signaux
 - Entièrement éditable ; l'édition est conservée entre les runs
+
+**5.1 bis** En tant qu'utilisateur, je veux aussi des profils de **partenaires**, pas seulement de clients (ADR-031).
+- `icps.type` : `customer` ou `partner`
+- Un profil partenaire répond à : qui visite mon client, qui le facture chaque mois, qui lui est
+  **légalement imposé** — ce dernier signal en premier, sa clientèle est captive
+- Il porte `access_angle` (par quoi il touche le client) et `partnership_angle` (pourquoi c'est
+  gagnant pour lui, et donc l'accroche du mail)
+- Découverte et qualification identiques ; **la séquence d'envoi, elle, diffère en profondeur**
+- Aucune société n'est citée sans avoir été trouvée, récupérée et qualifiée
 
 **5.2** En tant qu'utilisateur, je veux lancer une recherche de sociétés correspondant à l'ICP.
 - L'agent choisit ses sources selon l'ICP et **explique son plan avant d'exécuter**
@@ -1311,6 +1422,11 @@ automatiquement.
 - **Tracking d'ouverture comme métrique centrale.** Apple Mail Privacy Protection a rendu les taux
   d'ouverture ininterprétables. La métrique qui compte est le taux de réponse.
 - **CRM.** On s'y branche, on ne le remplace pas.
+- **Gestionnaire de tâches.** Les propositions d'amélioration (ADR-032) ont un état, pas un backlog :
+  l'agent le met à jour depuis la conversation. Dès qu'il faut ranger, assigner ou dater des tâches à
+  la main, on a franchi la ligne.
+- **Document de stratégie.** Une recommandation sans preuve vérifiable et sans exécution derrière est
+  un conseil générique. Eveil trouve et contacte ; il ne rédige pas de plans.
 
 ---
 

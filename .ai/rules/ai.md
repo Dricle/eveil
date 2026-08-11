@@ -52,3 +52,14 @@ Implemented 2026-08-11. `App\Support\Settings` reads the `settings` table, cache
 - A stored value of the wrong shape is ignored rather than trusted — the settings screen writes it, so validate on read.
 - The cache is invalidated on write. Without that a change from the screen appears to do nothing until the next deploy.
 - `php artisan eveil:agent-model` is the command-line half: no argument lists every agent with its provider, model, timeout, whether it came from `default` or `database`, and what it has spent so far. The superadmin settings PAGE still has to be built — it belongs with Epic 1, once auth and the UI shell exist.
+
+## Acquisition recommendations are stateful, not a report (ADR-032)
+Scope decision 2026-08-11. The Website agent also proposes acquisition levers the product is missing — referral scheme, editorial content, a trade fair, an offer to sector schools. Three rules separate this from the generic playbook any LLM emits in thirty seconds:
+
+- **Evidence or nothing.** Every recommendation cites what in the knowledge base or the crawl says it is missing. "Do content marketing" is not emitted; "your site has no blog while the three competitors you name publish weekly" is.
+- **Impact/effort ranking**, like the site suggestions of Epic 4.
+- **State, and it is honoured.** `proposed` → `done` or `archived`, and an archived recommendation NEVER comes back. Same rule as the hand-edited knowledge base and the erasure tombstone: once the user has decided, do not ask again.
+
+Identity is a stable `key`, never the wording — a re-analysis that rephrases the same idea must recognise it or the list fills with duplicates.
+
+State is driven by conversation: the user says "done" or "not interested" and the agent updates it. Nobody grooms a backlog — that boundary is what keeps this out of task-manager territory, which §8 lists as out of scope. `laravel/ai` already persists conversations (`RemembersConversations`, with its own migration), so what remains to build is the tool the agent calls to change a state.

@@ -80,3 +80,16 @@ Mechanics worth remembering:
 - Only `invalid` blocks a send. Catch-all is `risky`, a refused probe is `unknown`, and both stay sendable (ADR-007).
 - Guessed addresses are stored `inferred` and are only kept when the mail server accepts them — never guessed-and-stored blind.
 - The phone is kept on `companies.facts` even when no email exists: for this segment it is often the only way in, and a later channel will want it.
+
+## Partner profiles: same machine, different target (ADR-031)
+Scope decision 2026-08-11. An ICP carries a `type`: `customer` or `partner`. A partner profile describes not who buys, but **who already touches the buyer** — who visits them, who invoices them monthly, who is legally imposed on them.
+
+The reason it earns its place is measured, not theoretical: four qualified friteries produced two leads, both guessed `info@` and both `risky`, because local micro-businesses publish a phone and not an email. Their intermediaries — a wholesaler, a brewery, a sector-specialised accountant, a food-focused web agency — are B2B companies with real sites, named people and published addresses. Near-total reachability, and one accountant is fifty restaurants.
+
+Discovery, qualification and contact extraction are unchanged. Two things differ:
+- A partner profile carries `access_angle` (how it touches the customer, and how often) and `partnership_angle` (why the deal is good for them — which becomes the email opener).
+- **The outreach sequence differs in kind**: the mail to a wholesaler is not "buy this", it is "your reps visit 3,000 restaurants, here is the revenue share". Different value proposition, different definition of a positive reply.
+
+Prioritise the **legally obligatory** intermediaries — fiscal cash register, HACCP, food-safety, business counters. Captive clientele, few of them, enumerable.
+
+Never cite a company the pipeline has not found, fetched and qualified. An LLM produces plausible false names readily, and the whole point of this product over a strategy document is that its names are verified.

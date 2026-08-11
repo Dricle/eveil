@@ -7,7 +7,7 @@ paths:
 # General
 
 ## What Eveil is
-**North star (Clément, 2026-08-10): "I give the URL and the info about my product, and the app finds me clients."** One input, one output. Use it as the arbitration test on every feature: does this reduce what the user must supply, or increase clients found? If neither, it does not ship. Every required field is debt — acceptable as an intermediate step, never as the end state. The primary path is paste-URL → watch → approve, NOT a campaign builder; the step builder is the escape hatch, not the home screen.
+**North star (Clément, 2026-08-10, widened 2026-08-11): "I give the URL and the info about my product, and the app finds me clients" — directly, or through whoever already touches them (ADR-031).** One input, one output. Use it as the arbitration test on every feature: does this reduce what the user must supply, or increase clients found? If neither, it does not ship. Every required field is debt — acceptable as an intermediate step, never as the end state. The primary path is paste-URL → watch → approve, NOT a campaign builder; the step builder is the escape hatch, not the home screen.
 
 Eveil = **the open-source alternative to lemlist**. Category: multichannel outreach sequencer with AI personalisation, deliverability and a unified inbox. Not a data provider, not a CRM, not marketing automation.
 
@@ -19,7 +19,7 @@ Open questions live in a numbered register in §9 of the spec. It is currently E
 
 Hierarchy: User → Organization (billable entity) → Project (one product/site to promote, e.g. Dricle, Sendboo) → leads/campaigns/email accounts, all scoped to project.
 
-Two per-project AI "agents": Website (scrapes site + optional GitHub repo → builds the project knowledge base, suggests site improvements) and Sales (finds leads, runs email/LinkedIn outreach using that knowledge base).
+Two per-project AI roles: Website (crawls the site → knowledge base, plus site and acquisition suggestions, ADR-032) and Sales (derives target profiles, finds and qualifies companies, extracts contacts, runs outreach). A profile targets a customer OR a partner — whoever already touches the customer (ADR-031). Five agent classes back them: planner, extractor, qualifier, writer, classifier.
 
 Ships in two editions from one codebase: free self-hosted (docker compose) and paid cloud. Scope lives in saas-outreach-tool-user-stories.md at repo root — read it before planning features.
 
@@ -36,7 +36,7 @@ Run JS tooling on the HOST (`npm run dev`, `npm run lint:check`). `node_modules`
 The self-hosted deployment compose promised by Epic 1 is a SEPARATE artifact from `compose.yaml`. Do not turn the Sail file into the shipped one.
 
 Planned, verified on packagist/npm 2026-08-10:
-- laravel/ai — latest v0.10.3. PRE-1.0, breaking changes between minors. Pin exact version, wrap calls behind our own service classes so an upgrade touches one place.
+- laravel/ai — pinned at 0.10.3. Do NOT wrap it: an earlier wrapper was deleted after review because the package already provides every hook it reinvented. See `.ai/rules/ai.md` — agents extend `EveilAgent` and are called directly.
 - laravel/fortify — v1.37.x, stable.
 - @nuxt/ui v4.10 — declares `@inertiajs/vue3: ^2 || ^3` as peer dep, so Inertia use is officially supported (not Nuxt-only). Tailwind v4 already installed, which Nuxt UI 4 needs.
 
@@ -60,8 +60,8 @@ Strategic corollary: the moat is hosting, brand and execution speed — not code
 
 Before going public: write `ICLA.md`, `CCLA.md`, `CONTRIBUTING.md`, wire a CLA-check bot, and have a lawyer review it — this is the one project decision that cannot be undone.
 
-## All blocking open questions are settled — ADR-010 to ADR-030
-As of 2026-08-11 the §9 register in the spec is empty: tiers A, B and C are all decided as ADR-010 through ADR-030. Read §3 of `saas-outreach-tool-user-stories.md` before proposing anything architectural — the answer is probably already there, with its reasoning.
+## All blocking open questions are settled — ADR-010 to ADR-032
+As of 2026-08-11 the §9 register in the spec is empty: tiers A, B and C are all decided as ADR-010 through ADR-030, plus ADR-031 (partner profiles) and ADR-032 (acquisition recommendations) added as scope. Read §3 of `saas-outreach-tool-user-stories.md` before proposing anything architectural — the answer is probably already there, with its reasoning.
 
 Two deadlines remain, non-blocking for development but not to be discovered the night before launch:
 - Before opening the repo: write `ICLA.md`, `CCLA.md`, `CONTRIBUTING.md`, wire a CLA-check bot, have a lawyer review the licence and CLA (ADR-025).

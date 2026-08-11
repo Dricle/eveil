@@ -22,3 +22,11 @@ The v0 schema lives in five grouped migrations (`2026_08_11_1000xx_*`): organiza
 - **Shape comments use `//`, not `/** @var */`.** PHPStan rejects a `@var` with no variable name, and these describe a column's JSON payload rather than a PHP variable.
 - **Partial unique indexes need raw `DB::statement`** — Blueprint has none. Two exist and both encode business rules: `leads_project_id_email_unique` (dedupe by email while allowing many LinkedIn-only rows with no email) and `campaign_leads_one_active_per_lead` (a lead sits in at most one live campaign, ADR-015). `tests/Feature/SchemaConstraintsTest.php` proves both actually enforce — keep it passing.
 - Credit tables (`credit_prices`, `credit_wallets`, `credit_transactions`) are deliberately NOT created yet: cloud-only, and cloud does not exist in v0 (ADR-019).
+
+## Environment precedence — two behaviours that bite in opposite directions
+Verified empirically 2026-08-11, not assumed. They interact, and getting them backwards produces silent wrongness rather than an error.
+
+- **Laravel's Dotenv is immutable**: a real environment variable WINS over the same key in `.env`. That is what lets CI point at its own Postgres while `.env.example` keeps Sail's internal `pgsql` hostname.
+- **PHPUnit's `<env>` does NOT overwrite an existing environment variable** (no `force="true"`). So exporting `DB_DATABASE` in CI would silently run the suite against that database instead of the `testing` one `phpunit.xml` asks for — no error, just the wrong target and a wiped database.
+
+Consequence for `.github/workflows/tests.yml`: set `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD` at job level, and **never `DB_DATABASE`**. `.env.example` supplies it for the migrate step; `phpunit.xml` supplies `testing` for the suite. The workflow's Postgres service only creates `eveil`, so a step creates `testing` before setup runs.

@@ -1,0 +1,61 @@
+---
+paths:
+  - '**'
+  - composer.json
+---
+
+# General
+
+## What Eveil is
+**North star (Clément, 2026-08-10): "I give the URL and the info about my product, and the app finds me clients."** One input, one output. Use it as the arbitration test on every feature: does this reduce what the user must supply, or increase clients found? If neither, it does not ship. Every required field is debt — acceptable as an intermediate step, never as the end state. The primary path is paste-URL → watch → approve, NOT a campaign builder; the step builder is the escape hatch, not the home screen.
+
+Eveil = **the open-source alternative to lemlist**. Category: multichannel outreach sequencer with AI personalisation, deliverability and a unified inbox. Not a data provider, not a CRM, not marketing automation.
+
+Positioning, stated precisely (Clément, 2026-08-10): the whole category — lemlist, Instantly, Smartlead, Saleshandy, Reply.io — is proprietary SaaS billed per seat and per mailbox, with prospect data hosted by the vendor. Self-hosting unlocks unlimited mailboxes at no cost (exactly what Instantly/Smartlead charge for), data sovereignty, and no per-seat billing.
+
+Do NOT claim "no open-source lemlist alternative exists" — [Linki](https://github.com/moaljumaa/linki) was open sourced March 2026 and claims that exact slot. Clément tested it 2026-08-10 and rates it poor: LinkedIn-first, manual targeting, effectively a lead magnet for Opsily managed hosting. So the slot is claimed but not occupied. Still cite Linki honestly — claiming to be alone on a niche where a repo exists costs credibility for nothing. Eveil's defensible slot is **email-first + zero-config targeting derived from the product URL**.
+
+Open questions live in a numbered register in §9 of the spec. It is currently EMPTY — A1-A8, B1-B5 and C1-C8 were all settled as ADR-010 to ADR-030 on 2026-08-10/11. Add any new question there with an identifier, and promote it to an ADR in §3 once settled.
+
+Hierarchy: User → Organization (billable entity) → Project (one product/site to promote, e.g. Dricle, Sendboo) → leads/campaigns/email accounts, all scoped to project.
+
+Two per-project AI "agents": Website (scrapes site + optional GitHub repo → builds the project knowledge base, suggests site improvements) and Sales (finds leads, runs email/LinkedIn outreach using that knowledge base).
+
+Ships in two editions from one codebase: free self-hosted (docker compose) and paid cloud. Scope lives in saas-outreach-tool-user-stories.md at repo root — read it before planning features.
+
+## Stack: verified versions and traps
+Installed: Laravel 13, PHP 8.4, Inertia v3 + Vue 3, Wayfinder, Pest 5, Larastan, Pint, Boost. The starter shipped with SQLite — it is being replaced by PostgreSQL everywhere, tests included (ADR-010). Redis + Horizon for queues, cache and locks (ADR-011).
+
+Planned, verified on packagist/npm 2026-08-10:
+- laravel/ai — latest v0.10.3. PRE-1.0, breaking changes between minors. Pin exact version, wrap calls behind our own service classes so an upgrade touches one place.
+- laravel/fortify — v1.37.x, stable.
+- @nuxt/ui v4.10 — declares `@inertiajs/vue3: ^2 || ^3` as peer dep, so Inertia use is officially supported (not Nuxt-only). Tailwind v4 already installed, which Nuxt UI 4 needs.
+
+Do not add deps without approval.
+
+## Decisions: licence AGPL, edition split, v0 scope
+Settled 2026-08-10 with Clément:
+- Licence: AGPL-3.0. Anyone hosting a modified version must publish their code — blocks a competing cloud. Do not add code under an incompatible licence.
+- One repo, two editions. Cloud-only code lives under `app/Cloud/`, registered conditionally by a ServiceProvider on `APP_EDITION=self|cloud`. No second repo, no separate build.
+- v0 = single vertical slice: scrape site → knowledge base → AI lead discovery → AI sequence → SMTP send with daily cap → IMAP reply detection → auto-pause → unified inbox. Orgs, multi-user and LinkedIn are deferred to v1+ — this is BUILD ORDER, not an edition split: self-hosted gets organizations, invitations and access management too, in core (see ADR-025 below).
+- Sending: user's own SMTP/IMAP only. No ESP relay (cold outreach through Postmark/SES gets the account banned).
+
+## AGPL everywhere, free-outbound CLA, cloud dir holds billing only
+ADR-025, settled 2026-08-11. One `LICENSE`, AGPL-3.0, the whole repo — `app/Cloud/` included. No separately-licensed directory, no feature withheld from self-hosted.
+
+`app/Cloud/` is NOT a legal boundary, only a conditional-loading mechanism, and its scope is **billing and credit metering, nothing else**: Stripe, `credit_prices`, `credit_wallets`, `credit_transactions`, trial guards. Everything else lives in core — organizations, roles, invitations and per-project access included, so **self-hosted gets multi-user**. Cloud adds only managed hosting, billing, the supplied AI key, and support. Do not put a feature behind `app/Cloud/` thinking it is protected; it isn't, and it would break the "core stays free with no artificial limits" promise (story 10.3).
+
+CLA is required, modelled on Postiz: a licence grant, never a copyright assignment (contributors keep their copyright), with the outbound restricted to licences that are both FSF-free and OSI-approved. So the project can relicense to another free licence but can never go proprietary, BSL, or fair-source — contractually ruling out the move that cost Redis, HashiCorp and MongoDB their communities.
+
+Strategic corollary: the moat is hosting, brand and execution speed — not code. Postiz (AGPL-3.0, no `ee/`, cloud runs identical code, monetised on hosting alone) is the precedent being followed.
+
+Before going public: write `ICLA.md`, `CCLA.md`, `CONTRIBUTING.md`, wire a CLA-check bot, and have a lawyer review it — this is the one project decision that cannot be undone.
+
+## All blocking open questions are settled — ADR-010 to ADR-030
+As of 2026-08-11 the §9 register in the spec is empty: tiers A, B and C are all decided as ADR-010 through ADR-030. Read §3 of `saas-outreach-tool-user-stories.md` before proposing anything architectural — the answer is probably already there, with its reasoning.
+
+Two deadlines remain, non-blocking for development but not to be discovered the night before launch:
+- Before opening the repo: write `ICLA.md`, `CCLA.md`, `CONTRIBUTING.md`, wire a CLA-check bot, have a lawyer review the licence and CLA (ADR-025).
+- Before any public communication: pick the domain and run an EUIPO trademark search (ADR-030). The name stays "Eveil"; `eveil.com/.app/.io/.ai/.be` are taken, `eveil.dev/.email/.so`, `geteveil.com` and `useeveil.com` were free on 2026-08-11. Known and accepted downsides: the missing accent (French spells it Éveil), a saturated French keyword, and poor readability for English speakers.
+
+When a new open question appears, add it to the §9 register with an identifier, and promote it to an ADR in §3 once settled.

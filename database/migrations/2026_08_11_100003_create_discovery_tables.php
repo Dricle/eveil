@@ -10,9 +10,9 @@ use Illuminate\Support\Facades\Schema;
  *
  * Companies and leads are scoped to their project; only `crawled_pages` is
  * shared instance-wide, and it holds nothing but public web content. Fit score
- * lives on `company_icp_evaluations`, never on the company: the same firm
- * scores 90 for one ICP and 20 for another, so a column on `companies` would
- * have two ICPs overwriting each other.
+ * lives on `company_target_evaluations`, never on the company: the same firm
+ * scores 90 for one target profile and 20 for another, so a column on `companies` would
+ * have two target profiles overwriting each other.
  */
 return new class extends Migration
 {
@@ -41,7 +41,7 @@ return new class extends Migration
         Schema::create('discovery_runs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('project_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('icp_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('target_profile_id')->nullable()->constrained()->nullOnDelete();
 
             $table->string('status'); // pending|planning|running|succeeded|exhausted|aborted|failed
 
@@ -55,9 +55,9 @@ return new class extends Migration
             // Shape: array<int, array{axis: string, from: mixed, to: mixed, at: string}> widening log
             $table->jsonb('relaxations')->nullable();
 
-            // Set when the ICP is diagnosed as wrong rather than too narrow —
+            // Set when the target profile is diagnosed as wrong rather than too narrow —
             // that case escalates to the user and must never be widened.
-            $table->string('diagnosis')->nullable(); // too_narrow|wrong_source|bad_icp|no_contacts
+            $table->string('diagnosis')->nullable(); // too_narrow|wrong_source|bad_target_profile|no_contacts
 
             $table->timestamp('started_at')->nullable();
             $table->timestamp('finished_at')->nullable();
@@ -82,7 +82,7 @@ return new class extends Migration
             // never per project — Belgium runs FR, NL and EN in one city.
             $table->string('language', 5)->nullable();
 
-            // Shape: array<string, mixed> ICP-independent firmographics
+            // Shape: array<string, mixed> target profile-independent firmographics
             $table->jsonb('facts')->nullable();
 
             $table->string('source');
@@ -93,10 +93,10 @@ return new class extends Migration
             $table->unique(['project_id', 'domain']);
         });
 
-        Schema::create('company_icp_evaluations', function (Blueprint $table) {
+        Schema::create('company_target_evaluations', function (Blueprint $table) {
             $table->id();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('icp_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('target_profile_id')->constrained()->cascadeOnDelete();
             $table->foreignId('discovery_run_id')->nullable()->constrained()->nullOnDelete();
 
             $table->unsignedSmallInteger('fit_score');
@@ -106,8 +106,8 @@ return new class extends Migration
 
             $table->timestamps();
 
-            $table->unique(['company_id', 'icp_id']);
-            $table->index(['icp_id', 'fit_score']);
+            $table->unique(['company_id', 'target_profile_id']);
+            $table->index(['target_profile_id', 'fit_score']);
         });
 
         Schema::create('leads', function (Blueprint $table) {
@@ -162,7 +162,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('leads');
-        Schema::dropIfExists('company_icp_evaluations');
+        Schema::dropIfExists('company_target_evaluations');
         Schema::dropIfExists('companies');
         Schema::dropIfExists('discovery_runs');
         Schema::dropIfExists('crawled_pages');

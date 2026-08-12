@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-enum IcpSource: string
+enum TargetProfileSource: string
 {
     case Agent = 'agent';
     case Human = 'human';

@@ -20,10 +20,10 @@ return [
     */
 
     'agents' => [
-        // Thinking work. A real ICP derivation ran 69 seconds and died on the
+        // Thinking work. A real target profile derivation ran 69 seconds and died on the
         // 60s HTTP default, so these get room.
         'website-analyst' => ['provider' => Lab::Anthropic, 'model' => 'claude-opus-5', 'timeout' => 300],
-        'icp-deriver' => ['provider' => Lab::Anthropic, 'model' => 'claude-opus-5', 'timeout' => 300],
+        'target-profile-deriver' => ['provider' => Lab::Anthropic, 'model' => 'claude-opus-5', 'timeout' => 300],
         'discovery-planner' => ['provider' => Lab::Anthropic, 'model' => 'claude-opus-5', 'timeout' => 300],
 
         // Reading work: short structured output, high volume. A long timeout

@@ -2,10 +2,10 @@
 
 namespace App\Console\Commands;
 
-use App\Actions\DeriveIcps;
+use App\Actions\DeriveTargetProfiles;
 use App\Models\AgentRun;
-use App\Models\Icp;
 use App\Models\Project;
+use App\Models\TargetProfile;
 use App\Support\CurrentProject;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
@@ -17,14 +17,14 @@ use RuntimeException;
  * target profiles the search will run on. Still on the command line — the
  * pipeline is worth proving before an interface is built over it.
  */
-class DeriveIcpCommand extends Command
+class DeriveTargetsCommand extends Command
 {
-    protected $signature = 'eveil:derive-icp {project? : Project id, URL or name — defaults to the only one}
+    protected $signature = 'eveil:derive-targets {project? : Project id, URL or name — defaults to the only one}
                                              {--fresh : Replace the profiles previously derived by the agent}';
 
-    protected $description = 'Derive the ideal customer profiles from a project knowledge base';
+    protected $description = 'Derive the target profiles worth prospecting from a project knowledge base';
 
-    public function handle(DeriveIcps $derive, CurrentProject $currentProject): int
+    public function handle(DeriveTargetProfiles $derive, CurrentProject $currentProject): int
     {
         $project = $this->resolveProject();
 
@@ -32,7 +32,7 @@ class DeriveIcpCommand extends Command
             return self::FAILURE;
         }
 
-        $existing = Icp::query()->where('project_id', $project->id)->count();
+        $existing = TargetProfile::query()->where('project_id', $project->id)->count();
 
         if ($existing > 0 && ! $this->option('fresh')) {
             $this->components->warn("{$project->name} already has {$existing} profile(s). Pass --fresh to derive them again.");
@@ -40,7 +40,7 @@ class DeriveIcpCommand extends Command
             return self::SUCCESS;
         }
 
-        $this->components->info("Deriving customer profiles for {$project->name}");
+        $this->components->info("Deriving target profiles for {$project->name}");
 
         try {
             $profiles = $currentProject->run(
@@ -97,7 +97,7 @@ class DeriveIcpCommand extends Command
     }
 
     /**
-     * @param  Collection<int, Icp>  $profiles
+     * @param  Collection<int, TargetProfile>  $profiles
      */
     private function render($profiles): void
     {

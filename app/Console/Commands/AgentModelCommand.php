@@ -17,7 +17,7 @@ use Illuminate\Console\Command;
  */
 class AgentModelCommand extends Command
 {
-    protected $signature = 'eveil:agent-model {agent? : Agent slug, e.g. icp-deriver}
+    protected $signature = 'eveil:agent-model {agent? : Agent slug, e.g. target-profile-deriver}
                                               {--model= : Model id to use}
                                               {--provider= : Provider name, defaults to anthropic}
                                               {--timeout= : Seconds before the call is abandoned}

@@ -67,7 +67,7 @@ it('lists every agent with where its mapping came from', function () {
     app(Settings::class)->set('agents.company-qualifier', ['model' => 'claude-sonnet-5']);
 
     $this->artisan('eveil:agent-model')
-        ->expectsOutputToContain('icp-deriver')
+        ->expectsOutputToContain('target-profile-deriver')
         ->expectsOutputToContain('database')
         ->assertSuccessful();
 });
@@ -124,17 +124,17 @@ it('lists every agent it finds in the code, not a hand-kept list', function () {
         'company-qualifier',
         'contact-extractor',
         'discovery-planner',
-        'icp-deriver',
         'listing-extractor',
+        'target-profile-deriver',
         'website-analyst',
     ]);
 });
 
 it('lets two thinking agents run on different models', function () {
     // Impossible under the old shared "planner" line, and a distinction worth
-    // having: ICP derivation runs once per project, search planning runs often.
+    // having: target profile derivation runs once per project, search planning runs often.
     app(Settings::class)->set('agents.discovery-planner', ['model' => 'claude-sonnet-5']);
 
-    expect(mapping('icp-deriver')[1])->toBe('claude-opus-5')
+    expect(mapping('target-profile-deriver')[1])->toBe('claude-opus-5')
         ->and(mapping('discovery-planner')[1])->toBe('claude-sonnet-5');
 });

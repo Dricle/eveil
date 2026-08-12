@@ -162,7 +162,7 @@ class ListingHarvester
 
         // The one call that costs money, so it is paid for once per page. Keyed
         // and expiring like the page cache it mirrors, for the same reason
-        // : public content, ICP-independent, safe to share — and it
+        // : public content, target profile-independent, safe to share — and it
         // pays off most on the re-runs that testing a directory is made of.
         //
         // The instructions are part of the key so that editing the prompt

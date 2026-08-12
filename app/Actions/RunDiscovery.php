@@ -7,9 +7,9 @@ use App\Ai\Agents\DiscoveryPlanner;
 use App\Enums\DiscoveryDiagnosis;
 use App\Enums\DiscoveryRunStatus;
 use App\Models\Company;
-use App\Models\CompanyIcpEvaluation;
+use App\Models\CompanyTargetEvaluation;
 use App\Models\DiscoveryRun;
-use App\Models\Icp;
+use App\Models\TargetProfile;
 use App\Services\Discovery\Candidate;
 use App\Services\Discovery\PageFetcher;
 use App\Services\Discovery\Sources\DiscoverySource;
@@ -50,20 +50,20 @@ class RunDiscovery
     /**
      * @param  array{max_companies?: int, max_qualified?: int, max_pages?: int, max_queries?: int}  $overrides
      */
-    public function handle(Icp $icp, array $overrides = []): DiscoveryRun
+    public function handle(TargetProfile $targetProfile, array $overrides = []): DiscoveryRun
     {
         $budget = array_merge(config('eveil.discovery'), $overrides);
 
         $run = DiscoveryRun::create([
-            'project_id' => $icp->project_id,
-            'icp_id' => $icp->id,
+            'project_id' => $targetProfile->project_id,
+            'target_profile_id' => $targetProfile->id,
             'status' => DiscoveryRunStatus::Planning,
             'budget' => $budget,
             'started_at' => now(),
         ]);
 
         try {
-            $plan = $this->plan($icp);
+            $plan = $this->plan($targetProfile);
         } catch (Throwable $e) {
             return tap($run)->update([
                 'status' => DiscoveryRunStatus::Failed,
@@ -74,8 +74,8 @@ class RunDiscovery
 
         $run->update(['status' => DiscoveryRunStatus::Running, 'stats' => ['plan' => $plan['plan'] ?? null]]);
 
-        $candidates = $this->gather($icp, $plan, $budget);
-        $qualified = $this->qualify($icp, $run, $candidates, $budget);
+        $candidates = $this->gather($targetProfile, $plan, $budget);
+        $qualified = $this->qualify($targetProfile, $run, $candidates, $budget);
 
         $diagnosis = $this->diagnose($candidates, $qualified, $budget);
 
@@ -100,12 +100,12 @@ class RunDiscovery
     /**
      * @return array<string, mixed>
      */
-    private function plan(Icp $icp): array
+    private function plan(TargetProfile $targetProfile): array
     {
         /** @var StructuredAgentResponse $response */
-        $response = (new DiscoveryPlanner($icp->project))->prompt(
-            "Customer profile [{$icp->name}]:\n\n".json_encode(
-                $icp->criteria,
+        $response = (new DiscoveryPlanner($targetProfile->project))->prompt(
+            "Target profile [{$targetProfile->name}]:\n\n".json_encode(
+                $targetProfile->criteria,
                 JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
             ),
         );
@@ -121,9 +121,9 @@ class RunDiscovery
      * @param  array<string, int>  $budget
      * @return Collection<int, Candidate>
      */
-    private function gather(Icp $icp, array $plan, array $budget): Collection
+    private function gather(TargetProfile $targetProfile, array $plan, array $budget): Collection
     {
-        $known = Company::query()->where('project_id', $icp->project_id)->pluck('domain')->all();
+        $known = Company::query()->where('project_id', $targetProfile->project_id)->pluck('domain')->all();
 
         /** @var Collection<int, Candidate> $candidates */
         $candidates = new Collection;
@@ -189,9 +189,9 @@ class RunDiscovery
      * @param  Collection<int, Candidate>  $candidates
      * @param  array<string, int>  $budget
      */
-    private function qualify(Icp $icp, DiscoveryRun $run, Collection $candidates, array $budget): int
+    private function qualify(TargetProfile $targetProfile, DiscoveryRun $run, Collection $candidates, array $budget): int
     {
-        $criteria = (string) json_encode($icp->criteria, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $criteria = (string) json_encode($targetProfile->criteria, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $pages = 0;
         $qualified = 0;
 
@@ -206,7 +206,7 @@ class RunDiscovery
             // found. The first live run died two thirds of the way through on a
             // single mis-encoded page and lost the lot.
             try {
-                if ($this->qualifyOne($icp, $run, $candidate, $criteria)) {
+                if ($this->qualifyOne($targetProfile, $run, $candidate, $criteria)) {
                     $qualified++;
                 }
             } catch (Throwable $e) {
@@ -217,7 +217,7 @@ class RunDiscovery
         return $qualified;
     }
 
-    private function qualifyOne(Icp $icp, DiscoveryRun $run, Candidate $candidate, string $criteria): bool
+    private function qualifyOne(TargetProfile $targetProfile, DiscoveryRun $run, Candidate $candidate, string $criteria): bool
     {
         $page = $this->fetcher->fetch($candidate->website);
 
@@ -232,8 +232,8 @@ class RunDiscovery
         }
 
         /** @var StructuredAgentResponse $verdict */
-        $verdict = (new CompanyQualifier($icp->project))->prompt(
-            "Customer profile [{$icp->name}]:\n{$criteria}\n\n"
+        $verdict = (new CompanyQualifier($targetProfile->project))->prompt(
+            "Target profile [{$targetProfile->name}]:\n{$criteria}\n\n"
             ."Company website ({$candidate->website}):\n".mb_substr($parsed->text, 0, 8_000),
         );
 
@@ -241,7 +241,7 @@ class RunDiscovery
             return false;
         }
 
-        $this->store($icp, $run, $candidate, $parsed, $verdict->structured);
+        $this->store($targetProfile, $run, $candidate, $parsed, $verdict->structured);
 
         return true;
     }
@@ -249,10 +249,10 @@ class RunDiscovery
     /**
      * @param  array<string, mixed>  $verdict
      */
-    private function store(Icp $icp, DiscoveryRun $run, Candidate $candidate, ParsedPage $page, array $verdict): void
+    private function store(TargetProfile $targetProfile, DiscoveryRun $run, Candidate $candidate, ParsedPage $page, array $verdict): void
     {
         $company = Company::updateOrCreate(
-            ['project_id' => $icp->project_id, 'domain' => (string) $candidate->domain()],
+            ['project_id' => $targetProfile->project_id, 'domain' => (string) $candidate->domain()],
             [
                 'name' => $verdict['company_name'] ?: $candidate->name,
                 'website' => $candidate->website,
@@ -269,8 +269,8 @@ class RunDiscovery
             ],
         );
 
-        CompanyIcpEvaluation::updateOrCreate(
-            ['company_id' => $company->id, 'icp_id' => $icp->id],
+        CompanyTargetEvaluation::updateOrCreate(
+            ['company_id' => $company->id, 'target_profile_id' => $targetProfile->id],
             [
                 'discovery_run_id' => $run->id,
                 'fit_score' => (int) ($verdict['fit_score'] ?? 0),
@@ -305,7 +305,7 @@ class RunDiscovery
         }
 
         if ($qualified === 0) {
-            return DiscoveryDiagnosis::BadIcp;
+            return DiscoveryDiagnosis::BadTargetProfile;
         }
 
         if ($qualified < $budget['max_qualified'] / 2) {

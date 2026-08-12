@@ -19,7 +19,7 @@ class CompanyQualifier extends EveilAgent implements HasStructuredOutput
     public function instructions(): Stringable|string
     {
         return <<<'PROMPT'
-        You are given a customer profile and the text of one company's website. Decide
+        You are given a target profile and the text of one company's website. Decide
         how well that company fits the profile.
 
         Judge what the company IS, not how the page is written. A thin site is not a bad

@@ -165,9 +165,9 @@ return new class extends Migration
             $table->index(['status', 'next_action_at']);
         });
 
-        // A lead surfaced by two ICPs is not contacted twice: at most
+        // A lead surfaced by two target profiles is not contacted twice: at most
         // one live campaign membership per lead. Partial unique index — the
-        // second ICP records the overlap without re-engaging.
+        // second target profile records the overlap without re-engaging.
         DB::statement("CREATE UNIQUE INDEX campaign_leads_one_active_per_lead ON campaign_leads (lead_id) WHERE status IN ('pending', 'running', 'paused')");
 
         Schema::create('messages', function (Blueprint $table) {

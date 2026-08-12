@@ -25,7 +25,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('project_id')->constrained()->cascadeOnDelete();
 
-            // Slug of the agent class: website-analyst, icp-deriver, …
+            // Slug of the agent class: website-analyst, target-profile-deriver, …
             // Per agent, not per category, so this joins the credit grid, which
             // bills per action.
             $table->string('agent');

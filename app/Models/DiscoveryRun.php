@@ -13,13 +13,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
 /**
- * One search for companies matching an ICP. Carries its own hard budget: an
+ * One search for companies matching an target profile. Carries its own hard budget: an
  * unbounded agent loop that fetches pages burns real money, and in
  * cloud that budget IS the credit hold.
  *
  * @property int $id
  * @property int $project_id
- * @property int|null $icp_id
+ * @property int|null $target_profile_id
  * @property DiscoveryRunStatus $status
  * @property array{max_companies: int, max_qualified: int, max_pages: int, max_queries: int} $budget
  * @property array<string, mixed>|null $stats counters, plus the plan the agent explained before executing
@@ -31,28 +31,28 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['project_id', 'icp_id', 'status', 'budget', 'stats', 'relaxations', 'diagnosis', 'started_at', 'finished_at', 'error'])]
+#[Fillable(['project_id', 'target_profile_id', 'status', 'budget', 'stats', 'relaxations', 'diagnosis', 'started_at', 'finished_at', 'error'])]
 class DiscoveryRun extends Model
 {
     /** @use HasFactory<DiscoveryRunFactory> */
     use BelongsToProject, HasFactory;
 
     /**
-     * @return BelongsTo<Icp, $this>
+     * @return BelongsTo<TargetProfile, $this>
      */
-    public function icp(): BelongsTo
+    public function targetProfile(): BelongsTo
     {
-        return $this->belongsTo(Icp::class);
+        return $this->belongsTo(TargetProfile::class);
     }
 
     /**
-     * A diagnosed-wrong ICP is escalated to the user, never widened: widening
+     * A diagnosed-wrong target profile is escalated to the user, never widened: widening
      * there produces off-target leads the user then emails, and the complaints
      * land on their domain.
      */
     public function mayWiden(): bool
     {
-        return $this->diagnosis !== DiscoveryDiagnosis::BadIcp;
+        return $this->diagnosis !== DiscoveryDiagnosis::BadTargetProfile;
     }
 
     /**

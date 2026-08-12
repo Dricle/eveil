@@ -17,8 +17,8 @@ Cold outreach dies without these. Build them with the send feature, not after:
 
 ## Autonomy is a three-notch per-project setting
 ADR-009, settled 2026-08-10. `projects.autonomy_level`, changeable any time:
-- `supervised` — human approves every stage: ICP, company list, sequence, first send batch.
-- `semi_auto` — DEFAULT. Human approves ICP + sequence once on a sample, then it runs by itself.
+- `supervised` — human approves every stage: target profile, company list, sequence, first send batch.
+- `semi_auto` — DEFAULT. Human approves target profile + sequence once on a sample, then it runs by itself.
 - `autonomous` — sends straight from the URL, no a-priori approval.
 
 Circuit breakers are common to all three notches and always cut sending, `autonomous` included: bounce rate over threshold on a rolling window, any spam complaint, abnormal share of negative replies, email account auth failure. The autonomy setting removes approval gates, never the circuit breakers.

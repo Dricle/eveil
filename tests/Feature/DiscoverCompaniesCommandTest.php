@@ -5,9 +5,9 @@ use App\Ai\Agents\DiscoveryPlanner;
 use App\Enums\DiscoveryDiagnosis;
 use App\Enums\DiscoveryRunStatus;
 use App\Models\Company;
-use App\Models\CompanyIcpEvaluation;
+use App\Models\CompanyTargetEvaluation;
 use App\Models\DiscoveryRun;
-use App\Models\Icp;
+use App\Models\TargetProfile;
 use Illuminate\Support\Facades\Http;
 
 function plan(array $overpass = [], array $web = []): array
@@ -55,15 +55,15 @@ function page(string $body = 'Notre friterie à Charleroi, commandez par télép
     return '<!doctype html><html lang="fr"><head><title>Friterie</title></head><body><p>'.$body.'</p></body></html>';
 }
 
-function activeIcp(): Icp
+function activeTargetProfile(): TargetProfile
 {
-    return Icp::factory()->create(['name' => 'Friteries wallonnes', 'is_active' => true]);
+    return TargetProfile::factory()->create(['name' => 'Friteries wallonnes', 'is_active' => true]);
 }
 
 beforeEach(fn () => config()->set('eveil.crawl.delay_ms', 0));
 
 it('finds companies on the map, qualifies them and stores the pair', function () {
-    $icp = activeIcp();
+    $targetProfile = activeTargetProfile();
 
     DiscoveryPlanner::fake([plan(overpass: [overpassProbe()])]);
     CompanyQualifier::fake([verdict(88)]);
@@ -85,15 +85,15 @@ it('finds companies on the map, qualifies them and stores the pair', function ()
         ->and($company->facts['city'])->toBe('Charleroi');
 
     // The score belongs to the (company, profile) pair, never to the company.
-    $evaluation = CompanyIcpEvaluation::sole();
+    $evaluation = CompanyTargetEvaluation::sole();
 
     expect($evaluation->fit_score)->toBe(88)
-        ->and($evaluation->icp_id)->toBe($icp->id)
+        ->and($evaluation->target_profile_id)->toBe($targetProfile->id)
         ->and($evaluation->company_id)->toBe($company->id);
 });
 
 it('records the plan the agent explained before executing', function () {
-    activeIcp();
+    activeTargetProfile();
     DiscoveryPlanner::fake([plan(overpass: [overpassProbe()])]);
     CompanyQualifier::fake([verdict()]);
     Http::fake([
@@ -108,7 +108,7 @@ it('records the plan the agent explained before executing', function () {
 });
 
 it('searches the web when the profile has no premises', function () {
-    activeIcp();
+    activeTargetProfile();
     DiscoveryPlanner::fake([plan(web: [['query' => 'dark kitchen bruxelles', 'language' => 'fr', 'why' => '...']])]);
     CompanyQualifier::fake([verdict()]);
 
@@ -126,7 +126,7 @@ it('searches the web when the profile has no premises', function () {
 });
 
 it('throws away directories and platforms returned by the search engine', function () {
-    activeIcp();
+    activeTargetProfile();
     DiscoveryPlanner::fake([plan(web: [['query' => 'friterie', 'language' => 'fr', 'why' => '...']])]);
     CompanyQualifier::fake([verdict()]);
 
@@ -148,7 +148,7 @@ it('throws away directories and platforms returned by the search engine', functi
 });
 
 it('drops map entries that have no website', function () {
-    activeIcp();
+    activeTargetProfile();
     DiscoveryPlanner::fake([plan(overpass: [overpassProbe()])]);
     CompanyQualifier::fake([verdict()]);
 
@@ -168,7 +168,7 @@ it('drops map entries that have no website', function () {
 });
 
 it('keeps out what the qualifier says is not a prospect', function () {
-    activeIcp();
+    activeTargetProfile();
     DiscoveryPlanner::fake([plan(overpass: [overpassProbe()])]);
     CompanyQualifier::fake([verdict(prospect: false)]);
 
@@ -181,11 +181,11 @@ it('keeps out what the qualifier says is not a prospect', function () {
     $this->artisan('eveil:discover-companies')->assertSuccessful();
 
     expect(Company::count())->toBe(0)
-        ->and(DiscoveryRun::sole()->diagnosis)->toBe(DiscoveryDiagnosis::BadIcp);
+        ->and(DiscoveryRun::sole()->diagnosis)->toBe(DiscoveryDiagnosis::BadTargetProfile);
 });
 
 it('diagnoses a wrong source rather than a wrong profile when nothing is found', function () {
-    activeIcp();
+    activeTargetProfile();
     DiscoveryPlanner::fake([plan(overpass: [overpassProbe()])]);
 
     Http::fake(['*/api/interpreter' => Http::response(['elements' => []])]);
@@ -199,7 +199,7 @@ it('diagnoses a wrong source rather than a wrong profile when nothing is found',
 });
 
 it('stops at the qualified ceiling', function () {
-    activeIcp();
+    activeTargetProfile();
     DiscoveryPlanner::fake([plan(overpass: [overpassProbe()])]);
     CompanyQualifier::fake([verdict(), verdict(), verdict()]);
 
@@ -220,8 +220,8 @@ it('stops at the qualified ceiling', function () {
 });
 
 it('never rediscovers a company the project already has', function () {
-    $icp = activeIcp();
-    Company::factory()->create(['project_id' => $icp->project_id, 'domain' => 'connu.be']);
+    $targetProfile = activeTargetProfile();
+    Company::factory()->create(['project_id' => $targetProfile->project_id, 'domain' => 'connu.be']);
 
     DiscoveryPlanner::fake([plan(overpass: [overpassProbe()])]);
     CompanyQualifier::fake([verdict()]);
@@ -242,7 +242,7 @@ it('never rediscovers a company the project already has', function () {
 });
 
 it('survives a source that is down', function () {
-    activeIcp();
+    activeTargetProfile();
     DiscoveryPlanner::fake([plan(
         overpass: [overpassProbe()],
         web: [['query' => 'friterie charleroi', 'language' => 'fr', 'why' => '...']],
@@ -264,8 +264,8 @@ it('survives a source that is down', function () {
 });
 
 it('asks which profile when there are several', function () {
-    activeIcp();
-    activeIcp();
+    activeTargetProfile();
+    activeTargetProfile();
 
     $this->artisan('eveil:discover-companies')
         ->expectsOutputToContain('Several profiles')
@@ -273,7 +273,7 @@ it('asks which profile when there are several', function () {
 });
 
 it('scopes a map probe to its country', function () {
-    activeIcp();
+    activeTargetProfile();
     DiscoveryPlanner::fake([plan(overpass: [overpassProbe()])]);
     CompanyQualifier::fake([verdict()]);
 
@@ -295,7 +295,7 @@ it('scopes a map probe to its country', function () {
 });
 
 it('says which source failed rather than blaming the profile', function () {
-    activeIcp();
+    activeTargetProfile();
     DiscoveryPlanner::fake([plan(overpass: [overpassProbe()])]);
 
     // Overpass answers 406 to an unidentified client. That happened for real,
@@ -308,7 +308,7 @@ it('says which source failed rather than blaming the profile', function () {
 });
 
 it('identifies itself to the map service', function () {
-    activeIcp();
+    activeTargetProfile();
     DiscoveryPlanner::fake([plan(overpass: [overpassProbe()])]);
     CompanyQualifier::fake([verdict()]);
 
@@ -324,7 +324,7 @@ it('identifies itself to the map service', function () {
 });
 
 it('keeps going when one candidate blows up', function () {
-    activeIcp();
+    activeTargetProfile();
     DiscoveryPlanner::fake([plan(overpass: [overpassProbe()])]);
     CompanyQualifier::fake(function ($prompt) {
         // A single mis-encoded Belgian site killed the first live run two
@@ -352,7 +352,7 @@ it('keeps going when one candidate blows up', function () {
 });
 
 it('stores a page that Postgres would otherwise reject', function () {
-    activeIcp();
+    activeTargetProfile();
     DiscoveryPlanner::fake([plan(overpass: [overpassProbe()])]);
     CompanyQualifier::fake([verdict()]);
 

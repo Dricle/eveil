@@ -5,15 +5,15 @@ namespace App\Console\Commands;
 use App\Actions\RunDiscovery;
 use App\Enums\DiscoveryDiagnosis;
 use App\Models\AgentRun;
-use App\Models\CompanyIcpEvaluation;
+use App\Models\CompanyTargetEvaluation;
 use App\Models\DiscoveryRun;
-use App\Models\Icp;
+use App\Models\TargetProfile;
 use App\Support\CurrentProject;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 
 /**
- * Takes one customer profile and comes back with named companies that match it.
+ * Takes one target profile and comes back with named companies that match it.
  *
  * Four steps, all inside a single budgeted run:
  *   1. an agent plans where to look and says so before anything executes
@@ -26,24 +26,24 @@ use Illuminate\Support\Str;
  */
 class DiscoverCompaniesCommand extends Command
 {
-    protected $signature = 'eveil:discover-companies {icp? : Profile id or name — defaults to the only one}
+    protected $signature = 'eveil:discover-companies {profile? : Profile id or name — defaults to the only one}
                                                      {--companies= : Cap on candidates gathered}
                                                      {--qualified= : Cap on companies kept}
                                                      {--pages= : Cap on pages fetched}';
 
-    protected $description = 'Find and qualify companies matching a customer profile';
+    protected $description = 'Find and qualify companies matching a target profile';
 
     public function handle(RunDiscovery $discover, CurrentProject $currentProject): int
     {
-        $icp = $this->resolveIcp();
+        $targetProfile = $this->resolveTargetProfile();
 
-        if ($icp === null) {
+        if ($targetProfile === null) {
             return self::FAILURE;
         }
 
-        $this->components->info("Hunting for [{$icp->name}]");
+        $this->components->info("Hunting for [{$targetProfile->name}]");
 
-        $run = $currentProject->run($icp->project, fn (): DiscoveryRun => $discover->handle($icp, $this->overrides()));
+        $run = $currentProject->run($targetProfile->project, fn (): DiscoveryRun => $discover->handle($targetProfile, $this->overrides()));
 
         if ($run->error !== null) {
             $this->components->error($run->error);
@@ -52,9 +52,9 @@ class DiscoverCompaniesCommand extends Command
         }
 
         $this->renderPlan($run);
-        $this->renderCompanies($icp);
+        $this->renderCompanies($targetProfile);
         $this->renderVerdict($run);
-        $this->renderCost($icp);
+        $this->renderCost($targetProfile);
 
         return self::SUCCESS;
     }
@@ -71,34 +71,34 @@ class DiscoverCompaniesCommand extends Command
         ], fn (?int $value): bool => $value !== null);
     }
 
-    private function resolveIcp(): ?Icp
+    private function resolveTargetProfile(): ?TargetProfile
     {
-        $needle = $this->argument('icp');
+        $needle = $this->argument('profile');
 
         if ($needle === null) {
-            $icps = Icp::query()->where('is_active', true)->limit(2)->get();
+            $targetProfiles = TargetProfile::query()->where('is_active', true)->limit(2)->get();
 
-            if ($icps->count() === 1) {
-                return $icps->first();
+            if ($targetProfiles->count() === 1) {
+                return $targetProfiles->first();
             }
 
-            $this->components->error($icps->isEmpty()
-                ? 'No customer profile yet. Run eveil:derive-icp first.'
+            $this->components->error($targetProfiles->isEmpty()
+                ? 'No target profile yet. Run eveil:derive-targets first.'
                 : 'Several profiles exist — name one by id or name.');
 
             return null;
         }
 
-        $icp = Icp::query()
+        $targetProfile = TargetProfile::query()
             ->when(is_numeric($needle), fn ($query) => $query->orWhere('id', (int) $needle))
             ->orWhere('name', 'like', "%{$needle}%")
             ->first();
 
-        if ($icp === null) {
+        if ($targetProfile === null) {
             $this->components->error("No profile matches [{$needle}].");
         }
 
-        return $icp;
+        return $targetProfile;
     }
 
     private function renderPlan(DiscoveryRun $run): void
@@ -111,11 +111,11 @@ class DiscoverCompaniesCommand extends Command
         }
     }
 
-    private function renderCompanies(Icp $icp): void
+    private function renderCompanies(TargetProfile $targetProfile): void
     {
-        $evaluations = CompanyIcpEvaluation::query()
+        $evaluations = CompanyTargetEvaluation::query()
             ->with('company')
-            ->where('icp_id', $icp->id)
+            ->where('target_profile_id', $targetProfile->id)
             ->orderByDesc('fit_score')
             ->get();
 
@@ -154,7 +154,7 @@ class DiscoverCompaniesCommand extends Command
         // "Your market is 40 companies" is a result, not a failure.
         $message = match ($run->diagnosis) {
             DiscoveryDiagnosis::WrongSource => 'No candidate at all. The sources were wrong for this profile, not the profile itself.',
-            DiscoveryDiagnosis::BadIcp => 'Candidates were found but none fit. The profile is probably wrong — widening it would only produce off-target leads.',
+            DiscoveryDiagnosis::BadTargetProfile => 'Candidates were found but none fit. The profile is probably wrong — widening it would only produce off-target leads.',
             DiscoveryDiagnosis::TooNarrow => 'Fewer companies than asked for. Either the profile is narrow, or this is the whole market.',
             default => null,
         };
@@ -164,9 +164,9 @@ class DiscoverCompaniesCommand extends Command
         }
     }
 
-    private function renderCost(Icp $icp): void
+    private function renderCost(TargetProfile $targetProfile): void
     {
-        $runs = AgentRun::query()->where('project_id', $icp->project_id)->latest('id')->limit(200)->get();
+        $runs = AgentRun::query()->where('project_id', $targetProfile->project_id)->latest('id')->limit(200)->get();
 
         $this->components->twoColumnDetail(
             '<fg=gray>Total spent on this project</>',

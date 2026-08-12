@@ -11,8 +11,8 @@ use Laravel\Ai\Enums\Lab;
  *
  * Keyed on the agent slug, one line per agent. A coarser grouping was tried and
  * removed: three different jobs shared one "planner" line, so the meter could
- * not tell `project.analyze` from `icp.derive` — while the credit grid bills
- * them separately — and there was no way to put ICP derivation on the expensive
+ * not tell `project.analyze` from `target_profile.derive` — while the credit grid bills
+ * them separately — and there was no way to put target profile derivation on the expensive
  * model while search planning ran on a cheaper one.
  *
  * The superadmin's choice lives in the database and wins; `config/eveil.php`
@@ -64,7 +64,7 @@ class AgentSettings
 
     /**
      * The 60-second HTTP default is not enough for a thinking model: the first
-     * live ICP derivation took 69 seconds and died on it.
+     * live target profile derivation took 69 seconds and died on it.
      */
     public function timeout(string $agent): int
     {

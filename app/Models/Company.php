@@ -12,8 +12,8 @@ use Illuminate\Support\Carbon;
 
 /**
  * Firmographic facts only — no fit score. The same company scores 90 for one
- * ICP and 20 for another, so the score lives on CompanyIcpEvaluation or two
- * ICPs would overwrite each other.
+ * target profile and 20 for another, so the score lives on CompanyTargetEvaluation or two
+ * target profiles would overwrite each other.
  *
  * @property int $id
  * @property int $project_id
@@ -46,11 +46,11 @@ class Company extends Model
     }
 
     /**
-     * @return HasMany<CompanyIcpEvaluation, $this>
+     * @return HasMany<CompanyTargetEvaluation, $this>
      */
     public function evaluations(): HasMany
     {
-        return $this->hasMany(CompanyIcpEvaluation::class);
+        return $this->hasMany(CompanyTargetEvaluation::class);
     }
 
     /**

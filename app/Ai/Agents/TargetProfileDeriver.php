@@ -14,12 +14,12 @@ use Stringable;
  * one average profile targets nobody. But a segment nobody can be found for is
  * worse than no segment, so each one has to be searchable.
  */
-class IcpDeriver extends EveilAgent implements HasStructuredOutput
+class TargetProfileDeriver extends EveilAgent implements HasStructuredOutput
 {
     public function instructions(): Stringable|string
     {
         return <<<'PROMPT'
-        You are given the portrait of a product. Define the customer profiles worth
+        You are given the portrait of a product. Define the target profiles worth
         prospecting for it.
 
         A profile is only useful if someone could go and FIND those companies tomorrow.

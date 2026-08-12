@@ -6,7 +6,7 @@ paths:
 # Actions
 
 ## One class per use case, and nothing else lives here
-Settled 2026-08-12. `app/Actions/` holds the orchestrators — one class, one job the product actually performs: `AnalyzeWebsite`, `DeriveIcps`, `RunDiscovery`, `FindContacts`. They were split out of `app/Ai/` and `app/Services/Discovery/`, which had become a mix of machinery and use cases.
+Settled 2026-08-12. `app/Actions/` holds the orchestrators — one class, one job the product actually performs: `AnalyzeWebsite`, `DeriveTargetProfiles`, `RunDiscovery`, `FindContacts`. They were split out of `app/Ai/` and `app/Services/Discovery/`, which had become a mix of machinery and use cases.
 
 The line to hold:
 - **`app/Actions/`** — use cases. Fetch, call a service or an agent, persist, return. Invoked by a command, a controller or a job. No HTTP parsing, no prompt text, no schema.

@@ -50,11 +50,11 @@ class Project extends Model
     }
 
     /**
-     * @return HasMany<Icp, $this>
+     * @return HasMany<TargetProfile, $this>
      */
-    public function icps(): HasMany
+    public function targetProfiles(): HasMany
     {
-        return $this->hasMany(Icp::class);
+        return $this->hasMany(TargetProfile::class);
     }
 
     /**

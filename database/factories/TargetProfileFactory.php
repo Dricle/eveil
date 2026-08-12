@@ -2,17 +2,17 @@
 
 namespace Database\Factories;
 
-use App\Enums\IcpSource;
-use App\Models\Icp;
+use App\Enums\TargetProfileSource;
 use App\Models\Project;
+use App\Models\TargetProfile;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<Icp>
+ * @extends Factory<TargetProfile>
  */
-class IcpFactory extends Factory
+class TargetProfileFactory extends Factory
 {
-    protected $model = Icp::class;
+    protected $model = TargetProfile::class;
 
     /**
      * @return array<string, mixed>
@@ -27,7 +27,7 @@ class IcpFactory extends Factory
                 'geography' => ['BE'],
                 'titles' => ['founder'],
             ],
-            'source' => IcpSource::Agent,
+            'source' => TargetProfileSource::Agent,
             'is_active' => true,
         ];
     }

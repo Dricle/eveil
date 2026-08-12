@@ -18,7 +18,7 @@ class DiscoveryPlanner extends EveilAgent implements HasStructuredOutput
     public function instructions(): Stringable|string
     {
         return <<<'PROMPT'
-        You plan where to hunt for companies matching a customer profile. You have two
+        You plan where to hunt for companies matching a target profile. You have two
         sources and they are good at different things.
 
         OpenStreetMap (Overpass) enumerates physical businesses exhaustively and for

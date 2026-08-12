@@ -6,13 +6,13 @@ paths:
 # Discovery
 
 ## Lead discovery: the differentiator, and its stack
-AI lead discovery is the product's edge — not database size (Apollo has 275M contacts, we never will). Our edge: ICP derived automatically from the project knowledge base, fresh long-tail results (local businesses, new companies, niche directories) and shared context between discovery and personalisation.
+AI lead discovery is the product's edge — not database size (Apollo has 275M contacts, we never will). Our edge: target profiles derived automatically from the project knowledge base, fresh long-tail results (local businesses, new companies, niche directories) and shared context between discovery and personalisation.
 
-Pipeline, five stages, each independently testable: ICP derivation → company discovery → qualification/fit scoring → contact + email discovery → verification.
+Pipeline, five stages, each independently testable: target profile derivation → company discovery → qualification/fit scoring → contact + email discovery → verification.
 
 Settled 2026-08-10:
 - Search: SearXNG as an extra docker compose service. Free, no API key, identical code in both editions. Watch for rate-limits/blocking; a paid driver (Brave/Serper) can be added behind the same interface if it proves unreliable.
-- Also free and key-less: OpenStreetMap Overpass API for local-business discovery, GitHub API for developer ICPs.
+- Also free and key-less: OpenStreetMap Overpass API for local-business discovery, GitHub API for developer target profiles.
 - Email verification: in-house MX check + SMTP `RCPT TO` probe, no send. Must detect catch-all domains and flag those addresses `risky` rather than `valid`. Gmail/Outlook block probes — treat as unknown, never as invalid.
 - Email addresses from pattern inference (one known address on a domain → derive `first.last@`) are stored with `email_source=inferred` and always verified before any send.
 
@@ -21,27 +21,27 @@ Fetching starts with plain HTTP only. Add a headless browser container only once
 ## Per-project isolation, shared raw page cache
 ADR-014, settled 2026-08-10. Companies and leads stay scoped to their project — no shared company registry. Re-fetching is avoided by an instance-level raw page cache: key = normalised URL, with a TTL, public content only.
 
-Why no shared registry: the expensive part of discovery is LLM qualification, not the HTTP fetch, and fit score plus its rationale are ICP-specific — the same company scores 90 for one product and 20 for another. Sharing would only save the ICP-independent part (page content, firmographics) at the cost of an extra entity, a join everywhere, and an arbitration rule for when two projects disagree on a company's facts.
+Why no shared registry: the expensive part of discovery is LLM qualification, not the HTTP fetch, and fit score plus its rationale are target-profile-specific — the same company scores 90 for one product and 20 for another. Sharing would only save the target-profile-independent part (page content, firmographics) at the cost of an extra entity, a join everywhere, and an arbitration rule for when two projects disagree on a company's facts.
 
 Cache rules: never store authenticated or logged-in content, key on the URL, honour the TTL. It is public web data, so it is safe to share across tenants in cloud; if that ever becomes a concern, scope the cache per organization — nothing else changes. The cache pays off on re-runs of a single project as much as across projects.
 
-## ICPs: as many as the agent derives, free CRUD
-ADR-015, settled 2026-08-10. An ICP (Ideal Customer Profile) is the structured portrait of the target customer — sectors, size, geography, job titles, technologies, trigger signals — derived from the project knowledge base. It drives where the agent searches and how each company is scored.
+## target profiles: as many as the agent derives, free CRUD
+ADR-015, settled 2026-08-10. An target profile (Ideal Customer Profile) is the structured portrait of the target customer — sectors, size, geography, job titles, technologies, trigger signals — derived from the project knowledge base. It drives where the agent searches and how each company is scored.
 
 The agent derives as many as it judges necessary (no imposed count) and the user can create, edit and delete them freely. A product usually serves several markets; flattening them into one average profile targets nobody.
 
 Schema consequences, non-negotiable:
-- Fit score does NOT live on the company. The same company scores 90 for one ICP and 20 for another. Split `companies` (firmographic facts, deduped by domain within the project) from `company_icp_evaluations` (company_id + icp_id → fit_score, fit_reason). Otherwise two ICPs finding the same company overwrite each other's evaluation.
-- A lead surfaced by two ICPs is not contacted twice: a lead belongs to at most one active campaign per project. The second ICP records the overlap without re-engaging.
-- Each active ICP is one more discovery run, so one more budget. No hard cap, but the UI must show expected cost when several are active.
+- Fit score does NOT live on the company. The same company scores 90 for one target profile and 20 for another. Split `companies` (firmographic facts, deduped by domain within the project) from `company_target_evaluations` (company_id + target_profile_id → fit_score, fit_reason). Otherwise two target profiles finding the same company overwrite each other's evaluation.
+- A lead surfaced by two target profiles is not contacted twice: a lead belongs to at most one active campaign per project. The second target profile records the overlap without re-engaging.
+- Each active target profile is one more discovery run, so one more budget. No hard cap, but the UI must show expected cost when several are active.
 
 The main screen stays a straight line — the CRUD is available, never required to move forward.
 
 ## Insufficient discovery: diagnose before widening
 ADR-020, settled 2026-08-11. "Found nothing" is four distinct failures and they need different responses:
-- ICP too narrow (3 companies instead of 100) → widen one criterion.
+- target profile too narrow (3 companies instead of 100) → widen one criterion.
 - Wrong source (0 results but the market exists) → switch tool, not criteria.
-- Fit uniformly low (300 found, none above 40) → **the ICP is wrong; NEVER widen** — escalate to the user. Widening here is the worst case: 100 off-target leads get contacted and the user's domain takes the complaints.
+- Fit uniformly low (300 found, none above 40) → **the target profile is wrong; NEVER widen** — escalate to the user. Widening here is the worst case: 100 off-target leads get contacted and the user's domain takes the complaints.
 - No emails (companies qualified, contacts unreachable) → extraction problem, not targeting.
 
 Market exhaustion is a RESULT, not a failure. "Your market is 40 companies, here they are" beats scraping noise to hit a quota — no competitor says this, they sell on volume.
@@ -73,7 +73,7 @@ Cost measured: $0.0025 per qualification on Haiku, below the $0.0035 estimate. E
 ## Contact extraction: what the first live run actually returned (2026-08-11)
 Four qualified Belgian friteries went in. Out came **phone numbers on every one and not a single published email address** — one site named a person ("Ali, Owner/Chef") with no address. Guessing `info@` recovered two of the four; both came back `risky` because the domains are catch-all, so acceptance proved nothing.
 
-Read that as a finding about the segment, not a bug: **local micro-businesses publish a phone and a Facebook page, not an email.** Roughly half are email-reachable at all, and mostly through a guessed generic address. Any ICP of this shape should be expected to convert poorly into email leads — a dark kitchen, an agency or a SaaS will do far better. Say so to the user rather than reporting an empty run as a failure; `--guess-generic` is opt-in for exactly that reason.
+Read that as a finding about the segment, not a bug: **local micro-businesses publish a phone and a Facebook page, not an email.** Roughly half are email-reachable at all, and mostly through a guessed generic address. Any target profile of this shape should be expected to convert poorly into email leads — a dark kitchen, an agency or a SaaS will do far better. Say so to the user rather than reporting an empty run as a failure; `--guess-generic` is opt-in for exactly that reason.
 
 Mechanics worth remembering:
 - Port 25 is NOT blocked from the Sail container — the SMTP probe really ran and really detected catch-all domains. Do not assume the probe is decorative in dev.
@@ -82,7 +82,7 @@ Mechanics worth remembering:
 - The phone is kept on `companies.facts` even when no email exists: for this segment it is often the only way in, and a later channel will want it.
 
 ## Partner profiles: same machine, different target (ADR-031)
-Scope decision 2026-08-11. An ICP carries a `type`: `customer` or `partner`. A partner profile describes not who buys, but **who already touches the buyer** — who visits them, who invoices them monthly, who is legally imposed on them.
+Scope decision 2026-08-11. An target profile carries a `type`: `customer` or `partner`. A partner profile describes not who buys, but **who already touches the buyer** — who visits them, who invoices them monthly, who is legally imposed on them.
 
 The reason it earns its place is measured, not theoretical: four qualified friteries produced two leads, both guessed `info@` and both `risky`, because local micro-businesses publish a phone and not an email. Their intermediaries — a wholesaler, a brewery, a sector-specialised accountant, a food-focused web agency — are B2B companies with real sites, named people and published addresses. Near-total reachability, and one accountant is fifty restaurants.
 

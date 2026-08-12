@@ -3,16 +3,16 @@
 namespace Database\Factories;
 
 use App\Models\Company;
-use App\Models\CompanyIcpEvaluation;
-use App\Models\Icp;
+use App\Models\CompanyTargetEvaluation;
+use App\Models\TargetProfile;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<CompanyIcpEvaluation>
+ * @extends Factory<CompanyTargetEvaluation>
  */
-class CompanyIcpEvaluationFactory extends Factory
+class CompanyTargetEvaluationFactory extends Factory
 {
-    protected $model = CompanyIcpEvaluation::class;
+    protected $model = CompanyTargetEvaluation::class;
 
     /**
      * @return array<string, mixed>
@@ -21,7 +21,7 @@ class CompanyIcpEvaluationFactory extends Factory
     {
         return [
             'company_id' => Company::factory(),
-            'icp_id' => Icp::factory(),
+            'target_profile_id' => TargetProfile::factory(),
             'fit_score' => fake()->numberBetween(0, 100),
             'fit_reason' => fake()->sentence(),
         ];

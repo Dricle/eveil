@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Schema;
  * What the Website agent produces, and what the Sales agent targets with.
  *
  * `project_analyses` keeps the history so a re-run can be diffed against the
- * previous one. `icps` holds as many profiles as the agent derives,
+ * previous one. `target_profiles` holds as many profiles as the agent derives,
  * freely editable by the user — a product usually serves several
  * markets, and flattening them into one average profile targets nobody.
  */
@@ -39,7 +39,7 @@ return new class extends Migration
             $table->index(['project_id', 'created_at']);
         });
 
-        Schema::create('icps', function (Blueprint $table) {
+        Schema::create('target_profiles', function (Blueprint $table) {
             $table->id();
             $table->foreignId('project_id')->constrained()->cascadeOnDelete();
 
@@ -62,7 +62,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('icps');
+        Schema::dropIfExists('target_profiles');
         Schema::dropIfExists('project_analyses');
     }
 };

@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
-use App\Enums\IcpSource;
+use App\Enums\TargetProfileSource;
 use App\Models\Concerns\BelongsToProject;
-use Database\Factories\IcpFactory;
+use Database\Factories\TargetProfileFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -12,31 +12,37 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
- * Ideal Customer Profile — the structured portrait the agent derives from the
+ * Who to go after — the structured portrait the agent derives from the
  * knowledge base, which then drives where it searches and how each company is
  * scored. As many as the agent judges necessary, freely editable.
+ *
+ * Called a target profile and not an ICP because a profile may describe a
+ * PARTNER rather than a buyer — whoever already touches the customer, such as a
+ * wholesaler or a sector accountant. "Ideal Customer Profile" is simply wrong
+ * for those, and they are often the only reachable way into a market whose
+ * businesses publish a phone number and nothing else.
  *
  * @property int $id
  * @property int $project_id
  * @property string $name
  * @property array<string, mixed> $criteria
- * @property IcpSource $source
+ * @property TargetProfileSource $source
  * @property bool $is_active
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
 #[Fillable(['project_id', 'name', 'criteria', 'source', 'is_active'])]
-class Icp extends Model
+class TargetProfile extends Model
 {
-    /** @use HasFactory<IcpFactory> */
+    /** @use HasFactory<TargetProfileFactory> */
     use BelongsToProject, HasFactory;
 
     /**
-     * @return HasMany<CompanyIcpEvaluation, $this>
+     * @return HasMany<CompanyTargetEvaluation, $this>
      */
     public function evaluations(): HasMany
     {
-        return $this->hasMany(CompanyIcpEvaluation::class);
+        return $this->hasMany(CompanyTargetEvaluation::class);
     }
 
     /**
@@ -54,7 +60,7 @@ class Icp extends Model
     {
         return [
             'criteria' => 'array',
-            'source' => IcpSource::class,
+            'source' => TargetProfileSource::class,
             'is_active' => 'boolean',
         ];
     }

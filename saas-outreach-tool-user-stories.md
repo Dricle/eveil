@@ -65,7 +65,7 @@ Ce que l'auto-hébergement débloque, et qui n'est pas cosmétique :
 3. **Pas de facturation au siège, et le multi-utilisateur en self-hosted.** Organizations, rôles et
    invitations sont dans le cœur, pas derrière le cloud (ADR-025). Une équipe de 6 ne paie pas six
    fois — elle ne paie pas du tout si elle s'héberge.
-4. **Zéro configuration de ciblage.** L'ICP est dérivé du produit au lieu d'être rempli dans un
+4. **Zéro configuration de ciblage.** L'profil cible est dérivé du produit au lieu d'être rempli dans un
    formulaire. Aucun concurrent de la catégorie ne part de l'URL du produit.
 5. **Contexte partagé de bout en bout.** Découverte, qualification et personnalisation puisent dans
    la même base de connaissance : Eveil sait *pourquoi* ce contact, et le dit dans le mail.
@@ -209,8 +209,8 @@ Décision de Clément le 2026-08-09 : on l'inclura quand même, même risque que
 
 | Cran | Comportement | Pour qui |
 |---|---|---|
-| **Supervisé** | Validation humaine à chaque étape : ICP, liste de sociétés, séquence, et premier lot d'envois | Premier projet, utilisateur méfiant, secteur sensible |
-| **Semi-auto** *(défaut)* | Validation une fois de l'ICP et de la séquence sur un échantillon, puis pilote automatique avec retour à l'humain sur anomalie | Le cas normal |
+| **Supervisé** | Validation humaine à chaque étape : profil cible, liste de sociétés, séquence, et premier lot d'envois | Premier projet, utilisateur méfiant, secteur sensible |
+| **Semi-auto** *(défaut)* | Validation une fois de le profil cible et de la séquence sur un échantillon, puis pilote automatique avec retour à l'humain sur anomalie | Le cas normal |
 | **Autonome** | Envoi dès l'URL, sans point d'arrêt | Utilisateur aguerri, projet secondaire, opt-in explicite |
 
 Réglage porté par le projet (`projects.autonomy_level`), modifiable à tout moment. **Défaut =
@@ -237,7 +237,7 @@ la suite de tests.
 
 **Pourquoi Postgres** : les discovery runs écrivent en parallèle depuis plusieurs workers pendant
 plusieurs minutes — SQLite n'accepte qu'un écrivain à la fois, même en WAL. Le schéma est très JSON
-(`knowledge_base`, `icps.criteria`, `agent_runs.input/output`, `campaign_steps.config`) et JSONB est
+(`knowledge_base`, `target_profiles.criteria`, `agent_runs.input/output`, `campaign_steps.config`) et JSONB est
 indexable. La dédup a besoin d'index uniques partiels. La recherche dans les leads aura besoin du
 full-text natif. pgvector reste disponible si la knowledge base demande des embeddings plus tard.
 MySQL/MariaDB n'apportent rien ici et ont un JSON plus faible.
@@ -344,9 +344,9 @@ Sociétés et leads restent **cloisonnés par projet**, sans registre partagé. 
 brutes** au niveau instance évite les re-fetch : clé = URL normalisée, TTL, contenu public uniquement.
 
 **Pourquoi pas de registre partagé** : ce qui coûte cher dans la découverte n'est pas le fetch HTTP,
-c'est la qualification LLM. Or le score de fit et sa justification sont **spécifiques à l'ICP** — la
+c'est la qualification LLM. Or le score de fit et sa justification sont **spécifiques à le profil cible** — la
 même société vaut 90 pour un produit et 20 pour un autre. Le partage n'économiserait donc que la
-partie ICP-indépendante (contenu de page, firmographies), au prix d'une entité supplémentaire, d'une
+partie profil cible-indépendante (contenu de page, firmographies), au prix d'une entité supplémentaire, d'une
 jointure partout, et d'un arbitrage à inventer quand deux projets divergent sur les faits d'une même
 société.
 
@@ -358,10 +358,10 @@ Réserve mineure notée : l'existence d'une entrée en cache révèle en théori
 par quelqu'un. Jugé négligeable ; si ça devait poser problème en cloud, le cache se scope par
 organization sans rien changer d'autre.
 
-### ADR-015 — Autant d'ICP que nécessaire, en CRUD libre
+### ADR-015 — Autant de profil cible que nécessaire, en CRUD libre
 *(résout A6, tranché le 2026-08-10)*
 
-Un **ICP** (Ideal Customer Profile) est le portrait structuré du client visé : secteurs, taille,
+Un **profil cible** (Ideal Customer Profile) est le portrait structuré du client visé : secteurs, taille,
 géographie, postes, technologies, signaux déclencheurs. C'est l'objet que l'agent déduit de la
 knowledge base, et il pilote toute la recherche : l'agent choisit où chercher à partir de ces
 critères, puis note chaque société selon son écart avec ce portrait. Les outils concurrents le font
@@ -379,7 +379,7 @@ Conséquences de schéma, non négociables :
 
 ```
 companies                 faits firmographiques, dédupliqués par domaine au sein du projet
-company_icp_evaluations   company_id + icp_id → fit_score, fit_reason
+company_target_evaluations   company_id + target_profile_id → fit_score, fit_reason
 ```
 
   Sans ça, deux profils qui trouvent la même société écrasent mutuellement leur évaluation.
@@ -485,7 +485,7 @@ Opus 5 pour la planification, Haiku 4.5 pour extraction et qualification).
 | Action | Unité facturée | Crédits | Coût réel |
 |---|---|---|---|
 | `project.analyze` | par analyse de site | **200** | **0,19 $ — mesuré** |
-| `icp.derive` | par dérivation (tous profils) | **150** | **0,14 $ — mesuré** |
+| `targets.derive` | par dérivation (tous profils) | **150** | **0,14 $ — mesuré** |
 | `discovery.plan` | par run | 500 | 0,53 $ |
 | `company.qualify` | par société évaluée | **3** | **0,0025 $ — mesuré** |
 | `contact.extract` | par société retenue | 8 | 0,008 $ |
@@ -504,12 +504,12 @@ commercial : la vérification d'email est facturée chez les concurrents.
 | Action | Estimé | Mesuré | Détail |
 |---|---|---|---|
 | `project.analyze` | 0,15 $ | **0,192 $** | 11 pages, 24 051 in / 2 877 out, 45 s |
-| `icp.derive` | 0,06 $ | **0,143 $** | 4 profils, 4 456 in / 4 833 out, 69 s |
+| `targets.derive` | 0,06 $ | **0,143 $** | 4 profils, 4 456 in / 4 833 out, 69 s |
 | `company.qualify` | 0,0035 $ | **0,0025 $** | moyenne sur 14 qualifications réelles |
 
 **Le biais n'est pas uniforme, et sa cause est la sortie.** Sur Opus 5 la sortie coûte 25 $/MTok
 contre 5 $ en entrée : les actions **génératives** confiées au planner produisent plus de tokens
-qu'elles n'en consomment (4 833 en sortie pour 4 456 en entrée sur la dérivation d'ICP) et coûtent
+qu'elles n'en consomment (4 833 en sortie pour 4 456 en entrée sur la dérivation de profil cible) et coûtent
 donc **plus** que prévu. À l'inverse, les actions **d'extraction** confiées à Haiku rendent une sortie
 structurée courte et coûtent **moins** que prévu.
 
@@ -518,7 +518,7 @@ si l'action génère ou si elle extrait. `recommendations.generate` et `chat.mes
 et tournent sur le planner — donc probablement sous-estimées, comme les deux premières lignes l'ont
 été.
 
-Grille corrigée : `project.analyze` 150 → 200, `icp.derive` 60 → 150, `company.qualify` 4 → 3. C'est
+Grille corrigée : `project.analyze` 150 → 200, `targets.derive` 60 → 150, `company.qualify` 4 → 3. C'est
 exactement le mécanisme prévu par cet ADR : un chiffre faux se corrige en base, sans redéploiement,
 sans que le tarif client bouge.
 
@@ -550,15 +550,15 @@ optionnel** :
 
 | Panne | Symptôme | Réponse |
 |---|---|---|
-| ICP trop étroit | 3 sociétés au lieu de 100 | Élargir un critère |
+| profil cible trop étroit | 3 sociétés au lieu de 100 | Élargir un critère |
 | Mauvaise source | 0 résultat mais le marché existe | Changer d'outil, pas de critère |
-| Fit systématiquement bas | 300 trouvées, aucune au-dessus de 40 | **L'ICP est faux — ne jamais élargir**, remonter à l'utilisateur |
+| Fit systématiquement bas | 300 trouvées, aucune au-dessus de 40 | **L'profil cible est faux — ne jamais élargir**, remonter à l'utilisateur |
 | Pas d'emails | Sociétés qualifiées, contacts introuvables | Problème d'extraction, pas de ciblage |
 
 Élargir dans le troisième cas est le pire scénario possible : l'agent produit 100 leads hors cible,
 l'utilisateur les contacte, son domaine encaisse les plaintes.
 
-**L'épuisement du marché est un résultat, pas un échec.** Un ICP « agences web à Namur, 5 à 20
+**L'épuisement du marché est un résultat, pas un échec.** Un profil cible « agences web à Namur, 5 à 20
 personnes » a une taille finie. Annoncer « ton marché fait 40 sociétés, les voici » est plus utile que
 racler du bruit pour remplir un quota — et aucun concurrent ne le dit, ils vendent au volume.
 
@@ -762,8 +762,8 @@ ajoute une ligne à l'écran sans rien enregistrer nulle part.
 **La clé de réglage est le slug de l'agent**, kebab-case du nom de classe (`EveilAgent::slug()`), et
 `agent_runs.agent` stocke le même slug. Une taxonomie plus grossière — un enum `AgentType` à cinq
 rôles — a été essayée puis **supprimée** : trois travaux sans rapport partageaient la ligne `planner`,
-si bien que le compteur ne distinguait pas `project.analyze` de `icp.derive` alors que la grille de
-crédits les facture séparément, et qu'on ne pouvait pas mettre la dérivation d'ICP sur Opus en
+si bien que le compteur ne distinguait pas `project.analyze` de `targets.derive` alors que la grille de
+crédits les facture séparément, et qu'on ne pouvait pas mettre la dérivation de profil cible sur Opus en
 laissant la planification de recherche sur un modèle moins cher. Un agent = une ligne de réglage =
 une ligne de coût.
 
@@ -772,9 +772,9 @@ une ligne de coût.
 | Slug | Rôle | Défaut | Timeout | Sortie structurée requise |
 |---|---|---|---|---|
 | `website-analyst` | Site → base de connaissance | Opus 5 | 300s | non |
-| `icp-deriver` | Base de connaissance → profils cibles | Opus 5 | 300s | non |
+| `target-profile-deriver` | Base de connaissance → profils cibles | Opus 5 | 300s | non |
 | `discovery-planner` | Où chercher, quelles requêtes | Opus 5 | 300s | non |
-| `company-qualifier` | Score de fit vs ICP | Haiku 4.5 | 60s | **oui** |
+| `company-qualifier` | Score de fit vs profil cible | Haiku 4.5 | 60s | **oui** |
 | `contact-extractor` | Lecture de page → contacts structurés | Haiku 4.5 | 60s | **oui** |
 
 Les agents à venir (writer de séquence, classifier de réponses, recommandations d'acquisition)
@@ -784,7 +784,7 @@ s'ajoutent à cette liste avec leur propre slug, pas à une catégorie existante
 modèle local via Ollama sur `contact-extractor` obtiendra des extractions **cassées**, pas médiocres.
 Les agents génératifs se dégradent proprement ; ces deux-là non.
 
-**Le timeout est réglable par agent pour une raison mesurée** : la première dérivation d'ICP réelle a
+**Le timeout est réglable par agent pour une raison mesurée** : la première dérivation de profil cible réelle a
 pris 69 secondes et est morte sur le défaut HTTP de 60s. 300s pour les agents qui réfléchissent, 60s
 pour les lectures courtes — où un timeout long ne ferait que bloquer un worker.
 
@@ -925,7 +925,7 @@ ouverte bloquante.
 ### ADR-031 — Un profil cible peut viser un partenaire, pas seulement un client
 *(tranché le 2026-08-11)*
 
-Les ICP portent un **type** : `customer` ou `partner`. Un profil partenaire décrit non pas qui achète,
+Les profil cible portent un **type** : `customer` ou `partner`. Un profil partenaire décrit non pas qui achète,
 mais **qui touche déjà l'acheteur** — qui lui rend visite, qui le facture chaque mois, qui lui est
 légalement imposé.
 
@@ -941,7 +941,7 @@ une fiduciaire horeca, c'est cinquante restaurants d'un coup.**
 | Brique | Change ? |
 |---|---|
 | Knowledge base, découverte, qualification, contacts | non |
-| `icps.type` | ajouté |
+| `target_profiles.type` | ajouté |
 | Dérivation | un mode partenaire, avec ses propres critères |
 | Séquence d'envoi | **oui, en profondeur** |
 
@@ -1043,7 +1043,7 @@ voit jamais les deux cents fiches, seulement « 60 enregistrées, 41 avec site, 
 avec son contexte minimal, sa propre ligne en base, son propre coût.
 
 ```
-discovery_runs  (projet, icp, budget, credits_left, status)
+discovery_runs  (projet, profil cible, budget, credits_left, status)
 │
 ├─ PlanDiscovery          1 appel IA   → produit le plan, enfile les sondes
 │
@@ -1127,7 +1127,7 @@ supprime les liens de pagination — « page suivante » disparaît.
 
 BCE/KBO (Belgique), SIRENE (France, ~30 M d'établissements), Companies House (UK) sont ouverts,
 gratuits et **exhaustifs par construction** — aucun biais SEO possible. Code NACE plus commune est un
-meilleur filtre d'ICP que n'importe quelle requête. Limite connue : ni email ni site, donc ils
+meilleur filtre de profil cible que n'importe quelle requête. Limite connue : ni email ni site, donc ils
 alimentent l'enrichissement, pas l'envoi. À traiter comme des `DiscoverySource` supplémentaires quand
 la récolte d'annuaires sera en place, pas avant.
 
@@ -1144,7 +1144,7 @@ Facebook se rattrapent par OSM (`contact:facebook`) et par les annuaires.
 User ──< Organization (entité facturable en cloud)
             └──< Project (un produit/site à faire connaître)
                     ├── Knowledge base (issue de l'analyse du site)
-                    ├── ICP (dérivé, éditable)
+                    ├── profil cible (dérivé, éditable)
                     ├── Companies ──< Leads
                     ├── Email accounts
                     └── Campaigns ──< Steps ──< Variants
@@ -1158,7 +1158,7 @@ Tout ce qui appartient à un projet porte `project_id` et passe par un global sc
 | Agent | Entrée | Sortie |
 |---|---|---|
 | **Website** | URL du projet, repo GitHub optionnel | Knowledge base (ce que fait le produit, pour qui, positionnement) + pistes d'amélioration du site |
-| **Sales** | Knowledge base + ICP | Sociétés qualifiées, contacts vérifiés, séquences d'outreach, réponses traitées |
+| **Sales** | Knowledge base + profil cible | Sociétés qualifiées, contacts vérifiés, séquences d'outreach, réponses traitées |
 
 L'agent Website n'est **pas** un outil d'audit SEO. Ce dont l'agent Sales a besoin, c'est la knowledge
 base ; les suggestions d'amélioration tombent gratuitement du même appel LLM. Ne pas construire un
@@ -1167,7 +1167,7 @@ produit SEO à côté.
 ### Pipeline de découverte (5 étages, chacun testable seul)
 
 ```
-1. ICP derivation      knowledge base → LLM → critères structurés → édition utilisateur
+1. profil cible derivation      knowledge base → LLM → critères structurés → édition utilisateur
 2. Company discovery   l'agent planifie OÙ chercher, puis exécute ses tools
 3. Qualification       fetch du site → petit modèle → score de fit + justification
 4. Contact discovery   /about, /team, mentions légales → noms + postes → inférence de pattern email
@@ -1184,7 +1184,7 @@ Toolset de découverte :
 | `web_search` (SearXNG) | universel, requêtes générées par le LLM | gratuit, sans clé |
 | `overpass_query` (OSM) | commerces locaux par catégorie + zone | gratuit, sans clé |
 | `fetch_page` | annuaires, pages clients de concurrents, témoignages | gratuit |
-| `github_search` | ICP développeurs | gratuit |
+| `github_search` | profil cible développeurs | gratuit |
 | `job_board_search` | signal déclencheur : qui recrute pour le poste X a le besoin | gratuit |
 
 Contraintes techniques :
@@ -1228,7 +1228,7 @@ projects               organization_id, name, url, github_repo, knowledge_base (
 project_user           droit d'accès
 
 project_analyses       project_id, type: website|repo, raw, summary, status, agent_run_id
-icps                   project_id, name, type: customer|partner, criteria (json),
+target_profiles                   project_id, name, type: customer|partner, criteria (json),
                        source: agent|human, active
                        ← autant que l'agent en déduit, CRUD libre (ADR-015)
                        ← un profil partenaire porte access_angle et partnership_angle (ADR-031)
@@ -1238,7 +1238,7 @@ recommendations        project_id, key (identité stable), title, rationale, evi
                        decided_at, agent_run_id
                        ← archivée = ne réapparaît jamais (ADR-032)
 
-discovery_runs         project_id, icp_id, status, budget (json), credits_left, stats
+discovery_runs         project_id, target_profile_id, status, budget (json), credits_left, stats
                        ← status porte aussi exhausted|cancelled : un seul drapeau pour le
                          plafond de crédits et l'annulation (ADR-033)
 discovery_tasks        discovery_run_id, kind: plan|search|triage|harvest|extract|overpass|reflect,
@@ -1252,8 +1252,8 @@ directories            host, name, countries, sectors, discovery_mode: sitemap|p
 companies              project_id, domain (unique/projet), name, website, industry, size,
                        location, language, source, source_url  ← faits seulement, pas de score
                        ← language détectée au crawl (ADR-021)
-company_icp_evaluations company_id, icp_id, fit_score, fit_reason
-                       ← le fit dépend de l'ICP, jamais de la société (ADR-015)
+company_target_evaluations company_id, target_profile_id, fit_score, fit_reason
+                       ← le fit dépend de le profil cible, jamais de la société (ADR-015)
 leads                  project_id, company_id, first/last_name, title, email,
                        email_status: valid|risky|unknown|invalid,
                        email_source: scraped|inferred|provided|imported,
@@ -1293,7 +1293,7 @@ credit_transactions    organization_id, type: purchase|hold|charge|release|refun
 Mono-projet. **Pas** d'organizations, pas de multi-utilisateur, pas de LinkedIn, pas de facturation.
 
 ```
-URL du site → knowledge base → ICP éditable → DiscoveryRun (search + overpass + fetch)
+URL du site → knowledge base → profil cible éditable → DiscoveryRun (search + overpass + fetch)
 → sociétés qualifiées → contacts + emails vérifiés → séquence IA 2 étapes
 → envoi SMTP plafonné → détection réponse IMAP → pause auto → inbox unifiée
 ```
@@ -1337,7 +1337,7 @@ est une story pas faite.
 | 2 — Projets | 🟡 cloisonnement fait et testé, pas de CRUD |
 | 3 — Analyse & knowledge base | 🟡 `eveil:analyze` tourne, rien n'est déclenché automatiquement |
 | 4 — Agent Website | ⬜ table `recommendations` pas encore créée |
-| 5 — Découverte de leads | 🟡 chaîne complète en CLI + récolte d'annuaires ; `icps.type`, le registre et le branchement manquent |
+| 5 — Découverte de leads | 🟡 chaîne complète en CLI + récolte d'annuaires ; `target_profiles.type`, le registre et le branchement manquent |
 | 6 — Séquences | ⬜ |
 | 7 — Envoi | ⬜ |
 | 8 — Réponses & inbox | ⬜ |
@@ -1346,7 +1346,7 @@ est une story pas faite.
 | 11 — LinkedIn / 12 — Intégrations | ⬜ hors v0 et v1 |
 
 **Ce qui existe vraiment** : le schéma complet, les modèles, cinq agents, le crawler, la vérification
-d'emails, et quatre commandes — `eveil:analyze`, `eveil:derive-icp`, `eveil:discover-companies`,
+d'emails, et quatre commandes — `eveil:analyze`, `eveil:derive-targets`, `eveil:discover-companies`,
 `eveil:find-contacts` et `eveil:harvest` — plus `eveil:agent-model` et `eveil:credentials-key`. Aucune interface, aucune
 authentification, aucun envoi.
 
@@ -1370,7 +1370,7 @@ minimal, pour être opérationnel en quelques minutes.
 
 **1.6** 🟡 En tant que superadmin, je veux choisir le provider, le modèle et le timeout **par agent IA** (ADR-026).
 - Réglage de scope instance, réservé au superadmin — invisible pour les admins et membres d'organization
-- Une ligne par agent, clé = le slug de la classe (`website-analyst`, `icp-deriver`, …) ; pas de regroupement par catégorie
+- Une ligne par agent, clé = le slug de la classe (`website-analyst`, `target-profile-deriver`, …) ; pas de regroupement par catégorie
 - Liste des providers et modèles fournie par `laravel/ai`, liste des agents découverte dans `app/Ai/Agents/`
 - Défauts livrés : une install fraîche fonctionne sans ouvrir cet écran
 - Les agents exigeant une sortie structurée sont marqués comme tels
@@ -1449,12 +1449,12 @@ automatiquement.
 
 ### Epic 5 — Découverte de leads `v0` — *cœur du produit*
 
-**5.1** 🟡 En tant qu'utilisateur, je veux que l'ICP soit déduit de mon produit, sans le saisir.
+**5.1** 🟡 En tant qu'utilisateur, je veux que le profil cible soit déduit de mon produit, sans le saisir.
 - Critères structurés : secteurs, taille, géographie, intitulés de poste, technologies, signaux
 - Entièrement éditable ; l'édition est conservée entre les runs
 
 **5.1 bis** ⬜ En tant qu'utilisateur, je veux aussi des profils de **partenaires**, pas seulement de clients (ADR-031).
-- `icps.type` : `customer` ou `partner` — **colonne pas encore créée**
+- `target_profiles.type` : `customer` ou `partner` — **colonne pas encore créée**
 - Un profil partenaire répond à : qui visite mon client, qui le facture chaque mois, qui lui est
   **légalement imposé** — ce dernier signal en premier, sa clientèle est captive
 - Il porte `access_angle` (par quoi il touche le client) et `partnership_angle` (pourquoi c'est
@@ -1462,8 +1462,8 @@ automatiquement.
 - Découverte et qualification identiques ; **la séquence d'envoi, elle, diffère en profondeur**
 - Aucune société n'est citée sans avoir été trouvée, récupérée et qualifiée
 
-**5.2** 🟡 En tant qu'utilisateur, je veux lancer une recherche de sociétés correspondant à l'ICP.
-- L'agent choisit ses sources selon l'ICP et **explique son plan avant d'exécuter**
+**5.2** 🟡 En tant qu'utilisateur, je veux lancer une recherche de sociétés correspondant à le profil cible.
+- L'agent choisit ses sources selon le profil cible et **explique son plan avant d'exécuter**
 - Progression visible en direct : sources interrogées, sociétés trouvées, budget consommé
 - Budget dur (pages, tokens, leads) ; arrêt propre à la limite avec résultats partiels conservés
 - Un re-run ne duplique pas : dédup par domaine
@@ -1673,7 +1673,7 @@ chiffrement par organization et KMS externe en cloud.
 
 ~~**A5 — Sociétés et leads : cloisonnés ou partagés ?**~~ → tranché, voir **ADR-014**.
 
-~~**A6 — Plusieurs ICP par projet ?**~~ → tranché, voir **ADR-015**.
+~~**A6 — Plusieurs profil cible par projet ?**~~ → tranché, voir **ADR-015**.
 
 ~~**A7 — Tracking d'ouverture et de clic**~~ → tranché, voir **ADR-016**.
 

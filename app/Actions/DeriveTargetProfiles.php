@@ -2,10 +2,10 @@
 
 namespace App\Actions;
 
-use App\Ai\Agents\IcpDeriver;
-use App\Enums\IcpSource;
-use App\Models\Icp;
+use App\Ai\Agents\TargetProfileDeriver;
+use App\Enums\TargetProfileSource;
 use App\Models\Project;
+use App\Models\TargetProfile;
 use Illuminate\Support\Collection;
 use Laravel\Ai\Responses\StructuredAgentResponse;
 use RuntimeException;
@@ -15,10 +15,10 @@ use RuntimeException;
  * "I know what this product is" into "I know who to contact", and the reason
  * the user never fills in a targeting form.
  */
-class DeriveIcps
+class DeriveTargetProfiles
 {
     /**
-     * @return Collection<int, Icp>
+     * @return Collection<int, TargetProfile>
      */
     public function handle(Project $project, bool $replace = false): Collection
     {
@@ -30,7 +30,7 @@ class DeriveIcps
         }
 
         /** @var StructuredAgentResponse $response */
-        $response = (new IcpDeriver($project))->prompt($this->prompt($project));
+        $response = (new TargetProfileDeriver($project))->prompt($this->prompt($project));
 
         /** @var array<int, array<string, mixed>> $profiles */
         $profiles = $response->structured['profiles'] ?? [];
@@ -44,7 +44,7 @@ class DeriveIcps
         }
 
         return (new Collection($profiles))
-            ->map(fn (array $profile): Icp => $this->store($project, $profile))
+            ->map(fn (array $profile): TargetProfile => $this->store($project, $profile))
             ->values();
     }
 
@@ -54,26 +54,26 @@ class DeriveIcps
      */
     private function discardPreviousAgentProfiles(Project $project): void
     {
-        Icp::query()
+        TargetProfile::query()
             ->where('project_id', $project->id)
-            ->where('source', IcpSource::Agent)
+            ->where('source', TargetProfileSource::Agent)
             ->delete();
     }
 
     /**
      * @param  array<string, mixed>  $profile
      */
-    private function store(Project $project, array $profile): Icp
+    private function store(Project $project, array $profile): TargetProfile
     {
         $name = is_string($profile['name'] ?? null) && $profile['name'] !== ''
             ? $profile['name']
             : 'Profil sans nom';
 
-        return Icp::create([
+        return TargetProfile::create([
             'project_id' => $project->id,
             'name' => $name,
             'criteria' => collect($profile)->except('name')->all(),
-            'source' => IcpSource::Agent,
+            'source' => TargetProfileSource::Agent,
             'is_active' => true,
         ]);
     }

@@ -12,7 +12,7 @@ Self-hosted: the superadmin supplies their own API key. NO credit tracking, NO b
 
 Cloud: the user buys credits; each action debits a credit count from a DB table that cloud superadmins can adjust without a redeploy. Users only ever see credits — never tokens, never a model name. The AI provider and model are configured in-app and switchable in both editions; credits decouple the displayed price from real cost, so changing LLM moves our margin, not the user's price.
 
-Anchor: 1000 credits ≈ $1 of internal AI cost. Base grid — project.analyze 150 (per site analysis), icp.derive 60, discovery.plan 500 (per run), company.qualify 4 (per company EVALUATED), contact.extract 8 (per company retained), sequence.generate 100, lead.personalize 3, reply.classify 1. Email verification, SMTP send and IMAP read cost 0 — a selling point, competitors bill verification. A 100-lead campaign ≈ 3500 credits.
+Anchor: 1000 credits ≈ $1 of internal AI cost. Base grid — project.analyze 150 (per site analysis), targets.derive 60, discovery.plan 500 (per run), company.qualify 4 (per company EVALUATED), contact.extract 8 (per company retained), sequence.generate 100, lead.personalize 3, reply.classify 1. Email verification, SMTP send and IMAP read cost 0 — a selling point, competitors bill verification. A 100-lead campaign ≈ 3500 credits.
 
 Bill per unit of work, never per "run": a run evaluating 400 companies costs ten times one evaluating 40.
 

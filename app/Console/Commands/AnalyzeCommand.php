@@ -78,7 +78,7 @@ class AnalyzeCommand extends Command
      */
     private function missingProviderKey(): ?string
     {
-        $provider = app(AgentSettings::class)->provider(AgentType::Planner);
+        $provider = app(AgentSettings::class)->providerName(AgentType::Planner);
 
         return config("ai.providers.{$provider}.key") ? null : $provider;
     }

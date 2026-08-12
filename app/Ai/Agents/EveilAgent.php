@@ -8,6 +8,7 @@ use App\Enums\AgentType;
 use App\Models\Project;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\HasMiddleware;
+use Laravel\Ai\Enums\Lab;
 use Laravel\Ai\Promptable;
 
 /**
@@ -30,12 +31,12 @@ abstract class EveilAgent implements Agent, HasMiddleware
      */
     abstract public function type(): AgentType;
 
-    public function provider(): string
+    public function provider(): Lab|string
     {
         return $this->settings()->provider($this->type());
     }
 
-    public function model(): string
+    public function model(): ?string
     {
         return $this->settings()->model($this->type());
     }

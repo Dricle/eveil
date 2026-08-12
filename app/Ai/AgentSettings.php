@@ -4,6 +4,7 @@ namespace App\Ai;
 
 use App\Enums\AgentType;
 use App\Support\Settings;
+use Laravel\Ai\Enums\Lab;
 
 /**
  * Where each agent's provider, model and timeout come from (ADR-026).
@@ -17,14 +18,42 @@ class AgentSettings
 {
     public function __construct(private Settings $settings) {}
 
-    public function provider(AgentType $type): string
+    /**
+     * A `Lab` case whenever the provider is one the package knows, and a plain
+     * string otherwise — an OpenAI-compatible endpoint is referenced by its
+     * config key, which no enum can cover.
+     */
+    public function provider(AgentType $type): Lab|string
     {
-        return (string) ($this->for($type)['provider'] ?? 'anthropic');
+        $provider = $this->for($type)['provider'] ?? Lab::Anthropic;
+
+        if ($provider instanceof Lab) {
+            return $provider;
+        }
+
+        return Lab::tryFrom((string) $provider) ?? (string) $provider;
     }
 
-    public function model(AgentType $type): string
+    /**
+     * The provider as a config key — `config('ai.providers.<name>')` and any
+     * display want this, not the enum.
+     */
+    public function providerName(AgentType $type): string
     {
-        return (string) ($this->for($type)['model'] ?? 'claude-haiku-4-5');
+        $provider = $this->provider($type);
+
+        return $provider instanceof Lab ? $provider->value : $provider;
+    }
+
+    /**
+     * Null on purpose when nothing is configured: `laravel/ai` then resolves
+     * the provider's own default model, which beats a hardcoded guess here.
+     */
+    public function model(AgentType $type): ?string
+    {
+        $model = $this->for($type)['model'] ?? null;
+
+        return $model === null ? null : (string) $model;
     }
 
     /**
@@ -37,11 +66,11 @@ class AgentSettings
     }
 
     /**
-     * @return array{provider?: string, model?: string, timeout?: int}
+     * @return array{provider?: Lab|string, model?: string, timeout?: int}
      */
     public function for(AgentType $type): array
     {
-        /** @var array{provider?: string, model?: string, timeout?: int} $default */
+        /** @var array{provider?: Lab|string, model?: string, timeout?: int} $default */
         $default = config("eveil.agents.{$type->value}", []);
 
         // Whatever the operator saved, so the shape is checked, not trusted.
@@ -56,7 +85,7 @@ class AgentSettings
     }
 
     /**
-     * @param  array{provider?: string, model?: string, timeout?: int}  $values
+     * @param  array{provider?: Lab|string, model?: string, timeout?: int}  $values
      */
     public function save(AgentType $type, array $values): void
     {

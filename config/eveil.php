@@ -24,11 +24,11 @@ return [
         // on the first live call, so it gets room. The cheap agents read and
         // extract, which is fast — a long timeout there would only mean a stuck
         // job holds a worker.
-        'planner' => ['provider' => Lab::Anthropic->value, 'model' => 'claude-opus-5', 'timeout' => 300],
-        'extractor' => ['provider' => Lab::Anthropic->value, 'model' => 'claude-haiku-4-5', 'timeout' => 60],
-        'qualifier' => ['provider' => Lab::Anthropic->value, 'model' => 'claude-haiku-4-5', 'timeout' => 60],
-        'writer' => ['provider' => Lab::Anthropic->value, 'model' => 'claude-haiku-4-5', 'timeout' => 60],
-        'classifier' => ['provider' => Lab::Anthropic->value, 'model' => 'claude-haiku-4-5', 'timeout' => 60],
+        'planner' => ['provider' => Lab::Anthropic, 'model' => 'claude-opus-5', 'timeout' => 300],
+        'extractor' => ['provider' => Lab::Anthropic, 'model' => 'claude-haiku-4-5', 'timeout' => 60],
+        'qualifier' => ['provider' => Lab::Anthropic, 'model' => 'claude-haiku-4-5', 'timeout' => 60],
+        'writer' => ['provider' => Lab::Anthropic, 'model' => 'claude-haiku-4-5', 'timeout' => 60],
+        'classifier' => ['provider' => Lab::Anthropic, 'model' => 'claude-haiku-4-5', 'timeout' => 60],
     ],
 
     /*

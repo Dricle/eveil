@@ -60,12 +60,17 @@ class AgentModelCommand extends Command
         }
 
         $agents->save($type, [
-            'provider' => (string) ($this->option('provider') ?: $agents->provider($type)),
+            'provider' => (string) ($this->option('provider') ?: $agents->providerName($type)),
             'model' => (string) ($this->option('model') ?: $agents->model($type)),
             'timeout' => (int) ($this->option('timeout') ?: $agents->timeout($type)),
         ]);
 
-        $this->components->info("{$type->value} now runs on {$agents->provider($type)} / {$agents->model($type)}.");
+        $this->components->info(sprintf(
+            '%s now runs on %s / %s.',
+            $type->value,
+            $agents->providerName($type),
+            $agents->model($type) ?? "the provider's default",
+        ));
 
         // The credit grid is calibrated on a specific model mix (ADR-019), so
         // in cloud this and `credit_prices` are one operation, never two.
@@ -83,8 +88,8 @@ class AgentModelCommand extends Command
 
         return [
             $type->value,
-            $agents->provider($type),
-            $agents->model($type),
+            $agents->providerName($type),
+            $agents->model($type) ?? '<fg=gray>provider default</>',
             (string) $agents->timeout($type),
             $agents->isOverridden($type) ? '<fg=cyan>database</>' : 'default',
             '$'.number_format((float) (clone $runs)->sum('cost'), 4),

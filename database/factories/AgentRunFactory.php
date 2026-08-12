@@ -3,7 +3,6 @@
 namespace Database\Factories;
 
 use App\Enums\AgentRunStatus;
-use App\Enums\AgentType;
 use App\Models\AgentRun;
 use App\Models\Project;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -22,7 +21,7 @@ class AgentRunFactory extends Factory
     {
         return [
             'project_id' => Project::factory(),
-            'type' => AgentType::Planner,
+            'agent' => 'website-analyst',
             'status' => AgentRunStatus::Succeeded,
             'tokens_in' => fake()->numberBetween(100, 10000),
             'tokens_out' => fake()->numberBetween(50, 2000),

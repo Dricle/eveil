@@ -25,7 +25,10 @@ return new class extends Migration
             $table->id();
             $table->foreignId('project_id')->constrained()->cascadeOnDelete();
 
-            $table->string('type');   // planner|extractor|qualifier|writer|classifier
+            // Slug of the agent class: website-analyst, icp-deriver, …
+            // Per agent, not per category, so this joins the credit grid, which
+            // bills per action (ADR-019).
+            $table->string('agent');
             $table->string('status'); // pending|running|succeeded|failed|aborted
 
             $table->string('provider')->nullable();
@@ -44,7 +47,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['project_id', 'created_at']);
-            $table->index(['type', 'created_at']);
+            $table->index(['agent', 'created_at']);
 
             // Drives the payload purge sweep without scanning the whole table.
             $table->index('created_at', 'agent_runs_purge_index');

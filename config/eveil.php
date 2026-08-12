@@ -10,8 +10,8 @@ return [
     |--------------------------------------------------------------------------
     |
     | Shipped defaults so a fresh install works without opening the settings
-    | screen (ADR-026). The superadmin overrides these per agent at runtime;
-    | this array is only the fallback.
+    | screen (ADR-026). Keyed on the agent slug, one line per agent: the
+    | superadmin sets a model for a SPECIFIC job, not for a vague category.
     |
     | The split is the point: the expensive model plans and synthesises, the
     | cheap one reads pages and extracts. Collapsing them multiplies the real
@@ -20,15 +20,16 @@ return [
     */
 
     'agents' => [
-        // The planner thinks: a real derivation ran past the 60s HTTP default
-        // on the first live call, so it gets room. The cheap agents read and
-        // extract, which is fast — a long timeout there would only mean a stuck
-        // job holds a worker.
-        'planner' => ['provider' => Lab::Anthropic, 'model' => 'claude-opus-5', 'timeout' => 300],
-        'extractor' => ['provider' => Lab::Anthropic, 'model' => 'claude-haiku-4-5', 'timeout' => 60],
-        'qualifier' => ['provider' => Lab::Anthropic, 'model' => 'claude-haiku-4-5', 'timeout' => 60],
-        'writer' => ['provider' => Lab::Anthropic, 'model' => 'claude-haiku-4-5', 'timeout' => 60],
-        'classifier' => ['provider' => Lab::Anthropic, 'model' => 'claude-haiku-4-5', 'timeout' => 60],
+        // Thinking work. A real ICP derivation ran 69 seconds and died on the
+        // 60s HTTP default, so these get room.
+        'website-analyst' => ['provider' => Lab::Anthropic, 'model' => 'claude-opus-5', 'timeout' => 300],
+        'icp-deriver' => ['provider' => Lab::Anthropic, 'model' => 'claude-opus-5', 'timeout' => 300],
+        'discovery-planner' => ['provider' => Lab::Anthropic, 'model' => 'claude-opus-5', 'timeout' => 300],
+
+        // Reading work: short structured output, high volume. A long timeout
+        // here would only mean a stuck job holding a worker.
+        'company-qualifier' => ['provider' => Lab::Anthropic, 'model' => 'claude-haiku-4-5', 'timeout' => 60],
+        'contact-extractor' => ['provider' => Lab::Anthropic, 'model' => 'claude-haiku-4-5', 'timeout' => 60],
     ],
 
     /*

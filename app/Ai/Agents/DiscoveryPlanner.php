@@ -2,7 +2,6 @@
 
 namespace App\Ai\Agents;
 
-use App\Enums\AgentType;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\HasStructuredOutput;
 use Stringable;
@@ -16,11 +15,6 @@ use Stringable;
  */
 class DiscoveryPlanner extends EveilAgent implements HasStructuredOutput
 {
-    public function type(): AgentType
-    {
-        return AgentType::Planner;
-    }
-
     public function instructions(): Stringable|string
     {
         return <<<'PROMPT'

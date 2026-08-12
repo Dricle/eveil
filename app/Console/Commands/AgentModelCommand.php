@@ -3,7 +3,6 @@
 namespace App\Console\Commands;
 
 use App\Ai\AgentSettings;
-use App\Enums\AgentType;
 use App\Models\AgentRun;
 use Illuminate\Console\Command;
 
@@ -17,7 +16,7 @@ use Illuminate\Console\Command;
  */
 class AgentModelCommand extends Command
 {
-    protected $signature = 'eveil:agent-model {agent? : planner, extractor, qualifier, writer or classifier}
+    protected $signature = 'eveil:agent-model {agent? : Agent slug, e.g. icp-deriver}
                                               {--model= : Model id to use}
                                               {--provider= : Provider name, defaults to anthropic}
                                               {--timeout= : Seconds before the call is abandoned}
@@ -32,23 +31,21 @@ class AgentModelCommand extends Command
         if ($agent === null) {
             $this->table(
                 ['agent', 'provider', 'model', 'timeout', 'source', 'spent', 'calls'],
-                collect(AgentType::cases())->map(fn (AgentType $type): array => $this->row($type, $agents))->all(),
+                collect($agents->known())->map(fn (string $slug): array => $this->row($slug, $agents))->all(),
             );
 
             return self::SUCCESS;
         }
 
-        $type = AgentType::tryFrom($agent);
-
-        if ($type === null) {
-            $this->components->error("Unknown agent [{$agent}]. One of: ".implode(', ', array_column(AgentType::cases(), 'value')));
+        if (! in_array($agent, $agents->known(), true)) {
+            $this->components->error("Unknown agent [{$agent}]. One of: ".implode(', ', $agents->known()));
 
             return self::FAILURE;
         }
 
         if ($this->option('reset')) {
-            $agents->reset($type);
-            $this->components->info("{$type->value} is back on the shipped default.");
+            $agents->reset($agent);
+            $this->components->info("{$agent} is back on the shipped default.");
 
             return self::SUCCESS;
         }
@@ -59,17 +56,17 @@ class AgentModelCommand extends Command
             return self::SUCCESS;
         }
 
-        $agents->save($type, [
-            'provider' => (string) ($this->option('provider') ?: $agents->providerName($type)),
-            'model' => (string) ($this->option('model') ?: $agents->model($type)),
-            'timeout' => (int) ($this->option('timeout') ?: $agents->timeout($type)),
+        $agents->save($agent, [
+            'provider' => (string) ($this->option('provider') ?: $agents->providerName($agent)),
+            'model' => (string) ($this->option('model') ?: $agents->model($agent)),
+            'timeout' => (int) ($this->option('timeout') ?: $agents->timeout($agent)),
         ]);
 
         $this->components->info(sprintf(
             '%s now runs on %s / %s.',
-            $type->value,
-            $agents->providerName($type),
-            $agents->model($type) ?? "the provider's default",
+            $agent,
+            $agents->providerName($agent),
+            $agents->model($agent) ?? "the provider's default",
         ));
 
         // The credit grid is calibrated on a specific model mix (ADR-019), so
@@ -82,16 +79,16 @@ class AgentModelCommand extends Command
     /**
      * @return array<int, string>
      */
-    private function row(AgentType $type, AgentSettings $agents): array
+    private function row(string $agent, AgentSettings $agents): array
     {
-        $runs = AgentRun::query()->where('type', $type->value);
+        $runs = AgentRun::query()->where('agent', $agent);
 
         return [
-            $type->value,
-            $agents->providerName($type),
-            $agents->model($type) ?? '<fg=gray>provider default</>',
-            (string) $agents->timeout($type),
-            $agents->isOverridden($type) ? '<fg=cyan>database</>' : 'default',
+            $agent,
+            $agents->providerName($agent),
+            $agents->model($agent) ?? '<fg=gray>provider default</>',
+            (string) $agents->timeout($agent),
+            $agents->isOverridden($agent) ? '<fg=cyan>database</>' : 'default',
             '$'.number_format((float) (clone $runs)->sum('cost'), 4),
             (string) (clone $runs)->count(),
         ];

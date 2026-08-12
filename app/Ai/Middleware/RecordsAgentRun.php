@@ -33,7 +33,7 @@ class RecordsAgentRun
 
         $run = AgentRun::create([
             'project_id' => $agent->project->id,
-            'type' => $agent->type(),
+            'agent' => $agent->slug(),
             'status' => AgentRunStatus::Running,
             'provider' => $prompt->provider->name(),
             'model' => $prompt->model,

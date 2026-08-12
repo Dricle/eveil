@@ -3,7 +3,6 @@
 use App\Ai\Agents\WebsiteAnalyst;
 use App\Ai\ModelPricing;
 use App\Enums\AgentRunStatus;
-use App\Enums\AgentType;
 use App\Models\AgentRun;
 use App\Models\Project;
 use App\Support\Settings;
@@ -35,7 +34,9 @@ it('records tokens, cost and duration for a successful call', function () {
     $run = AgentRun::sole();
 
     expect($run->status)->toBe(AgentRunStatus::Succeeded)
-        ->and($run->type)->toBe(AgentType::Planner)
+        // The slug, not a category: the meter has to join a credit grid that
+        // bills per action (ADR-019).
+        ->and($run->agent)->toBe('website-analyst')
         ->and($run->tokens_in)->toBe(20_000)
         ->and($run->tokens_out)->toBe(1_000)
         // 20k input at $5/MTok plus 1k output at $25/MTok.
@@ -90,7 +91,7 @@ it('records a failed run and rethrows', function () {
 it('costs nothing rather than throwing on an unpriced model', function () {
     // Pricing follows the model we ASKED for, so an unpriced model has to be
     // the one configured — not merely the one the provider echoed back.
-    app(Settings::class)->set('agents.planner', ['model' => 'some-new-model']);
+    app(Settings::class)->set('agents.website-analyst', ['model' => 'some-new-model']);
 
     WebsiteAnalyst::fake([
         new StructuredTextResponse(

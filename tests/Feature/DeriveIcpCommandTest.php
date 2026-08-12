@@ -56,7 +56,7 @@ it('meters the call', function () {
 
     $this->artisan('eveil:derive-icp')->assertSuccessful();
 
-    expect(AgentRun::sole()->type->value)->toBe('planner');
+    expect(AgentRun::sole()->agent)->toBe('icp-deriver');
 });
 
 it('refuses to run before the site has been analysed', function () {

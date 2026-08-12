@@ -748,33 +748,49 @@ protégerait rien et abîmerait le message.
 vérification CLA, et **faire relire l'ensemble par un juriste** — c'est la seule décision du projet
 qu'on ne peut pas défaire.
 
-### ADR-026 — Provider et modèle configurables par agent
-*(résout C3, tranché le 2026-08-11)*
+### ADR-026 — Provider, modèle et timeout configurables par agent
+*(résout C3, tranché le 2026-08-11 ; resserré de la catégorie à l'agent le 2026-08-12)*
 
-Le superadmin choisit **le provider et le modèle pour chaque classe d'agent**, depuis un écran de
-settings. `laravel/ai` expose déjà la liste des providers et modèles disponibles ; la liste des agents
-vient du code. Pas de taxonomie de rôles inventée à maintenir en parallèle.
+Le superadmin choisit **le provider, le modèle et le timeout pour chaque classe d'agent**, depuis un
+écran de settings. `laravel/ai` expose déjà la liste des providers et modèles disponibles ; la liste
+des agents vient du code — `AgentSettings::known()` scanne `app/Ai/Agents/`, donc ajouter un agent
+ajoute une ligne à l'écran sans rien enregistrer nulle part.
 
-**Défauts livrés** — une install fraîche fonctionne sans toucher à l'écran :
+**La clé de réglage est le slug de l'agent**, kebab-case du nom de classe (`EveilAgent::slug()`), et
+`agent_runs.agent` stocke le même slug. Une taxonomie plus grossière — un enum `AgentType` à cinq
+rôles — a été essayée puis **supprimée** : trois travaux sans rapport partageaient la ligne `planner`,
+si bien que le compteur ne distinguait pas `project.analyze` de `icp.derive` alors que la grille de
+crédits les facture séparément, et qu'on ne pouvait pas mettre la dérivation d'ICP sur Opus en
+laissant la planification de recherche sur un modèle moins cher. Un agent = une ligne de réglage =
+une ligne de coût.
 
-| Agent | Rôle | Défaut | Sortie structurée requise |
-|---|---|---|---|
-| Planner | Où chercher, dérivation ICP, séquence | Opus 5 | non |
-| Extractor | Lecture de page → structuré | Haiku 4.5 | **oui** |
-| Qualifier | Score de fit vs ICP | Haiku 4.5 | **oui** |
-| Writer | Personnalisation, traduction | Haiku 4.5 | non |
-| Classifier | Classement des réponses | Haiku 4.5 | **oui** |
+**Défauts livrés** (`config/eveil.php`) — une install fraîche fonctionne sans toucher à l'écran :
+
+| Slug | Rôle | Défaut | Timeout | Sortie structurée requise |
+|---|---|---|---|---|
+| `website-analyst` | Site → base de connaissance | Opus 5 | 300s | non |
+| `icp-deriver` | Base de connaissance → profils cibles | Opus 5 | 300s | non |
+| `discovery-planner` | Où chercher, quelles requêtes | Opus 5 | 300s | non |
+| `company-qualifier` | Score de fit vs ICP | Haiku 4.5 | 60s | **oui** |
+| `contact-extractor` | Lecture de page → contacts structurés | Haiku 4.5 | 60s | **oui** |
+
+Les agents à venir (writer de séquence, classifier de réponses, recommandations d'acquisition)
+s'ajoutent à cette liste avec leur propre slug, pas à une catégorie existante.
 
 **L'écran marque les agents exigeant de la sortie structurée.** Un self-hoster qui branche un petit
-modèle local via Ollama sur `Extractor` obtiendra des extractions **cassées**, pas médiocres. Le
-`Planner` se dégrade proprement ; les trois autres non.
+modèle local via Ollama sur `contact-extractor` obtiendra des extractions **cassées**, pas médiocres.
+Les agents génératifs se dégradent proprement ; ces deux-là non.
+
+**Le timeout est réglable par agent pour une raison mesurée** : la première dérivation d'ICP réelle a
+pris 69 secondes et est morte sur le défaut HTTP de 60s. 300s pour les agents qui réfléchissent, 60s
+pour les lectures courtes — où un timeout long ne ferait que bloquer un worker.
 
 **Réglage de scope instance** (ADR-003), au même titre que la clé du provider : réservé au
 superadmin. Aucun admin ni membre d'organization ne le voit. En cloud, le seul superadmin est
 l'exploitant de l'instance — un client ne peut donc pas changer le mapping.
 
 Note d'exploitation, pas de garde-fou produit : la grille de crédits (ADR-019) est calibrée sur ce mix
-précis. Basculer `Qualifier` sur Opus 5 multiplie par cinq le coût réel de `company.qualify`. Si
+précis. Basculer `company-qualifier` sur Opus 5 multiplie par cinq le coût réel de `company.qualify`. Si
 l'exploitant change le mapping en cloud, il ajuste `credit_prices` dans la foulée.
 
 **Repli** : backoff et reprise via Horizon, **pas de bascule automatique vers un autre provider**. La
@@ -1168,9 +1184,10 @@ minimal, pour être opérationnel en quelques minutes.
 - Bouton « tester la connexion » avec retour immédiat
 - Vaut pour toutes les organizations et tous les projets de l'instance
 
-**1.6** En tant que superadmin, je veux choisir le provider et le modèle **par agent IA** (ADR-026).
+**1.6** En tant que superadmin, je veux choisir le provider, le modèle et le timeout **par agent IA** (ADR-026).
 - Réglage de scope instance, réservé au superadmin — invisible pour les admins et membres d'organization
-- Liste des providers et modèles fournie par `laravel/ai`, liste des agents issue du code
+- Une ligne par agent, clé = le slug de la classe (`website-analyst`, `icp-deriver`, …) ; pas de regroupement par catégorie
+- Liste des providers et modèles fournie par `laravel/ai`, liste des agents découverte dans `app/Ai/Agents/`
 - Défauts livrés : une install fraîche fonctionne sans ouvrir cet écran
 - Les agents exigeant une sortie structurée sont marqués comme tels
 - L'écran affiche, par agent, ce qu'il a déjà coûté et sur combien d'appels

@@ -4,8 +4,8 @@ namespace App\Ai\Agents;
 
 use App\Ai\AgentSettings;
 use App\Ai\Middleware\RecordsAgentRun;
-use App\Enums\AgentType;
 use App\Models\Project;
+use Illuminate\Support\Str;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\HasMiddleware;
 use Laravel\Ai\Enums\Lab;
@@ -27,23 +27,28 @@ abstract class EveilAgent implements Agent, HasMiddleware
     public function __construct(public readonly Project $project) {}
 
     /**
-     * Which line of the settings screen governs this agent.
+     * Which line of the settings screen governs this agent, and what
+     * `agent_runs` records — one line per agent, not per vague category, so
+     * the meter joins the credit grid, which bills per action (ADR-019).
      */
-    abstract public function type(): AgentType;
+    public function slug(): string
+    {
+        return Str::kebab(class_basename($this));
+    }
 
     public function provider(): Lab|string
     {
-        return $this->settings()->provider($this->type());
+        return $this->settings()->provider($this->slug());
     }
 
     public function model(): ?string
     {
-        return $this->settings()->model($this->type());
+        return $this->settings()->model($this->slug());
     }
 
     public function timeout(): int
     {
-        return $this->settings()->timeout($this->type());
+        return $this->settings()->timeout($this->slug());
     }
 
     /**

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Discovery;
+namespace App\Services\Discovery;
 
 use App\Enums\EmailStatus;
 use Throwable;

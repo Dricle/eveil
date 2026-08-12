@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Discovery;
+namespace App\Services\Discovery;
 
+use App\Support\Url;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 

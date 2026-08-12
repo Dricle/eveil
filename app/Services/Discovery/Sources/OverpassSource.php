@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Discovery\Sources;
+namespace App\Services\Discovery\Sources;
 
-use App\Discovery\Candidate;
-use App\Discovery\Url;
+use App\Services\Discovery\Candidate;
+use App\Support\Url;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Throwable;

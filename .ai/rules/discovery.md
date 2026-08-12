@@ -1,6 +1,6 @@
 ---
 paths:
-  - 'app/Discovery/**'
+  - 'app/Services/Discovery/**'
 ---
 
 # Discovery
@@ -120,29 +120,11 @@ Budget and cancellation are ONE flag: `discovery_runs.status`. Out of credits �
 
 A tool loop is still the right tool INSIDE one directory whose pagination resists. Local and bounded, not the overall architecture.
 
-## HtmlText must emit markdown, not text plus a link list
-Found 2026-08-12 while designing ADR-033, and it is a defect for listing pages, not a preference. `HtmlText` returns `text` and `links` separately and throws away anchor labels: a directory page yields 200 names on one side, 200 URLs on the other, and nothing pairs them. Markdown keeps `[Chez Marcel](/friterie/chez-marcel-4412)` intact — the difference between usable and not. Second defect of the same kind: `STRIP` removes `nav`, `header` and `footer`, which deletes the pagination links, so "next page" disappears.
+## HtmlText emits markdown, and lives in Support
+Done 2026-08-12. `HtmlText` used to return `text` and `links` separately, throwing away anchor labels: a directory page yielded 200 names on one side, 200 URLs on the other, and nothing paired them. It now emits markdown, so `[Acme Plumbing](/company/acme-plumbing-4412)` stays intact — the difference between a usable listing page and an unusable one. `mailto:` and `tel:` are kept verbatim in the markdown while `Url::resolve` still drops them, because they are contact details rather than links to crawl; an address that only appeared in an href used to be invisible to the extractor.
 
-## What the first real harvests returned (2026-08-12)
-`ListingHarvester` works end to end, and three live attempts corrected the ADR's central assumption.
+Same fix, second half: `nav`, `header` and `footer` are no longer stripped. They look like chrome until you notice pagination lives in `nav`, and dropping it stops a listing harvest at page one.
 
-**ADR-033 claimed directories "nearly all emit JSON-LD because SEO is their business". That was wrong and the assumption is dropped: nobody publishes it, so never plan around getting it.** Measured on three Belgian directories, none did.
+`HtmlText`, `ParsedPage` and `Url` now live in `app/Support/`, not here — parsing HTML and resolving a URL are not discovery concerns, they were just needed here first. `ParsedPage` had to move with `HtmlText`: Support must not depend on a service.
 
-| Host | Result |
-|---|---|
-| `pagesdor.be` | HTTP 200 carrying an **Imperva/Incapsula** challenge page, 1 152 bytes, no content. Hard bot protection — no parser fixes this. |
-| `infobel.com` | **403** to an unknown User-Agent. Its robots.txt names and disallows `GPTBot`, `CCBot`, `ChatGPT-User` and `anthropic` — AI crawlers are being blocked deliberately. |
-| `resto.be` | 200, **737 KB, zero `ld+json`** — a JS-rendered app. The LLM fallback read it fine: 23 businesses, 0 with a website, $0.019 for the page. |
-
-JSON-LD is still tried first — it costs nothing to attempt and is perfect when present — but it is a windfall, not a design assumption. **Plan every cost estimate on the LLM path.**
-
-Consequences:
-- **$0.019 per listing page** against $0.0025 per company qualification. Cheap per business ($0.0001 at 200 entries), but twenty pages is $0.38 spent before anything is qualified.
-- **An extraction is never paid for twice.** `crawled_pages` caches the fetch, not the model call, so a re-run used to re-bill every page — which is exactly what testing a directory involves. Results are cached on the URL hash for the crawl TTL. ICP-independent public content, so the same reasoning as ADR-014 applies.
-- **Learned CSS selectors are now the real win, not a speculative rung.** With the model as the normal path, deriving a host's selectors ONCE from the model's own output and replaying them free on later pages turns a recurring cost into a one-off. Build it when a directory has actually produced more than once — not before.
-- **Big national directories are the hostile case.** The `directories` registry should record *why* a host failed (`blocked`, `js_only`, `jsonld`, `llm`) so a blocked one is never retried at cost.
-- **JS rendering is now a real question**, where before it was deferred pending measurement (a 737 KB page yielding nothing server-side is the measurement starting). Not a reason to add a headless container yet — the LLM path reads what the server does send — but the failure rate is no longer hypothetical.
-- Blocked directories are also an argument for the official registries (KBO/BCE, SIRENE): open data, no bot protection, exhaustive.
-
-**Every business harvested from resto.be had no website of its own** — exactly the population ADR-033 was written for, and exactly the one the pipeline cannot yet hold: `companies.domain` is NOT NULL and is the dedupe key. `Candidate.website` is nullable and `Harvest::withoutWebsite()` counts them so the number is visible instead of silently dropped, but nothing consumes them yet. That schema change is the next real decision.
-
+Not replaced by a package, and the option was checked: `league/html-to-markdown` is the mature choice but resolves no relative URLs against a base, extracts no title, lang or link list, and would leave us owning most of this class anyway. Revisit only if the hand-rolled renderer starts failing on real pages.

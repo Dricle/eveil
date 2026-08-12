@@ -1,14 +1,14 @@
 <?php
 
 use App\Ai\Agents\ContactExtractor;
-use App\Discovery\EmailPattern;
-use App\Discovery\EmailVerifier;
 use App\Enums\EmailSource;
 use App\Enums\EmailStatus;
 use App\Models\Company;
 use App\Models\Erasure;
 use App\Models\Lead;
 use App\Models\Project;
+use App\Services\Discovery\EmailPattern;
+use App\Services\Discovery\EmailVerifier;
 use Illuminate\Support\Facades\Http;
 
 function extraction(array $people = [], array $generic = [], string $pattern = ''): array

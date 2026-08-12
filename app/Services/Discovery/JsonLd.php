@@ -1,7 +1,9 @@
 <?php
 
-namespace App\Discovery;
+namespace App\Services\Discovery;
 
+use App\Support\HtmlText;
+use App\Support\Url;
 use DOMElement;
 use DOMXPath;
 

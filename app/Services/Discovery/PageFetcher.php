@@ -1,8 +1,10 @@
 <?php
 
-namespace App\Discovery;
+namespace App\Services\Discovery;
 
 use App\Models\CrawledPage;
+use App\Support\HtmlText;
+use App\Support\Url;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 

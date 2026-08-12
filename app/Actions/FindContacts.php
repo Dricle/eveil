@@ -3,17 +3,17 @@
 namespace App\Actions;
 
 use App\Ai\Agents\ContactExtractor;
-use App\Discovery\EmailPattern;
-use App\Discovery\EmailVerifier;
-use App\Discovery\HtmlText;
-use App\Discovery\PageFetcher;
-use App\Discovery\ParsedPage;
-use App\Discovery\Url;
 use App\Enums\EmailSource;
 use App\Enums\EmailStatus;
 use App\Models\Company;
 use App\Models\Erasure;
 use App\Models\Lead;
+use App\Services\Discovery\EmailPattern;
+use App\Services\Discovery\EmailVerifier;
+use App\Services\Discovery\PageFetcher;
+use App\Support\HtmlText;
+use App\Support\ParsedPage;
+use App\Support\Url;
 use Illuminate\Support\Collection;
 use Laravel\Ai\Responses\StructuredAgentResponse;
 

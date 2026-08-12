@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Discovery;
+namespace App\Support;
 
 /**
  * URL normalisation, kept in one place because the crawl cache and the company

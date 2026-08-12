@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Discovery;
+namespace App\Services\Discovery;
 
 /**
  * Turns one known address into the others. This is how Hunter and

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Discovery\Sources;
+namespace App\Services\Discovery\Sources;
 
 use Illuminate\Support\Collection;
 

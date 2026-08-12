@@ -4,12 +4,12 @@ namespace App\Console\Commands;
 
 use App\Actions\AnalyzeWebsite;
 use App\Ai\AgentSettings;
-use App\Discovery\Url;
 use App\Enums\AnalysisStatus;
 use App\Models\AgentRun;
 use App\Models\Organization;
 use App\Models\Project;
 use App\Support\CurrentProject;
+use App\Support\Url;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 

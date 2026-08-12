@@ -3,12 +3,12 @@
 namespace App\Actions;
 
 use App\Ai\Agents\WebsiteAnalyst;
-use App\Discovery\ParsedPage;
-use App\Discovery\SiteCrawler;
 use App\Enums\AnalysisStatus;
 use App\Enums\AnalysisType;
 use App\Models\Project;
 use App\Models\ProjectAnalysis;
+use App\Services\Discovery\SiteCrawler;
+use App\Support\ParsedPage;
 use Illuminate\Support\Collection;
 use Laravel\Ai\Responses\StructuredAgentResponse;
 use Throwable;

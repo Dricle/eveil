@@ -1,7 +1,10 @@
 <?php
 
-namespace App\Discovery;
+namespace App\Services\Discovery;
 
+use App\Support\HtmlText;
+use App\Support\ParsedPage;
+use App\Support\Url;
 use Illuminate\Support\Collection;
 
 /**

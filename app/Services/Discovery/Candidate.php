@@ -1,6 +1,8 @@
 <?php
 
-namespace App\Discovery;
+namespace App\Services\Discovery;
+
+use App\Support\Url;
 
 /**
  * A company we might want, before anyone has judged whether we do. Sources

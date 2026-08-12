@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Discovery\Sources;
+namespace App\Services\Discovery\Sources;
 
-use App\Discovery\Candidate;
+use App\Services\Discovery\Candidate;
 use Illuminate\Support\Collection;
 
 /**

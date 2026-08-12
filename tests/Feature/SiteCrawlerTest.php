@@ -1,7 +1,7 @@
 <?php
 
-use App\Discovery\SiteCrawler;
 use App\Models\CrawledPage;
+use App\Services\Discovery\SiteCrawler;
 use Illuminate\Support\Facades\Http;
 
 function html(string $body, string $lang = 'fr'): string

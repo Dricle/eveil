@@ -1,7 +1,7 @@
 <?php
 
-use App\Discovery\HtmlText;
-use App\Discovery\ParsedPage;
+use App\Support\HtmlText;
+use App\Support\ParsedPage;
 
 function parsePage(string $html, string $url = 'https://example.be/annuaire/friteries'): ParsedPage
 {

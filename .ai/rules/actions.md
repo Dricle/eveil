@@ -6,13 +6,28 @@ paths:
 # Actions
 
 ## One class per use case, and nothing else lives here
-Settled 2026-08-12. `app/Actions/` holds the orchestrators — one class, one job the product actually performs: `AnalyzeWebsite`, `DeriveIcps`, `RunDiscovery`, `FindContacts`. They were split out of `app/Ai/` and `app/Discovery/`, which had become a mix of machinery and use cases.
+Settled 2026-08-12. `app/Actions/` holds the orchestrators — one class, one job the product actually performs: `AnalyzeWebsite`, `DeriveIcps`, `RunDiscovery`, `FindContacts`. They were split out of `app/Ai/` and `app/Services/Discovery/`, which had become a mix of machinery and use cases.
 
 The line to hold:
-- **`app/Actions/`** — use cases. Fetch, call an agent, persist, return. Invoked by a command, a controller or a job. No HTTP parsing, no prompt text, no schema.
+- **`app/Actions/`** — use cases. Fetch, call a service or an agent, persist, return. Invoked by a command, a controller or a job. No HTTP parsing, no prompt text, no schema.
 - **`app/Ai/`** — anything that IS AI: the agent classes and their prompts, `AgentSettings`, `ModelPricing`, the metering middleware.
-- **`app/Discovery/`** — the machinery an action drives: `SiteCrawler`, `PageFetcher`, `HtmlText`, `JsonLd`, `ListingHarvester`, `EmailVerifier`, the sources.
+- **`app/Services/<Domain>/`** — the machinery an action drives, one folder per subsystem: `Services/Discovery/` holds `SiteCrawler`, `PageFetcher`, `JsonLd`, `ListingHarvester`, `EmailVerifier` and the sources.
 
 `AnalyzeWebsite` sat in `app/Ai/` and contained no AI at all — it called an agent. That is the mistake to avoid: a class does not belong in `app/Ai/` because it mentions an agent, only because it IS one.
 
-An action stays thin by construction. When one grows a private method that parses HTML, verifies an address or talks to an API, that method belongs in `app/Discovery/` (or a new domain folder) and the action calls it.
+An action stays thin by construction. When one grows a private method that parses HTML, verifies an address or talks to an API, that method belongs in `app/Services/Discovery/` (or a new domain folder) and the action calls it.
+
+## Where a class goes
+Settled 2026-08-12, after `app/Discovery/` sat at the top level next to `Models` and `Enums` and read as a different kind of grouping than everything around it.
+
+| Folder | Holds |
+| --- | --- |
+| `app/Actions/` | one class per use case |
+| `app/Services/<Domain>/` | the machinery those use cases drive, grouped by subsystem |
+| `app/Models`, `Enums`, `Casts`, `Providers`, `Console` | what the framework expects, where it expects it |
+| `app/Support/` | genuinely cross-domain helpers, nothing feature-specific. `HtmlText`, `ParsedPage` and `Url` live here: parsing HTML and resolving a URL are not discovery concerns, they just happened to be needed there first. **Support depends on nothing above it** — that is why `ParsedPage` had to move with `HtmlText` rather than stay behind |
+| `app/Cloud/` | NOT a service grouping — a conditional-loading boundary on `APP_EDITION` |
+
+**`app/Ai/` is the documented exception and stays put.** `laravel/ai` scaffolds `make:agent` to `App\Ai\Agents`, `make:tool` to `App\Ai\Tools` and `make:agent-middleware` to `App\Ai\Middleware`. Moving it under `Services/` would mean renaming the namespace of every generated class forever, which buys a tidier folder listing and nothing else.
+
+DTOs live beside the services that produce them — `Candidate`, `ParsedPage` and `Harvest` are in `Services/Discovery/`, not a separate `Data/`. Splitting them out is more honest about types and worse for everything else: a change to harvesting would touch three top-level folders instead of one.

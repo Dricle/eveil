@@ -1,6 +1,6 @@
 ---
 paths:
-  - 'app/Outreach/**'
+  - 'app/Services/Outreach/**'
 ---
 
 # Outreach

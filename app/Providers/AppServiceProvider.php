@@ -2,8 +2,8 @@
 
 namespace App\Providers;
 
-use App\Discovery\PageFetcher;
-use App\Discovery\RobotsPolicy;
+use App\Services\Discovery\PageFetcher;
+use App\Services\Discovery\RobotsPolicy;
 use App\Support\CredentialsCipher;
 use App\Support\CurrentProject;
 use App\Support\Settings;

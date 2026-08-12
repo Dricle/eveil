@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Discovery;
+namespace App\Support;
 
 use DOMDocument;
 use DOMElement;

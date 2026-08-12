@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
-use App\Discovery\Candidate;
-use App\Discovery\ListingHarvester;
 use App\Models\Project;
+use App\Services\Discovery\Candidate;
+use App\Services\Discovery\ListingHarvester;
 use App\Support\CurrentProject;
 use Illuminate\Console\Command;
 

@@ -1,9 +1,12 @@
 <?php
 
-namespace App\Discovery;
+namespace App\Services\Discovery;
 
 use App\Ai\Agents\ListingExtractor;
 use App\Models\Project;
+use App\Support\HtmlText;
+use App\Support\ParsedPage;
+use App\Support\Url;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Throwable;

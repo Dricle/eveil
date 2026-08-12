@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Discovery;
+namespace App\Support;
 
 /**
  * One readable page. A small object rather than an array shape: array shapes

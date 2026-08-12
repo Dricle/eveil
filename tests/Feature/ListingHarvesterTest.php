@@ -1,9 +1,9 @@
 <?php
 
 use App\Ai\Agents\ListingExtractor;
-use App\Discovery\ListingHarvester;
 use App\Models\AgentRun;
 use App\Models\Project;
+use App\Services\Discovery\ListingHarvester;
 use Illuminate\Support\Facades\Http;
 
 function listingPage(string $body): string

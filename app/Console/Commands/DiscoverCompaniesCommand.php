@@ -13,15 +13,23 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 
 /**
- * The step the product is actually built on: a profile in, real companies out,
- * with no purchased database anywhere.
+ * Takes one customer profile and comes back with named companies that match it.
+ *
+ * Four steps, all inside a single budgeted run:
+ *   1. an agent plans where to look and says so before anything executes
+ *   2. the planned probes are put to the sources — map data and web search
+ *   3. each candidate's own site is fetched and scored against the profile
+ *   4. survivors are stored as companies, with a fit score and a usable reason
+ *
+ * No purchased database anywhere: every company here was found, fetched and
+ * read. Contacts are a separate step — see `eveil:find-contacts`.
  */
-class DiscoverCommand extends Command
+class DiscoverCompaniesCommand extends Command
 {
-    protected $signature = 'eveil:discover {icp? : Profile id or name — defaults to the only one}
-                                           {--companies= : Cap on candidates gathered}
-                                           {--qualified= : Cap on companies kept}
-                                           {--pages= : Cap on pages fetched}';
+    protected $signature = 'eveil:discover-companies {icp? : Profile id or name — defaults to the only one}
+                                                     {--companies= : Cap on candidates gathered}
+                                                     {--qualified= : Cap on companies kept}
+                                                     {--pages= : Cap on pages fetched}';
 
     protected $description = 'Find and qualify companies matching a customer profile';
 

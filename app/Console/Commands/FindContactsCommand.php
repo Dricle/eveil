@@ -38,7 +38,7 @@ class FindContactsCommand extends Command
         $companies = $this->companies($project);
 
         if ($companies->isEmpty()) {
-            $this->components->warn('No company left to work through. Run eveil:discover first, or pass --fresh.');
+            $this->components->warn('No company left to work through. Run eveil:discover-companies first, or pass --fresh.');
 
             return self::SUCCESS;
         }

@@ -74,7 +74,7 @@ it('finds companies on the map, qualifies them and stores the pair', function ()
         'https://friterie-centre.be/' => Http::response(page()),
     ]);
 
-    $this->artisan('eveil:discover')->assertSuccessful();
+    $this->artisan('eveil:discover-companies')->assertSuccessful();
 
     $company = Company::sole();
 
@@ -102,7 +102,7 @@ it('records the plan the agent explained before executing', function () {
         '*' => Http::response(page()),
     ]);
 
-    $this->artisan('eveil:discover')->assertSuccessful();
+    $this->artisan('eveil:discover-companies')->assertSuccessful();
 
     expect(DiscoveryRun::sole()->stats['plan'])->toContain('Charleroi');
 });
@@ -120,7 +120,7 @@ it('searches the web when the profile has no premises', function () {
         'https://darkkitchen.be/' => Http::response(page()),
     ]);
 
-    $this->artisan('eveil:discover')->assertSuccessful();
+    $this->artisan('eveil:discover-companies')->assertSuccessful();
 
     expect(Company::sole()->source)->toBe('web_search');
 });
@@ -141,7 +141,7 @@ it('throws away directories and platforms returned by the search engine', functi
         '*' => Http::response(page()),
     ]);
 
-    $this->artisan('eveil:discover')->assertSuccessful();
+    $this->artisan('eveil:discover-companies')->assertSuccessful();
 
     // Directories are how you find companies, not companies you can sell to.
     expect(Company::pluck('domain')->all())->toBe(['vraie-friterie.be']);
@@ -161,7 +161,7 @@ it('drops map entries that have no website', function () {
         '*' => Http::response(page()),
     ]);
 
-    $this->artisan('eveil:discover')->assertSuccessful();
+    $this->artisan('eveil:discover-companies')->assertSuccessful();
 
     // Without a domain there is nothing to qualify and no email to infer.
     expect(Company::pluck('domain')->all())->toBe(['avec-site.be']);
@@ -178,7 +178,7 @@ it('keeps out what the qualifier says is not a prospect', function () {
         '*' => Http::response(page()),
     ]);
 
-    $this->artisan('eveil:discover')->assertSuccessful();
+    $this->artisan('eveil:discover-companies')->assertSuccessful();
 
     expect(Company::count())->toBe(0)
         ->and(DiscoveryRun::sole()->diagnosis)->toBe(DiscoveryDiagnosis::BadIcp);
@@ -190,7 +190,7 @@ it('diagnoses a wrong source rather than a wrong profile when nothing is found',
 
     Http::fake(['*/api/interpreter' => Http::response(['elements' => []])]);
 
-    $this->artisan('eveil:discover')
+    $this->artisan('eveil:discover-companies')
         ->expectsOutputToContain('sources were wrong')
         ->assertSuccessful();
 
@@ -213,7 +213,7 @@ it('stops at the qualified ceiling', function () {
         '*' => Http::response(page()),
     ]);
 
-    $this->artisan('eveil:discover', ['--qualified' => 2])->assertSuccessful();
+    $this->artisan('eveil:discover-companies', ['--qualified' => 2])->assertSuccessful();
 
     // The budget is a hard ceiling: the run stops on it and keeps what it has.
     expect(Company::count())->toBe(2);
@@ -235,7 +235,7 @@ it('never rediscovers a company the project already has', function () {
         '*' => Http::response(page()),
     ]);
 
-    $this->artisan('eveil:discover')->assertSuccessful();
+    $this->artisan('eveil:discover-companies')->assertSuccessful();
 
     expect(Company::count())->toBe(2)
         ->and(DiscoveryRun::sole()->stats['candidates_found'])->toBe(1);
@@ -258,7 +258,7 @@ it('survives a source that is down', function () {
         '*' => Http::response(page()),
     ]);
 
-    $this->artisan('eveil:discover')->assertSuccessful();
+    $this->artisan('eveil:discover-companies')->assertSuccessful();
 
     expect(Company::sole()->domain)->toBe('survivant.be');
 });
@@ -267,7 +267,7 @@ it('asks which profile when there are several', function () {
     activeIcp();
     activeIcp();
 
-    $this->artisan('eveil:discover')
+    $this->artisan('eveil:discover-companies')
         ->expectsOutputToContain('Several profiles')
         ->assertFailed();
 });
@@ -283,7 +283,7 @@ it('scopes a map probe to its country', function () {
         '*' => Http::response(page()),
     ]);
 
-    $this->artisan('eveil:discover')->assertSuccessful();
+    $this->artisan('eveil:discover-companies')->assertSuccessful();
 
     // A probe on "Charleroi" alone also returns Charleroi, Pennsylvania — the
     // first live run brought back a Subway there.
@@ -302,7 +302,7 @@ it('says which source failed rather than blaming the profile', function () {
     // and the run reported "no candidate at all" as if the market were empty.
     Http::fake(['*/api/interpreter' => Http::response('', 406)]);
 
-    $this->artisan('eveil:discover')->assertSuccessful();
+    $this->artisan('eveil:discover-companies')->assertSuccessful();
 
     expect(DiscoveryRun::sole()->stats['source_failures'])->toContain('Charleroi: HTTP 406');
 });
@@ -317,7 +317,7 @@ it('identifies itself to the map service', function () {
         '*' => Http::response(page()),
     ]);
 
-    $this->artisan('eveil:discover')->assertSuccessful();
+    $this->artisan('eveil:discover-companies')->assertSuccessful();
 
     Http::assertSent(fn ($request) => ! str_contains($request->url(), 'interpreter')
         || str_contains($request->header('User-Agent')[0] ?? '', 'EveilBot'));
@@ -345,7 +345,7 @@ it('keeps going when one candidate blows up', function () {
         '*' => Http::response(page()),
     ]);
 
-    $this->artisan('eveil:discover')->assertSuccessful();
+    $this->artisan('eveil:discover-companies')->assertSuccessful();
 
     expect(Company::pluck('domain')->all())->toBe(['marche.be'])
         ->and(DiscoveryRun::sole()->stats['candidate_failures'][0])->toContain('casse.be');
@@ -363,7 +363,7 @@ it('stores a page that Postgres would otherwise reject', function () {
         '*' => Http::response(str_replace('friterie', "friterie\0", page())),
     ]);
 
-    $this->artisan('eveil:discover')->assertSuccessful();
+    $this->artisan('eveil:discover-companies')->assertSuccessful();
 
     expect(Company::sole()->domain)->toBe('nul.be');
 });

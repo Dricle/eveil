@@ -1346,7 +1346,7 @@ est une story pas faite.
 | 11 — LinkedIn / 12 — Intégrations | ⬜ hors v0 et v1 |
 
 **Ce qui existe vraiment** : le schéma complet, les modèles, cinq agents, le crawler, la vérification
-d'emails, et quatre commandes — `eveil:analyze`, `eveil:derive-icp`, `eveil:discover`,
+d'emails, et quatre commandes — `eveil:analyze`, `eveil:derive-icp`, `eveil:discover-companies`,
 `eveil:find-contacts` et `eveil:harvest` — plus `eveil:agent-model` et `eveil:credentials-key`. Aucune interface, aucune
 authentification, aucun envoi.
 
@@ -1477,7 +1477,7 @@ automatiquement.
 - Ajouter un annuaire ne demande pas de code
 - **État** : `ListingHarvester` fait et testé, pilotable par `eveil:harvest <url>` — JSON-LD, repli LLM,
   pagination, budget. Manquent le registre `directories`, le tri des résultats de recherche, et le
-  branchement dans `eveil:discover`. Les sociétés sans site sont comptées mais pas exploitables :
+  branchement dans `eveil:discover-companies`. Les sociétés sans site sont comptées mais pas exploitables :
   `companies.domain` est NOT NULL
 
 **5.2 ter** ⬜ En tant qu'utilisateur, je veux voir et reprendre la main sur ce que fait la découverte (ADR-033).

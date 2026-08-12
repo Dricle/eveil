@@ -5,7 +5,7 @@ namespace App\Discovery;
 /**
  * URL normalisation, kept in one place because the crawl cache and the company
  * dedupe both key on it — two different normalisations would mean two cache
- * entries for one page (ADR-014).
+ * entries for one page.
  */
 class Url
 {
@@ -37,9 +37,9 @@ class Url
             str_starts_with($href, 'http://'), str_starts_with($href, 'https://') => $href,
             str_starts_with($href, '//') => $base['scheme'].':'.$href,
             // A query-only reference keeps the base PATH (RFC 3986 §5.3). Taking
-            // its dirname instead turns `?page=2` on /annuaire/friteries into
-            // /annuaire?page=2 — which is how pagination silently breaks, and
-            // pagination is the whole point of harvesting a listing (ADR-033).
+            // its dirname instead turns `?page=2` on /directory/plumbers into
+            // /directory?page=2 — which is how pagination silently breaks, and
+            // pagination is the whole point of harvesting a listing.
             str_starts_with($href, '?') => $base['scheme'].'://'.$base['host'].($base['path'] ?? '/').$href,
             str_starts_with($href, '/') => $base['scheme'].'://'.$base['host'].$href,
             default => $base['scheme'].'://'.$base['host'].'/'.ltrim(

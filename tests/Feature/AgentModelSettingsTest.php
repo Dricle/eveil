@@ -7,7 +7,7 @@ use App\Support\Settings;
 use Laravel\Ai\Enums\Lab;
 
 /**
- * ADR-026: the mapping lives in the database so the operator can change a model
+ * The mapping lives in the database so the operator can change a model
  * from the settings screen. Config only supplies the shipped default.
  */
 function mapping(string $agent = 'website-analyst'): array

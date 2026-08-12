@@ -8,8 +8,8 @@ use Illuminate\Support\Facades\Schema;
  * What the Website agent produces, and what the Sales agent targets with.
  *
  * `project_analyses` keeps the history so a re-run can be diffed against the
- * previous one (story 4.2). `icps` holds as many profiles as the agent derives,
- * freely editable by the user (ADR-015) — a product usually serves several
+ * previous one. `icps` holds as many profiles as the agent derives,
+ * freely editable by the user — a product usually serves several
  * markets, and flattening them into one average profile targets nobody.
  */
 return new class extends Migration

@@ -9,18 +9,19 @@ use Illuminate\Support\Facades\Cache;
 use Throwable;
 
 /**
- * Reads a directory listing page and returns the businesses on it (ADR-033).
+ * Reads a directory listing page and returns the businesses on it.
  *
  * The reason this exists: a search engine ranks companies that do SEO, so it
- * finds the ones already being sold to. `pagesdor.be/friteries/namur` is not a
- * company, it is two hundred companies — and for a business with no site it is
- * the only place an email is published. The aggregator blocklist used to delete
- * exactly this.
+ * finds the ones already being sold to. A directory's page for one trade in one
+ * town is not a company, it is two hundred companies — and for a business with
+ * no site of its own it is the only place an email is published. The aggregator
+ * blocklist used to delete exactly this.
  *
  * The model decides WHERE to harvest; this does the volume. JSON-LD is tried
  * first because it costs nothing to try and is perfect when present — but it is
- * a windfall, not an assumption. Three real Belgian directories emitted none of
- * it (one behind Imperva, one 403-ing unknown agents, one a 737 KB JS app), so
+ * a windfall, not an assumption. The first three real directories tried emitted
+ * none of it — one behind bot protection, one 403-ing unknown agents, one a
+ * 737 KB JS app — so
  * **the LLM extractor is the normal path and the cost model**.
  *
  * Which is why extraction is cached: `crawled_pages` caches the fetch, not the
@@ -158,7 +159,7 @@ class ListingHarvester
 
         // The one call that costs money, so it is paid for once per page. Keyed
         // and expiring like the page cache it mirrors, for the same reason
-        // (ADR-014): public content, ICP-independent, safe to share — and it
+        // : public content, ICP-independent, safe to share — and it
         // pays off most on the re-runs that testing a directory is made of.
         //
         // The instructions are part of the key so that editing the prompt

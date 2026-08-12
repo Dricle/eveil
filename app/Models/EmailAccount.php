@@ -14,10 +14,10 @@ use Illuminate\Support\Carbon;
 
 /**
  * A mailbox we send from and read replies out of. Plain SMTP/IMAP, no OAuth
- * (ADR-027). `project_id` null means the account is shared across every project
+ *. `project_id` null means the account is shared across every project
  * of the organization.
  *
- * Passwords are encrypted with CREDENTIALS_KEY, never APP_KEY (ADR-012), and
+ * Passwords are encrypted with CREDENTIALS_KEY, never APP_KEY, and
  * are hidden from serialisation: they are write-only as far as the UI is
  * concerned.
  *
@@ -75,8 +75,8 @@ class EmailAccount extends Model
     }
 
     /**
-     * Ramp-up on a new mailbox (story 7.3). Warm-up is deliberately absent —
-     * we do not build it (ADR-023).
+     * Ramp-up on a new mailbox. Warm-up is deliberately absent —
+     * we do not build it.
      */
     public function allowanceForToday(): int
     {

@@ -17,7 +17,7 @@ use Laravel\Ai\Promptable;
  *
  * `Promptable` looks for `provider()`, `model()` and `timeout()` on the agent
  * before falling back to its own attributes, which is exactly the hook the
- * database-backed mapping needs (ADR-026) — a model change is a settings
+ * database-backed mapping needs — a model change is a settings
  * change, never a deploy.
  */
 abstract class EveilAgent implements Agent, HasMiddleware
@@ -29,7 +29,7 @@ abstract class EveilAgent implements Agent, HasMiddleware
     /**
      * Which line of the settings screen governs this agent, and what
      * `agent_runs` records — one line per agent, not per vague category, so
-     * the meter joins the credit grid, which bills per action (ADR-019).
+     * the meter joins the credit grid, which bills per action.
      */
     public function slug(): string
     {

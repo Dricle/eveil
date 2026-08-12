@@ -14,8 +14,8 @@ use Illuminate\Support\Carbon;
 
 /**
  * One search for companies matching an ICP. Carries its own hard budget: an
- * unbounded agent loop that fetches pages burns real money (ADR-004), and in
- * cloud that budget IS the credit hold (ADR-019).
+ * unbounded agent loop that fetches pages burns real money, and in
+ * cloud that budget IS the credit hold.
  *
  * @property int $id
  * @property int $project_id
@@ -48,7 +48,7 @@ class DiscoveryRun extends Model
     /**
      * A diagnosed-wrong ICP is escalated to the user, never widened: widening
      * there produces off-target leads the user then emails, and the complaints
-     * land on their domain (ADR-020).
+     * land on their domain.
      */
     public function mayWiden(): bool
     {

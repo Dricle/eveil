@@ -8,8 +8,8 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Sending, suppression and replies.
  *
- * Mail leaves the user's own mailbox over plain SMTP/IMAP (ADR-005, ADR-027)
- * and must be indistinguishable from something they typed (ADR-029): no
+ * Mail leaves the user's own mailbox over plain SMTP/IMAP
+ * and must be indistinguishable from something they typed: no
  * tracking, no unsubscribe link, no Eveil URL. Opt-out is a "reply STOP"
  * sentence, which makes reply classification a compliance mechanism rather
  * than a metric.
@@ -35,16 +35,16 @@ return new class extends Migration
             $table->string('smtp_host');
             $table->unsignedSmallInteger('smtp_port');
             $table->string('smtp_username');
-            $table->text('smtp_password'); // encrypted with CREDENTIALS_KEY (ADR-012)
+            $table->text('smtp_password'); // encrypted with CREDENTIALS_KEY
             $table->string('smtp_encryption')->nullable();
 
             $table->string('imap_host');
             $table->unsignedSmallInteger('imap_port');
             $table->string('imap_username');
-            $table->text('imap_password'); // encrypted with CREDENTIALS_KEY (ADR-012)
+            $table->text('imap_password'); // encrypted with CREDENTIALS_KEY
             $table->string('imap_encryption')->nullable();
 
-            // The only trailing block allowed in a message body (ADR-029).
+            // The only trailing block allowed in a message body.
             $table->text('signature')->nullable();
 
             $table->unsignedSmallInteger('daily_limit')->default(30);
@@ -60,7 +60,7 @@ return new class extends Migration
         });
 
         /**
-         * Three layers, three scopes (ADR-013). Every pre-send check reads all
+         * Three layers, three scopes. Every pre-send check reads all
          * three:
          *   opt_out → project (or organization once escalated)
          *   bounce  → email account
@@ -89,7 +89,7 @@ return new class extends Migration
         });
 
         /**
-         * Erasure tombstones (ADR-018). Deleting the row is not enough — the
+         * Erasure tombstones. Deleting the row is not enough — the
          * next discovery run would find the person again. We keep the hashed
          * address so they can never be re-discovered, and nothing else.
          * Organization-scoped: each controller handles its own erasures.
@@ -134,7 +134,7 @@ return new class extends Migration
 
             // Null means the body is generated per lead in the prospect's own
             // language; a value marks a hand-written or translated variant
-            // cached per (template, language) pair (ADR-021).
+            // cached per (template, language) pair.
             $table->string('language', 5)->nullable();
 
             $table->unsignedSmallInteger('weight')->default(1);
@@ -149,7 +149,7 @@ return new class extends Migration
             $table->foreignId('lead_id')->constrained()->cascadeOnDelete();
 
             // Pinned for the whole sequence so the thread stays coherent, and
-            // so mailbox rotation never splits one conversation (story 7.4).
+            // so mailbox rotation never splits one conversation.
             $table->foreignId('email_account_id')->nullable()->constrained()->nullOnDelete();
 
             $table->unsignedSmallInteger('current_step_position')->default(0);
@@ -165,7 +165,7 @@ return new class extends Migration
             $table->index(['status', 'next_action_at']);
         });
 
-        // A lead surfaced by two ICPs is not contacted twice (ADR-015): at most
+        // A lead surfaced by two ICPs is not contacted twice: at most
         // one live campaign membership per lead. Partial unique index — the
         // second ICP records the overlap without re-engaging.
         DB::statement("CREATE UNIQUE INDEX campaign_leads_one_active_per_lead ON campaign_leads (lead_id) WHERE status IN ('pending', 'running', 'paused')");
@@ -186,7 +186,7 @@ return new class extends Migration
             $table->string('subject');
             $table->text('body');
 
-            // Set on inbound messages only (ADR-022). `auto_reply` must never
+            // Set on inbound messages only. `auto_reply` must never
             // pause a campaign; `unsubscribe` is the sole opt-out channel and
             // errs toward suppressing.
             $table->string('classification')->nullable(); // interested|not_now|wrong_person|not_interested|unsubscribe|auto_reply

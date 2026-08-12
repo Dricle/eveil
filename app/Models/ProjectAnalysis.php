@@ -14,7 +14,7 @@ use Illuminate\Support\Carbon;
 
 /**
  * History of what the Website agent produced, so a re-run can be diffed against
- * the previous one (story 4.2).
+ * the previous one.
  *
  * @property int $id
  * @property int $project_id

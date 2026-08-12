@@ -119,7 +119,7 @@ it('never resurrects someone who asked to be erased', function () {
 
     $this->artisan('eveil:find-contacts')->assertSuccessful();
 
-    // ADR-018: deleting the row is not enough, the next run would find her again.
+    // Deleting the row is not enough, the next run would find her again.
     expect(Lead::count())->toBe(0);
 });
 
@@ -189,7 +189,7 @@ describe('email verification', function () {
     it('returns unknown rather than invalid when the probe is off', function () {
         // Only `invalid` blocks a send, so it is reserved for proof. Gmail and
         // Microsoft refuse probes, and treating that as invalid would discard
-        // most of the market (ADR-007).
+        // most of the market.
         expect(app(EmailVerifier::class)->verify('someone@gmail.com'))->toBe(EmailStatus::Unknown);
     });
 });

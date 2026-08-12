@@ -6,7 +6,7 @@ use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Facades\DB;
 
 /**
- * ADR-012: user secrets ride on CREDENTIALS_KEY, never APP_KEY, and a canary
+ * User secrets ride on CREDENTIALS_KEY, never APP_KEY, and a canary
  * makes a key mismatch fail loudly instead of silently returning garbage.
  */
 it('never stores a mailbox password in plaintext', function () {

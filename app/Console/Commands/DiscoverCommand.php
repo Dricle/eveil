@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Discovery\RunDiscovery;
+use App\Actions\RunDiscovery;
 use App\Enums\DiscoveryDiagnosis;
 use App\Models\AgentRun;
 use App\Models\CompanyIcpEvaluation;
@@ -143,7 +143,7 @@ class DiscoverCommand extends Command
             $this->components->twoColumnDetail('<fg=yellow>candidate skipped</>', Str::limit((string) $failure, 90));
         }
 
-        // "Your market is 40 companies" is a result, not a failure (ADR-020).
+        // "Your market is 40 companies" is a result, not a failure.
         $message = match ($run->diagnosis) {
             DiscoveryDiagnosis::WrongSource => 'No candidate at all. The sources were wrong for this profile, not the profile itself.',
             DiscoveryDiagnosis::BadIcp => 'Candidates were found but none fit. The profile is probably wrong — widening it would only produce off-target leads.',

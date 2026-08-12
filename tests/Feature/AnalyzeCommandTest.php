@@ -64,7 +64,7 @@ it('creates the implicit organization on a fresh install', function () {
 
     $this->artisan('eveil:analyze', ['url' => 'https://acme.test'])->assertSuccessful();
 
-    // ADR-003: self-hosted single-user still gets an organization, so there is
+    // Self-hosted single-user still gets an organization, so there is
     // one code path rather than two.
     expect(Organization::sole()->slug)->toBe('default')
         ->and(Project::sole()->organization_id)->toBe(Organization::sole()->id);

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Ai;
+namespace App\Actions;
 
 use App\Ai\Agents\IcpDeriver;
 use App\Enums\IcpSource;
@@ -11,7 +11,7 @@ use Laravel\Ai\Responses\StructuredAgentResponse;
 use RuntimeException;
 
 /**
- * Knowledge base in, target profiles out (ADR-015). This is the step that turns
+ * Knowledge base in, target profiles out. This is the step that turns
  * "I know what this product is" into "I know who to contact", and the reason
  * the user never fills in a targeting form.
  */

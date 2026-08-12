@@ -7,11 +7,11 @@ use Laravel\Ai\Contracts\HasStructuredOutput;
 use Stringable;
 
 /**
- * Pulls people and addresses out of a company's own pages (story 5.4).
+ * Pulls people and addresses out of a company's own pages.
  *
  * Runs on the cheap model: this is reading, not judgement, and it happens once
  * per company. Structured output is non-negotiable here — a model that cannot
- * hold the schema produces broken extractions, not merely worse ones (ADR-026).
+ * hold the schema produces broken extractions, not merely worse ones.
  */
 class ContactExtractor extends EveilAgent implements HasStructuredOutput
 {

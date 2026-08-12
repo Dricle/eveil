@@ -15,10 +15,10 @@ use DOMXPath;
  * Deliberately dependency-free: DOMDocument plus a tag map beats adding a
  * markdown converter for what amounts to "drop the chrome, keep the meaning".
  *
- * Markdown rather than flat text, decided 2026-08-12 (ADR-033), because flat
+ * Markdown rather than flat text, decided 2026-08-12, because flat
  * text throws away anchor labels: a directory listing came out as two hundred
  * business names on one side and two hundred URLs on the other, with nothing
- * pairing them. `[Chez Marcel](/friterie/chez-marcel-4412)` keeps them
+ * pairing them. `[Acme Plumbing](/company/acme-plumbing-4412)` keeps them
  * together. Same reason `mailto:` and `tel:` survive here while `Url::resolve`
  * drops them — they are not links to follow, they are the contact details, and
  * an address that only ever appears in an href used to be invisible.

@@ -8,7 +8,7 @@ use Closure;
 /**
  * Holds the project the current request or job is acting on, so the
  * `BelongsToProject` scope can constrain every query without each call site
- * remembering to (ADR-003: a leak between projects is the worst bug this app
+ * remembering to. A leak between projects is the worst bug this app
  * can ship).
  */
 class CurrentProject

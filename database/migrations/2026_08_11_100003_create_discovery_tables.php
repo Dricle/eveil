@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Lead discovery — the product's edge (ADR-014, ADR-015, ADR-020).
+ * Lead discovery — the product's edge.
  *
  * Companies and leads are scoped to their project; only `crawled_pages` is
  * shared instance-wide, and it holds nothing but public web content. Fit score
@@ -21,7 +21,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Shared raw page cache (ADR-014). Public content only — never anything
+        // Shared raw page cache. Public content only — never anything
         // behind a login. Keyed on the normalised URL's hash because URLs
         // exceed the index size limit.
         Schema::create('crawled_pages', function (Blueprint $table) {
@@ -52,7 +52,7 @@ return new class extends Migration
             // Shape: counters plus `plan`, the explanation the agent gave before executing
             $table->jsonb('stats')->nullable();
 
-            // Shape: array<int, array{axis: string, from: mixed, to: mixed, at: string}> widening log (ADR-020)
+            // Shape: array<int, array{axis: string, from: mixed, to: mixed, at: string}> widening log
             $table->jsonb('relaxations')->nullable();
 
             // Set when the ICP is diagnosed as wrong rather than too narrow —
@@ -78,7 +78,7 @@ return new class extends Migration
             $table->string('size')->nullable();
             $table->string('location')->nullable();
 
-            // Detected during the qualification crawl (ADR-021). Per company,
+            // Detected during the qualification crawl. Per company,
             // never per project — Belgium runs FR, NL and EN in one city.
             $table->string('language', 5)->nullable();
 
@@ -128,18 +128,18 @@ return new class extends Migration
             $table->string('language', 5)->nullable();
 
             // Provenance: audit and internal display only. Never injected into
-            // the mail — no generated legal text, no hosted notice (ADR-029).
+            // the mail — no generated legal text, no hosted notice.
             $table->string('source');
             $table->text('source_url')->nullable();
             $table->timestamp('discovered_at');
 
             $table->string('status')->default('new'); // new|queued|contacted|replied|suppressed
 
-            // Drives retention (ADR-018): 3 years after last contact, 6 months
+            // Drives retention: 3 years after last contact, 6 months
             // if never contacted.
             $table->timestamp('last_contacted_at')->nullable();
 
-            // Manual "signed" flag — unlocks cost per customer (ADR-022).
+            // Manual "signed" flag — unlocks cost per customer.
             $table->timestamp('won_at')->nullable();
 
             $table->timestamps();
@@ -152,7 +152,7 @@ return new class extends Migration
         // Dedupe by email within a project, but allow many leads with no email
         // (LinkedIn-only rows are valid). Laravel's Blueprint has no partial
         // index, so this is raw — and partial indexes are one of the reasons
-        // PostgreSQL is mandatory in tests too (ADR-010).
+        // PostgreSQL is mandatory in tests too.
         DB::statement('CREATE UNIQUE INDEX leads_project_id_email_unique ON leads (project_id, email) WHERE email IS NOT NULL');
     }
 

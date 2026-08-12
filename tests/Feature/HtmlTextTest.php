@@ -9,7 +9,7 @@ function parsePage(string $html, string $url = 'https://example.be/annuaire/frit
 }
 
 it('pairs a link with its label, which flat text could not', function () {
-    // ADR-033: the whole point. A listing page used to yield the names on one
+    // The whole point of emitting markdown. A listing page used to yield the names on one
     // side and the URLs on the other, with nothing joining them.
     $page = parsePage(<<<'HTML'
         <html><body><ul>

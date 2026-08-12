@@ -6,7 +6,7 @@ use DOMElement;
 use DOMXPath;
 
 /**
- * Pulls businesses out of a page's `application/ld+json` blocks (ADR-033).
+ * Pulls businesses out of a page's `application/ld+json` blocks.
  *
  * This is the load-bearing rung of the harvest ladder: directories emit
  * structured data because SEO is their entire business, so ONE parser covers

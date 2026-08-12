@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 
 /**
- * Instance-scope settings, superadmin-only (ADR-003, ADR-026): provider key,
+ * Instance-scope settings, superadmin-only: provider key,
  * per-agent provider/model mapping, retention windows, credentials canary.
  *
  * @property string $key

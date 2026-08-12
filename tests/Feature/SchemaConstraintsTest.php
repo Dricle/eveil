@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * The two partial unique indexes encode business rules that no application code
  * would otherwise enforce. They are also the reason PostgreSQL is mandatory in
- * tests (ADR-010) — SQLite would not reproduce either of them.
+ * tests — SQLite would not reproduce either of them.
  */
 function makeProject(): int
 {

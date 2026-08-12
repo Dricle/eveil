@@ -59,7 +59,7 @@ it('reads the businesses out of json-ld without calling a model', function () {
 });
 
 it('keeps the business that publishes no website, which is the whole point', function () {
-    // ADR-033: a search engine never surfaces these. They are counted rather
+    // A search engine never surfaces these. They are counted rather
     // than dropped, because `companies.domain` is NOT NULL and cannot hold them yet.
     Http::fake([
         'https://annuaire.test/friteries' => Http::response(listingPage(jsonLd([

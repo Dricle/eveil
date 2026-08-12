@@ -9,10 +9,10 @@ use Stringable;
 /**
  * Scores one company against one profile. Runs on the cheap model — this is the
  * volume step, several hundred calls per run, and collapsing it onto the
- * expensive model multiplies the cost of discovery roughly fivefold (ADR-026).
+ * expensive model multiplies the cost of discovery roughly fivefold.
  *
  * The score belongs to the (company, profile) pair, never to the company: the
- * same firm is a 90 for one profile and a 20 for another (ADR-015).
+ * same firm is a 90 for one profile and a 20 for another.
  */
 class CompanyQualifier extends EveilAgent implements HasStructuredOutput
 {
@@ -35,9 +35,9 @@ class CompanyQualifier extends EveilAgent implements HasStructuredOutput
 
         The reason you give is not a note to yourself: it is the opening line of a cold
         email. Make it specific to this company — something observable on their site
-        that connects to the profile. "Matches the profile" is useless. "Independent
-        pizzeria in Charleroi taking orders through a Facebook page, no online ordering
-        of its own" is what a salesperson can actually open with.
+        that connects to the profile. "Matches the profile" is useless. "Six-partner
+        accounting firm still publishing its rates as a PDF, with no client portal" is
+        what a salesperson can actually open with.
 
         Write the reason in the language of the company's own website.
         PROMPT;

@@ -6,8 +6,8 @@ use App\Models\Setting;
 use Illuminate\Support\Facades\Cache;
 
 /**
- * Instance-scope settings, superadmin-only (ADR-003): the AI provider key, the
- * per-agent provider/model mapping (ADR-026), retention windows.
+ * Instance-scope settings, superadmin-only: the AI provider key, the
+ * per-agent provider/model mapping, retention windows.
  *
  * Config files hold the shipped defaults so a fresh install works untouched;
  * the database holds what the operator changed. Every read goes through here so

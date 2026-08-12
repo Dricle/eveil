@@ -3,7 +3,7 @@
 namespace App\Enums;
 
 /**
- * Reply classification is a compliance mechanism, not a metric (ADR-029):
+ * Reply classification is a compliance mechanism, not a metric:
  * "reply STOP" is the only opt-out channel this product offers, because mails
  * carry no unsubscribe link and no `List-Unsubscribe` header.
  */
@@ -27,7 +27,7 @@ enum ReplyClassification: string
 
     /**
      * An out-of-office must never pause a campaign — otherwise a fortnight's
-     * holiday reads as a reply (story 8.1).
+     * holiday reads as a reply.
      */
     public function shouldPauseCampaign(): bool
     {
@@ -35,7 +35,7 @@ enum ReplyClassification: string
     }
 
     /**
-     * The north metric (ADR-022). Raw reply rate counts "no thanks" and
+     * The north metric. Raw reply rate counts "no thanks" and
      * out-of-office alongside real interest, which is why it is not used.
      */
     public function isPositive(): bool

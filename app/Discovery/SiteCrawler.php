@@ -9,7 +9,7 @@ use Illuminate\Support\Collection;
  * links most likely to say what the product is, who it is for and what it
  * costs. A homepage alone rarely answers any of those.
  *
- * Bounded on purpose (ADR-004): page count is part of a run's hard budget.
+ * Bounded on purpose: page count is part of a run's hard budget.
  */
 class SiteCrawler
 {

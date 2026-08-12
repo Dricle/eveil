@@ -119,7 +119,7 @@ it('strips machinery, keeps the readable markdown, and keeps nav', function () {
 
     expect($page->text)->toContain('Acme sells widgets.')
         ->and($page->text)->not->toContain('var x = 1')
-        // `nav` used to be stripped as chrome. Reversed on 2026-08-12 (ADR-033):
+        // `nav` used to be stripped as chrome. Reversed on 2026-08-12:
         // pagination lives there, and dropping it stops a listing harvest at
         // page one. The extra tokens are a rounding error against that.
         ->and($page->text)->toContain('[Contact](https://acme.test/contact)')

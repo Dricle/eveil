@@ -98,7 +98,7 @@ it('replaces its own profiles but never the ones a human wrote', function () {
 
     $this->artisan('eveil:derive-icp', ['--fresh' => true])->assertSuccessful();
 
-    // ADR-015: the user can CRUD profiles freely, so a re-derivation may only
+    // The user can CRUD profiles freely, so a re-derivation may only
     // throw away what the agent itself produced.
     expect(Icp::pluck('name')->sort()->values()->all())->toBe(['Deuxième passe', 'Écrit à la main'])
         ->and(Icp::find($handWritten->id))->not->toBeNull();

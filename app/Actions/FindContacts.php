@@ -1,8 +1,14 @@
 <?php
 
-namespace App\Discovery;
+namespace App\Actions;
 
 use App\Ai\Agents\ContactExtractor;
+use App\Discovery\EmailPattern;
+use App\Discovery\EmailVerifier;
+use App\Discovery\HtmlText;
+use App\Discovery\PageFetcher;
+use App\Discovery\ParsedPage;
+use App\Discovery\Url;
 use App\Enums\EmailSource;
 use App\Enums\EmailStatus;
 use App\Models\Company;
@@ -12,7 +18,7 @@ use Illuminate\Support\Collection;
 use Laravel\Ai\Responses\StructuredAgentResponse;
 
 /**
- * Turns qualified companies into people we can actually write to (story 5.4).
+ * Turns qualified companies into people we can actually write to.
  *
  * Four qualified companies with no address are worth nothing, so this is the
  * step that decides whether the whole no-purchased-database bet pays off.
@@ -53,7 +59,7 @@ class FindContacts
     /**
      * The homepage plus the handful of pages that carry a name and an address.
      * Reuses the shared crawl cache, so a company already read during
-     * qualification costs no request here (ADR-014).
+     * qualification costs no request here.
      *
      * @return Collection<int, ParsedPage>
      */
@@ -114,8 +120,8 @@ class FindContacts
             }
         }
 
-        // A generic address is a weak lead, but at a one-person friterie it is
-        // often the only door — and no lead at all is worth less (story 5.4).
+        // A generic address is a weak lead, but at a one-person business it is
+        // often the only door — and no lead at all is worth less.
         if ($leads->isEmpty()) {
             foreach ($extracted['generic_emails'] ?? [] as $email) {
                 $lead = $this->storeGeneric($company, (string) $email);
@@ -250,7 +256,7 @@ class FindContacts
 
     /**
      * An erasure request outlives the row it deleted: without this check the
-     * next run finds the person again and contacts them (ADR-018).
+     * next run finds the person again and contacts them.
      */
     private function erased(Company $company, string $email): bool
     {

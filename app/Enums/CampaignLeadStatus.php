@@ -12,7 +12,7 @@ enum CampaignLeadStatus: string
     case Stopped = 'stopped';
 
     /**
-     * A lead belongs to at most one live campaign per project (ADR-015): a lead
+     * A lead belongs to at most one live campaign per project: a lead
      * surfaced by two ICPs is recorded as an overlap, never contacted twice.
      *
      * This list MUST match the `campaign_leads_one_active_per_lead` partial

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Ai;
+namespace App\Actions;
 
 use App\Ai\Agents\WebsiteAnalyst;
 use App\Discovery\ParsedPage;
@@ -15,13 +15,13 @@ use Throwable;
 
 /**
  * Crawl a project's site, then turn it into the knowledge base both agents work
- * from (story 3.4) — derived once, never re-entered per agent.
+ * from — derived once, never re-entered per agent.
  */
 class AnalyzeWebsite
 {
     /**
      * Characters of page text handed to the model. Roughly 15k tokens, which is
-     * ~$0.08 of Opus input — the bounded-budget rule of ADR-004 applied to the
+     * ~$0.08 of Opus input — the bounded-budget rule applied to the
      * one place where a big site could otherwise run the bill up unnoticed.
      */
     private const MAX_CHARS = 60_000;
@@ -73,7 +73,7 @@ class AnalyzeWebsite
     }
 
     /**
-     * A hand-edited knowledge base outranks any later re-analysis (story 3.2):
+     * A hand-edited knowledge base outranks any later re-analysis:
      * the user corrected us once and should not have to do it again.
      *
      * @param  array<string, mixed>  $summary

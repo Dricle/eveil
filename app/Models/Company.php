@@ -13,7 +13,7 @@ use Illuminate\Support\Carbon;
 /**
  * Firmographic facts only — no fit score. The same company scores 90 for one
  * ICP and 20 for another, so the score lives on CompanyIcpEvaluation or two
- * ICPs would overwrite each other (ADR-014, ADR-015).
+ * ICPs would overwrite each other.
  *
  * @property int $id
  * @property int $project_id

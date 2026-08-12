@@ -14,7 +14,7 @@ use Illuminate\Support\Carbon;
 /**
  * Ideal Customer Profile — the structured portrait the agent derives from the
  * knowledge base, which then drives where it searches and how each company is
- * scored. As many as the agent judges necessary, freely editable (ADR-015).
+ * scored. As many as the agent judges necessary, freely editable.
  *
  * @property int $id
  * @property int $project_id

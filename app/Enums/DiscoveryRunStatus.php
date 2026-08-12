@@ -11,7 +11,7 @@ enum DiscoveryRunStatus: string
 
     /**
      * The market is finished, not the run: "your market is 40 companies, here
-     * they are" is a result worth reporting, not a failure (ADR-020).
+     * they are" is a result worth reporting, not a failure.
      */
     case Exhausted = 'exhausted';
 

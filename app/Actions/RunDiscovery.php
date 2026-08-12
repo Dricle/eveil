@@ -1,10 +1,16 @@
 <?php
 
-namespace App\Discovery;
+namespace App\Actions;
 
 use App\Ai\Agents\CompanyQualifier;
 use App\Ai\Agents\DiscoveryPlanner;
+use App\Discovery\Candidate;
+use App\Discovery\HtmlText;
+use App\Discovery\PageFetcher;
+use App\Discovery\ParsedPage;
 use App\Discovery\Sources\DiscoverySource;
+use App\Discovery\Sources\OverpassSource;
+use App\Discovery\Sources\WebSearchSource;
 use App\Enums\DiscoveryDiagnosis;
 use App\Enums\DiscoveryRunStatus;
 use App\Models\Company;
@@ -16,11 +22,11 @@ use Laravel\Ai\Responses\StructuredAgentResponse;
 use Throwable;
 
 /**
- * Plan, search, qualify. The whole of ADR-020's pipeline minus the widening
+ * Plan, search, qualify. The whole discovery pipeline minus the widening
  * loop.
  *
  * ponytail: a run that comes up short is diagnosed and reported, not widened.
- * Automatic widening needs the autonomy notches wired up (ADR-009) and a
+ * Automatic widening needs the autonomy notches wired up and a
  * re-plan cycle; the diagnosis is the half that makes the other half safe, and
  * it is worth having first.
  */
@@ -35,8 +41,8 @@ class RunDiscovery
     public function __construct(
         private PageFetcher $fetcher,
         private HtmlText $html,
-        Sources\OverpassSource $overpass,
-        Sources\WebSearchSource $webSearch,
+        OverpassSource $overpass,
+        WebSearchSource $webSearch,
     ) {
         $this->sources = [$overpass->name() => $overpass, $webSearch->name() => $webSearch];
     }
@@ -254,7 +260,7 @@ class RunDiscovery
                 'size' => $verdict['size'] ?? null,
                 'location' => $verdict['location'] ?? null,
                 // Detected here, not per project: Belgium runs FR, NL and EN in
-                // one city, and this drives the language of the email (ADR-021).
+                // one city, and this drives the language of the email.
                 'language' => $page->language ?? mb_substr((string) ($verdict['language'] ?? ''), 0, 2) ?: null,
                 'facts' => $candidate->facts,
                 'source' => $candidate->source,
@@ -285,7 +291,7 @@ class RunDiscovery
 
     /**
      * Why a run came up short decides what should happen next — and one of the
-     * answers is "do not widen" (ADR-020). Widening a wrong profile produces
+     * answers is "do not widen". Widening a wrong profile produces
      * off-target leads the user then emails, and the complaints land on their
      * own domain.
      *

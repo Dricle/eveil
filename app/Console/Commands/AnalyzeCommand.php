@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Actions\AnalyzeWebsite;
 use App\Ai\AgentSettings;
-use App\Ai\AnalyzeWebsite;
 use App\Discovery\Url;
 use App\Enums\AnalysisStatus;
 use App\Models\AgentRun;
@@ -95,7 +95,7 @@ class AnalyzeCommand extends Command
             return $existing;
         }
 
-        // Self-hosted single-user still gets an organization (ADR-003): one
+        // Self-hosted single-user still gets an organization: one
         // code path, never two.
         $organization = Organization::query()->first() ?? Organization::create([
             'name' => 'Default',

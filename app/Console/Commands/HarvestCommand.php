@@ -10,7 +10,7 @@ use Illuminate\Console\Command;
 
 /**
  * Points the harvester at one listing URL, so a directory can be tried against
- * the real thing before the discovery graph decides to trust it (ADR-033).
+ * the real thing before the discovery graph decides to trust it.
  */
 class HarvestCommand extends Command
 {
@@ -62,7 +62,7 @@ class HarvestCommand extends Command
         $this->components->twoColumnDetail('businesses', (string) $harvest->candidates->count());
         $this->components->twoColumnDetail('pages read', count($harvest->pages).' ('.implode(', ', array_unique($harvest->modes)).')');
 
-        // The headline number of ADR-033, and the reason it was written: these
+        // The headline number, and the reason directory harvesting exists: these
         // are the companies a search engine never surfaces.
         $this->components->twoColumnDetail(
             'without a website',

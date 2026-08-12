@@ -7,12 +7,13 @@ use App\Models\AgentRun;
 use Illuminate\Console\Command;
 
 /**
- * Reads and writes the per-agent provider/model mapping (ADR-026), which lives
+ * Reads and writes the per-agent provider/model mapping, which lives
  * in the database so changing a model is a settings change and not a deploy.
  *
- * This is the command-line half of the superadmin settings screen — an
- * instance-scope setting, never visible to an organization admin or member. The
- * screen itself arrives with Epic 1, once there is an interface to put it in.
+ * This is an instance-scope setting, never visible to an organization admin or
+ * member. A settings screen will front the same values; this command stays
+ * regardless — it is how you change a model over SSH on a self-hosted box, and
+ * how you script it.
  */
 class AgentModelCommand extends Command
 {
@@ -69,7 +70,7 @@ class AgentModelCommand extends Command
             $agents->model($agent) ?? "the provider's default",
         ));
 
-        // The credit grid is calibrated on a specific model mix (ADR-019), so
+        // The credit grid is calibrated on a specific model mix, so
         // in cloud this and `credit_prices` are one operation, never two.
         $this->components->warn('In cloud, adjust credit_prices in the same move — the grid is calibrated on the model mix.');
 

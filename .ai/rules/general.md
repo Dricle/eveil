@@ -76,3 +76,10 @@ Added 2026-08-12 because the ADR count was outrunning what exists. Every story i
 
 Do not invent a second tracker. No TODO.md, no issues file, no task list in another document — they drift apart within a week and then nobody trusts either.
 
+## Code comments never cite the spec, and examples stay domain-agnostic
+Two rules for anything under `app/`, `config/`, `database/` or `tests/`, settled 2026-08-12.
+
+**No `ADR-0XX`, no `Epic N`, no `story N.N` in code.** `saas-outreach-tool-user-stories.md` is our working document and goes away after the MVP; a public repo full of dangling references to a file nobody has is worse than no comment. Keep the REASONING, drop the citation — write "a leak between projects is the worst bug this app can ship", not "(ADR-003)". Same for roadmap framing: never "this arrives with Epic 1". If something is provisional, say what makes it provisional ("temporary while we validate the approach") — and check first whether it actually is. `eveil:agent-model` reads as scaffolding but is permanent: a settings screen will front the same values, and the command is still how you change a model over SSH on a self-hosted box.
+
+**Examples in prompts and comments must not anchor on one industry.** The first real test was a food-ordering product, and restaurants, friteries and pizzerias leaked into agent instructions everywhere — which biases the model on every OTHER kind of business the app is for. Concrete examples are good and abstract ones teach nothing; the fix is to VARY them across sectors, not to remove them. An ICP example should span software, local services and industry; an Overpass tag list should cover offices, health, retail, trade and industry, and say the list is a starting point rather than the vocabulary. Place names in examples: prefer the neutral or globally recognisable over the local.
+

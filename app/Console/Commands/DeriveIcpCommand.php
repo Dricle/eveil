@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Ai\DeriveIcps;
+use App\Actions\DeriveIcps;
 use App\Models\AgentRun;
 use App\Models\Icp;
 use App\Models\Project;

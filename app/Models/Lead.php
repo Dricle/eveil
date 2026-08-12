@@ -17,7 +17,7 @@ use Illuminate\Support\Carbon;
 /**
  * A person. `source` / `source_url` record provenance for audit and internal
  * display — never for injection into the mail: no generated legal text, no
- * hosted notice (ADR-029).
+ * hosted notice.
  *
  * @property int $id
  * @property int $project_id
@@ -74,7 +74,7 @@ class Lead extends Model
      * An address we never verified, or verified as invalid, is never sent to.
      * `risky` (catch-all) and `unknown` (provider blocks the probe) are
      * deliberately sendable — treating them as invalid would discard most of
-     * Gmail and Outlook (ADR-007).
+     * Gmail and Outlook.
      */
     public function isSendable(): bool
     {

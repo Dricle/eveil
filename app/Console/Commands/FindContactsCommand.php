@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Discovery\FindContacts;
+use App\Actions\FindContacts;
 use App\Enums\EmailSource;
 use App\Enums\EmailStatus;
 use App\Models\AgentRun;

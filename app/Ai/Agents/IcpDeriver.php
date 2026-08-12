@@ -8,7 +8,7 @@ use Stringable;
 
 /**
  * Turns the product portrait into the target profiles the search runs on
- * (ADR-015) — the "zero configuration targeting" the whole product rests on.
+ * — the "zero configuration targeting" the whole product rests on.
  *
  * As many profiles as the product actually serves: flattening two markets into
  * one average profile targets nobody. But a segment nobody can be found for is
@@ -23,9 +23,17 @@ class IcpDeriver extends EveilAgent implements HasStructuredOutput
         prospecting for it.
 
         A profile is only useful if someone could go and FIND those companies tomorrow.
-        "Businesses that want to grow" is not a profile. "Independent pizzerias in
-        Wallonia doing their own delivery, 1 to 3 locations, owner-operated" is: it can
-        be searched for on a map, in a directory, or on a search engine.
+        "Businesses that want to grow" is not a profile. These are, whatever the market:
+
+        - "B2B software companies of 20 to 50 people running their own outbound, whose
+          head of sales is named on the site"
+        - "Independent physiotherapy practices with 2 to 5 practitioners, taking bookings
+          by phone only"
+        - "Metal fabrication subcontractors, 10 to 50 employees, exporting outside their
+          home country"
+
+        Each can be searched for on a map, in a directory, or on a search engine. That is
+        the only test that matters.
 
         Derive as many profiles as the product genuinely serves, and no more. Most
         products have one to three. Splitting one market into artificial slices wastes
@@ -53,7 +61,7 @@ class IcpDeriver extends EveilAgent implements HasStructuredOutput
         return [
             'profiles' => $schema->array()->items($schema->object([
                 'name' => $schema->string()
-                    ->description('Short handle a human would recognise, e.g. "Friteries indépendantes en Wallonie".')
+                    ->description('Short handle a human would recognise, naming the segment and its market.')
                     ->required(),
 
                 'rationale' => $schema->string()

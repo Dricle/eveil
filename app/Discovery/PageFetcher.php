@@ -9,7 +9,7 @@ use Throwable;
 /**
  * One page in, one cached row out.
  *
- * The cache is shared instance-wide (ADR-014): it holds public web content and
+ * The cache is shared instance-wide: it holds public web content and
  * nothing else, which is what makes sharing it across tenants safe. It pays off
  * as much on a re-run of one project as it does across projects.
  */

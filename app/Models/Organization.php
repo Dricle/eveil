@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
- * The billable entity in cloud (ADR-003). Self-hosted still gets one, created
+ * The billable entity in cloud. Self-hosted still gets one, created
  * implicitly at setup — one code path, never two.
  *
  * @property int $id

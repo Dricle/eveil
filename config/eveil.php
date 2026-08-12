@@ -10,7 +10,7 @@ return [
     |--------------------------------------------------------------------------
     |
     | Shipped defaults so a fresh install works without opening the settings
-    | screen (ADR-026). Keyed on the agent slug, one line per agent: the
+    | screen. Keyed on the agent slug, one line per agent: the
     | superadmin sets a model for a SPECIFIC job, not for a vague category.
     |
     | The split is the point: the expensive model plans and synthesises, the
@@ -38,11 +38,11 @@ return [
     | Model Pricing
     |--------------------------------------------------------------------------
     |
-    | US dollars per million tokens, used to fill `agent_runs.cost` (ADR-004).
+    | US dollars per million tokens, used to fill `agent_runs.cost`.
     | Cache reads bill at a tenth of the input rate and cache writes at 1.25x.
     |
     | These are list prices and they drift. `agent_runs` is what tells us the
-    | real spend, and in cloud the credit grid absorbs any change (ADR-019).
+    | real spend, and in cloud the credit grid absorbs any change.
     |
     */
 
@@ -57,10 +57,10 @@ return [
     | Discovery Sources
     |--------------------------------------------------------------------------
     |
-    | Both are free and need no API key (ADR-006), which is what lets discovery
+    | Both are free and need no API key, which is what lets discovery
     | work on a self-hosted instance without the user subscribing to anything.
-    | SearXNG is universal; Overpass is unbeatable for local businesses and is
-    | the reason a restaurant ICP works at all.
+    | SearXNG is universal; Overpass is unbeatable for any business with a street
+    | address, which no search engine enumerates.
     |
     */
 
@@ -77,7 +77,7 @@ return [
         ],
 
         /*
-         * Directory harvesting (ADR-033). `max_pages` is per listing, not per
+         * Directory harvesting. `max_pages` is per listing, not per
          * run: five pages of a directory is already an order of magnitude more
          * companies than a search query returns, and a bad "next" link costs
          * five fetches instead of the whole budget.
@@ -93,7 +93,7 @@ return [
     | Discovery Budget
     |--------------------------------------------------------------------------
     |
-    | The hard ceiling of ADR-004, applied to the one loop that could otherwise
+    | The hard ceiling, applied to the one loop that could otherwise
     | run a bill up unnoticed. A run stops on whichever limit it reaches first
     | and keeps whatever it already found.
     |
@@ -111,7 +111,7 @@ return [
     | Email Verification
     |--------------------------------------------------------------------------
     |
-    | In-house, no third-party service (ADR-007). Only `invalid` blocks a send,
+    | In-house, no third-party service. Only `invalid` blocks a send,
     | and it is reserved for what we actually disproved: bad syntax, a
     | disposable domain, no MX, or an explicit 5xx rejection. Everything else
     | stays sendable.
@@ -154,7 +154,7 @@ return [
     |
     | Plain HTTP only, on purpose: a headless browser gets added when the
     | JS-render failure rate is measured, not before. Every crawl is bounded —
-    | an unbounded agent loop that fetches pages burns real money (ADR-004).
+    | an unbounded agent loop that fetches pages burns real money.
     |
     */
 

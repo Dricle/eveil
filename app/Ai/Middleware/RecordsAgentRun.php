@@ -13,7 +13,7 @@ use Throwable;
 
 /**
  * Every agent invocation lands in `agent_runs` — the debug log, the analysis
- * history and the billing meter are the same table (ADR-004).
+ * history and the billing meter are the same table.
  *
  * Middleware rather than an `AgentPrompted` listener because it wraps the call:
  * a provider that throws is recorded as failed instead of leaving a row stuck

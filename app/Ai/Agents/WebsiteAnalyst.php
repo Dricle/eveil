@@ -10,7 +10,7 @@ use Stringable;
  * Reads a product's own website and writes the portrait the Sales agent sells
  * from — a salesperson has to know the product.
  *
- * This is the knowledge base of ADR-021 and story 3.2, not an SEO audit: we are
+ * This is the product knowledge base, not an SEO audit: we are
  * deliberately not building a site-audit product on the side.
  */
 class WebsiteAnalyst extends EveilAgent implements HasStructuredOutput

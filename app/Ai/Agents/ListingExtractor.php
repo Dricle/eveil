@@ -7,14 +7,14 @@ use Laravel\Ai\Contracts\HasStructuredOutput;
 use Stringable;
 
 /**
- * Reads a directory listing page and returns the businesses on it (ADR-033).
+ * Reads a directory listing page and returns the businesses on it.
  *
  * The last rung of the harvest ladder, and the only one that costs money: it
  * runs when a page ships no usable JSON-LD. Runs on the cheap model — this is
  * reading a list, not judging it — and structured output is non-negotiable.
  *
  * It is given markdown, not text, which is the whole reason `HtmlText` emits
- * markdown: `[Chez Marcel](/friterie/chez-marcel-4412)` keeps the name and its
+ * markdown: `[Acme Plumbing](/company/acme-plumbing-4412)` keeps the name and its
  * page together, where flat text gave two hundred names and two hundred URLs
  * with nothing joining them.
  */

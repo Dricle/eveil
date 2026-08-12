@@ -21,8 +21,8 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         // Both hold per-process state the models depend on: the project every
-        // scoped query is constrained to (ADR-003), and the cipher guarding
-        // user secrets behind CREDENTIALS_KEY (ADR-012).
+        // scoped query is constrained to, and the cipher guarding
+        // user secrets behind CREDENTIALS_KEY.
         $this->app->singleton(CurrentProject::class);
         $this->app->singleton(CredentialsCipher::class);
         $this->app->singleton(Settings::class);

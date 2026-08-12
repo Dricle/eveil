@@ -7,7 +7,7 @@ use App\Models\Project;
 use App\Support\CurrentProject;
 
 /**
- * ADR-003 calls a leak between projects the worst bug this app can ship. These
+ * A leak between projects is the worst bug this app can ship. These
  * tests are the guard.
  */
 it('hides records belonging to another project', function () {

@@ -7,7 +7,7 @@ use Illuminate\Support\Str;
 use Laravel\Ai\Enums\Lab;
 
 /**
- * Where each agent's provider, model and timeout come from (ADR-026).
+ * Where each agent's provider, model and timeout come from.
  *
  * Keyed on the agent slug, one line per agent. A coarser grouping was tried and
  * removed: three different jobs shared one "planner" line, so the meter could

@@ -12,10 +12,10 @@ use Illuminate\Support\Carbon;
 
 /**
  * One lead's journey through one campaign. The email account is pinned for the
- * whole sequence so mailbox rotation never splits a conversation (story 7.4).
+ * whole sequence so mailbox rotation never splits a conversation.
  *
  * A lead sits in at most one live membership — the database enforces it with a
- * partial unique index (ADR-015).
+ * partial unique index.
  *
  * @property int $id
  * @property int $campaign_id

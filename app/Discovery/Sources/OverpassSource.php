@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Http;
 use Throwable;
 
 /**
- * OpenStreetMap via Overpass (ADR-006): free, no key, and by far the best way
+ * OpenStreetMap via Overpass: free, no key, and by far the best way
  * to enumerate local businesses — the long tail a purchased contact database
  * simply does not carry.
  *
@@ -70,8 +70,8 @@ class OverpassSource implements DiscoverySource
     }
 
     /**
-     * Place names are not unique: a probe on "Charleroi" without a country also
-     * returns Charleroi, Pennsylvania. The country is resolved first and the
+     * Place names are not unique: an early probe on a European town also returned
+     * its American namesake. The country is resolved first and the
      * town looked up inside it.
      *
      * @param  array<string, string>  $tags

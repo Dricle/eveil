@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Http;
 use Throwable;
 
 /**
- * Self-hosted SearXNG (ADR-006): free, no API key, same code in both editions.
+ * Self-hosted SearXNG: free, no API key, same code in both editions.
  * The trade-off is that it is a meta-search engine — upstream engines rate-limit
  * it, so a query returning nothing is normal and must never fail a run.
  */

@@ -12,7 +12,7 @@ use Illuminate\Support\Carbon;
 /**
  * A null `language` means the body is generated per lead in the prospect's own
  * language; a value marks a hand-written or translated variant, cached per
- * (template, language) pair (ADR-021).
+ * (template, language) pair.
  *
  * @property int $id
  * @property int $campaign_step_id

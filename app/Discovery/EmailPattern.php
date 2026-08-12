@@ -3,12 +3,12 @@
 namespace App\Discovery;
 
 /**
- * Turns one known address into the others (story 5.4). This is how Hunter and
+ * Turns one known address into the others. This is how Hunter and
  * every similar tool works, and it is the difference between "we found the
  * owner's name" and "we can write to the owner".
  *
  * Everything produced here is a guess, so it is stored as `inferred` and never
- * sent to until verification has had a look (ADR-007).
+ * sent to until verification has had a look.
  */
 class EmailPattern
 {

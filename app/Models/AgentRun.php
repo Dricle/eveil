@@ -11,11 +11,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 
 /**
- * Every agent invocation lands here (ADR-004): debug log, analysis history and
+ * Every agent invocation lands here: debug log, analysis history and
  * billing meter in one table, in BOTH editions — only the credit ledger is
  * cloud-only.
  *
- * Retention is split (ADR-018): payloads carry names and emails and are purged
+ * Retention is split: payloads carry names and emails and are purged
  * at 90 days, metrics survive so billing history stays intact.
  *
  * @property int $id
@@ -42,7 +42,7 @@ class AgentRun extends Model
     use BelongsToProject, HasFactory;
 
     /**
-     * Drops the payloads while keeping every metric — the shape ADR-018 asks
+     * Drops the payloads while keeping every metric — the shape the retention rule asks
      * for, so purging leads never leaves personal data behind in the meter.
      */
     public function purgePayloads(): void

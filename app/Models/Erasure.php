@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 
 /**
- * Erasure tombstone (ADR-018). Deleting the row is not enough: the next
+ * Erasure tombstone. Deleting the row is not enough: the next
  * discovery run would find the person again and contact them. We keep the
  * hashed address so they can never be re-discovered, and nothing else.
  *

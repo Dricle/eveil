@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Everything a project owns carries `project_id` and is constrained by it
- * (ADR-003). Queries are filtered and new records are stamped automatically,
+ *. Queries are filtered and new records are stamped automatically,
  * so no call site has to remember.
  *
  * The scope applies only while a current project is set. HTTP requests must

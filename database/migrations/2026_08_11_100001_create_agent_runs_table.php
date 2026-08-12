@@ -5,11 +5,11 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Every agent invocation writes a row here (ADR-004). This table is
+ * Every agent invocation writes a row here. This table is
  * simultaneously the debug log, the analysis history and the billing meter, and
  * it exists in BOTH editions — only the credit ledger is cloud-only.
  *
- * Retention is split (ADR-018): `input`/`output` carry names and emails and are
+ * Retention is split: `input`/`output` carry names and emails and are
  * purged or anonymised at 90 days, while the metrics survive indefinitely so
  * billing history stays intact. `payloads_purged_at` records that the payloads
  * were dropped rather than never written.
@@ -27,7 +27,7 @@ return new class extends Migration
 
             // Slug of the agent class: website-analyst, icp-deriver, …
             // Per agent, not per category, so this joins the credit grid, which
-            // bills per action (ADR-019).
+            // bills per action.
             $table->string('agent');
             $table->string('status'); // pending|running|succeeded|failed|aborted
 

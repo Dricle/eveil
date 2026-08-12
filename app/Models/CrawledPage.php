@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 
 /**
- * The one shared table (ADR-014). It holds public web content and nothing else
+ * The one shared table. It holds public web content and nothing else
  * — never a page behind a login — which is what makes sharing it across tenants
  * safe. Companies and leads stay scoped to their project.
  *

@@ -11,7 +11,7 @@ use Stringable;
  * intelligence of discovery lives — not in the scraping, which is plumbing.
  *
  * The plan is returned before anything executes so the user can see it
- * (story 5.2) and, at the supervised notch, refuse it (ADR-009).
+ * and, at the supervised notch, refuse it.
  */
 class DiscoveryPlanner extends EveilAgent implements HasStructuredOutput
 {
@@ -22,18 +22,25 @@ class DiscoveryPlanner extends EveilAgent implements HasStructuredOutput
         sources and they are good at different things.
 
         OpenStreetMap (Overpass) enumerates physical businesses exhaustively and for
-        free. It beats any search engine for anything with a front door: restaurants,
-        shops, garages, clinics, hotels. Use it whenever the profile has premises.
+        free. It beats any search engine for anything with a front door: shops, workshops,
+        surgeries, practices, agencies with a street address. Use it whenever the profile
+        has premises.
 
         Each Overpass probe is one area, its country, and one set of tags. The country
-        is not optional: "Charleroi" without one also returns Charleroi, Pennsylvania. The area must be a name
-        that exists in OpenStreetMap — a commune, a city, a province — spelled as OSM
-        spells it locally ("Charleroi", "Liège", "Hainaut", "Bruxelles"). A region that
-        is too large returns nothing useful, so prefer several city-sized probes over
-        one national one. Common tags: amenity=fast_food, amenity=restaurant,
-        amenity=cafe, amenity=bar, shop=bakery, shop=butcher, shop=greengrocer,
-        shop=convenience, amenity=pharmacy, shop=hairdresser, office=company,
-        craft=brewery, tourism=hotel. Use cuisine=... only alongside an amenity tag.
+        is not optional: town names repeat across continents, so "Cambridge" without one
+        matches both the English city and the American one. The area must be a name that
+        exists in OpenStreetMap — a town, a city, a region — spelled as OSM spells it
+        locally, which is the endonym: "München", not "Munich". A region that is too large
+        returns nothing useful, so prefer several city-sized probes over one national one.
+
+        Tags depend entirely on what the profile targets. Retail and trade: shop=*,
+        craft=*. Professional and office-based: office=company, office=lawyer,
+        office=accountant, office=estate_agent, office=architect, office=it. Health:
+        amenity=clinic, amenity=pharmacy, amenity=dentist, healthcare=*. Hospitality:
+        amenity=restaurant, amenity=cafe, tourism=hotel. Industry: man_made=works,
+        landuse=industrial. Education: amenity=school, amenity=college. Pick the tags
+        that describe the profile, not the ones listed here — the list is a starting
+        point, not the vocabulary.
 
         Web search finds everything OpenStreetMap cannot: businesses with no premises,
         online-only operations, professions, and anything defined by what it sells
@@ -41,9 +48,9 @@ class DiscoveryPlanner extends EveilAgent implements HasStructuredOutput
         market's own language, and aim them at the companies themselves rather than at
         directories — a query that mostly returns Tripadvisor or Yellow Pages is wasted.
 
-        Pick the sources the profile actually calls for. A dark kitchen has no useful
-        OSM presence; a friterie has almost nothing but. Using both when only one fits
-        spends the operator's budget on noise.
+        Pick the sources the profile actually calls for. A business defined by premises
+        is almost entirely an OSM job; one that exists only online has no OSM presence at
+        all. Using both when only one fits spends the operator's budget on noise.
 
         Explain the plan in two or three sentences before the probes: the user reads
         that to decide whether to let it run.
@@ -69,7 +76,7 @@ class DiscoveryPlanner extends EveilAgent implements HasStructuredOutput
                     ->required(),
                 'tags' => $schema->array()->items($schema->object([
                     'key' => $schema->string()->description('e.g. amenity, shop, craft')->required(),
-                    'value' => $schema->string()->description('e.g. fast_food, bakery')->required(),
+                    'value' => $schema->string()->description('e.g. company, pharmacy, hardware')->required(),
                 ]))->description('Tags combined with AND. Usually one, two at most.')->required(),
                 'why' => $schema->string()->description('What this probe is expected to surface.')->required(),
             ]))->description('Empty when the profile has no physical premises.')->required(),

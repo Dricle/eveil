@@ -7,7 +7,7 @@ use Illuminate\Support\Str;
 
 /**
  * Generates CREDENTIALS_KEY, the key that encrypts user secrets — deliberately
- * separate from APP_KEY (ADR-012).
+ * separate from APP_KEY.
  *
  * Rotating it makes every stored SMTP/IMAP password unreadable, so the command
  * refuses to overwrite an existing key unless forced.

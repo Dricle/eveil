@@ -18,7 +18,7 @@ readonly class Candidate
          * own — routine on a directory listing, impossible from a web search.
          * The pipeline cannot qualify these yet: `companies.domain` is the
          * dedupe key and it is NOT NULL, so they are counted and reported
-         * rather than silently dropped (ADR-033).
+         * rather than silently dropped.
          */
         public ?string $website,
         public string $source,

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Use this instead of Laravel's built-in `encrypted` cast on anything the user
- * gave us: it runs on CREDENTIALS_KEY rather than APP_KEY (ADR-012).
+ * gave us: it runs on CREDENTIALS_KEY rather than APP_KEY.
  *
  * @implements CastsAttributes<string|null, string|null>
  */

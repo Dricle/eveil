@@ -10,7 +10,7 @@ use RuntimeException;
 /**
  * User secrets — SMTP/IMAP passwords, the AI provider key, future OAuth tokens
  * — are encrypted with a dedicated `CREDENTIALS_KEY`, never with `APP_KEY`
- * (ADR-012).
+ *.
  *
  * APP_KEY also encrypts cookies and sessions and should be rotated after a
  * leak. Coupled to credentials, rotating it would destroy every email account
@@ -115,7 +115,7 @@ class CredentialsCipher
         if (! is_string($key) || $key === '') {
             throw new RuntimeException(
                 'CREDENTIALS_KEY is not set. It encrypts user secrets and is deliberately separate '
-                .'from APP_KEY (ADR-012). Generate one with: php artisan eveil:credentials-key',
+                .'from APP_KEY. Generate one with: php artisan eveil:credentials-key',
             );
         }
 

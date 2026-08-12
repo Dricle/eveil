@@ -5,9 +5,9 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Instance-scope settings (ADR-003): the AI provider key (story 1.3), the
- * per-agent provider/model mapping (ADR-026), retention windows (ADR-018) and
- * the credentials canary (ADR-012) all live here. Superadmin-only — no
+ * Instance-scope settings: the AI provider key, the
+ * per-agent provider/model mapping, retention windows and
+ * the credentials canary all live here. Superadmin-only — no
  * organization admin or member ever reads this table.
  */
 return new class extends Migration
@@ -21,7 +21,7 @@ return new class extends Migration
             $table->string('key')->primary();
             $table->text('value')->nullable();
 
-            // Encrypted with CREDENTIALS_KEY, not APP_KEY (ADR-012).
+            // Encrypted with CREDENTIALS_KEY, not APP_KEY.
             $table->boolean('is_encrypted')->default(false);
 
             $table->timestamps();

@@ -11,7 +11,7 @@ use Laravel\Ai\Responses\Data\Usage;
 use Laravel\Ai\Responses\StructuredTextResponse;
 
 /**
- * ADR-004: no agent call goes unmetered. Metering rides on agent middleware, so
+ * No agent call goes unmetered. Metering rides on agent middleware, so
  * it applies to every agent without a call site remembering.
  */
 function analyst(): WebsiteAnalyst
@@ -35,7 +35,7 @@ it('records tokens, cost and duration for a successful call', function () {
 
     expect($run->status)->toBe(AgentRunStatus::Succeeded)
         // The slug, not a category: the meter has to join a credit grid that
-        // bills per action (ADR-019).
+        // bills per action.
         ->and($run->agent)->toBe('website-analyst')
         ->and($run->tokens_in)->toBe(20_000)
         ->and($run->tokens_out)->toBe(1_000)

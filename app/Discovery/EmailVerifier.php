@@ -6,7 +6,7 @@ use App\Enums\EmailStatus;
 use Throwable;
 
 /**
- * In-house verification (ADR-007): syntax, disposable domains, MX, catch-all
+ * In-house verification: syntax, disposable domains, MX, catch-all
  * detection and an SMTP `RCPT TO` probe that sends nothing.
  *
  * The asymmetry is deliberate. `invalid` means "we proved this address does not
@@ -18,7 +18,7 @@ use Throwable;
  * ponytail: port 25 is blocked on most hosting and from every residential line,
  * so in practice the probe usually times out into `unknown`. That is the honest
  * answer, and it is why the probe has a short timeout rather than a long one.
- * A third-party verifier can slot in behind this class later (ADR-007).
+ * A third-party verifier can slot in behind this class later.
  */
 class EmailVerifier
 {

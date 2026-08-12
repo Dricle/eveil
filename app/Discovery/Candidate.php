@@ -13,7 +13,14 @@ readonly class Candidate
      */
     public function __construct(
         public string $name,
-        public string $website,
+        /**
+         * Null when the source found a business that publishes no site of its
+         * own — routine on a directory listing, impossible from a web search.
+         * The pipeline cannot qualify these yet: `companies.domain` is the
+         * dedupe key and it is NOT NULL, so they are counted and reported
+         * rather than silently dropped (ADR-033).
+         */
+        public ?string $website,
         public string $source,
         public ?string $sourceUrl = null,
         public array $facts = [],
@@ -21,6 +28,6 @@ readonly class Candidate
 
     public function domain(): ?string
     {
-        return Url::host($this->website);
+        return $this->website === null ? null : Url::host($this->website);
     }
 }

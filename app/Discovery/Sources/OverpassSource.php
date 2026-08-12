@@ -65,7 +65,7 @@ class OverpassSource implements DiscoverySource
         return (new Collection($elements))
             ->map(fn (array $element): ?Candidate => $this->toCandidate($element, $area))
             ->filter()
-            ->unique(fn (Candidate $candidate): string => $candidate->domain() ?? $candidate->website)
+            ->unique(fn (Candidate $candidate): string => $candidate->domain() ?? $candidate->name)
             ->values();
     }
 

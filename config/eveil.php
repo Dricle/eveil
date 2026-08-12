@@ -29,6 +29,7 @@ return [
         // Reading work: short structured output, high volume. A long timeout
         // here would only mean a stuck job holding a worker.
         'company-qualifier' => ['provider' => Lab::Anthropic, 'model' => 'claude-haiku-4-5', 'timeout' => 60],
+        'listing-extractor' => ['provider' => Lab::Anthropic, 'model' => 'claude-haiku-4-5', 'timeout' => 60],
         'contact-extractor' => ['provider' => Lab::Anthropic, 'model' => 'claude-haiku-4-5', 'timeout' => 60],
     ],
 
@@ -73,6 +74,17 @@ return [
             'url' => env('OVERPASS_URL', 'https://overpass-api.de/api/interpreter'),
             'timeout' => 60,
             'per_probe' => 60,
+        ],
+
+        /*
+         * Directory harvesting (ADR-033). `max_pages` is per listing, not per
+         * run: five pages of a directory is already an order of magnitude more
+         * companies than a search query returns, and a bad "next" link costs
+         * five fetches instead of the whole budget.
+         */
+        'directory' => [
+            'max_pages' => 5,
+            'max_entities' => 200,
         ],
     ],
 

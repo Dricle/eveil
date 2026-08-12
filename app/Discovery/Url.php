@@ -36,13 +36,35 @@ class Url
         $absolute = match (true) {
             str_starts_with($href, 'http://'), str_starts_with($href, 'https://') => $href,
             str_starts_with($href, '//') => $base['scheme'].':'.$href,
+            // A query-only reference keeps the base PATH (RFC 3986 §5.3). Taking
+            // its dirname instead turns `?page=2` on /annuaire/friteries into
+            // /annuaire?page=2 — which is how pagination silently breaks, and
+            // pagination is the whole point of harvesting a listing (ADR-033).
+            str_starts_with($href, '?') => $base['scheme'].'://'.$base['host'].($base['path'] ?? '/').$href,
             str_starts_with($href, '/') => $base['scheme'].'://'.$base['host'].$href,
             default => $base['scheme'].'://'.$base['host'].'/'.ltrim(
                 rtrim(dirname($base['path'] ?? '/'), '/').'/'.$href, '/'
             ),
         };
 
-        return self::normalize($absolute);
+        return self::normalize(self::removeDotSegments($absolute));
+    }
+
+    /**
+     * Collapses `.` and `..` segments. Without it a `../contact` href produces
+     * a URL that 404s, and the failed fetch still costs a request and a cache
+     * row.
+     */
+    private static function removeDotSegments(string $url): string
+    {
+        $previous = '';
+
+        while ($previous !== $url) {
+            $previous = $url;
+            $url = (string) preg_replace('#/(?!\.\./)[^/]+/\.\./#', '/', $url, 1);
+        }
+
+        return str_replace('/./', '/', $url);
     }
 
     /**

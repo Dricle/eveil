@@ -187,6 +187,9 @@ l'API GitHub sont également gratuits et sans clé.
 argument d'onboarding majeur. Risque assumé : SearXNG se fait rate-limiter ; si ça devient bloquant,
 un driver Brave/Serper se branche derrière la même interface.
 
+Complété par **ADR-033** : les annuaires et les registres officiels sont eux aussi gratuits et sans
+clé, et réduisent la dépendance à SearXNG comme point d'entrée unique.
+
 ### ADR-007 — Vérification email maison
 MX check puis sonde SMTP `RCPT TO` sans envoi. Détection obligatoire des domaines catch-all → ces
 adresses sont marquées `risky`, pas `valid`. Gmail et Outlook bloquent les sondes → statut `unknown`,
@@ -992,6 +995,145 @@ plomberie est quasi gratuite ; ce qui reste à écrire, c'est l'outil que l'agen
 **Affichage** : liste latérale du chat, « propositions d'amélioration », les faites et archivées
 masquées par défaut.
 
+### ADR-033 — Découverte en graphe de jobs, et les annuaires sont une source à part entière
+*(tranché le 2026-08-12)*
+
+**Le problème : la découverte par moteur de recherche est biaisée par le SEO.** Elle trouve les
+sociétés qui savent se référencer. Or une partie du marché visé n'a pas de site, ou seulement une page
+Facebook, ou un site que personne ne trouve avant la vingtième page de résultats. Ces sociétés-là sont
+souvent les meilleures cibles — elles n'ont personne pour les démarcher.
+
+Pire, le code actuel **supprimait activement la solution** : `WebSearchSource::isAggregator()` jetait
+tout résultat pointant vers un annuaire. Or `pagesdor.be/friteries/namur` n'est pas une société, c'est
+**deux cents sociétés** — et c'est le seul endroit où une société sans site publie une adresse email.
+La liste noire devient un aiguillage.
+
+#### Cinq décisions
+
+**1. Un résultat de recherche a deux natures, pas une.** *Entité* (une société → un candidat, comme
+aujourd'hui) ou *index* (une page de liste → à récolter). Ce qui était filtré est désormais trié.
+
+**2. Le modèle navigue, PHP extrait.** L'IA décide **où** regarder ; le code fait le volume. Un job
+`HarvestListing` récolte une page de liste en pur PHP — `sitemap.xml`, puis JSON-LD `LocalBusiness` /
+`Organization`, puis sélecteurs CSS enregistrés, puis en dernier recours l'extracteur LLM. Le modèle ne
+voit jamais les deux cents fiches, seulement « 60 enregistrées, 41 avec site, 12 avec email ».
+
+> **Corrigé, 2026-08-12 — le pari JSON-LD est abandonné.** Cet ADR affirmait que « les annuaires
+> émettent presque tous du JSON-LD, le SEO est leur métier ». C'est faux, et il ne faut pas le
+> supposer : personne n'en met. Sur trois annuaires belges essayés en réel, **aucun** — pagesdor.be
+> renvoie une page de challenge Imperva, infobel.com répond 403 aux User-Agents inconnus et bloque
+> nommément les crawlers IA dans son robots.txt, resto.be sert 737 Ko sans un seul `ld+json` parce que
+> c'est une application JS.
+>
+> **L'extraction LLM est donc le modèle de coût par défaut, pas un dernier recours.** 0,019 $ la page,
+> contre 0,0025 $ une qualification de société. Le JSON-LD reste tenté en premier parce qu'il ne coûte
+> rien à essayer et qu'il est parfait quand il est là — c'est une aubaine, plus une hypothèse de
+> conception. Trois conséquences qui en découlent :
+>
+> - **Une extraction n'est jamais repayée deux fois.** Le résultat est mis en cache sur le hash de
+>   l'URL, sinon relancer une récolte pour tester un annuaire rebille chaque page.
+> - **Les sélecteurs CSS deviennent le vrai gain, et non plus une optimisation spéculative.** Si le
+>   modèle est le chemin normal, apprendre les sélecteurs d'un hôte **depuis la sortie du modèle**, une
+>   fois, puis les rejouer gratuitement sur les pages suivantes, transforme un coût récurrent en coût
+>   unique. À construire quand un annuaire aura effectivement produit plusieurs fois — pas avant.
+> - Le registre `directories` mémorise **pourquoi** un hôte échoue (`blocked`, `js_only`, `jsonld`,
+>   `llm`) pour ne jamais repayer un annuaire bloqué.
+
+**3. La découverte est un graphe de jobs, pas une boucle d'outils.** Chaque nœud est un job en queue
+avec son contexte minimal, sa propre ligne en base, son propre coût.
+
+```
+discovery_runs  (projet, icp, budget, credits_left, status)
+│
+├─ PlanDiscovery          1 appel IA   → produit le plan, enfile les sondes
+│
+├─ RunSearchQuery × N     sans IA      → résultats bruts
+│   └─ TriageResults      1 appel IA, par lot d'~20 URL
+│                                      → entity | directory | skip
+│       ├─ HarvestListing × M  sans IA → sitemap → JSON-LD → sélecteurs → pagination
+│       │   └─ ExtractEntities  IA seulement si le JSON-LD a échoué
+│       └─ lignes companies
+│
+├─ RunOverpassProbe × N   sans IA
+│
+└─ ReflectAndExpand       1 appel IA, lit les agrégats → enfile la vague suivante
+```
+
+La majorité des nœuds ne touche jamais un LLM. L'IA n'intervient qu'aux points de jugement.
+
+**4. Le registre d'annuaires s'auto-alimente.** Une table `directories` enregistre ce qui a produit :
+hôte, rendement, secteurs, pays, mode d'extraction. Découvert par le tri, pas curé à la main — sinon
+c'est l'œuf et la poule, on ne peut pas savoir d'avance que `pagesdor.be` compte pour les friteries.
+Aux runs suivants, le planificateur interroge directement les annuaires déjà rentables, sans repasser
+par un moteur de recherche. Le registre est livré amorcé avec les évidences, et **une contribution
+« nouvel annuaire » est une ligne, pas une classe PHP** — un levier open source volontaire.
+
+**5. Un seul drapeau porte le budget et l'annulation.** `discovery_runs.status` : plus de crédits →
+`exhausted`, l'utilisateur annule → `cancelled`. Les jobs déjà en file le lisent à la reprise et se
+suppriment. Pas de registre de jobs à tenir, pas de worker à tuer. En cloud les crédits s'épuisent et
+le run s'arrête là ; l'utilisateur en rachète s'il veut continuer. En self-hosted la consommation
+détaillée s'affiche et le bouton annuler écrit le même drapeau.
+
+#### Pourquoi pas une boucle d'outils agentique
+
+La question a été posée sérieusement et trois objections sur quatre sont tombées : `laravel/ai` cumule
+déjà l'usage sur toutes les étapes (`TextGenerationLoop::buildFinalResponse()`), donc le comptage
+fonctionne sans rien écrire ; `Contracts/Approvable` met en pause et reprend par outil, donc le cran
+supervisé (ADR-009) se règle outil par outil ; et le cran supervisé porte de toute façon sur la
+**stratégie et le contenu des emails**, pas sur chaque fetch — laisser l'agent parcourir le web est
+acceptable tant qu'un plafond de crédits l'arrête.
+
+Il reste **une** raison, et elle est dimensionnante : **le coût d'une boucle croît de façon
+quadratique avec sa profondeur**, puisque chaque étape renvoie tout l'historique. Un scout à 40 étapes
+ne coûte pas quatre fois un scout à 10 étapes. Le graphe de jobs garde un contexte plat.
+
+S'y ajoutent trois bénéfices qui ne sont pas des arguments théoriques : un job se **rejoue depuis
+l'interface** (la ligne en base *est* le bouton), un job vérifie en démarrant si sa page est déjà en
+cache et **se supprime** si son travail n'a plus lieu d'être, et un crash à l'étape 35 ne perd pas les
+34 précédentes.
+
+**Ce que ça coûte, honnêtement** : la continuité de raisonnement. Un agent conversationnel se souvient
+que « pagesdor a rendu 60 à Namur, essayons Charleroi » ; des jobs en éventail sont amnésiques. Cette
+mémoire doit être **conçue** en base au lieu d'être offerte par la fenêtre de contexte — c'est le rôle
+de `ReflectAndExpand`, qui lit des agrégats (rendement par annuaire, requêtes stériles, communes non
+couvertes) et enfile la vague suivante. Il lit des compteurs, pas des pages : c'est ce qui le rend
+abordable. Coût secondaire : plus de classes qu'une boucle d'outils.
+
+La boucle d'outils n'est pas interdite pour autant — elle reste le bon choix **à l'intérieur d'un
+annuaire** dont la pagination résiste. Locale et bornée, pas l'architecture d'ensemble.
+
+#### Conséquence technique immédiate : HTML → markdown
+
+`HtmlText` renvoie aujourd'hui le texte et les liens **séparément**, en jetant le libellé des ancres.
+Acceptable pour la page d'une société, rédhibitoire pour une page de liste : on obtient deux cents noms
+d'un côté, deux cents URL de l'autre, et rien ne les apparie. Le markdown les garde ensemble —
+`[Chez Marcel](/friterie/chez-marcel-4412)`. Ce n'est pas une optimisation de tokens, c'est ce qui rend
+la page exploitable. Second défaut du même ordre : `STRIP` retire `nav`, `header` et `footer`, donc
+supprime les liens de pagination — « page suivante » disparaît.
+
+#### Effets sur les décisions existantes
+
+- **ADR-006** (découverte sans clé API) : inchangée et renforcée. Annuaires, registres et OSM sont
+  gratuits et sans clé, et réduisent la dépendance à SearXNG, dont le rate-limit était le risque assumé.
+- **ADR-014** (cache de pages partagé) : `crawled_pages` devient le point de contrôle d'idempotence des
+  jobs, en plus d'un cache.
+- **ADR-020** (élargissement borné) : `ReflectAndExpand` est l'endroit où ce diagnostic s'exécute. Une
+  panne `wrong_source` a maintenant une réponse concrète — changer d'annuaire — au lieu d'un constat.
+- **`DiscoverySource`** : l'interface survit pour les sources en un coup (Overpass, recherche web,
+  registres officiels). La récolte d'annuaire ne rentre pas dedans : elle est multi-pages et budgétée,
+  donc c'est un job, pas une `search()`.
+
+#### Piste retenue, non chiffrée : les registres officiels d'entreprises
+
+BCE/KBO (Belgique), SIRENE (France, ~30 M d'établissements), Companies House (UK) sont ouverts,
+gratuits et **exhaustifs par construction** — aucun biais SEO possible. Code NACE plus commune est un
+meilleur filtre d'ICP que n'importe quelle requête. Limite connue : ni email ni site, donc ils
+alimentent l'enrichissement, pas l'envoi. À traiter comme des `DiscoverySource` supplémentaires quand
+la récolte d'annuaires sera en place, pas avant.
+
+**Pas de scraper Facebook.** Bloqué, contraire aux CGU, fragile. Les sociétés qui n'ont qu'une page
+Facebook se rattrapent par OSM (`contact:facebook`) et par les annuaires.
+
 ---
 
 ## 4. Architecture
@@ -1096,7 +1238,17 @@ recommendations        project_id, key (identité stable), title, rationale, evi
                        decided_at, agent_run_id
                        ← archivée = ne réapparaît jamais (ADR-032)
 
-discovery_runs         project_id, icp_id, status, budget (json), stats
+discovery_runs         project_id, icp_id, status, budget (json), credits_left, stats
+                       ← status porte aussi exhausted|cancelled : un seul drapeau pour le
+                         plafond de crédits et l'annulation (ADR-033)
+discovery_tasks        discovery_run_id, kind: plan|search|triage|harvest|extract|overpass|reflect,
+                       payload (json), status, attempts, agent_run_id, error, timings
+                       ← un nœud du graphe de jobs : la ligne EST le bouton « rejouer » (ADR-033).
+                         Table dédiée et non la table `jobs` de Laravel, qui perd la ligne au succès
+directories            host, name, countries, sectors, discovery_mode: sitemap|pattern|search,
+                       extraction_mode: jsonld|selectors|llm, selectors (json),
+                       yield, last_harvested_at, healthy_at
+                       ← auto-alimentée par ce qui a produit, amorcée avec les évidences (ADR-033)
 companies              project_id, domain (unique/projet), name, website, industry, size,
                        location, language, source, source_url  ← faits seulement, pas de score
                        ← language détectée au crawl (ADR-021)
@@ -1119,7 +1271,7 @@ messages               campaign_lead_id, direction, email_account_id, message_id
                        in_reply_to, subject, body, sent_at, replied_at, status
                        ← pas de opened_at : aucun tracking en v0 (ADR-016)
 
-agent_runs             project_id, type, status, input, output,
+agent_runs             project_id, agent (slug de la classe), status, input, output,
                        tokens_in, tokens_out, cost, duration, error
                        ← les deux éditions (debug + historique)
 
@@ -1166,25 +1318,57 @@ LinkedIn (container dédié), API publique, serveur MCP, webhooks CRM, drivers p
 Format : `En tant que <persona>, je veux <action>, pour <bénéfice>.`
 Chaque story porte ses critères d'acceptation. Sans critères, impossible de dire « c'est fini ».
 
+### Avancement
+
+Chaque story porte un marqueur, mis à jour **dans le même commit que le code**. Une story non marquée
+est une story pas faite.
+
+| Marqueur | Sens |
+|---|---|
+| `✅` | Fait et couvert par des tests |
+| `🟡` | Backend ou CLI fait, **pas d'interface** — le reste est indiqué sur la story |
+| `⬜` | Pas commencé |
+
+État au 2026-08-12 :
+
+| Epic | Avancement |
+|---|---|
+| 1 — Setup & configuration | 🟡 réglages en base et en CLI, aucun écran, pas d'auth |
+| 2 — Projets | 🟡 cloisonnement fait et testé, pas de CRUD |
+| 3 — Analyse & knowledge base | 🟡 `eveil:analyze` tourne, rien n'est déclenché automatiquement |
+| 4 — Agent Website | ⬜ table `recommendations` pas encore créée |
+| 5 — Découverte de leads | 🟡 chaîne complète en CLI + récolte d'annuaires ; `icps.type`, le registre et le branchement manquent |
+| 6 — Séquences | ⬜ |
+| 7 — Envoi | ⬜ |
+| 8 — Réponses & inbox | ⬜ |
+| 9 — Organizations & permissions | ⬜ tables faites, rien au-dessus |
+| 10 — Facturation | ⬜ |
+| 11 — LinkedIn / 12 — Intégrations | ⬜ hors v0 et v1 |
+
+**Ce qui existe vraiment** : le schéma complet, les modèles, cinq agents, le crawler, la vérification
+d'emails, et quatre commandes — `eveil:analyze`, `eveil:derive-icp`, `eveil:discover`,
+`eveil:find-contacts` et `eveil:harvest` — plus `eveil:agent-model` et `eveil:credentials-key`. Aucune interface, aucune
+authentification, aucun envoi.
+
 ### Epic 1 — Setup & configuration `v0`
 
-**1.1** En tant que superadmin, je veux déployer l'app via `docker compose up -d` avec un `.env`
+**1.1** ⬜ En tant que superadmin, je veux déployer l'app via `docker compose up -d` avec un `.env`
 minimal, pour être opérationnel en quelques minutes.
 - Le compose démarre app, queue worker, scheduler, base, SearXNG
 - `.env.example` documente le minimum vital : URL, `APP_KEY`, mot de passe admin initial
 - Aucune clé API tierce n'est requise pour un premier run de découverte
 - Premier accès à l'URL → écran de setup, pas une erreur 500
 
-**1.2** En tant que superadmin, je veux me connecter avec le mot de passe défini au setup.
+**1.2** ⬜ En tant que superadmin, je veux me connecter avec le mot de passe défini au setup.
 - Le mot de passe initial vient de l'env ou du premier écran de setup
 - Changeable depuis les settings
 
-**1.3** En tant que superadmin, je veux choisir mon provider IA et saisir ma clé depuis les settings.
+**1.3** 🟡 En tant que superadmin, je veux choisir mon provider IA et saisir ma clé depuis les settings.
 - Clé chiffrée avec `CREDENTIALS_KEY` (ADR-012), jamais loggée, jamais renvoyée en clair au frontend
 - Bouton « tester la connexion » avec retour immédiat
 - Vaut pour toutes les organizations et tous les projets de l'instance
 
-**1.6** En tant que superadmin, je veux choisir le provider, le modèle et le timeout **par agent IA** (ADR-026).
+**1.6** 🟡 En tant que superadmin, je veux choisir le provider, le modèle et le timeout **par agent IA** (ADR-026).
 - Réglage de scope instance, réservé au superadmin — invisible pour les admins et membres d'organization
 - Une ligne par agent, clé = le slug de la classe (`website-analyst`, `icp-deriver`, …) ; pas de regroupement par catégorie
 - Liste des providers et modèles fournie par `laravel/ai`, liste des agents découverte dans `app/Ai/Agents/`
@@ -1193,84 +1377,84 @@ minimal, pour être opérationnel en quelques minutes.
 - L'écran affiche, par agent, ce qu'il a déjà coûté et sur combien d'appels
 - **État** : la couche base est faite et pilotable en CLI (`eveil:agent-model`) ; l'écran reste à construire avec l'auth
 
-**1.4** En tant que superadmin, je veux désactiver les inscriptions via variable d'env.
+**1.4** ⬜ En tant que superadmin, je veux désactiver les inscriptions via variable d'env.
 - `REGISTRATION_ENABLED=false` → la route register renvoie 404, pas un message d'erreur
 
-**1.5** En tant que superadmin, je veux modifier la configuration depuis une section settings.
+**1.5** ⬜ En tant que superadmin, je veux modifier la configuration depuis une section settings.
 - Ce qui est réglable en UI est explicitement listé ; le reste reste en env
 
 ### Epic 2 — Projets `v0`
 
-**2.1** En tant qu'utilisateur, je veux créer un projet avec un nom et une URL.
+**2.1** 🟡 En tant qu'utilisateur, je veux créer un projet avec un nom et une URL.
 - URL validée et joignable avant création
 - L'analyse initiale se déclenche automatiquement à l'enregistrement
 
-**2.2** En tant qu'utilisateur, je veux que tout soit cloisonné par projet.
+**2.2** ✅ En tant qu'utilisateur, je veux que tout soit cloisonné par projet.
 - Leads, sociétés, campagnes, comptes email, analyses, runs d'agent portent `project_id`
 - Un global scope l'applique ; un test vérifie qu'aucune requête ne fuit entre deux projets
 
-**2.3** `v1` En tant qu'utilisateur, je veux basculer d'un projet à l'autre depuis un sélecteur global.
+**2.3** ⬜ `v1` En tant qu'utilisateur, je veux basculer d'un projet à l'autre depuis un sélecteur global.
 - Le projet courant est en session, pas dans l'URL de chaque page
 - Le changement de projet ne perd pas le contexte de travail
 
-**2.4** `v1` En tant qu'utilisateur, je veux un dashboard multi-projet.
+**2.4** ⬜ `v1` En tant qu'utilisateur, je veux un dashboard multi-projet.
 - Par projet : leads actifs, campagnes en cours, dernières suggestions, consommation IA
 
 ### Epic 3 — Analyse & knowledge base `v0`
 
-**3.1** En tant qu'utilisateur, quand j'enregistre un projet, je veux que le site soit analysé
+**3.1** 🟡 En tant qu'utilisateur, quand j'enregistre un projet, je veux que le site soit analysé
 automatiquement.
 - Crawl plafonné (nb de pages, profondeur, timeout) et affiché en cours de route
 - robots.txt respecté
 - Un échec partiel produit quand même une knowledge base, avec la liste de ce qui a échoué
 
-**3.2** En tant qu'utilisateur, je veux voir un résumé du produit que je peux corriger.
+**3.2** 🟡 En tant qu'utilisateur, je veux voir un résumé du produit que je peux corriger.
 - Champs : ce que fait le produit, pour qui, positionnement, proposition de valeur, concurrents
 - L'édition manuelle prime sur toute ré-analyse ultérieure, et est marquée comme telle
 
-**3.3** `v1` En tant qu'utilisateur, je veux lier le repo GitHub pour une analyse plus poussée.
+**3.3** ⬜ `v1` En tant qu'utilisateur, je veux lier le repo GitHub pour une analyse plus poussée.
 - Repos publics d'abord ; stack technique, README, issues ouvertes
 - Sert à repérer les features pas assez mises en avant sur le site
 
-**3.4** En tant qu'utilisateur, je veux que cette analyse serve de contexte aux deux agents.
+**3.4** ✅ En tant qu'utilisateur, je veux que cette analyse serve de contexte aux deux agents.
 - Un seul objet knowledge base, référencé par Website et Sales, jamais dupliqué
 
 ### Epic 4 — Agent Website : pistes d'amélioration et d'acquisition `v1`
 
-**4.1** En tant qu'utilisateur, je veux une liste de pistes d'amélioration du site.
+**4.1** ⬜ En tant qu'utilisateur, je veux une liste de pistes d'amélioration du site.
 - Chaque suggestion : catégorie, impact estimé, justification, effort
 - Tri par impact par défaut
 
-**4.4** En tant qu'utilisateur, je veux qu'on me signale les leviers d'acquisition qui me manquent (ADR-032).
+**4.4** ⬜ En tant qu'utilisateur, je veux qu'on me signale les leviers d'acquisition qui me manquent (ADR-032). — **table `recommendations` pas encore créée**
 - Parrainage, contenu éditorial, salons, écoles du secteur, programme revendeur…
 - **Chaque recommandation cite sa preuve** dans la knowledge base ou le crawl ; sans preuve, pas de
   recommandation — c'est ce qui la sépare d'un conseil générique
 - Priorisée par impact et effort
 
-**4.5** En tant qu'utilisateur, je veux marquer une recommandation faite ou sans intérêt, en le disant.
+**4.5** ⬜ En tant qu'utilisateur, je veux marquer une recommandation faite ou sans intérêt, en le disant.
 - États : `proposed` → `done` ou `archived`
 - Une recommandation archivée ne réapparaît **jamais**, même après une ré-analyse
 - Identité par clé stable, pas par libellé, sinon une reformulation crée un doublon
 - Mise à jour depuis la conversation : l'utilisateur ne gère aucun backlog
 
-**4.6** En tant qu'utilisateur, je veux discuter de mon projet avec l'agent.
+**4.6** ⬜ En tant qu'utilisateur, je veux discuter de mon projet avec l'agent.
 - Une conversation par projet, avec la knowledge base pour contexte
 - Les propositions d'amélioration en liste latérale, faites et archivées masquées par défaut
 - Persistance fournie par `laravel/ai` (`RemembersConversations`)
 
-**4.2** En tant qu'utilisateur, je veux relancer une analyse à la demande.
+**4.2** ⬜ En tant qu'utilisateur, je veux relancer une analyse à la demande.
 - L'écart avec l'analyse précédente est visible : résolu / toujours ouvert / nouveau
 
-**4.3** En tant qu'utilisateur, je veux l'historique des analyses par projet.
+**4.3** ⬜ En tant qu'utilisateur, je veux l'historique des analyses par projet.
 
 ### Epic 5 — Découverte de leads `v0` — *cœur du produit*
 
-**5.1** En tant qu'utilisateur, je veux que l'ICP soit déduit de mon produit, sans le saisir.
+**5.1** 🟡 En tant qu'utilisateur, je veux que l'ICP soit déduit de mon produit, sans le saisir.
 - Critères structurés : secteurs, taille, géographie, intitulés de poste, technologies, signaux
 - Entièrement éditable ; l'édition est conservée entre les runs
 
-**5.1 bis** En tant qu'utilisateur, je veux aussi des profils de **partenaires**, pas seulement de clients (ADR-031).
-- `icps.type` : `customer` ou `partner`
+**5.1 bis** ⬜ En tant qu'utilisateur, je veux aussi des profils de **partenaires**, pas seulement de clients (ADR-031).
+- `icps.type` : `customer` ou `partner` — **colonne pas encore créée**
 - Un profil partenaire répond à : qui visite mon client, qui le facture chaque mois, qui lui est
   **légalement imposé** — ce dernier signal en premier, sa clientèle est captive
 - Il porte `access_angle` (par quoi il touche le client) et `partnership_angle` (pourquoi c'est
@@ -1278,64 +1462,85 @@ automatiquement.
 - Découverte et qualification identiques ; **la séquence d'envoi, elle, diffère en profondeur**
 - Aucune société n'est citée sans avoir été trouvée, récupérée et qualifiée
 
-**5.2** En tant qu'utilisateur, je veux lancer une recherche de sociétés correspondant à l'ICP.
+**5.2** 🟡 En tant qu'utilisateur, je veux lancer une recherche de sociétés correspondant à l'ICP.
 - L'agent choisit ses sources selon l'ICP et **explique son plan avant d'exécuter**
 - Progression visible en direct : sources interrogées, sociétés trouvées, budget consommé
 - Budget dur (pages, tokens, leads) ; arrêt propre à la limite avec résultats partiels conservés
 - Un re-run ne duplique pas : dédup par domaine
 
-**5.3** En tant qu'utilisateur, je veux que chaque société soit scorée et justifiée.
+**5.2 bis** 🟡 En tant qu'utilisateur, je veux trouver aussi les sociétés que les moteurs ne classent pas (ADR-033).
+- Les résultats pointant vers un **annuaire** sont récoltés, plus jetés : une page de liste vaut des
+  dizaines de sociétés, et c'est le seul endroit où une société sans site publie un email
+- Récolte en PHP : `sitemap.xml`, JSON-LD, sélecteurs, extracteur LLM en dernier recours
+- Un annuaire qui a produit est mémorisé avec son rendement, son pays et ses secteurs, et réinterrogé
+  directement au run suivant sans repasser par un moteur de recherche
+- Ajouter un annuaire ne demande pas de code
+- **État** : `ListingHarvester` fait et testé, pilotable par `eveil:harvest <url>` — JSON-LD, repli LLM,
+  pagination, budget. Manquent le registre `directories`, le tri des résultats de recherche, et le
+  branchement dans `eveil:discover`. Les sociétés sans site sont comptées mais pas exploitables :
+  `companies.domain` est NOT NULL
+
+**5.2 ter** ⬜ En tant qu'utilisateur, je veux voir et reprendre la main sur ce que fait la découverte (ADR-033).
+- La découverte est un graphe de jobs : chaque étape a sa ligne, son état, son coût, son erreur
+- **Rejouer une étape** depuis l'interface, sans relancer le run
+- **Annuler** le run : les étapes en file se suppriment à la reprise, les résultats acquis restent
+- En cloud, l'épuisement des crédits arrête le run proprement — l'utilisateur en rachète s'il veut suivre
+- En self-hosted, la consommation détaillée par run et par étape est affichée
+
+**5.3** 🟡 En tant qu'utilisateur, je veux que chaque société soit scorée et justifiée.
 - Score de fit + phrase de justification exploitable comme accroche
 - Filtrage par score, rejet manuel possible
 
-**5.4** En tant qu'utilisateur, je veux des contacts avec des emails utilisables.
+**5.4** 🟡 En tant qu'utilisateur, je veux des contacts avec des emails utilisables.
 - Scrape des pages équipe/contact/mentions légales
 - Inférence de pattern à partir d'une adresse connue sur le domaine
 - Fallback générique (`contact@`) marqué comme tel
 - Chaque email porte `email_source` et `email_status`
 
-**5.5** En tant qu'utilisateur, je veux que les emails soient vérifiés avant tout envoi.
+**5.5** 🟡 En tant qu'utilisateur, je veux que les emails soient vérifiés avant tout envoi.
 - MX, domaine jetable, catch-all, sonde SMTP sans envoi
 - Catch-all → `risky`. Gmail/Outlook bloquant la sonde → `unknown`, jamais `invalid`
 - Les `invalid` ne sont jamais envoyés
 
-**5.6** En tant qu'utilisateur, je veux importer un CSV.
+**5.6** ⬜ En tant qu'utilisateur, je veux importer un CSV.
 - Template téléchargeable ; email **ou** URL LinkedIn suffit pour qu'une ligne soit valide
 - Rapport d'import : importés, dédupliqués, rejetés avec motif
 
-**5.7** `v1` En tant qu'utilisateur, je veux brancher un provider tiers avec ma clé.
+**5.7** ⬜ `v1` En tant qu'utilisateur, je veux brancher un provider tiers avec ma clé.
 - Interface `LeadSource` commune à CSV, scraping et providers
+- Même porte d'entrée pour les registres officiels ouverts — BCE/KBO, SIRENE, Companies House :
+  exhaustifs et sans biais SEO, mais sans email, donc ils enrichissent et n'envoient pas (ADR-033)
 
-**5.8** En tant qu'utilisateur, je veux une fiche contact centralisée.
+**5.8** ⬜ En tant qu'utilisateur, je veux une fiche contact centralisée.
 - Historique d'outreach, statut de vérification, activité par campagne, provenance
 - Société en objet séparé et dédupliqué, jamais recopiée sur chaque contact
 
 ### Epic 6 — Séquences & personnalisation `v0`
 
-**6.1** En tant qu'utilisateur, je veux que l'IA génère une séquence complète à partir du contexte projet.
+**6.1** ⬜ En tant qu'utilisateur, je veux que l'IA génère une séquence complète à partir du contexte projet.
 - Séquence par défaut : email → attente → relance
 - Générée en moins de 5 minutes, entièrement éditable avant activation
 
-**6.2** En tant qu'utilisateur, je veux une accroche personnalisée par lead.
+**6.2** ⬜ En tant qu'utilisateur, je veux une accroche personnalisée par lead.
 - Construite à partir de la knowledge base + de la justification de fit de la société
 - Aucune recherche manuelle par contact
 - Prévisualisation sur un échantillon avant lancement
 
-**6.3** En tant qu'utilisateur, je veux composer les étapes moi-même.
+**6.3** ⬜ En tant qu'utilisateur, je veux composer les étapes moi-même.
 - Types en v0 : email, attente. LinkedIn plus tard, même structure
 - Réordonnancement, délais configurables
 
-**6.4** `v1` En tant qu'utilisateur, je veux plusieurs variantes par étape en A/B automatique.
+**6.4** ⬜ `v1` En tant qu'utilisateur, je veux plusieurs variantes par étape en A/B automatique.
 - Répartition par poids, résultats par variante
 
-**6.5** `v1` En tant qu'utilisateur, je veux des variables et des blocs conditionnels dans mes templates.
+**6.5** ⬜ `v1` En tant qu'utilisateur, je veux des variables et des blocs conditionnels dans mes templates.
 - Variables sur les champs lead et société, avec valeur de repli obligatoire
 - Blocs conditionnels : afficher un paragraphe seulement si un champ est renseigné
 - Prévisualisation rendue sur un lead réel, et refus d'envoi si une variable ne résout pas
 
 ### Epic 7 — Envoi `v0`
 
-**7.1** En tant qu'utilisateur, je veux connecter un ou plusieurs comptes email SMTP/IMAP.
+**7.1** ⬜ En tant qu'utilisateur, je veux connecter un ou plusieurs comptes email SMTP/IMAP.
 - Identifiants chiffrés avec `CREDENTIALS_KEY` (ADR-012) ; test de connexion à l'enregistrement
 - Partagés entre projets ou dédiés à un projet, au choix
 - **Pas d'OAuth** (ADR-027) — SMTP/IMAP classique uniquement
@@ -1343,14 +1548,14 @@ automatiquement.
   l'administrateur Workspace, SMTP AUTH coupé sur le tenant M365, port bloqué, TLS refusé…
 - Une page de documentation par fournisseur courant (OVH, Infomaniak, Gandi, Zoho, Gmail, M365)
 
-**7.2** En tant qu'utilisateur, je veux une limite d'envoi quotidienne par compte.
+**7.2** ⬜ En tant qu'utilisateur, je veux une limite d'envoi quotidienne par compte.
 - Le surplus est reporté au lendemain, la campagne ne s'arrête pas
 - Envois répartis dans la journée, pas en rafale
 
-**7.3** `v1` En tant qu'utilisateur, je veux un ramp-up progressif sur un nouveau compte.
+**7.3** ⬜ `v1` En tant qu'utilisateur, je veux un ramp-up progressif sur un nouveau compte.
 - Courbe de montée configurable, appliquée automatiquement
 
-**7.4** `v1` En tant qu'utilisateur, je veux que mes envois tournent sur plusieurs boîtes.
+**7.4** ⬜ `v1` En tant qu'utilisateur, je veux que mes envois tournent sur plusieurs boîtes.
 - Une campagne répartit ses envois sur un pool de comptes, chacun avec son propre plafond
 - Un lead donné reste sur la même boîte pour toute la séquence, thread préservé
 - Une boîte en échec ou en pause est retirée du pool sans interrompre la campagne
@@ -1359,7 +1564,7 @@ automatiquement.
 **7.5** ~~Warm-up des boîtes~~ — **hors scope, décision assumée (ADR-023)**.
 - Remplacé par une page de documentation expliquant pourquoi, et un point d'intégration tiers
 
-**7.6** En tant qu'utilisateur, je veux que tout envoi soit conforme.
+**7.6** ⬜ En tant qu'utilisateur, je veux que tout envoi soit conforme.
 - Phrase d'opt-out générée dans le corps ; « STOP » détecté → suppression immédiate (ADR-029)
 - Aucun lien, aucune image, aucun en-tête révélant un outil — indiscernable d'un envoi manuel
 - Suppression list vérifiée avant chaque envoi
@@ -1367,48 +1572,48 @@ automatiquement.
 
 ### Epic 8 — Réponses & inbox `v0`
 
-**8.1** En tant qu'utilisateur, je veux que la campagne se mette en pause sur un lead qui répond.
+**8.1** ⬜ En tant qu'utilisateur, je veux que la campagne se mette en pause sur un lead qui répond.
 - Attribution par `Message-ID` / `In-Reply-To`
 - Auto-reply détecté → **pas** de pause
 - Pause visible avec son motif
 
-**8.2** En tant qu'utilisateur, je veux une inbox unifiée sur tous mes comptes email.
+**8.2** ⬜ En tant qu'utilisateur, je veux une inbox unifiée sur tous mes comptes email.
 - Seuls les contacts ayant réellement répondu apparaissent
 - Filtrable par projet et par campagne
 
-**8.3** En tant qu'utilisateur, je veux répondre depuis l'app.
+**8.3** ⬜ En tant qu'utilisateur, je veux répondre depuis l'app.
 - Réponse envoyée depuis le compte email d'origine, thread préservé
 
-**8.4** En tant qu'utilisateur, je veux voir l'état de chaque lead dans le pipeline.
+**8.4** ⬜ En tant qu'utilisateur, je veux voir l'état de chaque lead dans le pipeline.
 - Vue funnel par étape, comptages par statut : en cours, terminé, répondu, échoué, supprimé
 
-**8.5** En tant qu'utilisateur, je veux un dashboard projet avec les stats clés.
+**8.5** ⬜ En tant qu'utilisateur, je veux un dashboard projet avec les stats clés.
 - Campagnes actives, contacts, taux de réponse, activité récente, consommation IA
 
 ### Epic 9 — Organizations & permissions `v1` — **cœur, pas cloud**
 
 > Disponible dans les deux éditions. `app/Cloud/` ne contient que facturation et crédits (ADR-025).
 
-**9.1** En tant qu'utilisateur cloud, je veux créer mon compte et devenir owner de mon organization.
-**9.2** En tant qu'admin, je veux inviter des membres avec un rôle.
-**9.3** En tant qu'admin, je veux accorder l'accès projet par projet.
+**9.1** ⬜ En tant qu'utilisateur cloud, je veux créer mon compte et devenir owner de mon organization.
+**9.2** ⬜ En tant qu'admin, je veux inviter des membres avec un rôle.
+**9.3** ⬜ En tant qu'admin, je veux accorder l'accès projet par projet.
 - Un membre sans accès à un projet ne le voit pas, ne le devine pas via une URL, et reçoit un 404
 
 ### Epic 10 — Facturation `v1`
 
-**10.1** En tant qu'utilisateur cloud, je veux m'abonner par carte (Stripe).
-**10.2** En tant qu'utilisateur cloud, je veux voir ma consommation par rapport à mon plan.
+**10.1** ⬜ En tant qu'utilisateur cloud, je veux m'abonner par carte (Stripe).
+**10.2** ⬜ En tant qu'utilisateur cloud, je veux voir ma consommation par rapport à mon plan.
 - Leads découverts, emails envoyés, coût IA — ventilés par projet, alimentés par `agent_runs`
-**10.3** En tant qu'utilisateur self-hosted, je veux que le core reste gratuit sans limite artificielle.
+**10.3** ⬜ En tant qu'utilisateur self-hosted, je veux que le core reste gratuit sans limite artificielle.
 - Le cloud ajoute uniquement : **hébergement géré, facturation, clé IA fournie, support**
 - Le multi-utilisateur n'en fait **pas** partie — il est dans le cœur (ADR-025)
 
 ### Epic 11 — LinkedIn `plus tard`
 
-**11.1** Enchaîner visite / connexion / message dans une campagne, en parallèle des étapes email.
-**11.2** Se connecter à LinkedIn côté serveur, avec gestion des codes email/SMS et de l'approbation mobile.
-**11.3** Rythme humain : délais randomisés.
-**11.4** Empreinte navigateur stable dans le temps, y compris après un rebuild du container.
+**11.1** ⬜ Enchaîner visite / connexion / message dans une campagne, en parallèle des étapes email.
+**11.2** ⬜ Se connecter à LinkedIn côté serveur, avec gestion des codes email/SMS et de l'approbation mobile.
+**11.3** ⬜ Rythme humain : délais randomisés.
+**11.4** ⬜ Empreinte navigateur stable dans le temps, y compris après un rebuild du container.
 
 > *Sales Navigator* (mentionné dans la version précédente du doc) est l'abonnement LinkedIn payant pour
 > commerciaux : on y construit une recherche filtrée dont l'URL encode les filtres, et « importer cette
@@ -1417,9 +1622,9 @@ automatiquement.
 
 ### Epic 12 — Intégrations `plus tard`
 
-**12.1** API pour créer projets, leads et campagnes par programmation.
-**12.2** Serveur MCP pour piloter l'outil depuis un agent IA externe.
-**12.3** Webhooks pour brancher un CRM.
+**12.1** ⬜ API pour créer projets, leads et campagnes par programmation.
+**12.2** ⬜ Serveur MCP pour piloter l'outil depuis un agent IA externe.
+**12.3** ⬜ Webhooks pour brancher un CRM.
 
 ---
 

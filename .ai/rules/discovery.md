@@ -93,3 +93,56 @@ Discovery, qualification and contact extraction are unchanged. Two things differ
 Prioritise the **legally obligatory** intermediaries — fiscal cash register, HACCP, food-safety, business counters. Captive clientele, few of them, enumerable.
 
 Never cite a company the pipeline has not found, fetched and qualified. An LLM produces plausible false names readily, and the whole point of this product over a strategy document is that its names are verified.
+
+## Directories are a source, and search results have two natures (ADR-033)
+Settled 2026-08-12. Search engines rank companies that do SEO. A large part of the target market has no site, only a Facebook page, or a site nobody reaches before page 20 — and those are frequently the best targets, because nobody else is calling them.
+
+The code was actively deleting the fix: `WebSearchSource::isAggregator()` dropped every result pointing at a directory. `pagesdor.be/friteries/namur` is not a company, it is **two hundred companies**, and it is the only place a site-less business publishes an email. **The blocklist becomes a router, not a filter**: a result is either an *entity* (→ candidate, as today) or an *index* (→ harvest).
+
+**The model navigates, PHP extracts.** The LLM decides WHERE to look; code does the volume. Harvesting a listing page is plain PHP — `sitemap.xml`, then JSON-LD `LocalBusiness`/`Organization`, then stored CSS selectors, then the LLM extractor as a last resort. Directories nearly all emit JSON-LD because SEO is their business, so one parser covers most of them. The model never sees the two hundred entries, only `"60 saved, 41 with a site, 12 with an email"`.
+
+`directories` is **self-populating**: host, yield, sectors, countries, extraction mode, recorded from what actually produced. Hand-curating it is chicken-and-egg — you cannot know in advance that `pagesdor.be` matters for friteries. Adding a directory must stay a row, never a PHP class; that is a deliberate open-source contribution lever.
+
+Not to be built: a Facebook scraper. Blocked, against ToS, fragile. Facebook-only businesses are reached through OSM `contact:facebook` and through directories.
+
+Noted but not scheduled: open company registries (KBO/BCE, SIRENE, Companies House) are exhaustive by construction and free — no SEO bias possible, NACE code plus commune beats any query. They carry no email, so they feed enrichment, not sending. They fit the existing `DiscoverySource` interface. Do them after directory harvesting, not before.
+
+## Discovery is a job graph, not an agent tool loop (ADR-033)
+Each node is a queued job with minimal context, its own `discovery_tasks` row, its own cost: `PlanDiscovery` (AI) → `RunSearchQuery` (no AI) → `TriageResults` (AI, batched ~20 URLs) → `HarvestListing` (no AI) → `ExtractEntities` (AI only when JSON-LD failed), alongside `RunOverpassProbe` (no AI), with `ReflectAndExpand` (AI, reads aggregates) enqueuing the next wave. Most nodes never touch an LLM.
+
+A tool loop was considered seriously and three of the four objections against it collapsed — `laravel/ai` already accumulates usage across steps in `TextGenerationLoop::buildFinalResponse()`, so metering needs no code; `Contracts/Approvable` pauses and resumes per tool; and the supervised notch (ADR-009) covers strategy and email content, not each fetch. **The reason that survived: a tool loop's cost grows quadratically with depth**, because every step resends the whole history. A 40-step scout is not 4× a 10-step one. The job graph keeps context flat.
+
+Three concrete benefits, not theory: a job re-runs from the UI (the row IS the button), a job checks `crawled_pages` on pickup and deletes itself when its work is moot, and a crash at step 35 does not lose the first 34.
+
+What it costs: reasoning continuity. Fan-out jobs are amnesiac where a conversation remembers "pagesdor yielded 60 in Namur, try Charleroi". That memory must be DESIGNED in the database instead of coming free from the context window — that is `ReflectAndExpand`'s job, and it reads counters (yield per directory, barren queries, uncovered communes), never pages. That is what keeps it cheap. It is also where the ADR-020 diagnosis runs; `wrong_source` finally has a concrete answer — switch directory.
+
+Budget and cancellation are ONE flag: `discovery_runs.status`. Out of credits → `exhausted`; user cancels → `cancelled`. Queued jobs read it on pickup and delete themselves. No job registry, no killing workers. `discovery_tasks` is a dedicated table and not Laravel's `jobs`, which loses the row on success and so cannot back a history or a re-run button.
+
+A tool loop is still the right tool INSIDE one directory whose pagination resists. Local and bounded, not the overall architecture.
+
+## HtmlText must emit markdown, not text plus a link list
+Found 2026-08-12 while designing ADR-033, and it is a defect for listing pages, not a preference. `HtmlText` returns `text` and `links` separately and throws away anchor labels: a directory page yields 200 names on one side, 200 URLs on the other, and nothing pairs them. Markdown keeps `[Chez Marcel](/friterie/chez-marcel-4412)` intact — the difference between usable and not. Second defect of the same kind: `STRIP` removes `nav`, `header` and `footer`, which deletes the pagination links, so "next page" disappears.
+
+## What the first real harvests returned (2026-08-12)
+`ListingHarvester` works end to end, and three live attempts corrected the ADR's central assumption.
+
+**ADR-033 claimed directories "nearly all emit JSON-LD because SEO is their business". That was wrong and the assumption is dropped: nobody publishes it, so never plan around getting it.** Measured on three Belgian directories, none did.
+
+| Host | Result |
+|---|---|
+| `pagesdor.be` | HTTP 200 carrying an **Imperva/Incapsula** challenge page, 1 152 bytes, no content. Hard bot protection — no parser fixes this. |
+| `infobel.com` | **403** to an unknown User-Agent. Its robots.txt names and disallows `GPTBot`, `CCBot`, `ChatGPT-User` and `anthropic` — AI crawlers are being blocked deliberately. |
+| `resto.be` | 200, **737 KB, zero `ld+json`** — a JS-rendered app. The LLM fallback read it fine: 23 businesses, 0 with a website, $0.019 for the page. |
+
+JSON-LD is still tried first — it costs nothing to attempt and is perfect when present — but it is a windfall, not a design assumption. **Plan every cost estimate on the LLM path.**
+
+Consequences:
+- **$0.019 per listing page** against $0.0025 per company qualification. Cheap per business ($0.0001 at 200 entries), but twenty pages is $0.38 spent before anything is qualified.
+- **An extraction is never paid for twice.** `crawled_pages` caches the fetch, not the model call, so a re-run used to re-bill every page — which is exactly what testing a directory involves. Results are cached on the URL hash for the crawl TTL. ICP-independent public content, so the same reasoning as ADR-014 applies.
+- **Learned CSS selectors are now the real win, not a speculative rung.** With the model as the normal path, deriving a host's selectors ONCE from the model's own output and replaying them free on later pages turns a recurring cost into a one-off. Build it when a directory has actually produced more than once — not before.
+- **Big national directories are the hostile case.** The `directories` registry should record *why* a host failed (`blocked`, `js_only`, `jsonld`, `llm`) so a blocked one is never retried at cost.
+- **JS rendering is now a real question**, where before it was deferred pending measurement (a 737 KB page yielding nothing server-side is the measurement starting). Not a reason to add a headless container yet — the LLM path reads what the server does send — but the failure rate is no longer hypothetical.
+- Blocked directories are also an argument for the official registries (KBO/BCE, SIRENE): open data, no bot protection, exhaustive.
+
+**Every business harvested from resto.be had no website of its own** — exactly the population ADR-033 was written for, and exactly the one the pipeline cannot yet hold: `companies.domain` is NOT NULL and is the dedupe key. `Candidate.website` is nullable and `Harvest::withoutWebsite()` counts them so the number is visible instead of silently dropped, but nothing consumes them yet. That schema change is the next real decision.
+

@@ -107,11 +107,11 @@ it('skips responses that are not html', function () {
     expect(app(SiteCrawler::class)->crawl('https://acme.test'))->toBeEmpty();
 });
 
-it('strips markup and keeps the readable text', function () {
+it('strips machinery, keeps the readable markdown, and keeps nav', function () {
     Http::fake([
         '*/robots.txt' => Http::response('', 404),
         'https://acme.test/' => Http::response(html(
-            '<nav>Menu Home Contact</nav><p>Acme sells widgets.</p><script>var x = 1;</script>'
+            '<nav>Menu <a href="/contact">Contact</a></nav><p>Acme sells widgets.</p><script>var x = 1;</script>'
         )),
     ]);
 
@@ -119,7 +119,10 @@ it('strips markup and keeps the readable text', function () {
 
     expect($page->text)->toContain('Acme sells widgets.')
         ->and($page->text)->not->toContain('var x = 1')
-        ->and($page->text)->not->toContain('Menu')
+        // `nav` used to be stripped as chrome. Reversed on 2026-08-12 (ADR-033):
+        // pagination lives there, and dropping it stops a listing harvest at
+        // page one. The extra tokens are a rounding error against that.
+        ->and($page->text)->toContain('[Contact](https://acme.test/contact)')
         ->and($page->language)->toBe('fr');
 });
 

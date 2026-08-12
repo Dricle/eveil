@@ -125,6 +125,7 @@ it('lists every agent it finds in the code, not a hand-kept list', function () {
         'contact-extractor',
         'discovery-planner',
         'icp-deriver',
+        'listing-extractor',
         'website-analyst',
     ]);
 });

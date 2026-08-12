@@ -19,7 +19,7 @@ Open questions live in a numbered register in §9 of the spec. It is currently E
 
 Hierarchy: User → Organization (billable entity) → Project (one product/site to promote, e.g. Dricle, Sendboo) → leads/campaigns/email accounts, all scoped to project.
 
-Two per-project AI roles: Website (crawls the site → knowledge base, plus site and acquisition suggestions, ADR-032) and Sales (derives target profiles, finds and qualifies companies, extracts contacts, runs outreach). A profile targets a customer OR a partner — whoever already touches the customer (ADR-031). Five agent classes back them: planner, extractor, qualifier, writer, classifier.
+Two per-project AI roles: Website (crawls the site → knowledge base, plus site and acquisition suggestions, ADR-032) and Sales (derives target profiles, finds and qualifies companies, extracts contacts, runs outreach). A profile targets a customer OR a partner — whoever already touches the customer (ADR-031). One agent class per specialisation backs them, in `app/Ai/Agents/`, each its own settings key — there is no role taxonomy (ADR-026).
 
 Ships in two editions from one codebase: free self-hosted (docker compose) and paid cloud. Scope lives in saas-outreach-tool-user-stories.md at repo root — read it before planning features.
 
@@ -60,11 +60,19 @@ Strategic corollary: the moat is hosting, brand and execution speed — not code
 
 Before going public: write `ICLA.md`, `CCLA.md`, `CONTRIBUTING.md`, wire a CLA-check bot, and have a lawyer review it — this is the one project decision that cannot be undone.
 
-## All blocking open questions are settled — ADR-010 to ADR-032
-As of 2026-08-11 the §9 register in the spec is empty: tiers A, B and C are all decided as ADR-010 through ADR-030, plus ADR-031 (partner profiles) and ADR-032 (acquisition recommendations) added as scope. Read §3 of `saas-outreach-tool-user-stories.md` before proposing anything architectural — the answer is probably already there, with its reasoning.
+## All blocking open questions are settled — ADR-010 to ADR-033
+As of 2026-08-12 the §9 register in the spec is empty: tiers A, B and C are all decided as ADR-010 through ADR-030, plus ADR-031 (partner profiles), ADR-032 (acquisition recommendations) and ADR-033 (job-graph discovery, directories as a source) added as scope. Read §3 of `saas-outreach-tool-user-stories.md` before proposing anything architectural — the answer is probably already there, with its reasoning.
 
 Two deadlines remain, non-blocking for development but not to be discovered the night before launch:
 - Before opening the repo: write `ICLA.md`, `CCLA.md`, `CONTRIBUTING.md`, wire a CLA-check bot, have a lawyer review the licence and CLA (ADR-025).
 - Before any public communication: pick the domain and run an EUIPO trademark search (ADR-030). The name stays "Eveil"; `eveil.com/.app/.io/.ai/.be` are taken, `eveil.dev/.email/.so`, `geteveil.com` and `useeveil.com` were free on 2026-08-11. Known and accepted downsides: the missing accent (French spells it Éveil), a saturated French keyword, and poor readability for English speakers.
 
 When a new open question appears, add it to the §9 register with an identifier, and promote it to an ADR in §3 once settled.
+
+## Story status lives in the spec, and it is your job to update it
+Added 2026-08-12 because the ADR count was outrunning what exists. Every story in §7 of `saas-outreach-tool-user-stories.md` carries a marker — `✅` done and tested, `🟡` backend/CLI only with no UI, `⬜` not started — plus a per-epic rollup at the top of the section.
+
+**Update the marker in the same commit as the code.** An unmarked or stale story is worse than none: the whole point is that §7 answers "what is left" without reading the codebase. When a story moves to `🟡`, say on the story itself what is missing. When the schema for a story does not exist yet, say so — several ADRs (031 partner ICPs, 032 recommendations, 033 directories) are decided in the spec but have no migration, and that gap is invisible from the ADR text alone.
+
+Do not invent a second tracker. No TODO.md, no issues file, no task list in another document — they drift apart within a week and then nobody trusts either.
+

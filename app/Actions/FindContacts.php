@@ -6,7 +6,6 @@ use App\Ai\Agents\ContactExtractor;
 use App\Enums\EmailSource;
 use App\Enums\EmailStatus;
 use App\Models\Company;
-use App\Models\Erasure;
 use App\Models\Lead;
 use App\Services\Discovery\EmailPattern;
 use App\Services\Discovery\EmailVerifier;
@@ -255,14 +254,16 @@ class FindContacts
     }
 
     /**
-     * An erasure request outlives the row it deleted: without this check the
-     * next run finds the person again and contacts them.
+     * An erasure request outlives the address it wiped: the lead row stays,
+     * stripped down to a hash, precisely so this check can still be made.
+     * Without it the next run reads the same team page and contacts her again.
      */
     private function erased(Company $company, string $email): bool
     {
-        return Erasure::query()
-            ->where('organization_id', $company->project->organization_id)
-            ->where('email_hash', Erasure::hashFor($email))
+        return Lead::query()
+            ->where('project_id', $company->project_id)
+            ->where('email_hash', Lead::hashFor($email))
+            ->whereNotNull('erased_at')
             ->exists();
     }
 
@@ -275,7 +276,7 @@ class FindContacts
 
         /** @var Lead $lead */
         $lead = Lead::updateOrCreate(
-            ['project_id' => $company->project_id, 'email' => $attributes['email']],
+            ['project_id' => $company->project_id, 'email_hash' => Lead::hashFor((string) $attributes['email'])],
             array_merge($attributes, [
                 'company_id' => $company->id,
                 'email_status' => $status,

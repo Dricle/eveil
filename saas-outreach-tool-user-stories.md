@@ -457,10 +457,17 @@ régler sur l'infini.
 
 Deux mécanismes obligatoires :
 
-- **Tombstone d'effacement.** Une demande de suppression ne peut pas se contenter de supprimer la
-  ligne : le prochain discovery run retrouverait la personne et la recontacterait. On conserve
-  l'email **haché** dans une liste d'effacement, consultée à la découverte comme à l'envoi. On ne
-  garde pas la personne, on garde le fait qu'il ne faut plus jamais la retrouver.
+- **Effacement porté par la ligne du lead.** Une demande de suppression ne peut pas se contenter de
+  supprimer la ligne : le prochain discovery run retrouverait la personne et la recontacterait. Et un
+  soft delete ne suffit pas non plus — `deleted_at` masque une ligne qui contient toujours le nom,
+  l'adresse et l'URL LinkedIn, c'est de la conservation avec un drapeau dessus. La ligne reste donc,
+  **vidée** : nom, prénom, titre, email, LinkedIn et `source_url` partent, ainsi que le sujet et le
+  corps des messages déjà envoyés, qui citent l'adresse. Survivent `email_hash` — un condensé à sens
+  unique, consulté à la découverte comme à l'envoi — et `erased_at`. On ne garde pas la personne, on
+  garde le fait qu'il ne faut plus jamais la retrouver. Pas de table `erasures` séparée : la portée est
+  le projet, exactement comme la ligne, car deux projets peuvent trouver la même personne et un seul
+  s'être vu demander de l'oublier. Un effacement à l'échelle de l'organization est la même opération
+  répétée par projet. Réserve assumée : trop effacer n'est jamais une infraction, pas assez si.
 - **Dissociation dans `agent_runs`.** Les payloads bruts sont purgés ou anonymisés tôt ; les métriques
   survivent sans limite. Purger les leads tout en gardant les runs indéfiniment reviendrait à laisser
   la donnée personnelle derrière soi dans le compteur de facturation.
@@ -1255,10 +1262,12 @@ companies              project_id, domain (unique/projet), name, website, indust
 company_target_evaluations company_id, target_profile_id, fit_score, fit_reason
                        ← le fit dépend de le profil cible, jamais de la société (ADR-015)
 leads                  project_id, company_id, first/last_name, title, email,
+                       email_hash  ← sha256, survit à l'effacement et sert de clé de dédup
                        email_status: valid|risky|unknown|invalid,
                        email_source: scraped|inferred|provided|imported,
                        linkedin_url, source, source_url, discovered_at, status,
                        won_at   ← marquage manuel du gain (ADR-022)
+                       erased_at ← la ligne vidée EST le tombstone, pas de table à part
 suppressions           email|domain, reason  ← global, hors scope projet
 
 email_accounts         project_id (nullable = partagé), smtp/imap chiffrés,

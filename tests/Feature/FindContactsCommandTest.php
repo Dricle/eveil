@@ -3,9 +3,11 @@
 use App\Ai\Agents\ContactExtractor;
 use App\Enums\EmailSource;
 use App\Enums\EmailStatus;
+use App\Enums\MessageDirection;
 use App\Models\Company;
-use App\Models\Erasure;
+use App\Models\EmailAccount;
 use App\Models\Lead;
+use App\Models\Message;
 use App\Models\Project;
 use App\Services\Discovery\EmailPattern;
 use App\Services\Discovery\EmailVerifier;
@@ -107,11 +109,12 @@ it('prefers a named person over the front desk', function () {
 
 it('never resurrects someone who asked to be erased', function () {
     $company = companyWithSite();
-    Erasure::create([
-        'organization_id' => $company->project->organization_id,
-        'email_hash' => Erasure::hashFor('marie.dupont@friterie.be'),
-        'requested_at' => now(),
-    ]);
+
+    Lead::factory()->create([
+        'project_id' => $company->project_id,
+        'company_id' => $company->id,
+        'email' => 'marie.dupont@friterie.be',
+    ])->erase();
 
     ContactExtractor::fake([extraction(people: [
         ['first_name' => 'Marie', 'last_name' => 'Dupont', 'title' => 'Gérante', 'email' => 'marie.dupont@friterie.be'],
@@ -119,8 +122,37 @@ it('never resurrects someone who asked to be erased', function () {
 
     $this->artisan('eveil:find-contacts')->assertSuccessful();
 
-    // Deleting the row is not enough, the next run would find her again.
-    expect(Lead::count())->toBe(0);
+    // The stripped row stays — it IS the tombstone — but nothing is re-created
+    // and no address comes back.
+    expect(Lead::count())->toBe(1)
+        ->and(Lead::sole()->email)->toBeNull()
+        ->and(Lead::sole()->first_name)->toBeNull()
+        ->and(Lead::sole()->erased_at)->not->toBeNull();
+});
+
+it('wipes the messages it already sent, not just the lead', function () {
+    $company = companyWithSite();
+    $lead = Lead::factory()->create(['project_id' => $company->project_id, 'company_id' => $company->id]);
+
+    $account = EmailAccount::factory()->create(['organization_id' => $company->project->organization_id]);
+    Message::create([
+        'lead_id' => $lead->id,
+        'email_account_id' => $account->id,
+        'direction' => MessageDirection::Outbound,
+        'message_id' => 'a@b',
+        'subject' => 'Bonjour Marie',
+        'body' => 'Marie, je vous écris à marie.dupont@friterie.be…',
+    ]);
+
+    $lead->erase();
+
+    // The copy we sent carries her name and address in the body: deleting the
+    // lead alone would leave the personal data sitting in `messages`.
+    $message = Message::sole();
+
+    expect($message->subject)->toBe('')
+        ->and($message->body)->toBe('')
+        ->and($lead->fresh()->email_hash)->not->toBeNull();
 });
 
 it('skips companies that already have leads unless asked', function () {

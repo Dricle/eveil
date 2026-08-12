@@ -88,22 +88,6 @@ return new class extends Migration
             $table->index(['email_account_id', 'email']);
         });
 
-        /**
-         * Erasure tombstones. Deleting the row is not enough — the
-         * next discovery run would find the person again. We keep the hashed
-         * address so they can never be re-discovered, and nothing else.
-         * Organization-scoped: each controller handles its own erasures.
-         */
-        Schema::create('erasures', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('organization_id')->constrained()->cascadeOnDelete();
-            $table->char('email_hash', 64);
-            $table->timestamp('requested_at');
-            $table->timestamp('created_at');
-
-            $table->unique(['organization_id', 'email_hash']);
-        });
-
         Schema::create('campaigns', function (Blueprint $table) {
             $table->id();
             $table->foreignId('project_id')->constrained()->cascadeOnDelete();
@@ -212,7 +196,6 @@ return new class extends Migration
         Schema::dropIfExists('step_variants');
         Schema::dropIfExists('campaign_steps');
         Schema::dropIfExists('campaigns');
-        Schema::dropIfExists('erasures');
         Schema::dropIfExists('suppressions');
         Schema::dropIfExists('email_accounts');
     }

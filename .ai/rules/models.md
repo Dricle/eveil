@@ -55,3 +55,20 @@ Two absolute rules on every export, whatever the format:
 - ALWAYS include the suppression list. Leaving without your opt-outs means re-contacting, in the new instance, people who unsubscribed in the old one. That is a GDPR failure and a complaint generator, not a convenience loss.
 
 In cloud, export stays gated behind a first payment (ADR-024) — otherwise the trial grant becomes a free file-extraction machine.
+
+## Erasure lives on the lead, not in a tombstone table
+Changed 2026-08-12. There was an `erasures` table holding `organization_id + sha256(email)`. It is gone: `leads` carries `email_hash` and `erased_at`, and `Lead::erase()` does the work.
+
+Why not a soft delete, which is the obvious first idea: `deleted_at` hides a row that still holds the name, the address and the LinkedIn URL. That is retention with a flag on it — the opposite of what an erasure request asks for.
+
+Why not a plain hard delete either: the next discovery run reads the same team page, finds the same person, and contacts her again. The request has to outlive the data it destroyed.
+
+So the row stays and is stripped. `email`, `first_name`, `last_name`, `title`, `linkedin_url`, `email_status`, `email_source` and `source_url` all go — `source_url` included, because a link to a page that names her identifies her too. What survives is `email_hash`, a one-way digest that cannot give the address back but still answers "is this person erased?".
+
+Three things that are easy to get wrong here:
+- **`erase()` also wipes `messages.subject` and `messages.body`.** The mail we sent quotes her name and address; clearing the lead alone leaves a full copy behind in another table. Anything else that ends up storing message content must be added to `erase()`.
+- **Never write `email = '[erased]'` or any placeholder.** The unique index is `(project_id, email_hash) WHERE email_hash IS NOT NULL`; a shared placeholder collides on the second erasure in a project. `email` goes to null, the hash carries the identity.
+- **`Lead::setEmailAttribute()` keeps `email_hash` in step automatically**, and deliberately does NOT clear the hash when the address is set to null — that asymmetry is what makes `erase()` work. Raw `DB::table()` inserts bypass it, which is fine in schema tests but nowhere else.
+
+Scope is the project, because the row is: two projects can find the same person and only one of them may have been asked to forget her. An organization-wide erasure is that operation repeated per project, not a different data shape. Note the trade-off — over-deleting is never a compliance problem and under-deleting is, so if a request is ambiguous, sweep every project.
+

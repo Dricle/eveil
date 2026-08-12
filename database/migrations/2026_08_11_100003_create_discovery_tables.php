@@ -120,6 +120,12 @@ return new class extends Migration
             $table->string('title')->nullable();
             $table->string('email')->nullable();
 
+            // sha256 of the lowercased address. Survives erasure, when `email`
+            // itself is wiped, and is what stops the next run re-discovering
+            // and re-contacting someone who asked to be forgotten. Doubles as
+            // the dedupe key so one column serves both.
+            $table->char('email_hash', 64)->nullable();
+
             $table->string('email_status')->nullable(); // valid|risky|unknown|invalid
             $table->string('email_source')->nullable(); // scraped|inferred|provided|imported
             $table->timestamp('email_verified_at')->nullable();
@@ -142,6 +148,12 @@ return new class extends Migration
             // Manual "signed" flag — unlocks cost per customer.
             $table->timestamp('won_at')->nullable();
 
+            // Set when the person asked to be forgotten. Every identifying
+            // column is wiped at the same moment; only `email_hash` and this
+            // timestamp survive, which is what makes the request enforceable
+            // without keeping the address.
+            $table->timestamp('erased_at')->nullable();
+
             $table->timestamps();
 
             $table->index(['project_id', 'status']);
@@ -149,11 +161,12 @@ return new class extends Migration
             $table->index(['project_id', 'discovered_at']);
         });
 
-        // Dedupe by email within a project, but allow many leads with no email
-        // (LinkedIn-only rows are valid). Laravel's Blueprint has no partial
-        // index, so this is raw — and partial indexes are one of the reasons
-        // PostgreSQL is mandatory in tests too.
-        DB::statement('CREATE UNIQUE INDEX leads_project_id_email_unique ON leads (project_id, email) WHERE email IS NOT NULL');
+        // Dedupe on the HASH, not the address: an erased lead keeps its hash
+        // and loses its email, and it still has to block a re-discovery. Many
+        // leads with no email at all are valid (LinkedIn-only rows), hence the
+        // partial index — Laravel's Blueprint has none, so this is raw, and it
+        // is one of the reasons PostgreSQL is mandatory in tests too.
+        DB::statement('CREATE UNIQUE INDEX leads_project_id_email_hash_unique ON leads (project_id, email_hash) WHERE email_hash IS NOT NULL');
     }
 
     /**

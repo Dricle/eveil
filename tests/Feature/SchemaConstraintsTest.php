@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\CampaignLeadStatus;
+use App\Models\Lead;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
@@ -29,9 +30,13 @@ function makeProject(): int
 
 function makeLead(int $projectId, ?string $email): int
 {
+    // Raw inserts on purpose: this file checks what the DATABASE refuses, not
+    // what the model prevents. So the hash is written by hand here — in the app
+    // the `email` mutator keeps it in step.
     return DB::table('leads')->insertGetId([
         'project_id' => $projectId,
         'email' => $email,
+        'email_hash' => $email === null ? null : Lead::hashFor($email),
         'source' => 'test',
         'discovered_at' => now(),
         'created_at' => now(),

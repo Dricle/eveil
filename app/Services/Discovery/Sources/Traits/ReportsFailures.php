@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Discovery\Sources;
+namespace App\Services\Discovery\Sources\Traits;
 
 use Illuminate\Support\Collection;
 
@@ -12,7 +12,7 @@ use Illuminate\Support\Collection;
  * wrong for this profile". The diagnosis was confidently wrong because a dead
  * source and an empty market looked identical from the outside.
  */
-trait ReportsFailuresTrait
+trait ReportsFailures
 {
     /** @var array<int, string> */
     private array $failures = [];

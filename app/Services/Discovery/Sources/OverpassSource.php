@@ -3,6 +3,7 @@
 namespace App\Services\Discovery\Sources;
 
 use App\Services\Discovery\Candidate;
+use App\Services\Discovery\Sources\Traits\ReportsFailures;
 use App\Support\Url;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
@@ -18,7 +19,7 @@ use Throwable;
  */
 class OverpassSource implements DiscoverySourceInterface
 {
-    use ReportsFailuresTrait;
+    use ReportsFailures;
 
     public function name(): string
     {

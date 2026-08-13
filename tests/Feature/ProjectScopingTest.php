@@ -2,9 +2,12 @@
 
 use App\Models\Campaign;
 use App\Models\Company;
+use App\Models\EmailAccount;
 use App\Models\Lead;
+use App\Models\Organization;
 use App\Models\Project;
 use App\Support\CurrentProject;
+use Illuminate\Database\QueryException;
 
 /**
  * A leak between projects is the worst bug this app can ship. These
@@ -73,4 +76,54 @@ it('leaves queries unscoped when no project is set, for console and jobs', funct
     Lead::factory()->count(2)->create();
 
     expect(Lead::count())->toBe(2);
+});
+
+it('grants a mailbox to a project only when it is attached', function () {
+    $organization = Organization::factory()->create();
+    $restogo = Project::factory()->create(['organization_id' => $organization->id]);
+    $immodb = Project::factory()->create(['organization_id' => $organization->id]);
+
+    $personal = EmailAccount::factory()->create([
+        'organization_id' => $organization->id,
+        'from_email' => 'clement@dricle.be',
+    ]);
+    $productAddress = EmailAccount::factory()->create([
+        'organization_id' => $organization->id,
+        'from_email' => 'contact@restogo.be',
+    ]);
+
+    $personal->projects()->attach([$restogo->id, $immodb->id]);
+    $productAddress->projects()->attach($restogo->id);
+
+    expect($restogo->emailAccounts()->pluck('from_email')->sort()->values()->all())
+        ->toBe(['clement@dricle.be', 'contact@restogo.be'])
+        ->and($immodb->emailAccounts()->pluck('from_email')->all())
+        ->toBe(['clement@dricle.be']);
+});
+
+it('leaves a new project unable to send until a mailbox is attached', function () {
+    // The reason this is a pivot and not a nullable `project_id`: "null means
+    // every project" would silently hand the founder's personal address to the
+    // next client project created.
+    $organization = Organization::factory()->create();
+    $existing = Project::factory()->create(['organization_id' => $organization->id]);
+
+    EmailAccount::factory()
+        ->create(['organization_id' => $organization->id, 'from_email' => 'clement@dricle.be'])
+        ->projects()->attach($existing->id);
+
+    $freshProject = Project::factory()->create(['organization_id' => $organization->id]);
+
+    expect($freshProject->emailAccounts()->count())->toBe(0)
+        ->and($organization->emailAccounts()->count())->toBe(1);
+});
+
+it('refuses to grant the same mailbox to one project twice', function () {
+    $project = Project::factory()->create();
+    $account = EmailAccount::factory()->create(['organization_id' => $project->organization_id]);
+
+    $account->projects()->attach($project->id);
+
+    expect(fn () => $account->projects()->attach($project->id))
+        ->toThrow(QueryException::class);
 });

@@ -23,10 +23,10 @@ return new class extends Migration
     {
         Schema::create('email_accounts', function (Blueprint $table) {
             $table->id();
+            // The ORGANIZATION owns the mailbox — credentials, limit, signature.
+            // Which projects may send through it is granted separately, in
+            // `email_account_project`.
             $table->foreignId('organization_id')->constrained()->cascadeOnDelete();
-
-            // Null means shared across every project of the organization.
-            $table->foreignId('project_id')->nullable()->constrained()->cascadeOnDelete();
 
             $table->string('name');
             $table->string('from_name');
@@ -57,6 +57,30 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['organization_id', 'status']);
+        });
+
+        /**
+         * Which mailboxes a project may send through.
+         *
+         * A pivot rather than a nullable `project_id`, which could only say
+         * "one project" or "all projects". "All" is the dangerous half: adding
+         * a project would silently grant it the founder's personal address,
+         * and that address carries a reputation nobody wants lent out by
+         * default. A new project starts unable to send until someone attaches
+         * a mailbox on purpose — the safe failure.
+         *
+         * The daily limit stays on the mailbox and NOT here: a shared address
+         * has one quota that every project draws on, because one quota is what
+         * the receiving server sees.
+         */
+        Schema::create('email_account_project', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('email_account_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('project_id')->constrained()->cascadeOnDelete();
+            $table->timestamps();
+
+            $table->unique(['email_account_id', 'project_id']);
+            $table->index('project_id');
         });
 
         /**
@@ -197,6 +221,7 @@ return new class extends Migration
         Schema::dropIfExists('campaign_steps');
         Schema::dropIfExists('campaigns');
         Schema::dropIfExists('suppressions');
+        Schema::dropIfExists('email_account_project');
         Schema::dropIfExists('email_accounts');
     }
 };

@@ -1270,8 +1270,13 @@ leads                  project_id, company_id, first/last_name, title, email,
                        erased_at ← la ligne vidée EST le tombstone, pas de table à part
 suppressions           email|domain, reason  ← global, hors scope projet
 
-email_accounts         project_id (nullable = partagé), smtp/imap chiffrés,
+email_accounts         organization_id, smtp/imap chiffrés,
                        daily_limit, ramp_up_started_at
+                       ← l'organization POSSÈDE la boîte ; le quota est à elle, pas au projet
+email_account_project  email_account_id, project_id
+                       ← quels projets ont le droit d'envoyer par cette boîte. Pivot et non
+                         `project_id` nullable : « null = tous les projets » offrirait
+                         silencieusement l'adresse perso du fondateur au prochain projet créé
 campaigns              project_id, name, status
 campaign_steps         campaign_id, position, type: email|wait|linkedin, delay, config
 step_variants          campaign_step_id, subject, body, weight       ← A/B

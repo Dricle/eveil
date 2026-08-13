@@ -10,12 +10,15 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Carbon;
 
 /**
  * A mailbox we send from and read replies out of. Plain SMTP/IMAP, no OAuth
- *. `project_id` null means the account is shared across every project
- * of the organization.
+. The ORGANIZATION owns it — credentials, daily limit and signature
+ * all live here. Which projects may send through it is granted separately, via
+ * `projects()`: a mailbox reaches a project only when someone attaches it, so a
+ * new project cannot quietly inherit the founder's personal address.
  *
  * Passwords are encrypted with CREDENTIALS_KEY, never APP_KEY, and
  * are hidden from serialisation: they are write-only as far as the UI is
@@ -23,7 +26,6 @@ use Illuminate\Support\Carbon;
  *
  * @property int $id
  * @property int $organization_id
- * @property int|null $project_id
  * @property string $name
  * @property string $from_name
  * @property string $from_email
@@ -47,7 +49,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  */
 #[Fillable([
-    'organization_id', 'project_id', 'name', 'from_name', 'from_email',
+    'organization_id', 'name', 'from_name', 'from_email',
     'smtp_host', 'smtp_port', 'smtp_username', 'smtp_password', 'smtp_encryption',
     'imap_host', 'imap_port', 'imap_username', 'imap_password', 'imap_encryption',
     'signature', 'daily_limit', 'ramp_up_started_at', 'status', 'last_error', 'last_checked_at',
@@ -67,16 +69,25 @@ class EmailAccount extends Model
     }
 
     /**
-     * @return BelongsTo<Project, $this>
+     * The projects allowed to send through this mailbox.
+     *
+     * @return BelongsToMany<Project, $this>
      */
-    public function project(): BelongsTo
+    public function projects(): BelongsToMany
     {
-        return $this->belongsTo(Project::class);
+        return $this->belongsToMany(Project::class)->withTimestamps();
     }
 
     /**
-     * Ramp-up on a new mailbox. Warm-up is deliberately absent —
-     * we do not build it.
+     * How many mails this mailbox may still send today.
+     *
+     * Ramp-up on a new mailbox. Warm-up is deliberately absent — we do not
+     * build it.
+     *
+     * The allowance belongs to the MAILBOX, never to a project or a campaign:
+     * one address shared by three projects still has one quota, because one
+     * quota is what the receiving server counts. Anything that sends must
+     * subtract today's total across every project before it picks a batch.
      */
     public function allowanceForToday(): int
     {

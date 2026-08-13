@@ -105,3 +105,15 @@ Nothing hosted, nothing generated on the legal side: no notice page, no art. 14 
 Major technical consequence: "reply STOP" is the ONLY opt-out channel, so reply classification (ADR-022) is a compliance mechanism, not a metric. Detection must be multilingual, case- and phrasing-insensitive, and must err toward suppressing — a false positive costs one lead, a false negative costs a complaint.
 
 Cloud DPA: accepted electronically at organization creation, version and timestamp stored.
+
+## The organization owns the mailbox, the project is granted it
+Settled 2026-08-12. `email_accounts` belongs to an organization — credentials, signature, `daily_limit`, `ramp_up_started_at`. A separate `email_account_project` pivot says which projects may send through it.
+
+It was a nullable `email_accounts.project_id` where null meant "shared across every project". That has only two states, one project or all of them, and **"all" is the dangerous one**: creating a project would silently grant it the founder's personal address. One org with several products — `clement@dricle.be` usable by two of them, `contact@restogo.be` by one, and a client project next month by neither — cannot be expressed at all. With the pivot a new project starts unable to send until someone attaches a mailbox on purpose, which is the safe failure. "Use for all projects" is a select-all in the UI, not a schema state.
+
+**`daily_limit` stays on the mailbox and must never be divided per project.** One address shared by three projects still has ONE quota, because one quota is what the receiving server counts. Whatever sends has to subtract today's total for that `email_account_id` across every project before choosing a batch — count per campaign and you send 90 from an address rated for 30 and burn the domain. `EmailAccount::allowanceForToday()` returns the mailbox figure; the caller owes the cross-project subtraction. The same applies to ramp-up: a new mailbox warms up once, not once per project.
+
+Consequence still to design: when several projects share a mailbox, something must allocate the remaining allowance between them, or whichever job runs first takes the lot and the others silently send nothing.
+
+Detaching a mailbox from a project mid-sequence is also undecided. Pause the affected `campaign_leads` rather than switch sender — switching mid-thread breaks reply threading, which is what `in_reply_to` exists to preserve.
+

@@ -82,6 +82,18 @@ class Project extends Model
     }
 
     /**
+     * Mailboxes this project may send through. Owned by the organization and
+     * granted here, so a new project starts unable to send until one is
+     * attached on purpose.
+     *
+     * @return BelongsToMany<EmailAccount, $this>
+     */
+    public function emailAccounts(): BelongsToMany
+    {
+        return $this->belongsToMany(EmailAccount::class)->withTimestamps();
+    }
+
+    /**
      * @return HasMany<Campaign, $this>
      */
     public function campaigns(): HasMany

@@ -1231,10 +1231,16 @@ Structure indicative, pas des migrations.
 users                  is_super_admin
 organizations
 organization_user      role: owner|admin|member
-projects               organization_id, name, url, github_repo, knowledge_base (json, éditable)
+projects               organization_id, name, url, knowledge_base (json, éditable)
+code_repositories      project_id, url, name
+                       ← plusieurs par projet : un front et une API décrivent le même produit.
+                         Pas `github_repositories` — le provider se lit dans l'URL, GitLab et
+                         Gitea auto-hébergé comptent autant
 project_user           droit d'accès
 
-project_analyses       project_id, type: website|repo, raw, summary, status, agent_run_id
+project_analyses       project_id, type: website|repo, raw, summary, status, agent_run_id,
+                       code_repository_id ← null pour une analyse de site ; avec plusieurs dépôts,
+                       `type = repo` ne suffit plus à dire ce qui a été analysé
 target_profiles                   project_id, name, type: customer|partner, criteria (json),
                        source: agent|human, active
                        ← autant que l'agent en déduit, CRUD libre (ADR-015)

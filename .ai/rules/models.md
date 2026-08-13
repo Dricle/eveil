@@ -72,3 +72,14 @@ Three things that are easy to get wrong here:
 
 Scope is the project, because the row is: two projects can find the same person and only one of them may have been asked to forget her. An organization-wide erasure is that operation repeated per project, not a different data shape. Note the trade-off — over-deleting is never a compliance problem and under-deleting is, so if a request is ambiguous, sweep every project.
 
+## A project has repositories, plural
+Changed 2026-08-13. `projects.github_repo` was a single nullable string, and nothing ever read it. It is now `code_repositories` — `project_id`, `url`, `name`, unique on `(project_id, url)`.
+
+One column cannot describe a product built from a front end and an API, which is the normal shape. It also cannot describe a mobile app plus its backend, or a monorepo alongside a docs site.
+
+Two naming decisions worth keeping:
+- **`CodeRepository`, not `Repository`.** `app/Models/Repository.php` reads as the repository pattern to anyone opening the file.
+- **Not `github_repositories`, and no `provider` column.** The same product self-hosts on GitLab or Gitea, and the provider is already in the URL — `CodeRepository::provider()` returns the host.
+
+`project_analyses` gained `code_repository_id`, nullable, null for a website analysis. That link is the real reason this had to be a table rather than a JSON array: with several repositories per project, `type = repo` no longer says WHICH one a run read, so the analysis history would be unreadable.
+

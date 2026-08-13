@@ -1,11 +1,14 @@
 <?php
 
+use App\Enums\AnalysisType;
 use App\Models\Campaign;
+use App\Models\CodeRepository;
 use App\Models\Company;
 use App\Models\EmailAccount;
 use App\Models\Lead;
 use App\Models\Organization;
 use App\Models\Project;
+use App\Models\ProjectAnalysis;
 use App\Support\CurrentProject;
 use Illuminate\Database\QueryException;
 
@@ -125,5 +128,48 @@ it('refuses to grant the same mailbox to one project twice', function () {
     $account->projects()->attach($project->id);
 
     expect(fn () => $account->projects()->attach($project->id))
+        ->toThrow(QueryException::class);
+});
+
+it('lets one project hold several repositories', function () {
+    // A front end and an API describe one product. The single `github_repo`
+    // column this replaced could only ever hold half the answer.
+    $project = Project::factory()->create();
+
+    $api = CodeRepository::factory()->create([
+        'project_id' => $project->id,
+        'url' => 'https://github.com/dricle/restogo-api',
+        'name' => 'restogo-api',
+    ]);
+    CodeRepository::factory()->create([
+        'project_id' => $project->id,
+        'url' => 'https://gitlab.com/dricle/restogo-web',
+        'name' => 'restogo-web',
+    ]);
+
+    expect($project->codeRepositories()->pluck('name')->sort()->values()->all())
+        ->toBe(['restogo-api', 'restogo-web'])
+        // The provider comes off the URL, so a self-hosted Gitea needs no column.
+        ->and($api->provider())->toBe('github.com');
+
+    $analysis = ProjectAnalysis::factory()->create([
+        'project_id' => $project->id,
+        'type' => AnalysisType::Repo,
+        'code_repository_id' => $api->id,
+    ]);
+
+    expect($analysis->codeRepository->name)->toBe('restogo-api')
+        // A website analysis reads no repository.
+        ->and(ProjectAnalysis::factory()->create(['project_id' => $project->id])->code_repository_id)
+        ->toBeNull();
+});
+
+it('refuses the same repository url twice in one project', function () {
+    $project = Project::factory()->create();
+    $url = 'https://github.com/dricle/restogo-api';
+
+    CodeRepository::factory()->create(['project_id' => $project->id, 'url' => $url]);
+
+    expect(fn () => CodeRepository::factory()->create(['project_id' => $project->id, 'url' => $url]))
         ->toThrow(QueryException::class);
 });

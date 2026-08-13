@@ -19,7 +19,6 @@ use Illuminate\Support\Carbon;
  * @property int $organization_id
  * @property string $name
  * @property string $url
- * @property string|null $github_repo
  * @property array<string, mixed>|null $knowledge_base
  * @property bool $knowledge_base_edited_by_user
  * @property string|null $default_language
@@ -27,7 +26,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['organization_id', 'name', 'url', 'github_repo', 'knowledge_base', 'knowledge_base_edited_by_user', 'default_language', 'autonomy_level'])]
+#[Fillable(['organization_id', 'name', 'url', 'knowledge_base', 'knowledge_base_edited_by_user', 'default_language', 'autonomy_level'])]
 class Project extends Model
 {
     /** @use HasFactory<ProjectFactory> */
@@ -55,6 +54,17 @@ class Project extends Model
     public function targetProfiles(): HasMany
     {
         return $this->hasMany(TargetProfile::class);
+    }
+
+    /**
+     * The repositories behind the product — a front end and an API are two
+     * rows describing one project.
+     *
+     * @return HasMany<CodeRepository, $this>
+     */
+    public function codeRepositories(): HasMany
+    {
+        return $this->hasMany(CodeRepository::class);
     }
 
     /**

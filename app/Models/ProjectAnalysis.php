@@ -19,6 +19,7 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $project_id
  * @property int|null $agent_run_id
+ * @property int|null $code_repository_id
  * @property AnalysisType $type
  * @property AnalysisStatus $status
  * @property array<string, mixed>|null $raw
@@ -28,7 +29,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['project_id', 'agent_run_id', 'type', 'status', 'raw', 'summary', 'failures', 'error'])]
+#[Fillable(['project_id', 'agent_run_id', 'code_repository_id', 'type', 'status', 'raw', 'summary', 'failures', 'error'])]
 class ProjectAnalysis extends Model
 {
     /** @use HasFactory<ProjectAnalysisFactory> */
@@ -40,6 +41,18 @@ class ProjectAnalysis extends Model
     public function agentRun(): BelongsTo
     {
         return $this->belongsTo(AgentRun::class);
+    }
+
+    /**
+     * Which repository this run read. Null for a website analysis — and the
+     * reason repositories are their own table: with several per project,
+     * `type = repo` no longer says what was analysed.
+     *
+     * @return BelongsTo<CodeRepository, $this>
+     */
+    public function codeRepository(): BelongsTo
+    {
+        return $this->belongsTo(CodeRepository::class);
     }
 
     /**

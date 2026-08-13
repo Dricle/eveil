@@ -46,7 +46,6 @@ return new class extends Migration
             $table->foreignId('organization_id')->constrained()->cascadeOnDelete();
             $table->string('name');
             $table->string('url');
-            $table->string('github_repo')->nullable();
 
             // Product portrait built by the Website agent, user-editable (
             // reads `default_language` from here as the last fallback).

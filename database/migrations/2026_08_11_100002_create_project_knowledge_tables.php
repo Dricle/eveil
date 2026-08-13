@@ -19,10 +19,35 @@ return new class extends Migration
      */
     public function up(): void
     {
+        /**
+         * The code behind the product. Several rows per project on purpose: a
+         * front end and an API are two repositories describing one product, and
+         * a single column could only ever hold half the answer.
+         *
+         * Not `github_repositories` — the same product self-hosts on GitLab or
+         * Gitea, and the provider is a property of the URL, not of the table.
+         */
+        Schema::create('code_repositories', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('project_id')->constrained()->cascadeOnDelete();
+
+            $table->string('url');
+            $table->string('name');
+
+            $table->timestamps();
+
+            $table->unique(['project_id', 'url']);
+        });
+
         Schema::create('project_analyses', function (Blueprint $table) {
             $table->id();
             $table->foreignId('project_id')->constrained()->cascadeOnDelete();
             $table->foreignId('agent_run_id')->nullable()->constrained()->nullOnDelete();
+
+            // Which repository this run read. Null for a website analysis, and
+            // the reason repositories are a table: with several of them, "type
+            // = repo" alone no longer says what was analysed.
+            $table->foreignId('code_repository_id')->nullable()->constrained()->cascadeOnDelete();
 
             $table->string('type');   // website|repo
             $table->string('status'); // pending|running|succeeded|partial|failed
@@ -64,5 +89,6 @@ return new class extends Migration
     {
         Schema::dropIfExists('target_profiles');
         Schema::dropIfExists('project_analyses');
+        Schema::dropIfExists('code_repositories');
     }
 };

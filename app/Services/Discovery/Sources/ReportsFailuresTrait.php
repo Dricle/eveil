@@ -12,7 +12,7 @@ use Illuminate\Support\Collection;
  * wrong for this profile". The diagnosis was confidently wrong because a dead
  * source and an empty market looked identical from the outside.
  */
-trait ReportsFailures
+trait ReportsFailuresTrait
 {
     /** @var array<int, string> */
     private array $failures = [];

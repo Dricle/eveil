@@ -18,7 +18,7 @@ use Throwable;
  */
 class OverpassSource implements DiscoverySourceInterface
 {
-    use ReportsFailures;
+    use ReportsFailuresTrait;
 
     public function name(): string
     {

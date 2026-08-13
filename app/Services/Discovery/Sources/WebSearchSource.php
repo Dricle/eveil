@@ -21,7 +21,7 @@ use Throwable;
  */
 class WebSearchSource implements DiscoverySourceInterface
 {
-    use ReportsFailures;
+    use ReportsFailuresTrait;
 
     public function name(): string
     {

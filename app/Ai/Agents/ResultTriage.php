@@ -18,6 +18,14 @@ use Stringable;
  *
  * Judged per HOST, not per URL, and the verdict is remembered instance-wide, so
  * this runs once per host ever rather than once per search.
+ *
+ * Deliberately blind to the target profile, which is what makes the verdict
+ * shareable at all. The question is what a host IS — one organisation, or a
+ * list of them — never whether it suits a particular buyer. A newspaper is a
+ * company somebody sells to; a job board is a list of companies that are
+ * hiring, which is precisely what a recruitment agency hunts. Encode relevance
+ * here and the answer stops being reusable across projects, which is the whole
+ * point of the registry. Relevance belongs to qualification, per profile.
  */
 class ResultTriage extends EveilAgent implements HasStructuredOutput
 {
@@ -25,34 +33,47 @@ class ResultTriage extends EveilAgent implements HasStructuredOutput
     {
         return <<<'PROMPT'
         You are given search results, one line per host, with the page title, a snippet
-        and how many of the results sit on that host. Say what each HOST is. You are
-        judging the site, not the single page.
+        and how many of the results sit on that host. Say what each HOST is
+        STRUCTURALLY. You are judging the site, not the single page.
 
-        index — the host publishes lists of businesses. Directories, marketplaces,
-        review sites, "top 10" roundups, startup showcases, professional registers,
-        chambers of commerce, trade federations with a member list. These are the most
-        valuable answer: one page of a directory can name hundreds of businesses, many
-        of which have no website and appear nowhere else.
+        You are NOT judging whether the host is useful to anyone in particular. You do
+        not know who is prospecting or what they sell, and you must not guess: a
+        newspaper is a company that someone sells to, and a job board is a list of
+        companies that are hiring, which is exactly what a recruitment agency hunts.
+        Relevance is decided later, by someone who knows the target. Your answer is
+        reused by every future search on this installation, so it has to hold for all of
+        them.
 
-        entity — one organisation's own site. What we are looking for.
+        index — the host publishes lists of ORGANISATIONS. Directories, marketplaces,
+        review sites, job boards, delivery platforms, startup showcases, professional
+        registers, chambers of commerce, trade federations with a member list, code
+        hosting that lists organisations. These are the most valuable answer: one page
+        can name hundreds of businesses, many of which have no website of their own and
+        appear nowhere else.
 
-        social — a social network or a profile platform. Never one company's site, and
-        not something we can read.
+        entity — one organisation's own site. A company, a newspaper, a school, an
+        agency, a public body. What we are ultimately looking for.
 
-        noise — everything else: encyclopaedias, news, forums, blog platforms, job
-        boards, general marketplaces, search engines, government portals that publish no
-        business list, software documentation.
+        social — a social network or profile platform. Structurally it may well list
+        organisations, but we cannot read it: they block automated access and their
+        terms forbid it.
 
-        The count is your strongest clue. A host holding twelve of twenty results is
-        almost always an index — a real business appears once, for its own name, not
-        across a whole result page. One result on a host says nothing either way; judge
-        it on the title and the domain.
+        other — structurally NEITHER a single organisation nor a list of them: search
+        engines, encyclopaedias, discussion forums, blog and publishing platforms,
+        software documentation, package registries. This is not a verdict of
+        worthlessness — an individual thread or article on such a host may well name
+        real businesses — it only says the HOST is not itself a company or a directory.
 
-        Do not confuse a company that happens to publish a blog list, or a directory of
-        products rather than of businesses, with an index of BUSINESSES. The test is
-        whether following the host would give you more companies to contact.
+        The count is your strongest clue for telling index from entity. A host holding
+        twelve of twenty results is almost always an index — a real organisation appears
+        once, for its own name, not across a whole result page. One result on a host
+        says nothing either way; judge it on the title and the domain.
 
-        When a host could plausibly be two things, prefer `index`: harvesting one that
+        The test for index is simple: would following this host give you MORE
+        organisations? A company that happens to publish a blog does not qualify. A
+        directory of products rather than of businesses does not qualify.
+
+        When a host could plausibly be two things, prefer index: harvesting one that
         turns out to be a single company costs one wasted page, while discarding a real
         directory loses every business on it.
         PROMPT;
@@ -66,7 +87,7 @@ class ResultTriage extends EveilAgent implements HasStructuredOutput
         return [
             'hosts' => $schema->array()->items($schema->object([
                 'host' => $schema->string()->description('Exactly as given to you.')->required(),
-                'kind' => $schema->string()->enum(['index', 'entity', 'social', 'noise'])->required(),
+                'kind' => $schema->string()->enum(['index', 'entity', 'social', 'other'])->required(),
                 'reason' => $schema->string()->description('One short clause. Shown to an operator reviewing the registry.')->required(),
             ]))->description('One entry per host you were given, none missing.')->required(),
         ];

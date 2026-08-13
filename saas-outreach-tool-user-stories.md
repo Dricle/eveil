@@ -1252,7 +1252,7 @@ recommendations        project_id, key (identité stable), title, rationale, evi
                        decided_at, agent_run_id
                        ← archivée = ne réapparaît jamais (ADR-032)
 
-known_hosts            host (unique), kind: index|entity|social|noise, reason,
+known_hosts            host (unique), kind: index|entity|social|other, reason,
                        harvest_status: jsonld|llm|blocked|js_only, pages_harvested,
                        businesses_found, is_locked, last_verified_at
                        ← ce que l'app a appris du web public, partagé toute l'instance. Un projet
@@ -1511,6 +1511,11 @@ automatiquement.
 - Ajouter un annuaire ne demande pas de code
 - Les hôtes sont **classés par l'IA, une fois pour toutes** : impossible d'énumérer à la main tous les
   annuaires du monde, et la liste noire écrite à la main jetait justement les résultats les plus utiles
+- Le verdict est **structurel, jamais une question de pertinence** : « ce site liste-t-il des
+  organisations ? », pas « est-ce que ça intéresse quelqu'un ? ». Un job board est un index — une agence
+  de recrutement prospecte les entreprises qui recrutent ; un journal est une `entity` — c'est une
+  société, cliente potentielle de qui vend aux éditeurs. C'est cette neutralité qui rend le registre
+  partageable entre tous les projets ; la pertinence se juge à la qualification, par profil
 - **État** : fait et testé — `ListingHarvester` (JSON-LD, repli LLM, pagination, budget),
   `HostRegistry` + agent `ResultTriage`, table `known_hosts` amorcée, branchement dans
   `eveil:discover-companies`. Reste : les sociétés sans site sont comptées mais pas exploitables

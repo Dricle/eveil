@@ -7,6 +7,7 @@ use App\Models\KnownHost;
 use App\Models\Project;
 use App\Services\Discovery\Harvest;
 use App\Services\Discovery\HostRegistry;
+use Database\Seeders\KnownHostSeeder;
 use Illuminate\Support\Collection;
 
 /**
@@ -55,22 +56,49 @@ it('answers for the certainties without spending a token', function () {
     $verdicts = classify([
         'https://www.facebook.com/marcel',
         'https://fr.wikipedia.org/wiki/Friterie',
-        'https://news.ycombinator.com/item?id=1',
+        'https://www.google.com/search?q=friterie',
     ]);
 
     expect($verdicts['facebook.com'])->toBe(HostKind::Social)
         // Keyed on the host as it appeared, and the floor matches on a
         // substring — so a language subdomain is caught without its own entry.
-        ->and($verdicts['fr.wikipedia.org'])->toBe(HostKind::Noise)
-        ->and($verdicts['news.ycombinator.com'])->toBe(HostKind::Noise)
+        ->and($verdicts['fr.wikipedia.org'])->toBe(HostKind::Other)
+        ->and($verdicts['google.com'])->toBe(HostKind::Other)
         // The floor is not a cache — nothing is written for it.
         ->and(KnownHost::count())->toBe(0);
+});
+
+it('leaves a host to the model when its kind depends on nothing but structure', function () {
+    // A job board looks like noise until you notice a recruitment agency hunts
+    // companies that are hiring, and code hosting looks like noise until a
+    // developer-tool profile needs it. Neither belongs in the floor: the
+    // verdict is structural, so both are indexes for everyone.
+    ResultTriage::fake([triaged(['indeed.test' => 'index', 'codehost.test' => 'index'])]);
+
+    $verdicts = classify(['https://indeed.test/jobs', 'https://codehost.test/orgs']);
+
+    expect($verdicts['indeed.test'])->toBe(HostKind::Index)
+        ->and($verdicts['codehost.test'])->toBe(HostKind::Index);
+});
+
+it('ships a seed whose verdicts hold for every kind of buyer', function () {
+    $this->seed(KnownHostSeeder::class);
+
+    $kindOf = fn (string $host): HostKind => KnownHost::query()->firstWhere('host', $host)->kind;
+
+    expect($kindOf('indeed.com'))->toBe(HostKind::Index)
+        ->and($kindOf('github.com'))->toBe(HostKind::Index)
+        ->and($kindOf('deliveroo.com'))->toBe(HostKind::Index)
+        ->and($kindOf('amazon.com'))->toBe(HostKind::Index)
+        // Not locked: a shipped guess is not a human decision, so it expires
+        // like any other verdict.
+        ->and(KnownHost::query()->firstWhere('host', 'indeed.com')->is_locked)->toBeFalse();
 });
 
 it('re-judges a verdict that has gone stale', function () {
     // Sites change CDN configuration and directories die, so a verdict must
     // not be a life sentence.
-    KnownHost::factory()->stale()->create(['host' => 'annuaire.test', 'kind' => HostKind::Noise]);
+    KnownHost::factory()->stale()->create(['host' => 'annuaire.test', 'kind' => HostKind::Other]);
 
     ResultTriage::fake([triaged(['annuaire.test' => 'index'])]);
 

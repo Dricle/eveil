@@ -22,7 +22,16 @@ use Illuminate\Database\Seeder;
  */
 class KnownHostSeeder extends Seeder
 {
-    /** @var array<string, array<int, string>> */
+    /**
+     * Verdicts are STRUCTURAL and hold for every target profile — "does this
+     * host list organisations?", never "would most customers care?". Job
+     * boards, marketplaces and delivery platforms are indexes for everyone,
+     * because a recruitment agency hunts companies that are hiring and a
+     * food-tech product hunts restaurants. Whether the contents fit a given
+     * profile is qualification's problem.
+     *
+     * @var array<string, array<int, string>>
+     */
     private const HOSTS = [
         HostKind::Index->value => [
             // Generalist business directories.
@@ -31,20 +40,27 @@ class KnownHostSeeder extends Seeder
             'thomsonlocal.com', 'kompass.com', 'europages.co.uk', 'cylex.net',
             // Reviews and hospitality, which double as business lists.
             'tripadvisor.com', 'thefork.com', 'resto.be', 'opentable.com',
+            // Delivery platforms: a list of restaurants is a list of businesses.
+            'deliveroo.com', 'ubereats.com', 'takeaway.com', 'justeat.com',
             // Software, startups and agencies.
             'producthunt.com', 'betalist.com', 'crunchbase.com', 'g2.com',
             'capterra.com', 'clutch.co', 'sortlist.com', 'trustpilot.com',
-            'angel.co', 'ycombinator.com',
+            // Job boards list companies that are hiring — the lead source for
+            // anyone selling to employers, recruiters above all.
+            'indeed.com', 'glassdoor.com', 'welcometothejungle.com', 'stepstone.com',
+            // Code hosting lists organisations, which is where a developer-tool
+            // profile finds its market.
+            'github.com', 'gitlab.com',
+            // Marketplaces list sellers.
+            'amazon.com', 'ebay.com', 'etsy.com',
         ],
         HostKind::Social->value => [
             'facebook.com', 'instagram.com', 'linkedin.com', 'x.com', 'twitter.com',
             'tiktok.com', 'pinterest.com', 'youtube.com',
         ],
-        HostKind::Noise->value => [
+        HostKind::Other->value => [
             'wikipedia.org', 'reddit.com', 'medium.com', 'quora.com',
-            'indeed.com', 'glassdoor.com', 'amazon.com', 'ebay.com',
-            'news.ycombinator.com', 'stackoverflow.com', 'github.com',
-            'deliveroo.com', 'ubereats.com', 'takeaway.com', 'justeat.com',
+            'stackoverflow.com', 'substack.com', 'wordpress.com', 'blogspot.com',
         ],
     ];
 

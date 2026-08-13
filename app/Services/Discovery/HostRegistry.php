@@ -26,20 +26,30 @@ use Throwable;
 class HostRegistry
 {
     /**
-     * Hosts that are never a prospect and never harvestable. NOT an attempt to
-     * list aggregators — that is the job the model took over. This exists so
-     * the certainties never cost a token and never vary: a dozen-odd platforms
-     * that change perhaps once a year.
+     * The only hosts decided without asking. NOT an attempt to list aggregators
+     * — that is the job the model took over — and NOT a list of things nobody
+     * wants: a verdict here is STRUCTURAL and holds for every possible target
+     * profile.
+     *
+     * That distinction is easy to get wrong and was, at first. Job boards,
+     * marketplaces, delivery platforms and code hosting all looked like noise
+     * until you notice a recruitment agency hunts companies that are hiring,
+     * and a developer-tool ICP lives on code hosting. Those are indexes for
+     * everyone; whether their contents fit a given profile is qualification's
+     * problem, not this table's. What is left here is genuinely never either a
+     * company or a list of companies.
      */
     private const FLOOR = [
+        // Structurally lists of organisations, but automated access is blocked
+        // and their terms forbid it, so the kind is moot.
         HostKind::Social->value => [
             'facebook.com', 'instagram.com', 'linkedin.com', 'x.com', 'twitter.com',
             'tiktok.com', 'pinterest.', 'youtube.com', 'snapchat.com', 'threads.net',
         ],
-        HostKind::Noise->value => [
-            'wikipedia.org', 'wikimedia.org', 'google.', 'bing.com', 'duckduckgo.com',
-            'reddit.com', 'medium.com', 'amazon.', 'ebay.', 'indeed.', 'glassdoor.',
-            'news.ycombinator.com', 'stackoverflow.com', 'github.com', 'archive.org',
+        HostKind::Other->value => [
+            'google.', 'bing.com', 'duckduckgo.com', 'search.brave.com', 'ecosia.org',
+            'wikipedia.org', 'wikimedia.org', 'archive.org',
+            'reddit.com', 'quora.com', 'stackoverflow.com',
         ],
     ];
 

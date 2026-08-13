@@ -137,3 +137,20 @@ Decided 2026-08-13, alongside `known_hosts`. A verdict the model got wrong cache
 
 Everything else about the registry is designed to avoid asking twice; these two exist so that "never ask twice" cannot become "wrong forever".
 
+## A host verdict is STRUCTURAL, never a judgement of relevance
+Corrected 2026-08-13, after the first pass got it wrong. `known_hosts.kind` answers *"what is this host?"* — one organisation, or a list of them — and never *"would a customer care?"*.
+
+The first version filed job boards, marketplaces, delivery platforms and code hosting under `noise`, which is wrong for whole categories of buyer:
+- a recruitment agency prospects companies that are **hiring**, so Indeed is an index, not noise
+- a food-tech product prospects restaurants, so Deliveroo is an index
+- a developer-tool profile lives on code hosting, and `.ai/rules/discovery.md` already named the GitHub API as a source — the floor was contradicting a decision we had taken
+- a newspaper is an `entity`: one organisation's site, and a prospect for anyone selling to publishers
+
+**The registry is shareable ONLY because the verdict is profile-blind.** Encode relevance in `kind` and the answer stops being reusable across projects, which destroys both the instance-wide table and the cloud cold-start argument that rests on it. `ResultTriage` is therefore never told what the target profile is, and its prompt says so explicitly.
+
+Relevance is `CompanyTargetEvaluation`'s job, per profile. A restaurant profile that harvests Indeed gets companies scored near zero — mildly wasteful, never wrong. That asymmetry is deliberate and matches the prompt's tie-breaker: harvesting a single company costs one page, discarding a real directory loses every business on it.
+
+What survives in `HostRegistry::FLOOR` is only what is structurally neither a company nor a list of companies for anybody: search engines, encyclopaedias, forums, and the social platforms — the last of which are structurally indexes but blocked and forbidden by their terms, so the kind is moot.
+
+**The fourth case is called `other`, not `noise`.** It states what a host is not; it never claims the host is worthless. A forum thread naming the best plumbers in a city, or an article listing five companies that just raised, are real leads on a host that is not itself a directory. We drop them today only because we classify HOSTS and harvest HOSTS — a page-level pass over `other` results that ranked for a targeted query is the obvious later move, and naming the case `noise` would have quietly argued against ever building it.
+

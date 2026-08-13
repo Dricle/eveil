@@ -19,8 +19,18 @@ enum HostKind: string
     /** A social platform. Never a prospect, and not harvestable. */
     case Social = 'social';
 
-    /** Encyclopaedias, forums, job boards, marketplaces, search engines. */
-    case Noise = 'noise';
+    /**
+     * Structurally neither: search engines, encyclopaedias, forums, publishing
+     * platforms, documentation.
+     *
+     * Called `other` and not `noise` deliberately. It says what the host is
+     * NOT, never that it is worthless — a forum thread naming the best plumbers
+     * in a city, or an article listing five companies that just raised money,
+     * are real leads sitting on a host that is not itself a directory. We skip
+     * them today because we read hosts, not pages; that is a limit of the
+     * current implementation, not a judgement.
+     */
+    case Other = 'other';
 
     public function isProspect(): bool
     {

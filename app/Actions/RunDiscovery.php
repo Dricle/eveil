@@ -200,8 +200,11 @@ class RunDiscovery
                 continue;
             }
 
-            // Social and noise are dropped outright; only an index is worth a
-            // fetch, and only once per host per run however many results it won.
+            // Only an index is worth a fetch, and only once per host per run
+            // however many results it won. Social and `other` are dropped —
+            // `other` because we read hosts and not pages, so a forum thread
+            // that names ten businesses goes with them. That is a limit worth
+            // revisiting, not a claim that the page was worthless.
             if ($kind !== HostKind::Index || $host === null || isset($harvested[$host])) {
                 continue;
             }

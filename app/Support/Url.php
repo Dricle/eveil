@@ -2,10 +2,23 @@
 
 namespace App\Support;
 
+use League\Uri\Uri as LeagueUri;
+
 /**
  * URL normalisation, kept in one place because the crawl cache and the company
  * dedupe both key on it — two different normalisations would mean two cache
  * entries for one page.
+ *
+ * Parsing and relative resolution are League\Uri's job, not ours. It ships with
+ * the framework (`Illuminate\Support\Uri` is a thin wrapper over the same
+ * object) so it costs no dependency, and it implements RFC 3986 properly: dot
+ * segments, query-only references, protocol-relative hosts, scheme and host
+ * casing, default ports. A hand-rolled version of that was here and got
+ * `?page=2` wrong, which is how pagination silently broke.
+ *
+ * What stays ours is CRAWLER POLICY — which URLs we are willing to follow and
+ * what shape we store them in. That is an application decision and does not
+ * belong in a URI library.
  */
 class Url
 {
@@ -17,85 +30,63 @@ class Url
     {
         $href = trim($href);
 
+        // A bare fragment points at the page we are already on. Resolving it
+        // would hand back the same URL and the crawler would count it as a new
+        // link to follow.
         if ($href === '' || str_starts_with($href, '#')) {
             return null;
         }
 
-        foreach (['mailto:', 'tel:', 'javascript:', 'data:'] as $scheme) {
-            if (str_starts_with(mb_strtolower($href), $scheme)) {
-                return null;
-            }
-        }
-
-        $base = parse_url($baseUrl);
-
-        if (! isset($base['scheme'], $base['host'])) {
-            return null;
-        }
-
-        $absolute = match (true) {
-            str_starts_with($href, 'http://'), str_starts_with($href, 'https://') => $href,
-            str_starts_with($href, '//') => $base['scheme'].':'.$href,
-            // A query-only reference keeps the base PATH (RFC 3986 §5.3). Taking
-            // its dirname instead turns `?page=2` on /directory/plumbers into
-            // /directory?page=2 — which is how pagination silently breaks, and
-            // pagination is the whole point of harvesting a listing.
-            str_starts_with($href, '?') => $base['scheme'].'://'.$base['host'].($base['path'] ?? '/').$href,
-            str_starts_with($href, '/') => $base['scheme'].'://'.$base['host'].$href,
-            default => $base['scheme'].'://'.$base['host'].'/'.ltrim(
-                rtrim(dirname($base['path'] ?? '/'), '/').'/'.$href, '/'
-            ),
-        };
-
-        return self::normalize(self::removeDotSegments($absolute));
-    }
-
-    /**
-     * Collapses `.` and `..` segments. Without it a `../contact` href produces
-     * a URL that 404s, and the failed fetch still costs a request and a cache
-     * row.
-     */
-    private static function removeDotSegments(string $url): string
-    {
-        $previous = '';
-
-        while ($previous !== $url) {
-            $previous = $url;
-            $url = (string) preg_replace('#/(?!\.\./)[^/]+/\.\./#', '/', $url, 1);
-        }
-
-        return str_replace('/./', '/', $url);
+        return self::normalize((string) LeagueUri::parse($href, $baseUrl));
     }
 
     /**
      * Drops the fragment, lowercases the host, and strips a trailing slash so
      * `https://Example.com/about/` and `https://example.com/about` are one URL.
+     *
+     * Also where `mailto:`, `tel:`, `javascript:` and `data:` are refused —
+     * not as a hand-kept list of schemes, but because anything that is not
+     * http(s) is not a page we can fetch.
      */
     public static function normalize(string $url): ?string
     {
-        $parts = parse_url($url);
+        $uri = LeagueUri::parse($url);
 
-        if (! isset($parts['scheme'], $parts['host']) || ! in_array($parts['scheme'], ['http', 'https'], true)) {
+        if ($uri === null || ! in_array($uri->getScheme(), ['http', 'https'], true)) {
             return null;
         }
 
-        $path = rtrim($parts['path'] ?? '', '/');
-        $query = isset($parts['query']) ? '?'.$parts['query'] : '';
+        $host = $uri->getHost();
 
-        return mb_strtolower($parts['scheme'].'://'.$parts['host']).($path === '' ? '/' : $path).$query;
+        if ($host === null || $host === '') {
+            return null;
+        }
+
+        $path = rtrim($uri->getPath(), '/');
+        $port = $uri->getPort();
+        $query = $uri->getQuery();
+
+        return $uri->getScheme().'://'.$host
+            .($port === null ? '' : ':'.$port)
+            .($path === '' ? '/' : $path)
+            .($query === null || $query === '' ? '' : '?'.$query);
     }
 
+    /**
+     * The host without `www.`, which is a display prefix rather than a
+     * different site — and the key companies are deduped on.
+     */
     public static function host(string $url): ?string
     {
-        $host = parse_url($url, PHP_URL_HOST);
+        $host = LeagueUri::parse($url)?->getHost();
 
-        return is_string($host) ? mb_strtolower(preg_replace('/^www\./', '', $host) ?? $host) : null;
+        return $host === null ? null : preg_replace('/^www\./', '', $host);
     }
 
     public static function path(string $url): string
     {
-        $path = parse_url($url, PHP_URL_PATH);
+        $path = LeagueUri::parse($url)?->getPath();
 
-        return is_string($path) ? $path : '/';
+        return $path === null || $path === '' ? '/' : $path;
     }
 }

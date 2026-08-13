@@ -51,8 +51,13 @@ class ResultTriage extends EveilAgent implements HasStructuredOutput
         can name hundreds of businesses, many of which have no website of their own and
         appear nowhere else.
 
-        entity — one organisation's own site. A company, a newspaper, a school, an
-        agency, a public body. What we are ultimately looking for.
+        entity — one organisation's own site, and nothing more. A company, a newspaper,
+        a school, an agency, a public body.
+
+        A directory is run by a company, so almost every index is also an entity. Answer
+        `index` whenever the host publishes lists — that is the more useful fact, and it
+        does not stop the host being treated as a business in its own right further
+        down. Reserve `entity` for hosts that publish no list of organisations at all.
 
         social — a social network or profile platform. Structurally it may well list
         organisations, but we cannot read it: they block automated access and their

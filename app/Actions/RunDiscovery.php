@@ -200,16 +200,29 @@ class RunDiscovery
                 continue;
             }
 
-            // Only an index is worth a fetch, and only once per host per run
-            // however many results it won. Social and `other` are dropped —
-            // `other` because we read hosts and not pages, so a forum thread
-            // that names ten businesses goes with them. That is a limit worth
-            // revisiting, not a claim that the page was worthless.
+            // Social and `other` are dropped — `other` because we read hosts
+            // and not pages, so a forum thread that names ten businesses goes
+            // with them. A limit worth revisiting, not a claim that the page
+            // was worthless.
             if ($kind !== HostKind::Index || $host === null || isset($harvested[$host])) {
                 continue;
             }
 
             $harvested[$host] = true;
+
+            // A directory is ALSO a company, and somebody's target profile is
+            // "launch platforms" or "review sites". Harvesting and qualifying
+            // are not alternatives: the host goes in as a candidate too, and
+            // qualification decides what it is worth. For a restaurant profile
+            // that costs one page and scores near zero; leaving it out would
+            // silently make a whole category of buyer unserviceable.
+            $out->push(new Candidate(
+                name: $host,
+                website: 'https://'.$host,
+                source: $candidate->source,
+                sourceUrl: $url,
+                facts: ['host_kind' => $kind->value],
+            ));
 
             $known = KnownHost::query()->firstWhere('host', $host);
 

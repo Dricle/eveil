@@ -1516,6 +1516,9 @@ automatiquement.
   de recrutement prospecte les entreprises qui recrutent ; un journal est une `entity` — c'est une
   société, cliente potentielle de qui vend aux éditeurs. C'est cette neutralité qui rend le registre
   partageable entre tous les projets ; la pertinence se juge à la qualification, par profil
+- Un annuaire est **aussi une société** : un hôte `index` est à la fois récolté ET retenu comme
+  candidat. Un fondateur dont la cible est « les plateformes de lancement » veut Product Hunt et
+  BetaList comme leads, pas seulement comme sources
 - **État** : fait et testé — `ListingHarvester` (JSON-LD, repli LLM, pagination, budget),
   `HostRegistry` + agent `ResultTriage`, table `known_hosts` amorcée, branchement dans
   `eveil:discover-companies`. Reste : les sociétés sans site sont comptées mais pas exploitables

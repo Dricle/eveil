@@ -2,11 +2,14 @@
 
 use App\Ai\Agents\CompanyQualifier;
 use App\Ai\Agents\DiscoveryPlanner;
+use App\Ai\Agents\ResultTriage;
 use App\Enums\DiscoveryDiagnosis;
 use App\Enums\DiscoveryRunStatus;
+use App\Enums\HostKind;
 use App\Models\Company;
 use App\Models\CompanyTargetEvaluation;
 use App\Models\DiscoveryRun;
+use App\Models\KnownHost;
 use App\Models\TargetProfile;
 use Illuminate\Support\Facades\Http;
 
@@ -366,4 +369,63 @@ it('stores a page that Postgres would otherwise reject', function () {
     $this->artisan('eveil:discover-companies')->assertSuccessful();
 
     expect(Company::sole()->domain)->toBe('nul.be');
+});
+
+it('harvests a directory and keeps the directory itself as a candidate', function () {
+    // A directory is also a company. Someone's target profile is "launch
+    // platforms" or "review sites", and treating index and entity as exclusive
+    // would make that buyer unserviceable — the host would be scraped for its
+    // listings and never considered as a lead.
+    activeTargetProfile();
+
+    DiscoveryPlanner::fake([plan(web: [['query' => 'friterie namur', 'language' => 'fr', 'why' => 'Local.']])]);
+    ResultTriage::fake([['hosts' => [['host' => 'annuaire.test', 'kind' => 'index', 'reason' => 'Lists businesses.']]]]);
+    CompanyQualifier::fake([verdict(90), verdict(20)]);
+
+    Http::fake([
+        '*/search*' => Http::response(['results' => [
+            ['url' => 'https://annuaire.test/friteries/namur', 'title' => 'Friteries à Namur', 'content' => 'Annuaire'],
+        ]]),
+        '*/robots.txt' => Http::response('', 404),
+        'https://annuaire.test/friteries/namur' => Http::response(
+            '<html lang="fr"><body><script type="application/ld+json">'
+            .json_encode(['@type' => 'Restaurant', 'name' => 'Chez Marcel', 'url' => 'https://chez-marcel.test', 'telephone' => '+3281223344'])
+            .'</script></body></html>'
+        ),
+        'https://chez-marcel.test/' => Http::response(page()),
+        'https://annuaire.test/' => Http::response(page('Annuaire des commerces.')),
+    ]);
+
+    $this->artisan('eveil:discover-companies')->assertSuccessful();
+
+    // Both: the business the listing named, AND the directory running it.
+    expect(Company::pluck('domain')->sort()->values()->all())
+        ->toBe(['annuaire.test', 'chez-marcel.test']);
+});
+
+it('remembers a host verdict so a second run never re-asks', function () {
+    activeTargetProfile();
+
+    DiscoveryPlanner::fake([plan(web: [['query' => 'friterie namur', 'language' => 'fr', 'why' => 'Local.']])]);
+    ResultTriage::fake([['hosts' => [['host' => 'marcel.test', 'kind' => 'entity', 'reason' => 'One business.']]]]);
+    CompanyQualifier::fake([verdict(88), verdict(88)]);
+
+    Http::fake([
+        '*/search*' => Http::response(['results' => [
+            ['url' => 'https://marcel.test/', 'title' => 'Friterie Chez Marcel', 'content' => 'Notre friterie'],
+        ]]),
+        '*/robots.txt' => Http::response('', 404),
+        'https://marcel.test/' => Http::response(page()),
+    ]);
+
+    $this->artisan('eveil:discover-companies')->assertSuccessful();
+
+    expect(KnownHost::query()->firstWhere('host', 'marcel.test')->kind)->toBe(HostKind::Entity);
+
+    // Second run, different profile: the model must not be consulted again.
+    ResultTriage::fake()->preventStrayPrompts();
+    DiscoveryPlanner::fake([plan(web: [['query' => 'friterie liege', 'language' => 'fr', 'why' => 'Local.']])]);
+    TargetProfile::factory()->create(['name' => 'Autre profil', 'is_active' => true]);
+
+    $this->artisan('eveil:discover-companies', ['profile' => 'Autre profil'])->assertSuccessful();
 });

@@ -154,3 +154,14 @@ What survives in `HostRegistry::FLOOR` is only what is structurally neither a co
 
 **The fourth case is called `other`, not `noise`.** It states what a host is not; it never claims the host is worthless. A forum thread naming the best plumbers in a city, or an article listing five companies that just raised, are real leads on a host that is not itself a directory. We drop them today only because we classify HOSTS and harvest HOSTS — a page-level pass over `other` results that ranked for a targeted query is the obvious later move, and naming the case `noise` would have quietly argued against ever building it.
 
+## `index` and `entity` are not alternatives — a directory is also a company
+Corrected 2026-08-13, the second time relevance leaked into a structural verdict. The first pass routed an `index` host to the harvester and nowhere else, so the host was scraped for its listings and never considered as a lead itself.
+
+That silently makes a whole category of buyer unserviceable. A founder whose target profile is "launch platforms and startup directories" wants Product Hunt and BetaList AS LEADS. Someone selling moderation tooling wants review sites. Someone selling analytics wants marketplaces. Every directory is run by a company.
+
+So an `index` host now produces **both**: the harvest of its listings, and a candidate for the host itself, built from the host root rather than the listing URL that matched. Qualification decides what it is worth — for a restaurant profile the directory scores near zero and costs one page fetch plus $0.0025, which is the right way round. Leaving it out costs an entire market.
+
+Corollary for the prompt: nearly every index is also an entity, so `ResultTriage` is told to answer `index` whenever a host publishes lists, and to reserve `entity` for hosts that publish none. Answering `index` no longer forecloses anything downstream.
+
+The pattern to watch for, since it has now happened twice: any time the registry's verdict decides what we DO rather than what a host IS, relevance has leaked back in. The verdict is structural; behaviour is chosen per run, and worth is decided per profile at qualification.
+

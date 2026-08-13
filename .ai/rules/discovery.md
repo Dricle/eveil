@@ -105,7 +105,7 @@ The code was actively deleting the fix: `WebSearchSource::isAggregator()` droppe
 
 Not to be built: a Facebook scraper. Blocked, against ToS, fragile. Facebook-only businesses are reached through OSM `contact:facebook` and through directories.
 
-Noted but not scheduled: open company registries (KBO/BCE, SIRENE, Companies House) are exhaustive by construction and free — no SEO bias possible, NACE code plus commune beats any query. They carry no email, so they feed enrichment, not sending. They fit the existing `DiscoverySource` interface. Do them after directory harvesting, not before.
+Noted but not scheduled: open company registries (KBO/BCE, SIRENE, Companies House) are exhaustive by construction and free — no SEO bias possible, NACE code plus commune beats any query. They carry no email, so they feed enrichment, not sending. They fit the existing `DiscoverySourceInterface` interface. Do them after directory harvesting, not before.
 
 ## Discovery is a job graph, not an agent tool loop (ADR-033)
 Each node is a queued job with minimal context, its own `discovery_tasks` row, its own cost: `PlanDiscovery` (AI) → `RunSearchQuery` (no AI) → `TriageResults` (AI, batched ~20 URLs) → `HarvestListing` (no AI) → `ExtractEntities` (AI only when JSON-LD failed), alongside `RunOverpassProbe` (no AI), with `ReflectAndExpand` (AI, reads aggregates) enqueuing the next wave. Most nodes never touch an LLM.

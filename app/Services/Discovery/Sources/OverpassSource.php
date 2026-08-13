@@ -16,7 +16,7 @@ use Throwable;
  * Only entries with a website survive: without a domain there is nothing to
  * qualify and no email to infer.
  */
-class OverpassSource implements DiscoverySource
+class OverpassSource implements DiscoverySourceInterface
 {
     use ReportsFailures;
 

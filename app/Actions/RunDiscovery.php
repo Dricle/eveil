@@ -12,7 +12,7 @@ use App\Models\DiscoveryRun;
 use App\Models\TargetProfile;
 use App\Services\Discovery\Candidate;
 use App\Services\Discovery\PageFetcher;
-use App\Services\Discovery\Sources\DiscoverySource;
+use App\Services\Discovery\Sources\DiscoverySourceInterface;
 use App\Services\Discovery\Sources\OverpassSource;
 use App\Services\Discovery\Sources\WebSearchSource;
 use App\Support\HtmlText;
@@ -32,7 +32,7 @@ use Throwable;
  */
 class RunDiscovery
 {
-    /** @var array<string, DiscoverySource> */
+    /** @var array<string, DiscoverySourceInterface> */
     private array $sources;
 
     /** @var array<int, string> */
@@ -285,7 +285,7 @@ class RunDiscovery
     private function sourceFailures(): array
     {
         return collect($this->sources)
-            ->flatMap(fn (DiscoverySource $source): array => method_exists($source, 'failures') ? $source->failures() : [])
+            ->flatMap(fn (DiscoverySourceInterface $source): array => method_exists($source, 'failures') ? $source->failures() : [])
             ->all();
     }
 

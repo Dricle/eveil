@@ -13,7 +13,7 @@ use Throwable;
  * The trade-off is that it is a meta-search engine — upstream engines rate-limit
  * it, so a query returning nothing is normal and must never fail a run.
  */
-class WebSearchSource implements DiscoverySource
+class WebSearchSource implements DiscoverySourceInterface
 {
     use ReportsFailures;
 

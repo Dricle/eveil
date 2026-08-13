@@ -11,7 +11,7 @@ use Illuminate\Support\Collection;
  * (a common `LeadSource` interface for CSV, scraping and paid providers is the
  * same idea one level down).
  */
-interface DiscoverySource
+interface DiscoverySourceInterface
 {
     public function name(): string;
 

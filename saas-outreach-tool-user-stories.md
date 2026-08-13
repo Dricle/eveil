@@ -1126,7 +1126,7 @@ supprime les liens de pagination — « page suivante » disparaît.
   jobs, en plus d'un cache.
 - **ADR-020** (élargissement borné) : `ReflectAndExpand` est l'endroit où ce diagnostic s'exécute. Une
   panne `wrong_source` a maintenant une réponse concrète — changer d'annuaire — au lieu d'un constat.
-- **`DiscoverySource`** : l'interface survit pour les sources en un coup (Overpass, recherche web,
+- **`DiscoverySourceInterface`** : l'interface survit pour les sources en un coup (Overpass, recherche web,
   registres officiels). La récolte d'annuaire ne rentre pas dedans : elle est multi-pages et budgétée,
   donc c'est un job, pas une `search()`.
 
@@ -1135,7 +1135,7 @@ supprime les liens de pagination — « page suivante » disparaît.
 BCE/KBO (Belgique), SIRENE (France, ~30 M d'établissements), Companies House (UK) sont ouverts,
 gratuits et **exhaustifs par construction** — aucun biais SEO possible. Code NACE plus commune est un
 meilleur filtre de profil cible que n'importe quelle requête. Limite connue : ni email ni site, donc ils
-alimentent l'enrichissement, pas l'envoi. À traiter comme des `DiscoverySource` supplémentaires quand
+alimentent l'enrichissement, pas l'envoi. À traiter comme des `DiscoverySourceInterface` supplémentaires quand
 la récolte d'annuaires sera en place, pas avant.
 
 **Pas de scraper Facebook.** Bloqué, contraire aux CGU, fragile. Les sociétés qui n'ont qu'une page

@@ -35,7 +35,7 @@ use Throwable;
  * from the model's own output, replayed free afterwards — but only once a
  * directory has produced more than once.
  *
- * Not a `DiscoverySource`: that interface is one probe in, one page of results
+ * Not a `DiscoverySourceInterface`: that interface is one probe in, one page of results
  * out. A harvest is multi-page and budgeted, so it will become a job when the
  * discovery graph lands.
  */

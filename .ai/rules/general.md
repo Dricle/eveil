@@ -83,3 +83,8 @@ Two rules for anything under `app/`, `config/`, `database/` or `tests/`, settled
 
 **Examples in prompts and comments must not anchor on one industry.** The first real test was a food-ordering product, and restaurants, friteries and pizzerias leaked into agent instructions everywhere — which biases the model on every OTHER kind of business the app is for. Concrete examples are good and abstract ones teach nothing; the fix is to VARY them across sectors, not to remove them. An target profile example should span software, local services and industry; an Overpass tag list should cover offices, health, retail, trade and industry, and say the list is a starting point rather than the vocabulary. Place names in examples: prefer the neutral or globally recognisable over the local.
 
+## Interfaces carry the `Interface` suffix
+Settled 2026-08-13. `DiscoverySourceInterface`, not `DiscoverySource`. The suffix says at the import line whether you are looking at a contract or a class, which matters most where a concrete implementation would otherwise read identically — `OverpassSource implements DiscoverySourceInterface` is unambiguous in a way `implements DiscoverySource` is not.
+
+Applies to interfaces only. Abstract classes keep their plain name (`EveilAgent`), and so do traits. Third-party contracts keep whatever their package calls them — `Laravel\Ai\Contracts\Agent` is imported as-is, never aliased to match our convention.
+

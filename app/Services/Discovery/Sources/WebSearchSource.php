@@ -12,6 +12,12 @@ use Throwable;
  * Self-hosted SearXNG: free, no API key, same code in both editions.
  * The trade-off is that it is a meta-search engine — upstream engines rate-limit
  * it, so a query returning nothing is normal and must never fail a run.
+ *
+ * Returns every result it is given and judges none of them. There used to be a
+ * hardcoded list of aggregator domains filtered out right here, which was wrong
+ * twice over: the list could never be complete, and it deleted the most
+ * valuable results of all, since a directory page is hundreds of businesses
+ * rather than one. `HostRegistry` decides what a host is, once per host ever.
  */
 class WebSearchSource implements DiscoverySourceInterface
 {
@@ -67,7 +73,7 @@ class WebSearchSource implements DiscoverySourceInterface
     {
         $url = is_string($result['url'] ?? null) ? Url::normalize($result['url']) : null;
 
-        if ($url === null || $this->isAggregator($url)) {
+        if ($url === null) {
             return null;
         }
 
@@ -80,27 +86,5 @@ class WebSearchSource implements DiscoverySourceInterface
             sourceUrl: $url,
             facts: ['query' => $query, 'snippet' => $result['content'] ?? null],
         );
-    }
-
-    /**
-     * Directories and platforms are how you find companies, not companies you
-     * can sell to. Keeping them would fill a run with pages nobody can email.
-     */
-    private function isAggregator(string $url): bool
-    {
-        $host = Url::host($url) ?? '';
-
-        foreach ([
-            'wikipedia.org', 'facebook.com', 'instagram.com', 'linkedin.com', 'x.com', 'twitter.com',
-            'youtube.com', 'tripadvisor.', 'yelp.', 'pagesdor.be', 'pagesjaunes.', 'google.',
-            'deliveroo.', 'ubereats.', 'takeaway.com', 'pinterest.', 'tiktok.com', 'amazon.',
-            'indeed.', 'glassdoor.', 'crunchbase.com', 'reddit.com', 'medium.com',
-        ] as $aggregator) {
-            if (str_contains($host, $aggregator)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 }

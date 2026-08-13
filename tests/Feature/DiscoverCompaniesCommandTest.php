@@ -128,26 +128,42 @@ it('searches the web when the profile has no premises', function () {
     expect(Company::sole()->source)->toBe('web_search');
 });
 
-it('throws away directories and platforms returned by the search engine', function () {
+it('sorts search results by what each host is, and harvests the lists', function () {
+    // This used to assert that directories were thrown away. They are the most
+    // valuable result there is — one listing page is hundreds of businesses,
+    // and for a business with no site of its own it is the only place an
+    // address is published. Encyclopaedias and social platforms still go.
     activeTargetProfile();
     DiscoveryPlanner::fake([plan(web: [['query' => 'friterie', 'language' => 'fr', 'why' => '...']])]);
-    CompanyQualifier::fake([verdict()]);
+    ResultTriage::fake([['hosts' => [
+        ['host' => 'annuaire.test', 'kind' => 'index', 'reason' => 'Lists businesses.'],
+        ['host' => 'vraie-friterie.be', 'kind' => 'entity', 'reason' => 'One business.'],
+    ]]]);
+    CompanyQualifier::fake([verdict(), verdict(), verdict()]);
 
     Http::fake([
         '*/search*' => Http::response(['results' => [
-            ['url' => 'https://www.tripadvisor.be/friteries', 'title' => 'Top friteries'],
+            ['url' => 'https://annuaire.test/friteries', 'title' => 'Top friteries'],
             ['url' => 'https://fr.wikipedia.org/wiki/Friterie', 'title' => 'Friterie'],
-            ['url' => 'https://deliveroo.be/fr/restaurants', 'title' => 'Livraison'],
+            ['url' => 'https://www.facebook.com/friterie', 'title' => 'Friterie'],
             ['url' => 'https://vraie-friterie.be', 'title' => 'Vraie Friterie'],
         ]]),
         '*/robots.txt' => Http::response('', 404),
+        'https://annuaire.test/friteries' => Http::response(
+            '<html lang="fr"><body><script type="application/ld+json">'
+            .json_encode(['@type' => 'Restaurant', 'name' => 'Chez Marcel', 'url' => 'https://chez-marcel.test', 'telephone' => '+3281223344'])
+            .'</script></body></html>'
+        ),
         '*' => Http::response(page()),
     ]);
 
     $this->artisan('eveil:discover-companies')->assertSuccessful();
 
-    // Directories are how you find companies, not companies you can sell to.
-    expect(Company::pluck('domain')->all())->toBe(['vraie-friterie.be']);
+    // The business the directory listed, the directory itself, and the one
+    // company site. Wikipedia and Facebook are gone, decided by the floor
+    // without spending a token.
+    expect(Company::pluck('domain')->sort()->values()->all())
+        ->toBe(['annuaire.test', 'chez-marcel.test', 'vraie-friterie.be']);
 });
 
 it('drops map entries that have no website', function () {
@@ -428,4 +444,36 @@ it('remembers a host verdict so a second run never re-asks', function () {
     TargetProfile::factory()->create(['name' => 'Autre profil', 'is_active' => true]);
 
     $this->artisan('eveil:discover-companies', ['profile' => 'Autre profil'])->assertSuccessful();
+});
+
+it('sends a real directory to the registry instead of deleting it', function () {
+    // Regression: `WebSearchSource` kept a hardcoded aggregator blocklist long
+    // after `HostRegistry` replaced it, so a real directory was dropped before
+    // the registry ever saw it and the whole feature was dead for web results.
+    // The earlier tests missed it by using invented hosts.
+    activeTargetProfile();
+
+    DiscoveryPlanner::fake([plan(web: [['query' => 'friterie namur', 'language' => 'fr', 'why' => 'Local.']])]);
+    ResultTriage::fake([['hosts' => [['host' => 'pagesdor.be', 'kind' => 'index', 'reason' => 'Business directory.']]]]);
+    CompanyQualifier::fake([verdict(90), verdict(30)]);
+
+    Http::fake([
+        '*/search*' => Http::response(['results' => [
+            ['url' => 'https://pagesdor.be/friteries/namur', 'title' => 'Friteries à Namur', 'content' => 'Annuaire'],
+        ]]),
+        '*/robots.txt' => Http::response('', 404),
+        'https://pagesdor.be/friteries/namur' => Http::response(
+            '<html lang="fr"><body><script type="application/ld+json">'
+            .json_encode(['@type' => 'Restaurant', 'name' => 'Chez Marcel', 'url' => 'https://chez-marcel.test', 'telephone' => '+3281223344'])
+            .'</script></body></html>'
+        ),
+        'https://chez-marcel.test/' => Http::response(page()),
+        'https://pagesdor.be/' => Http::response(page('Annuaire des commerces belges.')),
+    ]);
+
+    $this->artisan('eveil:discover-companies')->assertSuccessful();
+
+    expect(Company::pluck('domain')->sort()->values()->all())
+        ->toBe(['chez-marcel.test', 'pagesdor.be'])
+        ->and(KnownHost::query()->firstWhere('host', 'pagesdor.be')->kind)->toBe(HostKind::Index);
 });

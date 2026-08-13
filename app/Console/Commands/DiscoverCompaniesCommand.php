@@ -54,7 +54,7 @@ class DiscoverCompaniesCommand extends Command
         $this->renderPlan($run);
         $this->renderCompanies($targetProfile);
         $this->renderVerdict($run);
-        $this->renderCost($targetProfile);
+        $this->renderUsage($targetProfile);
 
         return self::SUCCESS;
     }
@@ -164,13 +164,18 @@ class DiscoverCompaniesCommand extends Command
         }
     }
 
-    private function renderCost(TargetProfile $targetProfile): void
+    private function renderUsage(TargetProfile $targetProfile): void
     {
         $runs = AgentRun::query()->where('project_id', $targetProfile->project_id)->latest('id')->limit(200)->get();
 
         $this->components->twoColumnDetail(
-            '<fg=gray>Total spent on this project</>',
-            sprintf('$%s over %d agent calls', number_format((float) $runs->sum('cost'), 4), $runs->count()),
+            '<fg=gray>Tokens used on this project</>',
+            sprintf(
+                '%s in / %s out over %d agent calls',
+                number_format((float) $runs->sum('tokens_in')),
+                number_format((float) $runs->sum('tokens_out')),
+                $runs->count(),
+            ),
         );
     }
 }

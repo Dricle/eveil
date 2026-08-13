@@ -6,6 +6,7 @@ use App\Models\AgentRun;
 use App\Models\Organization;
 use App\Models\Project;
 use App\Models\ProjectAnalysis;
+use App\Support\Settings;
 use Illuminate\Support\Facades\Http;
 
 function knowledgeBase(): array
@@ -27,7 +28,7 @@ function knowledgeBase(): array
 
 function fakeSite(): void
 {
-    config()->set('eveil.crawl.delay_ms', 0);
+    app(Settings::class)->set('crawl.delay_ms', 0);
 
     Http::fake([
         '*/robots.txt' => Http::response('', 404),
@@ -110,7 +111,7 @@ it('never overwrites a knowledge base the user edited', function () {
 });
 
 it('fails cleanly when nothing can be read', function () {
-    config()->set('eveil.crawl.delay_ms', 0);
+    app(Settings::class)->set('crawl.delay_ms', 0);
     Http::fake(['*' => Http::response('', 500)]);
 
     $this->artisan('eveil:analyze', ['url' => 'https://acme.test'])->assertFailed();

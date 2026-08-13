@@ -6,6 +6,7 @@ use App\Ai\Agents\ListingExtractor;
 use App\Models\Project;
 use App\Support\HtmlText;
 use App\Support\ParsedPage;
+use App\Support\Settings;
 use App\Support\Url;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -41,12 +42,12 @@ use Throwable;
  */
 class ListingHarvester
 {
-    public function __construct(private PageFetcher $fetcher, private HtmlText $html) {}
+    public function __construct(private PageFetcher $fetcher, private HtmlText $html, private Settings $settings) {}
 
     public function harvest(string $url, ?Project $project = null, ?int $maxPages = null): Harvest
     {
-        $maxPages ??= (int) config('eveil.sources.directory.max_pages');
-        $maxEntities = (int) config('eveil.sources.directory.max_entities');
+        $maxPages ??= $this->settings->int('sources.directory.max_pages');
+        $maxEntities = $this->settings->int('sources.directory.max_entities');
 
         /** @var Collection<int, Candidate> $candidates */
         $candidates = new Collection;
@@ -175,7 +176,7 @@ class ListingHarvester
         /** @var array<int, array<string, string>> $businesses */
         $businesses = Cache::remember(
             'listing:'.hash('xxh3', (string) $extractor->instructions()).':'.hash('sha256', $url),
-            now()->addDays((int) config('eveil.crawl.cache_ttl_days')),
+            now()->addDays($this->settings->int('crawl.cache_ttl_days')),
             fn (): array => $this->ask($extractor, $parsed, $url),
         );
 

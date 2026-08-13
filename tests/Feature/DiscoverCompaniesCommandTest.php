@@ -11,6 +11,8 @@ use App\Models\CompanyTargetEvaluation;
 use App\Models\DiscoveryRun;
 use App\Models\KnownHost;
 use App\Models\TargetProfile;
+use App\Support\Settings;
+use Database\Seeders\KnownHostSeeder;
 use Illuminate\Support\Facades\Http;
 
 function plan(array $overpass = [], array $web = []): array
@@ -63,7 +65,7 @@ function activeTargetProfile(): TargetProfile
     return TargetProfile::factory()->create(['name' => 'Friteries wallonnes', 'is_active' => true]);
 }
 
-beforeEach(fn () => config()->set('eveil.crawl.delay_ms', 0));
+beforeEach(fn () => app(Settings::class)->set('crawl.delay_ms', 0));
 
 it('finds companies on the map, qualifies them and stores the pair', function () {
     $targetProfile = activeTargetProfile();
@@ -133,6 +135,7 @@ it('sorts search results by what each host is, and harvests the lists', function
     // valuable result there is — one listing page is hundreds of businesses,
     // and for a business with no site of its own it is the only place an
     // address is published. Encyclopaedias and social platforms still go.
+    $this->seed(KnownHostSeeder::class);
     activeTargetProfile();
     DiscoveryPlanner::fake([plan(web: [['query' => 'friterie', 'language' => 'fr', 'why' => '...']])]);
     ResultTriage::fake([['hosts' => [
@@ -160,8 +163,8 @@ it('sorts search results by what each host is, and harvests the lists', function
     $this->artisan('eveil:discover-companies')->assertSuccessful();
 
     // The business the directory listed, the directory itself, and the one
-    // company site. Wikipedia and Facebook are gone, decided by the floor
-    // without spending a token.
+    // company site. Wikipedia and Facebook are gone, answered from their
+    // locked rows without spending a token.
     expect(Company::pluck('domain')->sort()->values()->all())
         ->toBe(['annuaire.test', 'chez-marcel.test', 'vraie-friterie.be']);
 });

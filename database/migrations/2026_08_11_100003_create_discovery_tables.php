@@ -57,6 +57,47 @@ return new class extends Migration
          * Hunt, BetaList, Clutch, every trade directory in every country — so
          * the list is learned rather than written.
          */
+        /**
+         * Path fragments that mark a page worth reading, learned rather than
+         * enumerated.
+         *
+         * This was a const in `FindContacts` covering four languages, which
+         * silently missed `/contacto`, `/chi-siamo`, `/om-oss`, `/kontakty`,
+         * `/quem-somos` and every other market we have not thought of. A list
+         * of the world's words for "contact us" is not something anyone can
+         * finish writing.
+         *
+         * Instance-wide like the host registry, and for the same reason: "sites
+         * put their contact details at /contacto" is a fact about the web, not
+         * about a customer. One project paying a model to notice it means every
+         * other project has it free.
+         */
+        Schema::create('path_hints', function (Blueprint $table) {
+            $table->id();
+
+            // What the hint is FOR: contact details, product information, …
+            $table->string('kind');
+            $table->string('token');
+
+            // How often this fragment SELECTED a page, and how often that page
+            // then carried what we were after. The ratio is the whole review
+            // mechanism: a fragment that keeps choosing pages and never
+            // delivering is not merely useless, it is spending fetches, and
+            // `learn()` will have written it once for every project on the
+            // instance to trip over.
+            $table->unsignedInteger('matched')->default(0);
+            $table->unsignedInteger('hits')->default(0);
+
+            // A human decided; no model overwrites it. Same escape hatch as
+            // `known_hosts`, for the same reason.
+            $table->boolean('is_locked')->default(false);
+
+            $table->timestamps();
+
+            $table->unique(['kind', 'token']);
+            $table->index('kind');
+        });
+
         Schema::create('known_hosts', function (Blueprint $table) {
             $table->id();
             $table->string('host')->unique();
@@ -228,6 +269,7 @@ return new class extends Migration
         Schema::dropIfExists('company_target_evaluations');
         Schema::dropIfExists('companies');
         Schema::dropIfExists('discovery_runs');
+        Schema::dropIfExists('path_hints');
         Schema::dropIfExists('known_hosts');
         Schema::dropIfExists('crawled_pages');
     }

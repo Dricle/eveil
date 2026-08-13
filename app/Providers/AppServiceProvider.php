@@ -6,6 +6,7 @@ use App\Services\Discovery\PageFetcher;
 use App\Services\Discovery\RobotsPolicy;
 use App\Support\CredentialsCipher;
 use App\Support\CurrentProject;
+use App\Support\DisposableDomains;
 use App\Support\Settings;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
@@ -25,6 +26,10 @@ class AppServiceProvider extends ServiceProvider
         // user secrets behind CREDENTIALS_KEY.
         $this->app->singleton(CurrentProject::class);
         $this->app->singleton(CredentialsCipher::class);
+
+        // Memoises its lookups across a run; a fresh instance per lead would
+        // query the blocklist once per address.
+        $this->app->singleton(DisposableDomains::class);
         $this->app->singleton(Settings::class);
 
         // Both hold per-process crawl state: the parsed robots.txt per host,

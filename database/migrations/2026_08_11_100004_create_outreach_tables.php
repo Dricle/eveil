@@ -112,6 +112,36 @@ return new class extends Migration
             $table->index(['email_account_id', 'email']);
         });
 
+        /**
+         * What we have learned about the mail servers behind a domain.
+         *
+         * Keyed on the MX HOST rather than the recipient domain, which is where
+         * the leverage is: one row for `protection.outlook.com` covers every
+         * company on Microsoft, and Google and Microsoft between them host a
+         * large share of business email.
+         *
+         * This replaced nine hardcoded provider names, which had no Proton,
+         * Zoho, Fastmail, GMX, OVH, Infomaniak or any corporate Exchange. A
+         * miss there is not a wrong answer — the probe returns nothing and we
+         * answer `unknown` either way — it just costs the timeout each time.
+         */
+        Schema::create('mail_hosts', function (Blueprint $table) {
+            $table->id();
+            $table->string('host')->unique();
+
+            // Conversations completed, and how many ended without a verdict.
+            // Both, because one silence is greylisting and five is a policy.
+            $table->unsignedInteger('attempts')->default(0);
+            $table->unsignedInteger('refusals')->default(0);
+
+            // Set for the providers everyone already knows refuse; never
+            // overwritten by what we observe, and editable by a superadmin.
+            $table->boolean('is_locked')->default(false);
+
+            $table->timestamp('last_seen_at')->nullable();
+            $table->timestamps();
+        });
+
         Schema::create('campaigns', function (Blueprint $table) {
             $table->id();
             $table->foreignId('project_id')->constrained()->cascadeOnDelete();
@@ -221,6 +251,7 @@ return new class extends Migration
         Schema::dropIfExists('campaign_steps');
         Schema::dropIfExists('campaigns');
         Schema::dropIfExists('suppressions');
+        Schema::dropIfExists('mail_hosts');
         Schema::dropIfExists('email_account_project');
         Schema::dropIfExists('email_accounts');
     }

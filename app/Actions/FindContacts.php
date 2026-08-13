@@ -5,14 +5,16 @@ namespace App\Actions;
 use App\Ai\Agents\ContactExtractor;
 use App\Enums\EmailSource;
 use App\Enums\EmailStatus;
+use App\Enums\PathHintKind;
 use App\Models\Company;
 use App\Models\Lead;
 use App\Services\Discovery\EmailPattern;
 use App\Services\Discovery\EmailVerifier;
 use App\Services\Discovery\PageFetcher;
+use App\Services\Discovery\PathHints;
 use App\Support\HtmlText;
 use App\Support\ParsedPage;
-use App\Support\Url;
+use App\Support\Settings;
 use Illuminate\Support\Collection;
 use Laravel\Ai\Responses\StructuredAgentResponse;
 
@@ -28,6 +30,8 @@ class FindContacts
         private PageFetcher $fetcher,
         private HtmlText $html,
         private EmailVerifier $verifier,
+        private PathHints $hints,
+        private Settings $settings,
     ) {}
 
     /**
@@ -75,25 +79,27 @@ class FindContacts
         /** @var Collection<int, ParsedPage> $pages */
         $pages = new Collection($parsed->isEmpty() ? [] : [$parsed]);
 
-        /** @var array<int, string> $wanted */
-        $wanted = config('eveil.contacts.paths');
-
-        $links = collect($parsed->links)
-            ->filter(fn (string $url): bool => Url::host($url) === Url::host((string) $home->url))
-            ->filter(function (string $url) use ($wanted): bool {
-                $path = mb_strtolower(Url::path($url));
-
-                return collect($wanted)->contains(fn (string $needle): bool => str_contains($path, $needle));
-            })
-            ->unique()
-            ->take((int) config('eveil.contacts.max_pages'));
+        $links = $this->hints->pick(
+            $parsed,
+            PathHintKind::Contact,
+            $company->project,
+            $this->settings->int('contacts.max_pages'),
+        );
 
         foreach ($links as $url) {
             $page = $this->fetcher->fetch($url);
 
-            if ($page !== null) {
-                $pages->push($this->html->parse((string) $page->content, $url));
+            if ($page === null) {
+                continue;
             }
+
+            $read = $this->html->parse((string) $page->content, $url);
+            $pages->push($read);
+
+            // Both outcomes, not just the wins: a fragment that keeps choosing
+            // pages with no address on them is spending a fetch every time, and
+            // only the ratio makes that visible.
+            $this->hints->record($url, PathHintKind::Contact, str_contains($read->text, '@'));
         }
 
         return $pages;

@@ -4,6 +4,7 @@ namespace App\Services\Discovery\Sources;
 
 use App\Services\Discovery\Candidate;
 use App\Services\Discovery\Sources\Traits\ReportsFailures;
+use App\Support\Settings;
 use App\Support\Url;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
@@ -22,6 +23,8 @@ use Throwable;
  */
 class WebSearchSource implements DiscoverySourceInterface
 {
+    public function __construct(private Settings $settings) {}
+
     use ReportsFailures;
 
     public function name(): string
@@ -61,7 +64,7 @@ class WebSearchSource implements DiscoverySourceInterface
         $results = $response->json('results') ?? [];
 
         return (new Collection($results))
-            ->take((int) config('eveil.sources.searxng.per_query'))
+            ->take($this->settings->int('sources.searxng.per_query'))
             ->map(fn (array $result): ?Candidate => $this->toCandidate($result, $query))
             ->filter()
             ->values();

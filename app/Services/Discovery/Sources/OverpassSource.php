@@ -4,6 +4,7 @@ namespace App\Services\Discovery\Sources;
 
 use App\Services\Discovery\Candidate;
 use App\Services\Discovery\Sources\Traits\ReportsFailures;
+use App\Support\Settings;
 use App\Support\Url;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
@@ -19,6 +20,8 @@ use Throwable;
  */
 class OverpassSource implements DiscoverySourceInterface
 {
+    public function __construct(private Settings $settings) {}
+
     use ReportsFailures;
 
     public function name(): string
@@ -83,7 +86,7 @@ class OverpassSource implements DiscoverySourceInterface
             ->map(fn (string $value, string $key): string => '["'.addslashes($key).'"="'.addslashes($value).'"]')
             ->implode('');
 
-        $limit = (int) config('eveil.sources.overpass.per_probe');
+        $limit = $this->settings->int('sources.overpass.per_probe');
         $area = addslashes($area);
 
         $scope = $country === ''

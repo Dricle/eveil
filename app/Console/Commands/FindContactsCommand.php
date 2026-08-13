@@ -178,11 +178,15 @@ class FindContactsCommand extends Command
             );
         }
 
-        $spent = AgentRun::query()->where('project_id', $project->id)->sum('cost');
+        $runs = AgentRun::query()->where('project_id', $project->id);
 
         $this->components->twoColumnDetail(
-            '<fg=gray>Total spent on this project</>',
-            '$'.number_format((float) $spent, 4),
+            '<fg=gray>Tokens used on this project</>',
+            sprintf(
+                '%s in / %s out',
+                number_format((float) (clone $runs)->sum('tokens_in')),
+                number_format((float) (clone $runs)->sum('tokens_out')),
+            ),
         );
     }
 }

@@ -25,7 +25,6 @@ class AgentRunFactory extends Factory
             'status' => AgentRunStatus::Succeeded,
             'tokens_in' => fake()->numberBetween(100, 10000),
             'tokens_out' => fake()->numberBetween(50, 2000),
-            'cost' => fake()->randomFloat(6, 0, 1),
             'duration_ms' => fake()->numberBetween(200, 30000),
         ];
     }

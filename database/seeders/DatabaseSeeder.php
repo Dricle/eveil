@@ -17,7 +17,7 @@ class DatabaseSeeder extends Seeder
     {
         // Ships in both editions: the head start a fresh install gets before
         // it has learned anything of its own.
-        $this->call(KnownHostSeeder::class);
+        $this->call([KnownHostSeeder::class, DisposableDomainSeeder::class, MailHostSeeder::class]);
 
         User::factory()->create([
             'name' => 'Test User',

@@ -29,13 +29,12 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $payloads_purged_at
  * @property int $tokens_in
  * @property int $tokens_out
- * @property string $cost
  * @property int|null $duration_ms
  * @property string|null $error
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['project_id', 'agent', 'status', 'provider', 'model', 'input', 'output', 'tokens_in', 'tokens_out', 'cost', 'duration_ms', 'error'])]
+#[Fillable(['project_id', 'agent', 'status', 'provider', 'model', 'input', 'output', 'tokens_in', 'tokens_out', 'duration_ms', 'error'])]
 class AgentRun extends Model
 {
     /** @use HasFactory<AgentRunFactory> */

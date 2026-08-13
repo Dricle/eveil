@@ -4,13 +4,21 @@ use App\Ai\Agents\ContactExtractor;
 use App\Enums\EmailSource;
 use App\Enums\EmailStatus;
 use App\Enums\MessageDirection;
+use App\Enums\ProbeOutcome;
+use App\Enums\SuppressionLayer;
 use App\Models\Company;
 use App\Models\EmailAccount;
 use App\Models\Lead;
+use App\Models\MailHost;
 use App\Models\Message;
 use App\Models\Project;
+use App\Models\Suppression;
 use App\Services\Discovery\EmailPattern;
 use App\Services\Discovery\EmailVerifier;
+use App\Support\DisposableDomains;
+use App\Support\Settings;
+use Database\Seeders\DisposableDomainSeeder;
+use Database\Seeders\MailHostSeeder;
 use Illuminate\Support\Facades\Http;
 
 function extraction(array $people = [], array $generic = [], string $pattern = ''): array
@@ -42,9 +50,9 @@ function companyWithSite(?Project $project = null): Company
 }
 
 beforeEach(function () {
-    config()->set('eveil.crawl.delay_ms', 0);
+    app(Settings::class)->set('crawl.delay_ms', 0);
     // The probe needs a real socket; verification is exercised on its own below.
-    config()->set('eveil.verification.probe', false);
+    app(Settings::class)->set('verification.probe', false);
 
     Http::fake([
         '*/robots.txt' => Http::response('', 404),
@@ -190,11 +198,42 @@ describe('email pattern inference', function () {
     })->with([
         ['marie.dupont@x.be', 'first.last'],
         ['mariedupont@x.be', 'firstlast'],
+        ['marie_dupont@x.be', 'first_last'],
         ['m.dupont@x.be', 'f.last'],
         ['mdupont@x.be', 'flast'],
         ['marie@x.be', 'first'],
+        ['dupont@x.be', 'last'],
         ['dupont.marie@x.be', 'last.first'],
+
+        // None of these were in the hand-written list of eight shapes that this
+        // replaced. A shape it cannot read is not a quiet miss: the site's real
+        // convention is lost and the fallback guesses one that bounces.
+        ['marie-dupont@x.be', 'first-last'],
+        ['dupont-marie@x.be', 'last-first'],
+        ['m_dupont@x.be', 'f_last'],
+        ['maried@x.be', 'firstl'],
+        ['d.marie@x.be', 'l.first'],
+        ['marie.d@x.be', 'first.l'],
     ]);
+
+    it('round-trips every shape it can read onto another person', function (string $email) {
+        $shape = EmailPattern::detect($email, 'Marie', 'Dupont');
+
+        expect($shape)->not->toBeNull()
+            ->and(EmailPattern::apply($shape, 'Jean', 'Martin', 'y.be'))->not->toBeNull();
+    })->with(['marie-dupont@x.be', 'm_dupont@x.be', 'maried@x.be', 'd.marie@x.be', 'dupont.marie@x.be']);
+
+    it('prefers the full name over the initial when both would fit', function () {
+        // Marie shortened to M: `m.dupont` is `first.last`, not `f.last`, and
+        // guessing the latter would write `j.martin` where `jean.martin` is right.
+        expect(EmailPattern::detect('m.dupont@x.be', 'M', 'Dupont'))->toBe('first.last');
+    });
+
+    it('refuses two bare initials, which identify nobody', function () {
+        // `md@` fits half a company. Inferring anyone else's address from it
+        // produces bounces, and bounces cost the sending domain.
+        expect(EmailPattern::detect('md@x.be', 'Marie', 'Dupont'))->toBeNull();
+    });
 
     it('gives up on a shape it does not recognise', function () {
         expect(EmailPattern::detect('sales-team-2024@x.be', 'Marie', 'Dupont'))->toBeNull();
@@ -211,12 +250,87 @@ describe('email pattern inference', function () {
 
 describe('email verification', function () {
     it('rejects what it can actually disprove', function (string $email) {
+        // The blocklist lives in the database now, so it has to be loaded —
+        // without it `mailinator.com` reaches the MX check, which is a real
+        // DNS call, and mailinator has perfectly good MX records.
+        $this->seed(DisposableDomainSeeder::class);
+
         expect(app(EmailVerifier::class)->verify($email))->toBe(EmailStatus::Invalid);
     })->with([
         'not-an-email',
         'someone@mailinator.com',
         'someone@domain-that-does-not-exist-eveil-test.invalid',
     ]);
+
+    it('loads a blocklist far larger than anyone would maintain by hand', function () {
+        // Twelve domains used to be listed in the verifier. A throwaway domain
+        // has working MX and passes every other check, so each one missing was
+        // an address marked valid and sent to.
+        $this->seed(DisposableDomainSeeder::class);
+
+        expect(Suppression::query()->where('layer', SuppressionLayer::Toxic)->count())
+            ->toBeGreaterThan(5_000)
+            ->and(app(DisposableDomains::class)->includes('mailinator.com'))->toBeTrue()
+            ->and(app(DisposableDomains::class)->includes('laravel.com'))->toBeFalse();
+    });
+
+    it('replaces the whole set rather than merging into it', function () {
+        // A refresh that half-succeeded would leave a partial blocklist, which
+        // silently starts accepting throwaways it used to reject.
+        $disposable = app(DisposableDomains::class);
+
+        $disposable->replaceWith(['old-throwaway.test', 'mailinator.com']);
+        $disposable->replaceWith(['new-throwaway.test']);
+
+        expect($disposable->includes('new-throwaway.test'))->toBeTrue()
+            ->and($disposable->includes('old-throwaway.test'))->toBeFalse()
+            ->and(Suppression::query()->where('layer', SuppressionLayer::Toxic)->count())->toBe(1);
+    });
+
+    it('refuses a truncated upstream list instead of shrinking the blocklist', function () {
+        $this->seed(DisposableDomainSeeder::class);
+        $before = Suppression::query()->where('layer', SuppressionLayer::Toxic)->count();
+
+        Http::fake(['*' => Http::response("only-one.test\n")]);
+
+        $this->artisan('eveil:refresh-disposable')
+            ->expectsOutputToContain('Refusing to replace')
+            ->assertFailed();
+
+        expect(Suppression::query()->where('layer', SuppressionLayer::Toxic)->count())->toBe($before);
+    });
+
+    it('skips a provider known to refuse, without spending the timeout', function () {
+        // Nine provider names used to be hardcoded. A miss was never a wrong
+        // answer — the probe returns nothing and we say `unknown` either way —
+        // it just cost the timeout every time.
+        $this->seed(MailHostSeeder::class);
+        app(Settings::class)->set('verification.probe', true);
+
+        expect(MailHost::query()->firstWhere('host', 'google.com')->refusesProbes())->toBeTrue()
+            // Learned rows need evidence; a shipped certainty does not.
+            ->and(MailHost::query()->firstWhere('host', 'google.com')->is_locked)->toBeTrue();
+    });
+
+    it('marks a host as refusing only after it has consistently said nothing', function () {
+        $host = MailHost::factory()->create(['attempts' => 2, 'refusals' => 2]);
+
+        // Two silences is greylisting or bad luck, not a policy.
+        expect($host->refusesProbes())->toBeFalse()
+            ->and(MailHost::factory()->refusing()->create()->refusesProbes())->toBeTrue()
+            // One verdict among the silences means it does answer, sometimes.
+            ->and(MailHost::factory()->create(['attempts' => 9, 'refusals' => 8])->refusesProbes())->toBeFalse();
+    });
+
+    it('learns nothing from a probe that never reached a server', function () {
+        // Port 25 is blocked on most hosting. Counting that as a refusal would
+        // have the first run on such a box mark every mail provider on earth
+        // as one — and then never probe again, anywhere.
+        expect(ProbeOutcome::Unreachable->isEvidence())->toBeFalse()
+            ->and(ProbeOutcome::NoVerdict->isEvidence())->toBeTrue()
+            ->and(ProbeOutcome::NoVerdict->isVerdict())->toBeFalse()
+            ->and(ProbeOutcome::Accepted->isVerdict())->toBeTrue();
+    });
 
     it('returns unknown rather than invalid when the probe is off', function () {
         // Only `invalid` blocks a send, so it is reserved for proof. Gmail and

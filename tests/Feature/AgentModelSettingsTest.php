@@ -7,8 +7,9 @@ use App\Support\Settings;
 use Laravel\Ai\Enums\Lab;
 
 /**
- * The mapping lives in the database so the operator can change a model
- * from the settings screen. Config only supplies the shipped default.
+ * The mapping lives in the database and nowhere else — defaults are written by
+ * a migration, not mirrored in a config file, so there is one place to look and
+ * no merge to reason about on read.
  */
 function mapping(string $agent = 'website-analyst'): array
 {
@@ -16,8 +17,15 @@ function mapping(string $agent = 'website-analyst'): array
 
     return [$agents->provider($agent), $agents->model($agent)];
 }
-it('falls back to the shipped default when nothing is stored', function () {
+it('reads the mapping the install was seeded with', function () {
     expect(mapping())->toBe([Lab::Anthropic, 'claude-opus-5']);
+});
+
+it('falls back to a conservative default for an agent added after the install', function () {
+    // `known()` discovers agents from the filesystem, so a class added after
+    // the migration ran genuinely has no row. It must run cheap, not throw.
+    expect(app(AgentSettings::class)->model('agent-added-yesterday'))->toBe('claude-haiku-4-5')
+        ->and(app(AgentSettings::class)->timeout('agent-added-yesterday'))->toBe(120);
 });
 
 it('lets a stored mapping win over the default', function () {
@@ -26,10 +34,11 @@ it('lets a stored mapping win over the default', function () {
     expect(mapping())->toBe([Lab::Anthropic, 'claude-sonnet-5']);
 });
 
-it('merges a partial override onto the default', function () {
+it('merges a partial change into what is stored, on write', function () {
     // Changing only the model must not silently drop the timeout that keeps a
-    // thinking model from dying on the 60s HTTP default.
-    app(Settings::class)->set('agents.website-analyst', ['model' => 'claude-sonnet-5']);
+    // thinking model from dying on the 60s HTTP default. The merge used to
+    // happen on read against config; it now happens here.
+    app(AgentSettings::class)->save('website-analyst', ['model' => 'claude-sonnet-5']);
 
     expect(mapping())->toBe([Lab::Anthropic, 'claude-sonnet-5'])
         ->and(app(AgentSettings::class)->timeout('website-analyst'))->toBe(300);
@@ -38,7 +47,7 @@ it('merges a partial override onto the default', function () {
 it('ignores a stored value of the wrong shape', function () {
     app(Settings::class)->set('agents.website-analyst', 'claude-sonnet-5');
 
-    expect(mapping())->toBe([Lab::Anthropic, 'claude-opus-5']);
+    expect(mapping())->toBe([Lab::Anthropic, 'claude-haiku-4-5']);
 });
 
 it('changes the model from the command line', function () {
@@ -55,12 +64,14 @@ it('warns that the credit grid is calibrated on the model mix', function () {
         ->assertSuccessful();
 });
 
-it('resets back to the shipped default', function () {
-    app(Settings::class)->set('agents.website-analyst', ['model' => 'claude-sonnet-5']);
+it('resets to the conservative default, not to whatever shipped', function () {
+    // Restoring the seeded value would mean keeping a second copy of it in
+    // code, which is the config-shadows-database duplication this removed.
+    app(AgentSettings::class)->save('website-analyst', ['model' => 'claude-sonnet-5']);
 
     $this->artisan('eveil:agent-model', ['agent' => 'website-analyst', '--reset' => true])->assertSuccessful();
 
-    expect(mapping())->toBe([Lab::Anthropic, 'claude-opus-5']);
+    expect(mapping())->toBe([Lab::Anthropic, 'claude-haiku-4-5']);
 });
 
 it('lists every agent with where its mapping came from', function () {
@@ -113,7 +124,7 @@ it('keeps an unknown provider as a plain string', function () {
 });
 
 it('leaves the model unset so the provider default applies', function () {
-    config()->set('eveil.agents.website-analyst', ['provider' => Lab::Anthropic]);
+    app(Settings::class)->set('agents.website-analyst', ['provider' => 'anthropic']);
 
     expect(app(AgentSettings::class)->model('website-analyst'))->toBeNull();
 });
@@ -123,6 +134,7 @@ it('lists every agent it finds in the code, not a hand-kept list', function () {
     expect(app(AgentSettings::class)->known())->toBe([
         'company-qualifier',
         'contact-extractor',
+        'contact-page-finder',
         'discovery-planner',
         'listing-extractor',
         'result-triage',

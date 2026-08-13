@@ -15,13 +15,24 @@ use Laravel\Ai\Enums\Lab;
  * them separately — and there was no way to put target profile derivation on the expensive
  * model while search planning ran on a cheaper one.
  *
- * The superadmin's choice lives in the database and wins; `config/eveil.php`
- * only supplies the shipped default so a fresh install works without opening
- * the settings screen. Agents read this through `provider()`, `model()` and
+ * The database is the only source: defaults are written by a migration rather
+ * than mirrored in a config file, so there is one place to look and no merge to
+ * reason about. Agents read this through `provider()`, `model()` and
  * `timeout()` — the hooks `Promptable` consults before its own attributes.
  */
 class AgentSettings
 {
+    /**
+     * What an agent runs on before anyone has said otherwise.
+     *
+     * Not a config fallback — the shipped values live in a migration. This
+     * exists for one narrow case: an agent class added AFTER the install was
+     * migrated has no row yet, and should run on the cheap model rather than
+     * throw. `AgentSettings::known()` discovers agents from the filesystem, so
+     * that gap is real and normal.
+     */
+    private const DEFAULT = ['provider' => 'anthropic', 'model' => 'claude-haiku-4-5', 'timeout' => 120];
+
     public function __construct(private Settings $settings) {}
 
     /**
@@ -68,7 +79,7 @@ class AgentSettings
      */
     public function timeout(string $agent): int
     {
-        return (int) ($this->for($agent)['timeout'] ?? 120);
+        return (int) ($this->for($agent)['timeout'] ?? self::DEFAULT['timeout']);
     }
 
     /**
@@ -76,13 +87,11 @@ class AgentSettings
      */
     public function for(string $agent): array
     {
-        /** @var array{provider?: Lab|string, model?: string, timeout?: int} $default */
-        $default = config("eveil.agents.{$agent}", []);
-
         // Whatever the operator saved, so the shape is checked, not trusted.
-        $override = $this->settings->get("agents.{$agent}", []);
+        $stored = $this->settings->get("agents.{$agent}");
 
-        return is_array($override) ? array_merge($default, $override) : $default;
+        /** @var array{provider?: Lab|string, model?: string, timeout?: int} */
+        return is_array($stored) && $stored !== [] ? $stored : self::DEFAULT;
     }
 
     public function isOverridden(string $agent): bool
@@ -93,11 +102,33 @@ class AgentSettings
     /**
      * @param  array{provider?: Lab|string, model?: string, timeout?: int}  $values
      */
+    /**
+     * Merges into what is already stored rather than replacing it.
+     *
+     * @param  array{provider?: Lab|string, model?: string, timeout?: int}  $values
+     *
+     * Changing only the model must not silently drop the timeout: a thinking
+     * model on the 60s HTTP default dies, which is how the first real profile
+     * derivation was lost at 69 seconds. The merge used to happen on READ,
+     * against a config file; now the stored row is the only source, so it
+     * happens on write.
+     */
     public function save(string $agent, array $values): void
     {
-        $this->settings->set("agents.{$agent}", array_filter($values));
+        $this->settings->set("agents.{$agent}", array_merge($this->for($agent), array_filter($values)));
     }
 
+    /**
+     * Drops the row, so the agent falls back to `self::DEFAULT`.
+     *
+     * Note what this does NOT do: restore whatever the install originally
+     * shipped with. Those values were written by a migration and the migration
+     * is not a lookup table — keeping a second copy of them in code to support
+     * this one command would recreate exactly the config-shadows-database
+     * duplication that was just removed. Reset lands on the conservative
+     * default, the command prints what it landed on, and an operator who wants
+     * something else sets it explicitly.
+     */
     public function reset(string $agent): void
     {
         $this->settings->forget("agents.{$agent}");

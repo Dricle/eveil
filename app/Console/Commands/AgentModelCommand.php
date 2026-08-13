@@ -21,7 +21,7 @@ class AgentModelCommand extends Command
                                               {--model= : Model id to use}
                                               {--provider= : Provider name, defaults to anthropic}
                                               {--timeout= : Seconds before the call is abandoned}
-                                              {--reset : Drop the override and fall back to the shipped default}';
+                                              {--reset : Drop the stored mapping and fall back to the conservative default}';
 
     protected $description = 'Show or change which model each agent runs on';
 
@@ -31,7 +31,7 @@ class AgentModelCommand extends Command
 
         if ($agent === null) {
             $this->table(
-                ['agent', 'provider', 'model', 'timeout', 'source', 'spent', 'calls'],
+                ['agent', 'provider', 'model', 'timeout', 'source', 'tokens in / out', 'calls'],
                 collect($agents->known())->map(fn (string $slug): array => $this->row($slug, $agents))->all(),
             );
 
@@ -46,7 +46,7 @@ class AgentModelCommand extends Command
 
         if ($this->option('reset')) {
             $agents->reset($agent);
-            $this->components->info("{$agent} is back on the shipped default.");
+            $this->components->info("{$agent} dropped back to the default mapping.");
 
             return self::SUCCESS;
         }
@@ -90,7 +90,7 @@ class AgentModelCommand extends Command
             $agents->model($agent) ?? '<fg=gray>provider default</>',
             (string) $agents->timeout($agent),
             $agents->isOverridden($agent) ? '<fg=cyan>database</>' : 'default',
-            '$'.number_format((float) (clone $runs)->sum('cost'), 4),
+            number_format((float) (clone $runs)->sum('tokens_in')).' / '.number_format((float) (clone $runs)->sum('tokens_out')),
             (string) (clone $runs)->count(),
         ];
     }

@@ -150,7 +150,7 @@ The first version filed job boards, marketplaces, delivery platforms and code ho
 
 Relevance is `CompanyTargetEvaluation`'s job, per profile. A restaurant profile that harvests Indeed gets companies scored near zero — mildly wasteful, never wrong. That asymmetry is deliberate and matches the prompt's tie-breaker: harvesting a single company costs one page, discarding a real directory loses every business on it.
 
-What survives in `HostRegistry::FLOOR` is only what is structurally neither a company nor a list of companies for anybody: search engines, encyclopaedias, forums, and the social platforms — the last of which are structurally indexes but blocked and forbidden by their terms, so the kind is moot.
+What is structurally neither a company nor a list of companies for anybody — search engines, encyclopaedias, forums, and the social platforms — lives as LOCKED rows in `known_hosts`, seeded by `KnownHostSeeder`. The social ones are there for a different reason than the rest: structurally they do list organisations, but automated access is blocked and their terms forbid it, so the kind is moot.
 
 **The fourth case is called `other`, not `noise`.** It states what a host is not; it never claims the host is worthless. A forum thread naming the best plumbers in a city, or an article listing five companies that just raised, are real leads on a host that is not itself a directory. We drop them today only because we classify HOSTS and harvest HOSTS — a page-level pass over `other` results that ranked for a targeted query is the obvious later move, and naming the case `noise` would have quietly argued against ever building it.
 
@@ -189,4 +189,49 @@ Shape when it is built, so the decision is not re-litigated:
 - **The sidecar is the primary, a hosted API is the alternative** — never the reverse. ADR-006 says discovery works self-hosted without subscribing to anything, so a third-party renderer can never be the only path. `browserless/chromium` as an OPTIONAL compose profile, off by default: ~1 GB image, 200-500 MB per page context, 2-5 s per page against ~200 ms. On a small VPS that is the whole machine, so a self-hoster opts in.
 - Cloudflare Browser Rendering, ScrapingBee or Zyte fit the same seam as a driver for operators who would rather pay than run Chromium. Optional, keyed, never assumed.
 - Do not build the interface before the second implementation exists.
+
+## Path keywords are learned, and there is no list anywhere
+Settled 2026-08-13, in two passes. `FindContacts::CONTACT_PATHS` was a const covering four languages, silently missing `/contacto`, `/chi-siamo`, `/om-oss`, `/kontakty` and every market nobody had thought of. Moving it into a seeder was the same list in a different file, so that went too.
+
+**`path_hints` starts EMPTY.** The first site asks `ContactPageFinder`, `learn()` writes the answer back, and within a handful of sites the common words are all there. A cold start costs a few tenths of a cent, once, for the whole instance — instance-wide for the same reason as `known_hosts`: which word a site puts in the URL of its contact page is a fact about the web, not about a customer.
+
+Full lifecycle, no curation required:
+- **create** — the model picks links; `learn()` stores the last meaningful segment, so `/nl/over-ons` teaches `over-ons` and not a path that only ever matches one site. Under four characters, numeric, or a file extension teaches nothing and is skipped.
+- **rank** — `matched`/`hits`, so what keeps working is tried first.
+- **retire** — `review()` deletes a fragment whose pages keep not delivering.
+
+**The ratio is also the guard against an over-generic fragment**, which is the real hazard of learning: a model that answers `/informations` once writes a token that then selects a page on half the sites on the instance, forever. There is deliberately NO stop-list of banned words — that would be another hardcoded list. A fragment that is too generic simply fails to deliver and the ratio catches it. Judged only after 8 attempts, because a good fragment can start badly, and never on a locked row.
+
+Resolution walks the label chain: `fr.wikipedia.org` answers from the `wikipedia.org` row and `nl.pagesdor.be` from `pagesdor.be`, stopping at two labels. That replaced the old substring match and closes the gap noted earlier, where a directory would have been judged once per language subdomain. Wrong for `co.uk`-style suffixes, but only if somebody creates a row for one, and the alternative is a public-suffix dependency for a case that has not come up.
+
+`ContactPageFinder` reads the markdown link list, which is why `HtmlText` emits markdown: `[Chi siamo](/chi-siamo)` carries the LABEL as well as the path, and the label is what makes an unfamiliar path readable.
+
+The bootstrap problem that rules out learning from success alone: you only fetch what already matches, so you can never learn a word you have never seen. The model call breaks that loop and only fires on a miss.
+
+`PathHintKind::Product` exists but nothing records against it — `SiteCrawler::PRIORITY_PATHS` is still a const, because "did this page improve the knowledge base?" has no crisp per-page signal the way "did this page contain an email?" does. Wire it when there is something honest to count.
+
+### Lists still hardcoded, and what to do with each
+- `SiteCrawler::PRIORITY_PATHS` — should become `PathHintKind::Product`, blocked on the reward signal above.
+- ~~`HostRegistry::FLOOR`~~ — **done 2026-08-13.** Locked rows in `known_hosts` now. A hardcoded list shadowing a table is that table minus the ability to edit it. Losing the zero-query answer cost one `whereIn` per search, which replaced the several individual lookups it sat in front of. Degrades safely if seeding is skipped: the model is asked about facebook.com once and reaches the same answer for a fraction of a cent.
+- `KnownHostSeeder` — defensible as-is: unlike path hints, its cold start is the cloud-versus-self-hosted argument, and a wrong host verdict is expensive rather than a fraction of a cent.
+- `JsonLd::NOT_A_BUSINESS`, `FindContacts::COMMON_LOCAL_PARTS` — leave. Schema.org type names and `info@`/`contact@` are not language- or market-dependent in the way a URL path is.
+
+## Closed-world lists: the audit, and what each one needed
+Clément's review 2026-08-13 found `CONTACT_PATHS` and read it as a symptom rather than a defect — code that enumerates a closed set of facts about an open world will be wrong, because you cannot predict every domain, language or market. Auditing every list in `app/` against that test found ten, and the two worst were not in discovery at all but in **verification, where being wrong means a bad send**.
+
+**Fine as they are** — these enumerate sets a spec or we define, not the world: `HtmlText::SKIP`/`BLOCK`/`HEADINGS` (HTML tag names), `Url`'s http/https, `AgentSettings::DEFAULT`, the enums.
+
+**Fixed:**
+- **`EmailPattern`'s eight shapes → a grammar.** It matched `first.last`, `flast` and six others one by one, and silently failed on `first-last`, `last-first`, `f_last`, `firstl`. A missed shape is not a quiet miss: `detect()` returns null, the site's real convention is lost, and the fallback guesses one that BOUNCES. Now the shapes are generated from the name's pieces (`first`, `last`, `f`, `l`) crossed with separators (`.`, `_`, `-`, none), so a convention nobody wrote down is recognised the first time it appears. Full names beat initials when both fit, and two bare initials (`md@`) are refused — they identify nobody, so inferring anyone else's address from them produces bounces.
+- **`EmailVerifier::DISPOSABLE`'s twelve domains → a maintained dataset.** There are 8 201 and new ones weekly. This one was wrong the day it was written: a throwaway domain has working MX and passes every other check, so each miss was an address marked valid and sent to. NOT learnable — you would have to send to a throwaway to find out — so it is treated as what it is, a public dataset: bundled at `database/data/disposable-email-domains.txt` so a fresh install needs no network, refreshed by `eveil:refresh-disposable`, stored on the `toxic` suppression layer, which already meant "instance-wide, fed only by public lists and our own detection". `replaceWith()` is transactional and the command refuses a response under 1 000 domains, because a half-applied refresh silently starts accepting what it used to reject.
+
+**Also fixed — `EmailVerifier::PROBE_REFUSERS` → `mail_hosts`.** Nine provider names, missing Proton, Zoho, Fastmail, GMX, OVH, Infomaniak and every corporate Exchange. Correction to the original ranking: a miss here was NOT a wrong answer. Without the shortcut we probe, get nothing, and return `unknown` — the same verdict, five seconds later. It is a speed guard, and it was over-ranked at first.
+
+Learned free, because the refusal is the signal. Keyed on the MX HOST with parent-domain fallback, which is where the leverage is: one `google.com` row covers every customer domain Google hosts. Marked refusing after 3 conversations that all ended without a verdict — one silence is greylisting, two is bad luck.
+
+**The hazard that shaped the design: port 25 is blocked on most hosting.** If a failed connection counted as a refusal, the first run on such a box would mark every mail provider on earth as one, and then never probe again, anywhere. So `ProbeOutcome` separates `Unreachable` (never got a conversation — says nothing about the server, discard) from `NoVerdict` (talked, and it would not say — that is about the server). Only the latter is recorded. The seeded certainties are locked, so observation never moves them.
+
+**Still open, in order:**
+- `FindContacts::COMMON_LOCAL_PARTS`, `SiteCrawler::PRIORITY_PATHS`, the crawler's dead-end paths — all language-bound, all the `PathHints` case, already-built mechanism waiting to be wired.
+- `JsonLd::NOT_A_BUSINESS` — leave. It is a denylist with a fallback (a node still needs a name plus a contact detail), so a miss lets noise through that qualification filters, rather than dropping a real company.
 

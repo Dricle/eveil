@@ -2,6 +2,7 @@
 
 use App\Models\CrawledPage;
 use App\Services\Discovery\SiteCrawler;
+use App\Support\Settings;
 use Illuminate\Support\Facades\Http;
 
 function html(string $body, string $lang = 'fr'): string
@@ -10,7 +11,7 @@ function html(string $body, string $lang = 'fr'): string
 }
 
 beforeEach(function () {
-    config()->set('eveil.crawl.delay_ms', 0);
+    app(Settings::class)->set('crawl.delay_ms', 0);
 });
 
 it('reads the homepage and follows the pages that carry product information', function () {

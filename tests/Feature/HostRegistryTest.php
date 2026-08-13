@@ -51,6 +51,10 @@ it('never asks twice about the same host, in any project', function () {
 });
 
 it('answers for the certainties without spending a token', function () {
+    // These used to be a const inside HostRegistry, consulted before the table.
+    // A hardcoded list shadowing a table is that table minus the ability to
+    // edit it, so they are locked rows now.
+    $this->seed(KnownHostSeeder::class);
     ResultTriage::fake()->preventStrayPrompts();
 
     $verdicts = classify([
@@ -60,12 +64,29 @@ it('answers for the certainties without spending a token', function () {
     ]);
 
     expect($verdicts['facebook.com'])->toBe(HostKind::Social)
-        // Keyed on the host as it appeared, and the floor matches on a
-        // substring — so a language subdomain is caught without its own entry.
+        // Answered from the `wikipedia.org` row: a language subdomain resolves
+        // through its parent domain, so a site is not judged once per locale.
         ->and($verdicts['fr.wikipedia.org'])->toBe(HostKind::Other)
-        ->and($verdicts['google.com'])->toBe(HostKind::Other)
-        // The floor is not a cache — nothing is written for it.
-        ->and(KnownHost::count())->toBe(0);
+        ->and($verdicts['google.com'])->toBe(HostKind::Other);
+});
+
+it('resolves a subdomain through its parent domain', function () {
+    KnownHost::factory()->index()->create(['host' => 'pagesdor.be']);
+    ResultTriage::fake()->preventStrayPrompts();
+
+    expect(classify(['https://nl.pagesdor.be/frituren'])['nl.pagesdor.be'])->toBe(HostKind::Index);
+});
+
+it('locks the certainties so no model ever overwrites one', function () {
+    $this->seed(KnownHostSeeder::class);
+
+    $facebook = KnownHost::query()->firstWhere('host', 'facebook.com');
+
+    expect($facebook->is_locked)->toBeTrue()
+        // Locked means authoritative forever: no expiry, no re-judging.
+        ->and($facebook->isAuthoritative())->toBeTrue()
+        // The learned rows are NOT locked — a seeded guess is not a decision.
+        ->and(KnownHost::query()->firstWhere('host', 'producthunt.com')->is_locked)->toBeFalse();
 });
 
 it('leaves a host to the model when its kind depends on nothing but structure', function () {

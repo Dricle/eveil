@@ -3,6 +3,10 @@
 namespace App\Services\Discovery;
 
 use App\Enums\EmailStatus;
+use App\Enums\ProbeOutcome;
+use App\Models\MailHost;
+use App\Support\DisposableDomains;
+use App\Support\Settings;
 use Throwable;
 
 /**
@@ -22,23 +26,16 @@ use Throwable;
  */
 class EmailVerifier
 {
-    /** Providers that refuse probes wholesale. Asking is a waste of seconds. */
-    private const PROBE_REFUSERS = [
-        'google.com', 'googlemail.com', 'gmail.com', 'outlook.com', 'hotmail.com',
-        'office365.com', 'protection.outlook.com', 'yahoo.com', 'icloud.com',
-    ];
-
-    private const DISPOSABLE = [
-        'mailinator.com', 'yopmail.com', 'guerrillamail.com', '10minutemail.com',
-        'temp-mail.org', 'trashmail.com', 'sharklasers.com', 'getnada.com',
-        'throwawaymail.com', 'maildrop.cc', 'jetable.org', 'tempmail.com',
-    ];
+    public function __construct(private Settings $settings, private DisposableDomains $disposable) {}
 
     /** @var array<string, array<int, string>|null> domain => MX hosts */
     private array $mxCache = [];
 
     /** @var array<string, bool> domain => accepts anything */
     private array $catchAllCache = [];
+
+    /** @var array<string, MailHost|null> mx host => what we know about it */
+    private array $mailHostCache = [];
 
     public function verify(string $email): EmailStatus
     {
@@ -50,7 +47,11 @@ class EmailVerifier
 
         $domain = mb_strtolower((string) mb_substr(strrchr($email, '@') ?: '', 1));
 
-        if ($domain === '' || in_array($domain, self::DISPOSABLE, true)) {
+        // A throwaway domain has working MX and passes every other check we
+        // make, so this is the only thing standing between us and sending to
+        // one. Twelve of them used to be listed here; there are north of eight
+        // thousand, maintained upstream and loaded into the toxic layer.
+        if ($domain === '' || $this->disposable->includes($domain)) {
             return EmailStatus::Invalid;
         }
 
@@ -66,7 +67,7 @@ class EmailVerifier
             return EmailStatus::Unknown;
         }
 
-        if (! (bool) config('eveil.verification.probe')) {
+        if (! (bool) $this->settings->bool('verification.probe')) {
             return EmailStatus::Unknown;
         }
 
@@ -75,10 +76,14 @@ class EmailVerifier
             return EmailStatus::Risky;
         }
 
-        return match ($this->probe($hosts[0], $email)) {
-            true => EmailStatus::Valid,
-            false => EmailStatus::Invalid,
-            null => EmailStatus::Unknown,
+        $outcome = $this->probe($hosts[0], $email);
+
+        $this->remember($hosts[0], $outcome);
+
+        return match ($outcome) {
+            ProbeOutcome::Accepted => EmailStatus::Valid,
+            ProbeOutcome::Rejected => EmailStatus::Invalid,
+            default => EmailStatus::Unknown,
         };
     }
 
@@ -105,19 +110,95 @@ class EmailVerifier
     }
 
     /**
+     * Whether talking to these servers is known to be a waste of the timeout.
+     *
+     * Nine provider names used to be hardcoded here — no Proton, Zoho,
+     * Fastmail, GMX, OVH, Infomaniak, nor any corporate Exchange. They are
+     * learned now, which costs nothing: a server that will not answer announces
+     * itself the first time we ask.
+     *
      * @param  array<int, string>  $hosts
      */
     private function refusesProbes(array $hosts): bool
     {
         foreach ($hosts as $host) {
-            foreach (self::PROBE_REFUSERS as $refuser) {
-                if (str_contains(mb_strtolower($host), $refuser)) {
-                    return true;
-                }
+            $known = $this->mailHost($host);
+
+            if ($known?->refusesProbes() === true) {
+                return true;
             }
         }
 
         return false;
+    }
+
+    /**
+     * Resolves an MX host against what we know, falling back to its parent
+     * domain: `alt1.aspmx.l.google.com` answers from the `google.com` row.
+     *
+     * That fallback is where the leverage is. A provider serves thousands of
+     * customer domains, so one row learned covers all of them.
+     */
+    private function mailHost(string $host): ?MailHost
+    {
+        $host = mb_strtolower(rtrim($host, '.'));
+
+        if (array_key_exists($host, $this->mailHostCache)) {
+            return $this->mailHostCache[$host];
+        }
+
+        $labels = explode('.', $host);
+        $chain = [];
+
+        while (count($labels) >= 2) {
+            $chain[] = implode('.', $labels);
+            array_shift($labels);
+        }
+
+        $rows = MailHost::query()->whereIn('host', $chain)->get()->keyBy('host');
+
+        foreach ($chain as $candidate) {
+            if ($rows->has($candidate)) {
+                return $this->mailHostCache[$host] = $rows->get($candidate);
+            }
+        }
+
+        return $this->mailHostCache[$host] = null;
+    }
+
+    /**
+     * Records how a conversation went, so the next domain on this provider does
+     * not repeat it.
+     *
+     * Only a conversation teaches anything. `Unreachable` is discarded on
+     * purpose: port 25 is blocked on most hosting, and counting that as a
+     * refusal would have the first run on such a box mark every mail provider
+     * on earth as one — and then never probe again, anywhere.
+     */
+    private function remember(string $host, ProbeOutcome $outcome): void
+    {
+        if (! $outcome->isEvidence()) {
+            return;
+        }
+
+        $host = mb_strtolower(rtrim($host, '.'));
+        $known = $this->mailHost($host);
+
+        // A row a human set, or a shipped certainty, is never moved by what we
+        // happen to observe.
+        if ($known?->is_locked === true) {
+            return;
+        }
+
+        $row = MailHost::query()->firstOrNew(['host' => $host]);
+
+        $row->fill([
+            'attempts' => $row->attempts + 1,
+            'refusals' => $row->refusals + ($outcome->isVerdict() ? 0 : 1),
+            'last_seen_at' => now(),
+        ])->save();
+
+        unset($this->mailHostCache[$host]);
     }
 
     private function acceptsAnything(string $domain, string $host): bool
@@ -125,30 +206,30 @@ class EmailVerifier
         return $this->catchAllCache[$domain] ??= $this->probe(
             $host,
             'eveil-catch-all-probe-'.bin2hex(random_bytes(6)).'@'.$domain,
-        ) === true;
+        ) === ProbeOutcome::Accepted;
     }
 
     /**
      * Opens an SMTP conversation and stops at RCPT TO — nothing is ever sent.
-     *
-     * @return bool|null null when the server would not tell us
      */
-    private function probe(string $host, string $email): ?bool
+    private function probe(string $host, string $email): ProbeOutcome
     {
-        $timeout = (int) config('eveil.verification.timeout');
+        $timeout = $this->settings->int('verification.timeout');
         $from = (string) config('eveil.verification.probe_from');
 
         $socket = @fsockopen($host, 25, $errno, $errstr, $timeout);
 
+        // Never reached the server, so this says nothing about it — most
+        // likely port 25 is blocked on our side.
         if ($socket === false) {
-            return null;
+            return ProbeOutcome::Unreachable;
         }
 
         stream_set_timeout($socket, $timeout);
 
         try {
             if (! $this->expect($socket, '220')) {
-                return null;
+                return ProbeOutcome::Unreachable;
             }
 
             $domain = mb_substr(strrchr($from, '@') ?: '@localhost', 1);
@@ -159,21 +240,21 @@ class EmailVerifier
             fwrite($socket, "MAIL FROM:<{$from}>\r\n");
 
             if (! $this->expect($socket, '250')) {
-                return null;
+                return ProbeOutcome::NoVerdict;
             }
 
             fwrite($socket, "RCPT TO:<{$email}>\r\n");
             $reply = $this->read($socket);
 
             return match (true) {
-                str_starts_with($reply, '250'), str_starts_with($reply, '251') => true,
+                str_starts_with($reply, '250'), str_starts_with($reply, '251') => ProbeOutcome::Accepted,
                 str_starts_with($reply, '550'), str_starts_with($reply, '551'),
-                str_starts_with($reply, '553') => false,
+                str_starts_with($reply, '553') => ProbeOutcome::Rejected,
                 // 4xx is "not now": greylisting, throttling. Never a verdict.
-                default => null,
+                default => ProbeOutcome::NoVerdict,
             };
         } catch (Throwable) {
-            return null;
+            return ProbeOutcome::NoVerdict;
         } finally {
             @fwrite($socket, "QUIT\r\n");
             @fclose($socket);

@@ -148,7 +148,7 @@ class AnalyzeCommand extends Command
             $this->newLine();
             $this->components->twoColumnDetail(
                 "<fg=gray>{$run->model}</>",
-                sprintf('%d in / %d out · $%s · %dms', $run->tokens_in, $run->tokens_out, $run->cost, $run->duration_ms ?? 0),
+                sprintf('%d in / %d out · %dms', $run->tokens_in, $run->tokens_out, $run->duration_ms ?? 0),
             );
         }
     }

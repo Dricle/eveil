@@ -88,3 +88,16 @@ Settled 2026-08-13. `DiscoverySourceInterface`, not `DiscoverySource`. The suffi
 
 Applies to interfaces only. Abstract classes keep their plain name (`EveilAgent`), and so do traits. Third-party contracts keep whatever their package calls them — `Laravel\Ai\Contracts\Agent` is imported as-is, never aliased to match our convention.
 
+## The database is the only source for settings; config is deployment only
+Changed 2026-08-13. `config/eveil.php` used to mirror every tunable value as a fallback under the `settings` table. Two places to look, and a merge to reason about on every read. It now holds ONLY what an env file sets and no screen should: service URLs, HTTP timeouts, the user agent, the max-bytes safety limit, the SMTP probe's envelope sender.
+
+Everything that is a product decision — per-agent model mapping, pricing, discovery budgets, crawl limits, verification toggles, host-registry TTL — lives in `settings`, seeded by `2026_08_11_100006_seed_default_settings`, read through `App\Support\Settings`.
+
+- **A migration, not a seeder.** Seeders are optional and a forgotten one leaves the app with no values: zero pages crawled, a zero-millisecond politeness delay. That fails silently and looks like a different bug. Migrations always run.
+- **`Settings::int()` / `bool()` / `array()` throw when a key is missing.** Casting null gives 0, and 0 is a plausible-looking catastrophe. A missing setting is a bug and should say so.
+- **Merging moved from read to write.** `AgentSettings::save()` merges into the stored row, so changing only the model does not drop the timeout that keeps a thinking model off the 60s HTTP default.
+- **`--reset` lands on a conservative default, NOT on what the install shipped with.** Restoring the seeded value would mean keeping a second copy of it in code, which is the duplication this removed. The command prints what it landed on.
+- **Path heuristics are not settings.** `CONTACT_PATHS` and `PRIORITY_PATHS` are consts on `FindContacts` and `SiteCrawler`. No operator would tune them, and a screen offering to would be a screen offering to break contact discovery.
+
+Trap worth remembering: `config()->set('eveil.crawl.delay_ms', 0)` in a test is now a silent no-op — the suite still passed, but every fetch slept for real and the run went from 5s to 19s. Test overrides go through `app(Settings::class)->set(...)`.
+

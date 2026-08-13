@@ -21,6 +21,7 @@ use App\Services\Discovery\Sources\OverpassSource;
 use App\Services\Discovery\Sources\WebSearchSource;
 use App\Support\HtmlText;
 use App\Support\ParsedPage;
+use App\Support\Settings;
 use App\Support\Url;
 use Illuminate\Support\Collection;
 use Laravel\Ai\Responses\StructuredAgentResponse;
@@ -50,6 +51,7 @@ class RunDiscovery
         private ListingHarvester $harvester,
         OverpassSource $overpass,
         WebSearchSource $webSearch,
+        private Settings $settings,
     ) {
         $this->sources = [$overpass->name() => $overpass, $webSearch->name() => $webSearch];
     }
@@ -59,7 +61,7 @@ class RunDiscovery
      */
     public function handle(TargetProfile $targetProfile, array $overrides = []): DiscoveryRun
     {
-        $budget = array_merge(config('eveil.discovery'), $overrides);
+        $budget = array_merge($this->settings->array('discovery'), $overrides);
 
         $run = DiscoveryRun::create([
             'project_id' => $targetProfile->project_id,

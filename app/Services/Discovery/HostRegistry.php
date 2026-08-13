@@ -6,6 +6,7 @@ use App\Ai\Agents\ResultTriage;
 use App\Enums\HostKind;
 use App\Models\KnownHost;
 use App\Models\Project;
+use App\Support\Settings;
 use App\Support\Url;
 use Illuminate\Support\Collection;
 use Throwable;
@@ -20,38 +21,16 @@ use Throwable;
  * ever, and `known_hosts` keeps the answer for every future run of every
  * project on the instance.
  *
- * Three layers, cheapest first: the floor below, then the registry, then the
- * model for whatever is left.
+ * Two layers: the registry, then the model for whatever it does not know. The
+ * certainties — search engines, encyclopaedias, the social platforms — used to
+ * be a third layer, a const in this class, until it became obvious that a
+ * hardcoded list shadowing a table IS the table, minus the ability to edit it.
+ * They are locked rows now, seeded by `KnownHostSeeder`, and a superadmin can
+ * change one.
  */
 class HostRegistry
 {
-    /**
-     * The only hosts decided without asking. NOT an attempt to list aggregators
-     * — that is the job the model took over — and NOT a list of things nobody
-     * wants: a verdict here is STRUCTURAL and holds for every possible target
-     * profile.
-     *
-     * That distinction is easy to get wrong and was, at first. Job boards,
-     * marketplaces, delivery platforms and code hosting all looked like noise
-     * until you notice a recruitment agency hunts companies that are hiring,
-     * and a developer-tool ICP lives on code hosting. Those are indexes for
-     * everyone; whether their contents fit a given profile is qualification's
-     * problem, not this table's. What is left here is genuinely never either a
-     * company or a list of companies.
-     */
-    private const FLOOR = [
-        // Structurally lists of organisations, but automated access is blocked
-        // and their terms forbid it, so the kind is moot.
-        HostKind::Social->value => [
-            'facebook.com', 'instagram.com', 'linkedin.com', 'x.com', 'twitter.com',
-            'tiktok.com', 'pinterest.', 'youtube.com', 'snapchat.com', 'threads.net',
-        ],
-        HostKind::Other->value => [
-            'google.', 'bing.com', 'duckduckgo.com', 'search.brave.com', 'ecosia.org',
-            'wikipedia.org', 'wikimedia.org', 'archive.org',
-            'reddit.com', 'quora.com', 'stackoverflow.com',
-        ],
-    ];
+    public function __construct(private Settings $settings) {}
 
     /**
      * @param  Collection<int, string>  $urls
@@ -65,23 +44,17 @@ class HostRegistry
             ->countBy()
             ->all();
 
+        $hosts = array_map(strval(...), array_keys($counts));
+        $known = $this->lookup($hosts);
+
         $verdicts = [];
         $unknown = [];
 
-        foreach (array_keys($counts) as $host) {
-            $host = (string) $host;
-            $floor = $this->floorKind($host);
+        foreach ($hosts as $host) {
+            $row = $known[$host] ?? null;
 
-            if ($floor !== null) {
-                $verdicts[$host] = $floor;
-
-                continue;
-            }
-
-            $known = KnownHost::query()->where('host', $host)->first();
-
-            if ($known !== null && $known->isAuthoritative()) {
-                $verdicts[$host] = $known->kind;
+            if ($row !== null && $row->isAuthoritative()) {
+                $verdicts[$host] = $row->kind;
 
                 continue;
             }
@@ -89,7 +62,7 @@ class HostRegistry
             $unknown[$host] = $counts[$host];
         }
 
-        $batch = max(1, (int) config('eveil.sources.host_registry.batch'));
+        $batch = max(1, $this->settings->int('sources.host_registry.batch'));
 
         foreach (array_chunk($unknown, $batch, true) as $chunk) {
             foreach ($this->ask($chunk, $urls, $project) as $host => $kind) {
@@ -120,17 +93,69 @@ class HostRegistry
         ])->save();
     }
 
-    private function floorKind(string $host): ?HostKind
+    /**
+     * Resolves each host against the registry, falling back to its parent
+     * domain: `fr.wikipedia.org` answers from the `wikipedia.org` row, and
+     * `nl.pagesdor.be` from `pagesdor.be`, so a directory does not have to be
+     * judged once per language subdomain.
+     *
+     * Stops at two labels, which is wrong for `co.uk`-style suffixes but only
+     * matters if somebody creates a row for one — and the alternative is a
+     * public-suffix dependency for a case that has not come up.
+     *
+     * One query for the whole batch. The old floor answered without touching
+     * the database at all; the cost of losing that is a single `whereIn` per
+     * search, against the several individual lookups it replaces.
+     *
+     * @param  array<int, string>  $hosts
+     * @return array<string, KnownHost>
+     */
+    private function lookup(array $hosts): array
     {
-        foreach (self::FLOOR as $kind => $needles) {
-            foreach ($needles as $needle) {
-                if (str_contains($host, $needle)) {
-                    return HostKind::from($kind);
+        $chains = [];
+
+        foreach ($hosts as $host) {
+            foreach ($this->parents($host) as $candidate) {
+                $chains[$host][] = $candidate;
+            }
+        }
+
+        $rows = KnownHost::query()
+            ->whereIn('host', collect($chains)->flatten()->unique()->all())
+            ->get()
+            ->keyBy('host');
+
+        $resolved = [];
+
+        foreach ($chains as $host => $candidates) {
+            foreach ($candidates as $candidate) {
+                if ($rows->has($candidate)) {
+                    $resolved[$host] = $rows->get($candidate);
+
+                    break;
                 }
             }
         }
 
-        return null;
+        return $resolved;
+    }
+
+    /**
+     * The host itself, then each parent domain down to two labels.
+     *
+     * @return array<int, string>
+     */
+    private function parents(string $host): array
+    {
+        $labels = explode('.', $host);
+        $chain = [];
+
+        while (count($labels) >= 2) {
+            $chain[] = implode('.', $labels);
+            array_shift($labels);
+        }
+
+        return $chain;
     }
 
     /**

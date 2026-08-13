@@ -4,6 +4,7 @@ namespace App\Services\Discovery;
 
 use App\Models\CrawledPage;
 use App\Support\HtmlText;
+use App\Support\Settings;
 use App\Support\Url;
 use Illuminate\Support\Facades\Http;
 use Throwable;
@@ -20,7 +21,7 @@ class PageFetcher
     /** @var array<string, int> host => last fetch, in milliseconds */
     private array $lastFetchedAt = [];
 
-    public function __construct(private RobotsPolicy $robots) {}
+    public function __construct(private RobotsPolicy $robots, private Settings $settings) {}
 
     public function fetch(string $url): ?CrawledPage
     {
@@ -74,7 +75,7 @@ class PageFetcher
                 'language' => $parsed->language,
                 'content' => $this->storable($body),
                 'fetched_at' => now(),
-                'expires_at' => now()->addDays((int) config('eveil.crawl.cache_ttl_days')),
+                'expires_at' => now()->addDays($this->settings->int('crawl.cache_ttl_days')),
             ],
         );
     }
@@ -113,7 +114,7 @@ class PageFetcher
     private function throttle(string $url): void
     {
         $host = Url::host($url) ?? '';
-        $delay = (int) config('eveil.crawl.delay_ms');
+        $delay = $this->settings->int('crawl.delay_ms');
         $elapsed = (int) ((microtime(true) * 1000) - ($this->lastFetchedAt[$host] ?? 0));
 
         if (isset($this->lastFetchedAt[$host]) && $elapsed < $delay) {

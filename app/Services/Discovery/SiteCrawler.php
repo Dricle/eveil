@@ -4,6 +4,7 @@ namespace App\Services\Discovery;
 
 use App\Support\HtmlText;
 use App\Support\ParsedPage;
+use App\Support\Settings;
 use App\Support\Url;
 use Illuminate\Support\Collection;
 
@@ -16,14 +17,26 @@ use Illuminate\Support\Collection;
  */
 class SiteCrawler
 {
-    public function __construct(private PageFetcher $fetcher, private HtmlText $html) {}
+    /**
+     * Paths worth reading first. A heuristic rather than a setting — the
+     * homepage rarely says what a product costs or who it is for.
+     */
+    private const PRIORITY_PATHS = [
+        'about', 'a-propos', 'apropos', 'over-ons',
+        'pricing', 'prix', 'tarifs', 'tarieven',
+        'product', 'produit', 'features', 'fonctionnalites', 'solutions',
+        'services', 'customers', 'clients', 'cases', 'use-cases',
+        'contact',
+    ];
+
+    public function __construct(private PageFetcher $fetcher, private HtmlText $html, private Settings $settings) {}
 
     /**
      * @return Collection<int, ParsedPage>
      */
     public function crawl(string $seedUrl, ?int $maxPages = null): Collection
     {
-        $maxPages = $maxPages ?? (int) config('eveil.crawl.max_pages');
+        $maxPages = $maxPages ?? $this->settings->int('crawl.max_pages');
         $seed = Url::normalize($seedUrl);
 
         if ($seed === null) {
@@ -86,10 +99,7 @@ class SiteCrawler
             return 0;
         }
 
-        /** @var array<int, string> $priority */
-        $priority = config('eveil.crawl.priority_paths');
-
-        foreach ($priority as $needle) {
+        foreach (self::PRIORITY_PATHS as $needle) {
             if (str_contains($path, $needle)) {
                 return 10 - (int) min(9, substr_count(trim($path, '/'), '/'));
             }

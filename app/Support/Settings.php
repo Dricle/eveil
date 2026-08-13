@@ -4,14 +4,20 @@ namespace App\Support;
 
 use App\Models\Setting;
 use Illuminate\Support\Facades\Cache;
+use RuntimeException;
 
 /**
- * Instance-scope settings, superadmin-only: the AI provider key, the
- * per-agent provider/model mapping, retention windows.
+ * Instance-scope settings, superadmin-only: the AI provider key, the per-agent
+ * provider/model mapping, crawl and discovery budgets, retention windows.
  *
- * Config files hold the shipped defaults so a fresh install works untouched;
- * the database holds what the operator changed. Every read goes through here so
- * there is exactly one place where that precedence lives.
+ * The database is the ONLY source. There used to be a mirror of every value in
+ * `config/eveil.php` acting as a fallback, which meant two places to look and a
+ * merge to reason about on every read. Defaults are written by a migration, so
+ * they exist before the app can run rather than being layered underneath it.
+ *
+ * `config/eveil.php` keeps only what is genuinely deployment rather than
+ * product: service URLs, HTTP timeouts, the user agent — the things an env file
+ * sets and no screen should.
  */
 class Settings
 {
@@ -44,6 +50,47 @@ class Settings
         );
 
         $this->flush();
+    }
+
+    /**
+     * A missing setting is a bug, not a zero.
+     *
+     * Casting null quietly gives 0 pages crawled or a 0 ms politeness delay:
+     * the run does nothing, or hammers a host, and neither says why. The
+     * defaults ship in a migration precisely so this never fires in a healthy
+     * install — if it does, seeding was skipped.
+     */
+    public function int(string $key): int
+    {
+        return (int) $this->required($key);
+    }
+
+    public function bool(string $key): bool
+    {
+        return (bool) $this->required($key);
+    }
+
+    /**
+     * @return array<mixed>
+     */
+    public function array(string $key): array
+    {
+        $value = $this->required($key);
+
+        return is_array($value) ? $value : [];
+    }
+
+    private function required(string $key): mixed
+    {
+        $value = $this->get($key);
+
+        if ($value === null) {
+            throw new RuntimeException(
+                "Setting [{$key}] is missing. Run `php artisan migrate` — defaults ship as a migration."
+            );
+        }
+
+        return $value;
     }
 
     public function forget(string $key): void

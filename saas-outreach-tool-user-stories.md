@@ -1252,6 +1252,14 @@ recommendations        project_id, key (identité stable), title, rationale, evi
                        decided_at, agent_run_id
                        ← archivée = ne réapparaît jamais (ADR-032)
 
+path_hints             kind: contact|product, token, matched, hits, is_locked
+                       ← les fragments d'URL qui marquent une page à lire. Table VIDE au
+                         départ : aucune liste nulle part, ni en const ni en seeder. Le
+                         premier site interroge le modèle, la réponse est écrite, et en
+                         quelques sites les mots courants y sont — pour toute l'instance.
+                         `matched`/`hits` classe, et supprime ce qui choisit des pages sans
+                         jamais livrer : c'est aussi le garde-fou contre un fragment trop
+                         générique, sans liste de mots interdits
 known_hosts            host (unique), kind: index|entity|social|other, reason,
                        harvest_status: jsonld|llm|blocked|js_only, pages_harvested,
                        businesses_found, is_locked, last_verified_at
@@ -1300,7 +1308,11 @@ messages               campaign_lead_id, direction, email_account_id, message_id
                        ← pas de opened_at : aucun tracking en v0 (ADR-016)
 
 agent_runs             project_id, agent (slug de la classe), status, input, output,
-                       tokens_in, tokens_out, cost, duration, error
+                       tokens_in, tokens_out, duration, error
+                       ← des tokens, jamais des euros : aucun provider ne renvoie de prix, donc
+                         tout montant serait notre propre multiplication par un tarif qui dérive.
+                         Le self-hosted paie son provider et veut des tokens ; le cloud facture en
+                         crédits, calibrés par l'exploitant depuis ces compteurs et sa vraie facture
                        ← les deux éditions (debug + historique)
 
 ── cloud uniquement, app/Cloud/ (ADR-019) ───────────────────────────────────

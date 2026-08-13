@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\HarvestStatus;
 use App\Enums\HostKind;
+use App\Support\Settings;
 use Database\Factories\KnownHostFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -49,7 +50,7 @@ class KnownHost extends Model
     public function isAuthoritative(): bool
     {
         return $this->is_locked
-            || $this->last_verified_at->gt(now()->subDays((int) config('eveil.sources.host_registry.ttl_days')));
+            || $this->last_verified_at->gt(now()->subDays(app(Settings::class)->int('sources.host_registry.ttl_days')));
     }
 
     public function isWorthHarvesting(): bool

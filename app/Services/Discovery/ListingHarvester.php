@@ -53,6 +53,7 @@ class ListingHarvester
         $pages = [];
         $modes = [];
         $seen = [];
+        $textLength = 0;
         $next = Url::normalize($url);
         $stopped = null;
 
@@ -83,6 +84,7 @@ class ListingHarvester
 
             $body = (string) $page->content;
             $pages[] = $next;
+            $textLength += $this->html->parse($body, $next)->length();
 
             [$found, $mode] = $this->extract($body, $next, $project);
             $modes[] = $mode;
@@ -101,7 +103,7 @@ class ListingHarvester
             $next = $this->html->next($body, $next);
         }
 
-        return new Harvest($candidates->take($maxEntities)->values(), $pages, $modes, $stopped);
+        return new Harvest($candidates->take($maxEntities)->values(), $pages, $modes, $stopped, $textLength);
     }
 
     /**

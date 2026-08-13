@@ -1,6 +1,7 @@
 <?php
 
 use App\Ai\Agents\ListingExtractor;
+use App\Enums\HarvestStatus;
 use App\Models\AgentRun;
 use App\Models\Project;
 use App\Services\Discovery\ListingHarvester;
@@ -244,4 +245,25 @@ it('pays for an extraction once, not on every re-run', function () {
     // A second prompt would exhaust the single faked response and blow up.
     expect($again->candidates->pluck('name')->all())->toBe(['Chez Marcel'])
         ->and(AgentRun::count())->toBe(1);
+});
+
+it('tells a shell page apart from a page that simply listed nothing', function () {
+    // The difference decides whether a headless browser is ever worth shipping,
+    // so it must not be guessed from "came back empty".
+    Http::fake([
+        'https://shell.test/list' => Http::response(listingPage('<div id="app"></div>')),
+        'https://empty.test/list' => Http::response(listingPage(
+            '<p>'.str_repeat('Aucun résultat pour cette recherche. ', 40).'</p>'
+        )),
+        '*/robots.txt' => Http::response('', 404),
+    ]);
+
+    ListingExtractor::fake([['businesses' => []], ['businesses' => []]]);
+
+    $project = Project::factory()->create();
+
+    expect(app(ListingHarvester::class)->harvest('https://shell.test/list', $project)->status())
+        ->toBe(HarvestStatus::JsOnly)
+        ->and(app(ListingHarvester::class)->harvest('https://empty.test/list', $project)->status())
+        ->toBe(HarvestStatus::NoListing);
 });

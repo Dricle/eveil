@@ -165,3 +165,28 @@ Corollary for the prompt: nearly every index is also an entity, so `ResultTriage
 
 The pattern to watch for, since it has now happened twice: any time the registry's verdict decides what we DO rather than what a host IS, relevance has leaked back in. The verdict is structural; behaviour is chosen per run, and worth is decided per profile at qualification.
 
+## Headless rendering: deferred on purpose, with the trigger written down
+Noted 2026-08-13, not built. Plain HTTP only remains the rule.
+
+**Measured cases so far: zero.** `resto.be` was not JS-only — the server sent 737 KB and the extractor read 23 businesses out of it. `pagesdor.be` was `blocked`, not unrendered. Nothing yet would have been saved by a browser.
+
+`harvest_status` is now precise enough to make the decision on evidence rather than instinct:
+
+| status | meaning | would a browser help? |
+| --- | --- | --- |
+| `blocked` | nothing fetched | **no** |
+| `js_only` | fetched, under 500 chars of text — a shell | **yes** |
+| `no_listing` | fetched, real text, nothing on it | no |
+| `jsonld` / `llm` | worked | n/a |
+
+**Trigger: revisit at 10 or more hosts sitting on `js_only`.** `KnownHost::where('harvest_status', 'js_only')->count()` is the whole decision. Below that the extractor is reading what servers actually send, and a gigabyte of Chromium buys nothing.
+
+**Rendering does not fix `blocked`, and expecting it to is the expensive mistake here.** Imperva and Cloudflare fingerprint a headless browser too, so a vanilla Playwright is detected almost immediately. Beating that needs stealth plugins and residential proxies — an arms race, a running cost, and aimed at a site that put bot protection in front of its data and `Disallow` in its robots.txt. We respect robots.txt; do not chase this, and say so plainly rather than pretending the capability exists.
+
+Shape when it is built, so the decision is not re-litigated:
+- A renderer **chain** in config, escalating on OUTCOME rather than per-host setting: fetch plain, and only retry through a renderer when the extraction came back `js_only`. `HarvestStatus::needsRendering()` already marks the hook.
+- Write the result back to `known_hosts`, so a host known to need rendering goes straight there next time and never pays the wasted plain fetch again. Same compounding as every other verdict.
+- **The sidecar is the primary, a hosted API is the alternative** — never the reverse. ADR-006 says discovery works self-hosted without subscribing to anything, so a third-party renderer can never be the only path. `browserless/chromium` as an OPTIONAL compose profile, off by default: ~1 GB image, 200-500 MB per page context, 2-5 s per page against ~200 ms. On a small VPS that is the whole machine, so a self-hoster opts in.
+- Cloudflare Browser Rendering, ScrapingBee or Zyte fit the same seam as a driver for operators who would rather pay than run Chromium. Optional, keyed, never assumed.
+- Do not build the interface before the second implementation exists.
+

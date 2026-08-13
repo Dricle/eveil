@@ -13,6 +13,13 @@ use Illuminate\Support\Collection;
 readonly class Harvest
 {
     /**
+     * Below this many characters across every page read, the server sent a
+     * shell rather than a page. Chosen loosely on purpose: a real listing runs
+     * to tens of thousands of characters, so anything near this is not one.
+     */
+    private const READABLE_TEXT = 500;
+
+    /**
      * @param  Collection<int, Candidate>  $candidates
      * @param  array<int, string>  $pages  URLs actually read, in order
      * @param  array<int, string>  $modes  `jsonld` or `llm`, one per page read
@@ -22,6 +29,7 @@ readonly class Harvest
         public array $pages = [],
         public array $modes = [],
         public ?string $stoppedBecause = null,
+        public int $textLength = 0,
     ) {}
 
     public function withoutWebsite(): int
@@ -35,15 +43,31 @@ readonly class Harvest
     }
 
     /**
-     * How the host behaved, for the registry. `Blocked` is the one that matters
-     * — a host that answered nothing readable must never be paid for twice.
+     * How the host behaved, for the registry. `Blocked` is the one that saves
+     * money; `JsOnly` is the one that decides whether a headless renderer is
+     * ever worth adding, so it has to mean what it says.
+     *
+     * Three ways to come back empty and they are NOT the same finding:
+     *   - nothing fetched at all          → blocked
+     *   - fetched, but almost no text     → js_only, the server rendered a shell
+     *   - fetched with real text, no hits → the page was not a listing
+     *
+     * Collapsing the last two would inflate the JS-rendering figure with pages
+     * that read perfectly well and simply had nothing on them, and that figure
+     * is the whole basis for deciding whether to ship a browser.
      */
     public function status(): HarvestStatus
     {
-        if ($this->candidates->isEmpty()) {
-            return $this->pages === [] ? HarvestStatus::Blocked : HarvestStatus::JsOnly;
+        if ($this->candidates->isNotEmpty()) {
+            return $this->usedAgent() ? HarvestStatus::Llm : HarvestStatus::JsonLd;
         }
 
-        return $this->usedAgent() ? HarvestStatus::Llm : HarvestStatus::JsonLd;
+        if ($this->pages === []) {
+            return HarvestStatus::Blocked;
+        }
+
+        return $this->textLength < self::READABLE_TEXT
+            ? HarvestStatus::JsOnly
+            : HarvestStatus::NoListing;
     }
 }

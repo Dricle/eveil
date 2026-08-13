@@ -1365,7 +1365,7 @@ est une story pas faite.
 | 2 — Projets | 🟡 cloisonnement fait et testé, pas de CRUD |
 | 3 — Analyse & knowledge base | 🟡 `eveil:analyze` tourne, rien n'est déclenché automatiquement |
 | 4 — Agent Website | ⬜ table `recommendations` pas encore créée |
-| 5 — Découverte de leads | 🟡 chaîne complète en CLI + récolte d'annuaires ; `target_profiles.type`, le registre et le branchement manquent |
+| 5 — Découverte de leads | 🟡 chaîne complète en CLI, récolte d'annuaires, registre d'hôtes appris ; manquent `target_profiles.type`, l'import CSV, le rendu JS (5.9, reporté) |
 | 6 — Séquences | ⬜ |
 | 7 — Envoi | ⬜ |
 | 8 — Réponses & inbox | ⬜ |
@@ -1554,6 +1554,28 @@ automatiquement.
 - Interface `LeadSource` commune à CSV, scraping et providers
 - Même porte d'entrée pour les registres officiels ouverts — BCE/KBO, SIRENE, Companies House :
   exhaustifs et sans biais SEO, mais sans email, donc ils enrichissent et n'envoient pas (ADR-033)
+
+**5.9** ⬜ `v1` En tant qu'exploitant, je veux lire les annuaires qui ne rendent rien côté serveur.
+*(reporté volontairement le 2026-08-13 — déclencheur écrit, pas encore atteint)*
+- **Cas mesurés à ce jour : zéro.** `resto.be` n'était pas JS-only — le serveur a envoyé 737 Ko et
+  l'extracteur y a lu 23 sociétés ; `pagesdor.be` était `blocked`, pas non-rendu
+- `known_hosts.harvest_status` distingue désormais les quatre issues : `blocked` (rien récupéré),
+  `js_only` (récupéré mais moins de 500 caractères — une coquille), `no_listing` (lu correctement,
+  rien dessus), `jsonld`/`llm` (a marché). Seul `js_only` serait réglé par un navigateur
+- **Déclencheur : 10 hôtes ou plus en `js_only`.** En dessous, un gigaoctet de Chromium n'achète rien
+- **Un navigateur ne règle PAS `blocked`** : Imperva et Cloudflare détectent aussi un headless. Y aller
+  demanderait des plugins furtifs et des proxys résidentiels, contre un site qui a mis une protection
+  devant ses données et `Disallow` dans son robots.txt. On respecte robots.txt — on ne le fera pas, et
+  on le dira plutôt que de laisser croire le contraire
+- Forme retenue : chaîne de renderers en config, **escalade sur le RÉSULTAT** et non par réglage
+  d'hôte — fetch HTTP simple, et on ne réessaie via un renderer que si l'extraction est revenue
+  `js_only`. Le verdict est écrit dans `known_hosts`, donc l'hôte suivant y va directement
+- **Le sidecar est le chemin principal, une API hébergée l'alternative**, jamais l'inverse : ADR-006
+  impose que la découverte tourne en self-hosted sans souscrire à quoi que ce soit. `browserless/chromium`
+  en profil compose **optionnel**, désactivé par défaut — image ~1 Go, 200 à 500 Mo par page, 2 à 5 s
+  par page contre ~200 ms. Sur un petit VPS c'est la machine entière
+- Cloudflare Browser Rendering, ScrapingBee ou Zyte se branchent au même endroit pour qui préfère payer
+  plutôt qu'exploiter Chromium. Optionnel, avec clé, jamais supposé
 
 **5.8** ⬜ En tant qu'utilisateur, je veux une fiche contact centralisée.
 - Historique d'outreach, statut de vérification, activité par campagne, provenance

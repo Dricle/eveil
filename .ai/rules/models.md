@@ -6,8 +6,8 @@ paths:
 
 # Models
 
-## Conventions established 2026-08-11 with the first model layer
-Follow these rather than reinventing per model — 19 models already do.
+## Model layer conventions
+Follow these rather than reinventing per model — every model already does.
 
 - **House style is Laravel 13 attributes**: `#[Fillable([...])]`, `#[Hidden([...])]`, a `casts(): array` method, and a `@property` docblock listing every column. Larastan runs at level 7 and reads those docblocks.
 - **Statuses are PHP backed enums in `app/Enums/`**, cast on the model. The database stores plain strings on purpose (see `.ai/rules/database.md`), so the enum is the only place the allowed values exist. Enum keys are TitleCase.
@@ -27,7 +27,7 @@ Self-hosted single-user still gets an implicit Organization created at setup. On
 Everything project-owned (leads, companies, campaigns, email accounts, agent runs, analyses) carries `project_id` and is scoped by a global scope. Leaking data across projects is the worst bug this app can have.
 
 ## User secrets use CREDENTIALS_KEY, not APP_KEY
-ADR-012, settled 2026-08-10. SMTP/IMAP passwords, the AI provider key and future OAuth tokens are encrypted with a dedicated `CREDENTIALS_KEY` through its own Encrypter and cast — never Laravel's default `encrypted` cast.
+ADR-012. SMTP/IMAP passwords, the AI provider key and future OAuth tokens are encrypted with a dedicated `CREDENTIALS_KEY` through its own Encrypter and cast — never Laravel's default `encrypted` cast.
 
 Why: APP_KEY also encrypts cookies and sessions and should be rotated after a leak. Coupled to credentials, rotating it would destroy every email account on the instance, so nobody ever would.
 
@@ -39,7 +39,7 @@ Required around it:
 Never log a decrypted secret, never send one back to the frontend — write-only from the UI's point of view.
 
 ## Retention: automatic purge with CNIL-based defaults
-ADR-018, settled 2026-08-10. Configurable in settings but with an enforced floor — these must never be settable to infinity.
+ADR-018. Configurable in settings but with an enforced floor — these must never be settable to infinity.
 
 Defaults: contacted lead 3 years after last contact (CNIL commercial-prospecting reference); discovered-but-never-contacted lead 6 months (no commercial relationship to justify); `agent_runs` input/output payloads 90 days; `agent_runs` metrics (tokens, cost, duration, status) kept indefinitely for billing; crawled page cache short TTL.
 
@@ -48,7 +48,7 @@ Two mandatory mechanisms:
 - **Split `agent_runs`.** Raw payloads carry names and emails; purge or anonymise them early while metrics survive. Purging leads while keeping runs forever would leave the personal data sitting in the billing meter.
 
 ## Export: CSV in v0, portable archive before cloud launch
-ADR-028, settled 2026-08-11. v0 ships a CSV export of leads and companies (one day of work, useful regardless). A full re-importable JSON archive of a project lands before the cloud opens — both editions run the same code and schema (ADR-025), so it is subtree serialisation, not format conversion, which makes cloud → self-hosted migration genuinely deliverable unlike any SaaS competitor.
+ADR-028. v0 ships a CSV export of leads and companies (one day of work, useful regardless). A full re-importable JSON archive of a project lands before the cloud opens — both editions run the same code and schema (ADR-025), so it is subtree serialisation, not format conversion, which makes cloud → self-hosted migration genuinely deliverable unlike any SaaS competitor.
 
 Two absolute rules on every export, whatever the format:
 - NEVER include secrets. SMTP/IMAP passwords and the provider key are excluded — a dump containing them becomes a leak vector the moment it sits in a downloads folder.
@@ -57,7 +57,7 @@ Two absolute rules on every export, whatever the format:
 In cloud, export stays gated behind a first payment (ADR-024) — otherwise the trial grant becomes a free file-extraction machine.
 
 ## Erasure lives on the lead, not in a tombstone table
-Changed 2026-08-12. There was an `erasures` table holding `organization_id + sha256(email)`. It is gone: `leads` carries `email_hash` and `erased_at`, and `Lead::erase()` does the work.
+`leads` carries `email_hash` and `erased_at`, and `Lead::erase()` does the work. There is no separate erasure table — do not add one.
 
 Why not a soft delete, which is the obvious first idea: `deleted_at` hides a row that still holds the name, the address and the LinkedIn URL. That is retention with a flag on it — the opposite of what an erasure request asks for.
 
@@ -73,7 +73,7 @@ Three things that are easy to get wrong here:
 Scope is the project, because the row is: two projects can find the same person and only one of them may have been asked to forget her. An organization-wide erasure is that operation repeated per project, not a different data shape. Note the trade-off — over-deleting is never a compliance problem and under-deleting is, so if a request is ambiguous, sweep every project.
 
 ## A project has repositories, plural
-Changed 2026-08-13. `projects.github_repo` was a single nullable string, and nothing ever read it. It is now `code_repositories` — `project_id`, `url`, `name`, unique on `(project_id, url)`.
+Repositories live in `code_repositories` — `project_id`, `url`, `name`, unique on `(project_id, url)` — never as a column on `projects`.
 
 One column cannot describe a product built from a front end and an API, which is the normal shape. It also cannot describe a mobile app plus its backend, or a monorepo alongside a docs site.
 
@@ -81,5 +81,5 @@ Two naming decisions worth keeping:
 - **`CodeRepository`, not `Repository`.** `app/Models/Repository.php` reads as the repository pattern to anyone opening the file.
 - **Not `github_repositories`, and no `provider` column.** The same product self-hosts on GitLab or Gitea, and the provider is already in the URL — `CodeRepository::provider()` returns the host.
 
-`project_analyses` gained `code_repository_id`, nullable, null for a website analysis. That link is the real reason this had to be a table rather than a JSON array: with several repositories per project, `type = repo` no longer says WHICH one a run read, so the analysis history would be unreadable.
+`project_analyses` carries `code_repository_id`, nullable, null for a website analysis. That link is the real reason this is a table rather than a JSON array: with several repositories per project, `type = repo` no longer says WHICH one a run read, so the analysis history would be unreadable.
 

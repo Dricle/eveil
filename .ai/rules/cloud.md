@@ -6,7 +6,7 @@ paths:
 # Cloud
 
 ## AI credits: cloud only, priced per unit of work
-ADR-019, settled 2026-08-11.
+ADR-019.
 
 Self-hosted: the superadmin supplies their own API key. NO credit tracking, NO billing, no counting code at all. `agent_runs` still exists there for debug and history — the ledger does not.
 
@@ -22,7 +22,7 @@ Implementation rules:
 - A run aborted by our own error is not billed; a run the user interrupts bills the work actually produced.
 
 ## Cloud pricing: credits only, 3x markup, guarded trial
-ADR-024, settled 2026-08-11. Credits are the only cloud model — no bring-your-own-key tier. Anyone who wants to supply their own key runs the self-hosted edition, which is free and built for it.
+ADR-024. Credits are the only cloud model — no bring-your-own-key tier. Anyone who wants to supply their own key runs the self-hosted edition, which is free and built for it.
 
 Calibration: 1000 credits = $1 real cost; a 100-lead campaign = 3500 credits ≈ €3.50. Target margin 3× → ~€0.10 per qualified lead, enrichment and sequencing included (cheaper than Apollo, which is $0.05–0.15 per exported contact, for more product).
 
@@ -37,7 +37,7 @@ The trial grant is a REAL abuse vector: this product is an email-extraction mach
 Expiry: subscription credits expire at period end, purchased packs last 12 months. Without expiry you accrue a liability of unspent credits bought at old rates.
 
 ## Cloud is born smart; self-hosted starts cold. That is a selling point, not a limit
-Noted 2026-08-13. `known_hosts`, `crawled_pages` and the listing-extraction cache are shared instance-wide. In cloud that means ONE registry fed by every customer: someone prospecting restaurants pays a model to work out that a national directory is an index, and the next customer prospecting bakeries gets it free. A cloud account is useful from the first run in a way a fresh self-hosted install cannot be, because the self-hosted install has nobody else's learnings.
+`known_hosts`, `crawled_pages` and the listing-extraction cache are shared instance-wide. In cloud that means ONE registry fed by every customer: someone prospecting restaurants pays a model to work out that a national directory is an index, and the next customer prospecting bakeries gets it free. A cloud account is useful from the first run in a way a fresh self-hosted install cannot be, because the self-hosted install has nobody else's learnings.
 
 **This is a legitimate commercial argument and it must stay an emergent one.** Self-hosted ships the identical code and the identical seed registry — nothing is withheld, no cap, no crippled path. It simply has a smaller population feeding it. The moment someone "improves" this by shipping a thinner seed to self-hosted, it becomes an artificial limit and breaks the core-stays-free promise. Do not.
 

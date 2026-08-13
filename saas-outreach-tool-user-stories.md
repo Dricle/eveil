@@ -1,8 +1,7 @@
 # Eveil — spécification produit
 
 > Outil marketing/sales piloté par IA, multi-projet, en édition self-hosted gratuite et cloud payante.
-> Dernière révision : 2026-08-10 (brainstorm Clément + Claude).
-> Sources : lemlist.com, github.com/moaljumaa/linki, braindump Clément du 2026-08-09.
+> Sources : lemlist.com, github.com/moaljumaa/linki.
 
 ---
 
@@ -82,7 +81,7 @@ source lemlist alternative »). Open sourcé en mars 2026, LinkedIn-first (le re
 « Self-hosted LinkedIn outreach automation tool »), il pilote un vrai navigateur Chrome, avec un
 ciblage manuel.
 
-**Testé par Clément le 2026-08-10 : le produit ne tient pas.** L'évaluation est qu'il s'agit d'un
+**Testé : le produit ne tient pas.** L'évaluation est qu'il s'agit d'un
 véhicule d'acquisition pour l'hébergement managé Opsily plus que d'un produit autonome. Conclusion
 pratique : le slot est revendiqué mais **pas occupé**. Il reste à prendre.
 
@@ -200,12 +199,10 @@ Login serveur + relais 2FA + empreinte navigateur stable + proxy par compte = un
 par utilisateur. C'est un produit à lui seul. Quand ça arrivera, ce sera dans son propre container,
 optionnel.
 Risque assumé par ailleurs : automatiser LinkedIn viole ses CGU (risque de ban du compte utilisateur).
-Décision de Clément le 2026-08-09 : on l'inclura quand même, même risque que Linki.
+Décision : on l'inclura quand même, même risque que Linki.
 
 ### ADR-009 — L'autonomie est un réglage à trois crans, par projet
-> *Interprétation de la validation de Clément le 2026-08-10 : les trois niveaux sont implémentés comme
-> un réglage, pas comme un choix unique figé dans le produit. À corriger si l'intention était de n'en
-> retenir qu'un.*
+> *Les trois niveaux sont un réglage, pas un choix unique figé dans le produit.*
 
 | Cran | Comportement | Pour qui |
 |---|---|---|
@@ -230,7 +227,7 @@ Le cran autonome ne désactive pas ces gardes-fous. Il ne supprime que les point
 ---
 
 ### ADR-010 — PostgreSQL partout, tests inclus
-*(résout A1, tranché le 2026-08-10)*
+*(résout A1)*
 
 PostgreSQL est le seul moteur supporté, en dev, en test, en CI et en prod. Pas de SQLite, même pour
 la suite de tests.
@@ -252,7 +249,7 @@ sur Postgres ; le `composer setup` doit échouer clairement si aucun Postgres n'
 que de retomber silencieusement sur SQLite.
 
 ### ADR-011 — Redis + Horizon pour la queue, le cache et les locks
-*(résout A2, tranché le 2026-08-10)*
+*(résout A2)*
 
 Redis rejoint le docker compose (6 services : app, worker, scheduler, Postgres, SearXNG, Redis).
 Horizon pilote les workers.
@@ -285,7 +282,7 @@ dashboard Horizon est réservé au superadmin ; le compose doit démarrer Horizo
 nu.
 
 ### ADR-012 — Clé de chiffrement dédiée aux credentials
-*(résout A3, tranché le 2026-08-10)*
+*(résout A3)*
 
 Les secrets utilisateurs — mots de passe SMTP/IMAP, clé du provider IA, futurs tokens OAuth — sont
 chiffrés avec une clé **distincte de l'`APP_KEY`** : `CREDENTIALS_KEY`, portée par son propre
@@ -311,7 +308,7 @@ organization (envelope encryption) et un KMS externe restent des questions ouver
 bloquantes pour le v0.
 
 ### ADR-013 — Suppression list à trois couches, opt-out scopé au projet
-*(résout A4, tranché le 2026-08-10)*
+*(résout A4)*
 
 | Couche | Contenu | Périmètre | Raison du périmètre |
 |---|---|---|---|
@@ -323,7 +320,7 @@ Seule la couche 3 traverse les tenants. Elle est alimentée par des listes publi
 détections, **jamais par le comportement des prospects d'un client** — sinon tester une adresse
 révélerait qui prospecte qui.
 
-Le choix du périmètre projet pour la couche 1 est délibéré (Clément, 2026-08-10) : il privilégie le
+Le choix du périmètre projet pour la couche 1 est délibéré : il privilégie le
 cas agence. Il ouvre un risque — un prospect désinscrit d'un produit peut être resollicité par la même
 entité pour un autre — compensé par deux soupapes obligatoires :
 
@@ -338,7 +335,7 @@ entité pour un autre — compensé par deux soupapes obligatoires :
 Toute vérification avant envoi consulte les trois couches.
 
 ### ADR-014 — Données cloisonnées par projet, cache de pages partagé
-*(résout A5, tranché le 2026-08-10)*
+*(résout A5)*
 
 Sociétés et leads restent **cloisonnés par projet**, sans registre partagé. Un **cache de pages
 brutes** au niveau instance évite les re-fetch : clé = URL normalisée, TTL, contenu public uniquement.
@@ -359,7 +356,7 @@ par quelqu'un. Jugé négligeable ; si ça devait poser problème en cloud, le c
 organization sans rien changer d'autre.
 
 ### ADR-015 — Autant de profil cible que nécessaire, en CRUD libre
-*(résout A6, tranché le 2026-08-10)*
+*(résout A6)*
 
 Un **profil cible** (Ideal Customer Profile) est le portrait structuré du client visé : secteurs, taille,
 géographie, postes, technologies, signaux déclencheurs. C'est l'objet que l'agent déduit de la
@@ -395,7 +392,7 @@ company_target_evaluations   company_id + target_profile_id → fit_score, fit_r
 L'écran principal reste une ligne droite : le CRUD est disponible, jamais obligatoire pour avancer.
 
 ### ADR-016 — Aucun tracking dans les emails en v0
-*(résout A7, tranché le 2026-08-10)*
+*(résout A7)*
 
 Ni pixel d'ouverture, ni réécriture de liens. `messages.opened_at` sort du schéma. La métrique
 suivie est la **réponse**.
@@ -411,9 +408,9 @@ utilisateur, donc un CNAME à configurer — ce qui percute la promesse « opér
 Reporté en v1, désactivé par défaut.
 
 ### ADR-017 — Sendboo n'est pas réutilisable, et c'est structurel
-*(question soulevée le 2026-08-10 : faut-il reconstruire un pseudo-Sendboo ?)*
+*(question : faut-il reconstruire un pseudo-Sendboo ?)*
 
-Sendboo (`/Users/mydnic/code/dricle/sendboo`) est une plateforme d'email marketing multi-tenant bâtie
+Sendboo est une plateforme d'email marketing multi-tenant bâtie
 sur Spatie Mailcoach, orientée e-commerce : listes, abonnés, automations, sending domains,
 Store/Product/DiscountCode, extension Shopify. Réponse : **non, et il n'y a pas de rattrapage à
 faire.**
@@ -442,7 +439,7 @@ dans ce qu'Eveil n'a pas à faire.
 vers une liste Sendboo pour le nurturing. Epic 12, jamais une dépendance.
 
 ### ADR-018 — Rétention : purge automatique, défauts CNIL, configurable
-*(résout A8, tranché le 2026-08-10)*
+*(résout A8)*
 
 | Donnée | Défaut | Repère |
 |---|---|---|
@@ -473,7 +470,7 @@ Deux mécanismes obligatoires :
   la donnée personnelle derrière soi dans le compteur de facturation.
 
 ### ADR-019 — Crédits IA en cloud, clé du user en self-hosted
-*(résout B1, tranché le 2026-08-11)*
+*(résout B1)*
 
 **Self-hosted** : le superadmin met sa propre clé API. **Aucun suivi de crédits, aucune facturation,
 aucun code de comptage.** `agent_runs` reste (debug et historique), pas le grand livre.
@@ -506,7 +503,7 @@ Opus 5 pour la planification, Haiku 4.5 pour extraction et qualification).
 Campagne type de 100 leads ≈ **3 500 crédits**. Les actions non-IA à zéro crédit sont un argument
 commercial : la vérification d'email est facturée chez les concurrents.
 
-**Premières mesures réelles, 2026-08-11**, sur restogo.be :
+**Mesures réelles** :
 
 | Action | Estimé | Mesuré | Détail |
 |---|---|---|---|
@@ -545,12 +542,12 @@ Règles d'implémentation :
 - **Un run avorté par une erreur de notre côté n'est pas facturé** ; un run interrompu par l'utilisateur
   facture le travail réellement produit.
 
-Ce que ça change pour B1 : **la mesure n'est plus bloquante.** On livre sur les estimations,
+Ce que ça change pour B1 : **la mesure n'est pas bloquante.** On livre sur les estimations,
 `agent_runs` donne le coût réel, la grille s'ajuste en base. Seul le *ratio entre actions* doit être à
 peu près juste au départ, sinon une action se vend à perte sans que personne ne le voie.
 
 ### ADR-020 — Découverte insuffisante : diagnostic, puis élargissement borné
-*(résout B2, tranché le 2026-08-11)*
+*(résout B2)*
 
 « Rien trouvé » recouvre quatre pannes distinctes. **Diagnostiquer avant d'élargir n'est pas
 optionnel** :
@@ -585,7 +582,7 @@ Les tentatives d'élargissement **se comptent dans le budget du run initial** et
 nouveau : sans ça une boucle d'élargissement brûle des crédits sans rien produire.
 
 ### ADR-021 — Langue détectée par société, contenu généré dedans
-*(résout B3, tranché le 2026-08-11)*
+*(résout B3)*
 
 Trois choses distinctes, à ne pas confondre :
 
@@ -613,7 +610,7 @@ coût est marginal à l'échelle. La version traduite est visible en prévisuali
 découvre jamais après coup ce qui est parti en son nom.
 
 ### ADR-022 — Métrique nord : réponses positives, plus le gain marqué à la main
-*(résout B4, tranché le 2026-08-11)*
+*(résout B4)*
 
 L'app ne voit que des réponses, jamais un contrat signé. Le taux de réponse **brut** est un mauvais
 indicateur : il compte les « non merci » et les absences du bureau à égalité avec les vrais intérêts.
@@ -646,7 +643,7 @@ Ce qui reste **hors scope** (§8) : les stades de pipeline complets saisis à la
 ça demande une discipline de saisie que personne n'a.
 
 ### ADR-023 — Pas de warm-up : position assumée et documentée
-*(résout B5, tranché le 2026-08-11)*
+*(résout B5)*
 
 Eveil ne construit **aucun** mécanisme de warm-up — ni réseau mutualisé, ni échange local entre les
 boîtes de l'utilisateur.
@@ -675,7 +672,7 @@ point d'intégration pour brancher un service tiers si l'utilisateur y tient vra
 **Tier B entièrement tranché** (ADR-019 à ADR-023). Les écrans du v0 peuvent être dessinés.
 
 ### ADR-024 — Tarification cloud : crédits seuls, avec dotation d'essai
-*(résout C1, tranché le 2026-08-11)*
+*(résout C1)*
 
 **Modèle unique : les crédits.** Pas de formule « apporte ta clé » en cloud — celui qui veut fournir sa
 propre clé installe le self-hosted, qui est gratuit et fait pour ça.
@@ -715,7 +712,7 @@ valables 12 mois. Sans expiration, on accumule une dette de crédits non consomm
 revenir trois ans plus tard avec un stock acheté au tarif de l'époque.
 
 ### ADR-025 — AGPL partout, CLA à sortie libre (modèle Postiz)
-*(résout C2, tranché le 2026-08-11)*
+*(résout C2)*
 
 **Un seul `LICENSE`, AGPL-3.0, tout le repo — `app/Cloud/` compris.** Pas de dossier sous licence
 distincte, pas de fonctionnalité retenue côté cloud.
@@ -724,7 +721,7 @@ distincte, pas de fonctionnalité retenue côté cloud.
 juridique, seulement un mécanisme de chargement conditionnel. Sans cette précision, quelqu'un y
 mettra du code dans six mois en le croyant protégé.
 
-**Périmètre de `app/Cloud/`, arrêté le 2026-08-11 : facturation et comptage de crédits, rien d'autre.**
+**Périmètre de `app/Cloud/` : facturation et comptage de crédits, rien d'autre.**
 Stripe, `credit_prices`, `credit_wallets`, `credit_transactions`, garde-fous d'essai. Tout le reste est
 dans le cœur — organizations, rôles, invitations, accès par projet compris, donc **disponibles en
 self-hosted**. Le cloud n'ajoute que l'hébergement géré, la facturation et le support. C'est ce
@@ -759,7 +756,7 @@ vérification CLA, et **faire relire l'ensemble par un juriste** — c'est la se
 qu'on ne peut pas défaire.
 
 ### ADR-026 — Provider, modèle et timeout configurables par agent
-*(résout C3, tranché le 2026-08-11 ; resserré de la catégorie à l'agent le 2026-08-12)*
+*(résout C3)*
 
 Le superadmin choisit **le provider, le modèle et le timeout pour chaque classe d'agent**, depuis un
 écran de settings. `laravel/ai` expose déjà la liste des providers et modèles disponibles ; la liste
@@ -809,7 +806,7 @@ cours de run produirait des scores issus de deux barèmes différents sans que �
 provider reste une opération de config assumée.
 
 ### ADR-027 — SMTP/IMAP classique uniquement, pas d'OAuth
-*(résout C4, tranché le 2026-08-11)*
+*(résout C4)*
 
 **Aucun OAuth**, ni en self-hosted ni en cloud. Connexion des boîtes par identifiants SMTP/IMAP
 seulement. Aucune vérification Google, aucune évaluation CASA, aucun délai administratif sur le
@@ -822,9 +819,9 @@ IMAP/SMTP client. C4 avait été formulé sur cette hypothèse, elle est fausse.
 Microsoft 365 — OVH, Infomaniak, Gandi, Zoho, cPanel, serveurs internes, tous en SMTP/IMAP classique
 sans échéance. C'est particulièrement vrai des PME européennes, qui sont la cible.
 
-**Risque assumé, consigné pour mémoire** (décision de Clément le 2026-08-11) :
+**Risque assumé, consigné pour mémoire** :
 
-| Fournisseur | État au 2026-08-11 |
+| Fournisseur | État |
 |---|---|
 | Google Workspace | Basic auth supprimée depuis le 1er mai 2025. App passwords disponibles avec 2FA, mais **un admin peut les couper pour toute l'organisation** |
 | Gmail grand public | App password + 2FA : fonctionnel |
@@ -841,7 +838,7 @@ courant, avec la procédure pas à pas. Quelques heures de travail, et ça trans
 déblocage de trente secondes.
 
 ### ADR-028 — Export CSV en v0, archive portable avant le cloud
-*(résout C5, tranché le 2026-08-11)*
+*(résout C5)*
 
 **v0** : export CSV des leads et des sociétés. Un jour de travail, utile de toute façon.
 
@@ -862,7 +859,7 @@ En cloud, l'export reste **conditionné à un premier paiement** (ADR-024), sino
 devient une machine à extraire des fichiers gratuits.
 
 ### ADR-029 — Mails indiscernables d'un envoi manuel, opt-out par « STOP »
-*(résout C6, tranché le 2026-08-11)*
+*(résout C6)*
 
 Les mails partent depuis la boîte de l'utilisateur et doivent **ressembler exactement à ce qu'il
 aurait tapé lui-même**. Tout ce qui signale un outil disparaît.
@@ -889,7 +886,7 @@ Pas d'en-tête `List-Unsubscribe` : les destinataires ne se sont abonnés à rie
 **Rien d'hébergé, rien de généré côté juridique.** Pas de page de notice, pas de texte art. 14, pas
 d'identité légale collectée. L'obligation d'information subsiste en droit européen mais **pèse sur
 l'utilisateur en tant que responsable de traitement** — Eveil est sous-traitant en cloud, hors boucle
-en self-hosted. Décision de Clément le 2026-08-11, risque assumé et documenté.
+en self-hosted. Risque assumé et documenté.
 
 ⚠️ **Conséquence technique majeure** : « répondez STOP » devient **l'unique canal de désinscription**.
 La classification des réponses (ADR-022) passe donc de métrique à **mécanisme de conformité**. Rater
@@ -905,12 +902,12 @@ horodatées en base. Eveil y est sous-traitant ; le document est standard et ne 
 de PDF signés.
 
 ### ADR-030 — Le nom reste Eveil, le domaine se choisira plus tard
-*(résout C8, tranché le 2026-08-11)*
+*(résout C8)*
 
 Le produit s'appelle **Eveil**. Le choix du domaine est reporté ; il ne bloque ni le code ni le
 schéma.
 
-État des domaines au 2026-08-11 : `eveil.com`, `.app`, `.io`, `.ai` et `.be` sont **pris**. Libres :
+État des domaines : `eveil.com`, `.app`, `.io`, `.ai` et `.be` sont **pris**. Libres :
 `eveil.dev`, `eveil.email`, `eveil.so`, `geteveil.com`, `useeveil.com`.
 
 Limites connues et assumées :
@@ -930,7 +927,6 @@ public — après, ça coûte le repo, la doc, les étoiles GitHub et le SEO acc
 ouverte bloquante.
 
 ### ADR-031 — Un profil cible peut viser un partenaire, pas seulement un client
-*(tranché le 2026-08-11)*
 
 Les profil cible portent un **type** : `customer` ou `partner`. Un profil partenaire décrit non pas qui achète,
 mais **qui touche déjà l'acheteur** — qui lui rend visite, qui le facture chaque mois, qui lui est
@@ -972,7 +968,6 @@ base qu'après avoir été trouvée, son site récupéré et qualifiée.
 — directement, ou via ceux qui les touchent déjà ».
 
 ### ADR-032 — Recommandations d'acquisition : ancrées, priorisées, avec un état
-*(tranché le 2026-08-11)*
 
 L'agent Website ne produit pas que des pistes d'amélioration du site : il propose aussi des **leviers
 d'acquisition absents** — programme de parrainage, contenu éditorial, présence sur un salon, offre aux
@@ -1003,31 +998,28 @@ plomberie est quasi gratuite ; ce qui reste à écrire, c'est l'outil que l'agen
 masquées par défaut.
 
 ### ADR-033 — Découverte en graphe de jobs, et les annuaires sont une source à part entière
-*(tranché le 2026-08-12)*
 
 **Le problème : la découverte par moteur de recherche est biaisée par le SEO.** Elle trouve les
 sociétés qui savent se référencer. Or une partie du marché visé n'a pas de site, ou seulement une page
 Facebook, ou un site que personne ne trouve avant la vingtième page de résultats. Ces sociétés-là sont
 souvent les meilleures cibles — elles n'ont personne pour les démarcher.
 
-Pire, le code actuel **supprimait activement la solution** : `WebSearchSource::isAggregator()` jetait
-tout résultat pointant vers un annuaire. Or `pagesdor.be/friteries/namur` n'est pas une société, c'est
-**deux cents sociétés** — et c'est le seul endroit où une société sans site publie une adresse email.
-La liste noire devient un aiguillage.
+Jeter tout résultat pointant vers un annuaire supprime la solution : `pagesdor.be/friteries/namur`
+n'est pas une société, c'est **deux cents sociétés** — et c'est le seul endroit où une société sans
+site publie une adresse email. La liste noire est un aiguillage, pas un filtre.
 
 #### Cinq décisions
 
-**1. Un résultat de recherche a deux natures, pas une.** *Entité* (une société → un candidat, comme
-aujourd'hui) ou *index* (une page de liste → à récolter). Ce qui était filtré est désormais trié.
+**1. Un résultat de recherche a deux natures, pas une.** *Entité* (une société → un candidat) ou
+*index* (une page de liste → à récolter). Un résultat n'est pas filtré, il est trié.
 
 **2. Le modèle navigue, PHP extrait.** L'IA décide **où** regarder ; le code fait le volume. Un job
 `HarvestListing` récolte une page de liste en pur PHP — `sitemap.xml`, puis JSON-LD `LocalBusiness` /
 `Organization`, puis sélecteurs CSS enregistrés, puis en dernier recours l'extracteur LLM. Le modèle ne
 voit jamais les deux cents fiches, seulement « 60 enregistrées, 41 avec site, 12 avec email ».
 
-> **Corrigé, 2026-08-12 — le pari JSON-LD est abandonné.** Cet ADR affirmait que « les annuaires
-> émettent presque tous du JSON-LD, le SEO est leur métier ». C'est faux, et il ne faut pas le
-> supposer : personne n'en met. Sur trois annuaires belges essayés en réel, **aucun** — pagesdor.be
+> **Ne pas parier sur le JSON-LD.** « Les annuaires en émettent presque tous, le SEO est leur métier »
+> est faux : personne n'en met. Sur trois annuaires belges essayés en réel, **aucun** — pagesdor.be
 > renvoie une page de challenge Imperva, infobel.com répond 403 aux User-Agents inconnus et bloque
 > nommément les crawlers IA dans son robots.txt, resto.be sert 737 Ko sans un seul `ld+json` parce que
 > c'est une application JS.
@@ -1369,7 +1361,7 @@ est une story pas faite.
 | `🟡` | Backend ou CLI fait, **pas d'interface** — le reste est indiqué sur la story |
 | `⬜` | Pas commencé |
 
-État au 2026-08-12 :
+État actuel :
 
 | Epic | Avancement |
 |---|---|
@@ -1568,10 +1560,10 @@ automatiquement.
   exhaustifs et sans biais SEO, mais sans email, donc ils enrichissent et n'envoient pas (ADR-033)
 
 **5.9** ⬜ `v1` En tant qu'exploitant, je veux lire les annuaires qui ne rendent rien côté serveur.
-*(reporté volontairement le 2026-08-13 — déclencheur écrit, pas encore atteint)*
-- **Cas mesurés à ce jour : zéro.** `resto.be` n'était pas JS-only — le serveur a envoyé 737 Ko et
-  l'extracteur y a lu 23 sociétés ; `pagesdor.be` était `blocked`, pas non-rendu
-- `known_hosts.harvest_status` distingue désormais les quatre issues : `blocked` (rien récupéré),
+*(reporté volontairement — déclencheur écrit, pas encore atteint)*
+- **Cas mesurés à ce jour : zéro.** `resto.be` n'est pas JS-only — le serveur envoie 737 Ko et l'extracteur y lit 23 sociétés ;
+  `pagesdor.be` est `blocked`, pas non-rendu
+- `known_hosts.harvest_status` distingue les quatre issues : `blocked` (rien récupéré),
   `js_only` (récupéré mais moins de 500 caractères — une coquille), `no_listing` (lu correctement,
   rien dessus), `jsonld`/`llm` (a marché). Seul `js_only` serait réglé par un navigateur
 - **Déclencheur : 10 hôtes ou plus en `js_only`.** En dessous, un gigaoctet de Chromium n'achète rien

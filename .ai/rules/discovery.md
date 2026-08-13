@@ -128,3 +128,12 @@ Same fix, second half: `nav`, `header` and `footer` are no longer stripped. They
 `HtmlText`, `ParsedPage` and `Url` now live in `app/Support/`, not here — parsing HTML and resolving a URL are not discovery concerns, they were just needed here first. `ParsedPage` had to move with `HtmlText`: Support must not depend on a service.
 
 Not replaced by a package, and the option was checked: `league/html-to-markdown` is the mature choice but resolves no relative URLs against a base, extracts no title, lang or link list, and would leave us owning most of this class anyway. Revisit only if the hand-rolled renderer starts failing on real pages.
+
+## Learned host verdicts need a human override and an expiry
+Decided 2026-08-13, alongside `known_hosts`. A verdict the model got wrong caches with exactly the same confidence as one it got right, instance-wide and forever: misclassify a real prospect's site as `noise` and it is invisible to every project, in every organization, permanently. Two guards, both cheap now and awful to retrofit:
+
+- **`is_locked`** — a superadmin can see and edit the table in the UI, and a row a human touched is never overwritten by a model. The screen is the escape hatch for exactly the failure above.
+- **`last_verified_at`** plus a re-check window — `blocked` must not be permanent, because sites change CDN configuration, and a directory can die. An expired row is re-judged on next encounter.
+
+Everything else about the registry is designed to avoid asking twice; these two exist so that "never ask twice" cannot become "wrong forever".
+

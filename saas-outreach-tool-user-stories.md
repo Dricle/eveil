@@ -1123,7 +1123,8 @@ supprime les liens de pagination — « page suivante » disparaît.
 - **ADR-006** (découverte sans clé API) : inchangée et renforcée. Annuaires, registres et OSM sont
   gratuits et sans clé, et réduisent la dépendance à SearXNG, dont le rate-limit était le risque assumé.
 - **ADR-014** (cache de pages partagé) : `crawled_pages` devient le point de contrôle d'idempotence des
-  jobs, en plus d'un cache.
+  jobs, en plus d'un cache. Le même raisonnement fonde `known_hosts` — du web public, pas de la donnée
+  client, donc partageable sans réserve entre organizations.
 - **ADR-020** (élargissement borné) : `ReflectAndExpand` est l'endroit où ce diagnostic s'exécute. Une
   panne `wrong_source` a maintenant une réponse concrète — changer d'annuaire — au lieu d'un constat.
 - **`DiscoverySourceInterface`** : l'interface survit pour les sources en un coup (Overpass, recherche web,
@@ -1251,6 +1252,13 @@ recommendations        project_id, key (identité stable), title, rationale, evi
                        decided_at, agent_run_id
                        ← archivée = ne réapparaît jamais (ADR-032)
 
+known_hosts            host (unique), kind: index|entity|social|noise, reason,
+                       harvest_status: jsonld|llm|blocked|js_only, pages_harvested,
+                       businesses_found, is_locked, last_verified_at
+                       ← ce que l'app a appris du web public, partagé toute l'instance. Un projet
+                         paie le modèle une fois, tous les autres en profitent. `is_locked` = un
+                         humain a tranché, aucun modèle ne réécrit ; `last_verified_at` fait expirer
+                         les verdicts, sinon `blocked` serait une condamnation à perpétuité
 discovery_runs         project_id, target_profile_id, status, budget (json), credits_left, stats
                        ← status porte aussi exhausted|cancelled : un seul drapeau pour le
                          plafond de crédits et l'annulation (ADR-033)
@@ -1388,6 +1396,12 @@ minimal, pour être opérationnel en quelques minutes.
 - Bouton « tester la connexion » avec retour immédiat
 - Vaut pour toutes les organizations et tous les projets de l'instance
 
+**1.7** ⬜ En tant que superadmin, je veux voir et corriger ce que l'app a appris sur les hôtes.
+- Table `known_hosts` : hôte, verdict, motif, rendement, dernier statut de récolte
+- Éditer un verdict le **verrouille** — un modèle ne le réécrira plus jamais
+- Nécessaire parce qu'un mauvais verdict se met en cache avec exactement la même confiance qu'un bon,
+  et à l'échelle de l'instance : un vrai prospect classé `noise` devient invisible pour tous les projets
+
 **1.6** 🟡 En tant que superadmin, je veux choisir le provider, le modèle et le timeout **par agent IA** (ADR-026).
 - Réglage de scope instance, réservé au superadmin — invisible pour les admins et membres d'organization
 - Une ligne par agent, clé = le slug de la classe (`website-analyst`, `target-profile-deriver`, …) ; pas de regroupement par catégorie
@@ -1495,10 +1509,12 @@ automatiquement.
 - Un annuaire qui a produit est mémorisé avec son rendement, son pays et ses secteurs, et réinterrogé
   directement au run suivant sans repasser par un moteur de recherche
 - Ajouter un annuaire ne demande pas de code
-- **État** : `ListingHarvester` fait et testé, pilotable par `eveil:harvest <url>` — JSON-LD, repli LLM,
-  pagination, budget. Manquent le registre `directories`, le tri des résultats de recherche, et le
-  branchement dans `eveil:discover-companies`. Les sociétés sans site sont comptées mais pas exploitables :
-  `companies.domain` est NOT NULL
+- Les hôtes sont **classés par l'IA, une fois pour toutes** : impossible d'énumérer à la main tous les
+  annuaires du monde, et la liste noire écrite à la main jetait justement les résultats les plus utiles
+- **État** : fait et testé — `ListingHarvester` (JSON-LD, repli LLM, pagination, budget),
+  `HostRegistry` + agent `ResultTriage`, table `known_hosts` amorcée, branchement dans
+  `eveil:discover-companies`. Reste : les sociétés sans site sont comptées mais pas exploitables
+  (`companies.domain` est NOT NULL), et l'écran superadmin du registre
 
 **5.2 ter** ⬜ En tant qu'utilisateur, je veux voir et reprendre la main sur ce que fait la découverte (ADR-033).
 - La découverte est un graphe de jobs : chaque étape a sa ligne, son état, son coût, son erreur

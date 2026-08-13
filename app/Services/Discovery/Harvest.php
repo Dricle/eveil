@@ -2,6 +2,7 @@
 
 namespace App\Services\Discovery;
 
+use App\Enums\HarvestStatus;
 use Illuminate\Support\Collection;
 
 /**
@@ -31,5 +32,18 @@ readonly class Harvest
     public function usedAgent(): bool
     {
         return in_array('llm', $this->modes, true);
+    }
+
+    /**
+     * How the host behaved, for the registry. `Blocked` is the one that matters
+     * — a host that answered nothing readable must never be paid for twice.
+     */
+    public function status(): HarvestStatus
+    {
+        if ($this->candidates->isEmpty()) {
+            return $this->pages === [] ? HarvestStatus::Blocked : HarvestStatus::JsOnly;
+        }
+
+        return $this->usedAgent() ? HarvestStatus::Llm : HarvestStatus::JsonLd;
     }
 }

@@ -6,17 +6,22 @@ use App\Ai\Agents\CompanyQualifier;
 use App\Ai\Agents\DiscoveryPlanner;
 use App\Enums\DiscoveryDiagnosis;
 use App\Enums\DiscoveryRunStatus;
+use App\Enums\HostKind;
 use App\Models\Company;
 use App\Models\CompanyTargetEvaluation;
 use App\Models\DiscoveryRun;
+use App\Models\KnownHost;
 use App\Models\TargetProfile;
 use App\Services\Discovery\Candidate;
+use App\Services\Discovery\HostRegistry;
+use App\Services\Discovery\ListingHarvester;
 use App\Services\Discovery\PageFetcher;
 use App\Services\Discovery\Sources\DiscoverySourceInterface;
 use App\Services\Discovery\Sources\OverpassSource;
 use App\Services\Discovery\Sources\WebSearchSource;
 use App\Support\HtmlText;
 use App\Support\ParsedPage;
+use App\Support\Url;
 use Illuminate\Support\Collection;
 use Laravel\Ai\Responses\StructuredAgentResponse;
 use Throwable;
@@ -41,6 +46,8 @@ class RunDiscovery
     public function __construct(
         private PageFetcher $fetcher,
         private HtmlText $html,
+        private HostRegistry $hosts,
+        private ListingHarvester $harvester,
         OverpassSource $overpass,
         WebSearchSource $webSearch,
     ) {
@@ -136,7 +143,9 @@ class RunDiscovery
 
             $queries++;
 
-            foreach ($this->sources[$source]->search($probe) as $candidate) {
+            $found = $this->sources[$source]->search($probe);
+
+            foreach ($this->sorted($found, $targetProfile, $budget) as $candidate) {
                 $domain = $candidate->domain();
 
                 if ($domain === null || in_array($domain, $known, true)) {
@@ -149,6 +158,72 @@ class RunDiscovery
         }
 
         return $candidates->take($budget['max_companies'])->values();
+    }
+
+    /**
+     * Turns one source's raw results into companies worth qualifying.
+     *
+     * A result is either a company or a LIST of companies, and telling them
+     * apart used to be a hand-written blocklist of aggregator domains — which
+     * could never be complete, and which threw away the most valuable results
+     * of all. A directory's page for one trade in one town is not a company, it
+     * is hundreds, and for a business with no site of its own it is the only
+     * place an address is published.
+     *
+     * @param  Collection<int, Candidate>  $found
+     * @param  array<string, int>  $budget
+     * @return Collection<int, Candidate>
+     */
+    private function sorted(Collection $found, TargetProfile $targetProfile, array $budget): Collection
+    {
+        if ($found->isEmpty()) {
+            return $found;
+        }
+
+        $kinds = $this->hosts->classify(
+            $found->map(fn (Candidate $candidate): string => (string) ($candidate->sourceUrl ?? $candidate->website)),
+            $targetProfile->project,
+        );
+
+        /** @var Collection<int, Candidate> $out */
+        $out = new Collection;
+        $harvested = [];
+
+        foreach ($found as $candidate) {
+            $url = (string) ($candidate->sourceUrl ?? $candidate->website);
+            $host = Url::host($url);
+            $kind = $kinds[$host] ?? HostKind::Entity;
+
+            if ($kind === HostKind::Entity) {
+                $out->push($candidate);
+
+                continue;
+            }
+
+            // Social and noise are dropped outright; only an index is worth a
+            // fetch, and only once per host per run however many results it won.
+            if ($kind !== HostKind::Index || $host === null || isset($harvested[$host])) {
+                continue;
+            }
+
+            $harvested[$host] = true;
+
+            $known = KnownHost::query()->firstWhere('host', $host);
+
+            if ($known !== null && ! $known->isWorthHarvesting()) {
+                $this->candidateFailures[] = "{$host}: skipped, {$known->harvest_status?->value} last time";
+
+                continue;
+            }
+
+            $harvest = $this->harvester->harvest($url, $targetProfile->project, $budget['max_pages'] ?? null);
+
+            $this->hosts->recordHarvest($host, $harvest);
+
+            $out = $out->merge($harvest->candidates);
+        }
+
+        return $out;
     }
 
     /**

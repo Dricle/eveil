@@ -35,3 +35,11 @@ Trial: ~5000 credits at signup, enough for one complete campaign through to repl
 The trial grant is a REAL abuse vector: this product is an email-extraction machine and 5000 free credits is ~100 qualified leads. Mandatory guards — verified email, one project only, a cap on leads DISCOVERED (not just credits), and no CSV export before a first payment. Trial users can see and email their leads; they do not walk away with the file.
 
 Expiry: subscription credits expire at period end, purchased packs last 12 months. Without expiry you accrue a liability of unspent credits bought at old rates.
+
+## Cloud is born smart; self-hosted starts cold. That is a selling point, not a limit
+Noted 2026-08-13. `known_hosts`, `crawled_pages` and the listing-extraction cache are shared instance-wide. In cloud that means ONE registry fed by every customer: someone prospecting restaurants pays a model to work out that a national directory is an index, and the next customer prospecting bakeries gets it free. A cloud account is useful from the first run in a way a fresh self-hosted install cannot be, because the self-hosted install has nobody else's learnings.
+
+**This is a legitimate commercial argument and it must stay an emergent one.** Self-hosted ships the identical code and the identical seed registry — nothing is withheld, no cap, no crippled path. It simply has a smaller population feeding it. The moment someone "improves" this by shipping a thinner seed to self-hosted, it becomes an artificial limit and breaks the core-stays-free promise. Do not.
+
+Use it in positioning: cloud saves you the cold start, plus hosting, plus the AI key. Not: cloud unlocks features.
+

@@ -30,6 +30,7 @@ return [
         // here would only mean a stuck job holding a worker.
         'company-qualifier' => ['provider' => Lab::Anthropic, 'model' => 'claude-haiku-4-5', 'timeout' => 60],
         'listing-extractor' => ['provider' => Lab::Anthropic, 'model' => 'claude-haiku-4-5', 'timeout' => 60],
+        'result-triage' => ['provider' => Lab::Anthropic, 'model' => 'claude-haiku-4-5', 'timeout' => 60],
         'contact-extractor' => ['provider' => Lab::Anthropic, 'model' => 'claude-haiku-4-5', 'timeout' => 60],
     ],
 
@@ -85,6 +86,17 @@ return [
         'directory' => [
             'max_pages' => 5,
             'max_entities' => 200,
+        ],
+
+        /*
+         * The learned host registry. Hosts here are never re-judged by a model
+         * until the verdict expires — sites change CDN configuration and
+         * directories die, so `blocked` must not be permanent. A row a
+         * superadmin locked never expires.
+         */
+        'host_registry' => [
+            'ttl_days' => 180,
+            'batch' => 25,
         ],
     ],
 

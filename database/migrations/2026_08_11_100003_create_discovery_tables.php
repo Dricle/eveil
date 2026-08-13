@@ -38,6 +38,56 @@ return new class extends Migration
             $table->index('expires_at');
         });
 
+        /**
+         * What we have already worked out about a host on the public web.
+         *
+         * Shared instance-wide and deliberately NOT scoped to an organization
+         * or a project, for the same reason as the page cache: "producthunt.com
+         * lists products" is a fact about the open web, not client data. One
+         * project paying a model to work it out means every other project gets
+         * it free, forever.
+         *
+         * Not called `directories`, though that is the interesting row type:
+         * the table also remembers that a host is a social platform or noise,
+         * and the whole point is to never ask the model the same question
+         * twice — a negative answer is worth caching exactly as much as a
+         * positive one.
+         *
+         * Enumerating aggregators by hand is hopeless — Pages d'Or, Product
+         * Hunt, BetaList, Clutch, every trade directory in every country — so
+         * the list is learned rather than written.
+         */
+        Schema::create('known_hosts', function (Blueprint $table) {
+            $table->id();
+            $table->string('host')->unique();
+
+            // index|entity|social|noise — what the host IS.
+            $table->string('kind');
+            $table->text('reason')->nullable();
+
+            // Learned by trying, and only meaningful for an index:
+            // jsonld|llm|blocked|js_only. `blocked` is the one that saves real
+            // money — a host behind bot protection must never be paid for twice.
+            $table->string('harvest_status')->nullable();
+
+            $table->unsignedInteger('pages_harvested')->default(0);
+            $table->unsignedInteger('businesses_found')->default(0);
+            $table->timestamp('last_harvested_at')->nullable();
+
+            // A verdict a human set. Never overwritten by a model — the
+            // superadmin screen is the escape hatch for a row the model got
+            // wrong, and a wrong row is invisible-forever for every project.
+            $table->boolean('is_locked')->default(false);
+
+            // Verdicts expire. Sites change CDN configuration and directories
+            // die, so `blocked` must not be a life sentence.
+            $table->timestamp('last_verified_at');
+
+            $table->timestamps();
+
+            $table->index('kind');
+        });
+
         Schema::create('discovery_runs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('project_id')->constrained()->cascadeOnDelete();
@@ -178,6 +228,7 @@ return new class extends Migration
         Schema::dropIfExists('company_target_evaluations');
         Schema::dropIfExists('companies');
         Schema::dropIfExists('discovery_runs');
+        Schema::dropIfExists('known_hosts');
         Schema::dropIfExists('crawled_pages');
     }
 };

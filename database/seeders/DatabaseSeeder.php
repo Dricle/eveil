@@ -15,7 +15,9 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // Ships in both editions: the head start a fresh install gets before
+        // it has learned anything of its own.
+        $this->call(KnownHostSeeder::class);
 
         User::factory()->create([
             'name' => 'Test User',

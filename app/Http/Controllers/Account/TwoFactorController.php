@@ -1,17 +1,18 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Account;
 
+use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Account security. Two-factor enrolment is driven by Fortify's own routes —
- * this only renders the state they act on, so the QR code and the recovery
- * codes never travel as JSON the page has to assemble itself.
+ * Two-factor enrolment is driven by Fortify's own routes — this only renders
+ * the state they act on, so the QR code and the recovery codes never travel as
+ * JSON the page has to assemble itself.
  */
-class SecurityController extends Controller
+class TwoFactorController extends Controller
 {
     public function edit(Request $request): Response
     {
@@ -19,7 +20,7 @@ class SecurityController extends Controller
 
         $enrolling = $user->two_factor_secret !== null;
 
-        return Inertia::render('Security', [
+        return Inertia::render('account/TwoFactor', [
             'twoFactorEnabled' => $enrolling,
             'twoFactorConfirmed' => $user->two_factor_confirmed_at !== null,
             'qrCode' => $enrolling ? $user->twoFactorQrCodeSvg() : null,

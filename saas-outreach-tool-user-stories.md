@@ -1398,10 +1398,10 @@ minimal, pour être opérationnel en quelques minutes.
 - Le mot de passe initial vient de l'env ou du premier écran de setup
 - Changeable depuis les settings
 - **État** : Fortify installé ; écran de setup (`/app/setup`, superadmin + organization owner),
-  login, logout, mot de passe oublié + réinitialisation par email, confirmation de mot de passe et
-  2FA TOTP (activation, QR, codes de secours, désactivation sur `/app/security`) faits et testés.
-  Manquent le mot de passe initial par l'env et le changement de mot de passe depuis les settings,
-  qui arrivent avec 1.5
+  login, logout, inscription, mot de passe oublié + réinitialisation par email, confirmation de mot
+  de passe faits et testés. Section compte sous `/app/account` avec sa sidebar : profil, mot de
+  passe, 2FA TOTP (activation, QR, codes de secours, désactivation) et suppression de compte.
+  Manque le mot de passe initial par l'env, qui arrive avec 1.5
 
 **1.3** 🟡 En tant que superadmin, je veux choisir mon provider IA et saisir ma clé depuis les settings.
 - Clé chiffrée avec `CREDENTIALS_KEY` (ADR-012), jamais loggée, jamais renvoyée en clair au frontend
@@ -1425,8 +1425,7 @@ minimal, pour être opérationnel en quelques minutes.
 
 **1.4** ✅ En tant que superadmin, je veux désactiver les inscriptions via variable d'env.
 - `REGISTRATION_ENABLED=false` → la route register renvoie 404, pas un message d'erreur
-- Défaut lié à l'édition : ouvert en cloud, fermé en self-hosted ; `REGISTRATION_ENABLED` tranche
-  dans les deux sens
+- Ouvert par défaut ; `REGISTRATION_ENABLED=false` ferme une instance destinée à une seule équipe
 - Fermé = Fortify n'enregistre pas les routes : `/app/register` est un vrai 404, pas un formulaire
   qui refuse. Corollaire : aucune page n'importe `@/routes/register`, l'URL vient d'une prop
   partagée (`registerUrl`)

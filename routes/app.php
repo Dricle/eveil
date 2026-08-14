@@ -1,7 +1,8 @@
 <?php
 
+use App\Http\Controllers\Account\AccountDeletionController;
+use App\Http\Controllers\Account\TwoFactorController;
 use App\Http\Controllers\Auth\SetupController;
-use App\Http\Controllers\SecurityController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -18,5 +19,18 @@ Route::middleware('guest')->group(function (): void {
 Route::middleware('auth')->group(function (): void {
     Route::inertia('/', 'Dashboard')->name('dashboard');
 
-    Route::get('security', [SecurityController::class, 'edit'])->name('security');
+    /*
+     * Account management. The forms post to Fortify's own update routes, so
+     * most of these only need to render a page.
+     */
+    Route::prefix('account')->name('account.')->group(function (): void {
+        Route::redirect('/', '/app/account/profile');
+
+        Route::inertia('profile', 'account/Profile')->name('profile');
+        Route::inertia('password', 'account/Password')->name('password');
+        Route::get('two-factor', [TwoFactorController::class, 'edit'])->name('two-factor');
+        Route::inertia('delete', 'account/Delete')->name('delete');
+
+        Route::delete('/', [AccountDeletionController::class, 'destroy'])->name('destroy');
+    });
 });

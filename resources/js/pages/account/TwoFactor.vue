@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Form, Head, Link } from '@inertiajs/vue3';
-import { dashboard } from '@/routes';
+import { Form, Head } from '@inertiajs/vue3';
+import AccountLayout from '@/layouts/AccountLayout.vue';
 import {
     confirm,
     disable,
@@ -17,17 +17,8 @@ defineProps<{
 </script>
 
 <template>
-    <div class="mx-auto max-w-2xl space-y-6 p-6">
-        <Head title="Security" />
-
-        <div class="flex items-center justify-between">
-            <h1 class="text-lg font-semibold">Security</h1>
-            <Link
-                :href="dashboard.url()"
-                class="text-sm text-neutral-500 underline"
-                >Back to dashboard</Link
-            >
-        </div>
+    <AccountLayout title="Two-factor authentication">
+        <Head title="Two-factor authentication" />
 
         <UCard>
             <template #header>
@@ -122,5 +113,5 @@ defineProps<{
                 </Form>
             </div>
         </UCard>
-    </div>
+    </AccountLayout>
 </template>

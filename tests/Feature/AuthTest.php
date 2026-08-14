@@ -78,7 +78,7 @@ it('logs out', function () {
 
 it('keeps guests off the application', function () {
     $this->get(route('dashboard'))->assertRedirect(route('login'));
-    $this->get(route('security'))->assertRedirect(route('login'));
+    $this->get(route('account.profile'))->assertRedirect(route('login'));
 });
 
 it('emails a reset link and lets the user set a new password', function () {

@@ -144,10 +144,10 @@ return [
     */
 
     'features' => array_filter([
-        // Cloud sells sign-ups; a self-hosted box is one team's instance whose
-        // first account comes from the setup screen, so it stays closed unless
-        // its operator opens it. Off means the routes are never registered, so
-        // `/app/register` is a genuine 404.
+        // Sign-ups are open by default; an operator running the app for one
+        // team closes them with REGISTRATION_ENABLED=false, and the first
+        // account still comes from the setup screen either way. Closed means
+        // the routes are never registered, so `/app/register` is a genuine 404.
         env('REGISTRATION_ENABLED', true) ? Features::registration() : null,
         Features::resetPasswords(),
         // Features::emailVerification(),

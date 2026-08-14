@@ -470,6 +470,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@iconify-json/lucide@npm:^1.2.123":
+  version: 1.2.123
+  resolution: "@iconify-json/lucide@npm:1.2.123"
+  dependencies:
+    "@iconify/types": "npm:*"
+  checksum: 10c0/47ed855809b3d0e017f10bc80362fdb5b6fc23a8af0fe16d752df6ae5deade1ef0979136fdbd499ba0f8ceccc257ad50e2e5184bcb185a44e576cf3d03851f2a
+  languageName: node
+  linkType: hard
+
 "@iconify/collections@npm:^1.0.721":
   version: 1.0.724
   resolution: "@iconify/collections@npm:1.0.724"
@@ -6011,6 +6020,7 @@ __metadata:
   resolution: "root-workspace-0b6124@workspace:."
   dependencies:
     "@eslint/js": "npm:^9.19.0"
+    "@iconify-json/lucide": "npm:^1.2.123"
     "@inertiajs/vite": "npm:^3.0.0"
     "@inertiajs/vue3": "npm:^3.0.0"
     "@laravel/vite-plugin-wayfinder": "npm:^0.1.3"

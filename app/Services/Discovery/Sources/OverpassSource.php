@@ -6,6 +6,7 @@ use App\Services\Discovery\Candidate;
 use App\Services\Discovery\Sources\Traits\ReportsFailures;
 use App\Support\Settings;
 use App\Support\Url;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Throwable;
@@ -20,6 +21,19 @@ use Throwable;
  */
 class OverpassSource implements DiscoverySourceInterface
 {
+    /**
+     * Overpass says "busy" in two ways and neither means the area is empty: 429
+     * when every slot on the instance is taken, 504 when the gateway gives up
+     * on a query still running. Both answer the next probe the same way, so a
+     * run against a loaded instance loses its whole query budget to a source
+     * that is merely queueing — waiting out a round is the difference between
+     * an empty run and a full one.
+     *
+     * Nothing else is retried: a 400 is our own malformed QL and a 406 is the
+     * missing User-Agent, and repeating either only costs time.
+     */
+    private const BUSY = [429, 504];
+
     public function __construct(private Settings $settings) {}
 
     use ReportsFailures;
@@ -43,18 +57,7 @@ class OverpassSource implements DiscoverySourceInterface
         }
 
         try {
-            $response = Http::timeout((int) config('eveil.sources.overpass.timeout'))
-                // Overpass answers 406 to Guzzle's default User-Agent and asks
-                // that clients identify themselves. Without this the source
-                // returns nothing, forever, silently.
-                ->withHeaders([
-                    'User-Agent' => (string) config('eveil.crawl.user_agent'),
-                    'Accept' => 'application/json',
-                ])
-                ->asForm()
-                ->post((string) config('eveil.sources.overpass.url'), [
-                    'data' => $this->query($area, $tags, (string) ($probe['country'] ?? '')),
-                ]);
+            $response = $this->post($this->query($area, $tags, (string) ($probe['country'] ?? '')));
         } catch (Throwable $e) {
             return $this->failed("{$area}: {$e->getMessage()}");
         }
@@ -71,6 +74,34 @@ class OverpassSource implements DiscoverySourceInterface
             ->filter()
             ->unique(fn (Candidate $candidate): string => $candidate->domain() ?? $candidate->name)
             ->values();
+    }
+
+    private function post(string $query): Response
+    {
+        $wait = (int) config('eveil.sources.overpass.retry_wait_ms');
+
+        foreach ([0, $wait, $wait * 2] as $delay) {
+            if ($delay > 0) {
+                usleep($delay * 1000);
+            }
+
+            $response = Http::timeout((int) config('eveil.sources.overpass.timeout'))
+                // Overpass answers 406 to Guzzle's default User-Agent and asks
+                // that clients identify themselves. Without this the source
+                // returns nothing, forever, silently.
+                ->withHeaders([
+                    'User-Agent' => (string) config('eveil.crawl.user_agent'),
+                    'Accept' => 'application/json',
+                ])
+                ->asForm()
+                ->post((string) config('eveil.sources.overpass.url'), ['data' => $query]);
+
+            if (! in_array($response->status(), self::BUSY, true)) {
+                return $response;
+            }
+        }
+
+        return $response;
     }
 
     /**

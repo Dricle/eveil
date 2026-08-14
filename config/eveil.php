@@ -27,6 +27,11 @@ return [
         'overpass' => [
             'url' => env('OVERPASS_URL', 'https://overpass-api.de/api/interpreter'),
             'timeout' => 60,
+
+            // The public instance hands out a few slots per IP and answers 429
+            // when they are all busy. A probe that waits for a slot costs
+            // seconds; one that gives up costs a whole area of the market.
+            'retry_wait_ms' => env('OVERPASS_RETRY_WAIT_MS', 3_000),
         ],
     ],
 

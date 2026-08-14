@@ -480,3 +480,56 @@ it('sends a real directory to the registry instead of deleting it', function () 
         ->toBe(['chez-marcel.test', 'pagesdor.be'])
         ->and(KnownHost::query()->firstWhere('host', 'pagesdor.be')->kind)->toBe(HostKind::Index);
 });
+
+it('spends the query budget across both sources, not all of it on the first', function () {
+    // Overpass rate-limits by IP and answers 429 when its slots are busy. Run
+    // every map probe before the first web query and a busy Overpass takes the
+    // whole `max_queries` budget with it: the run reports an empty market it
+    // never actually searched.
+    activeTargetProfile();
+    app(Settings::class)->set('discovery', array_merge(app(Settings::class)->array('discovery'), ['max_queries' => 4]));
+    config()->set('eveil.sources.overpass.retry_wait_ms', 0);
+
+    DiscoveryPlanner::fake([plan(
+        overpass: [overpassProbe('Namur'), overpassProbe('Charleroi'), overpassProbe('Liège'), overpassProbe('Mons')],
+        web: [['query' => 'friterie namur', 'language' => 'fr', 'why' => 'Local.']],
+    )]);
+    ResultTriage::fake([['hosts' => [['host' => 'vraie-friterie.be', 'kind' => 'entity', 'reason' => 'One business.']]]]);
+    CompanyQualifier::fake([verdict()]);
+
+    Http::fake([
+        '*/api/interpreter' => Http::response('rate limited', 429),
+        '*/search*' => Http::response(['results' => [
+            ['url' => 'https://vraie-friterie.be', 'title' => 'Vraie Friterie'],
+        ]]),
+        '*/robots.txt' => Http::response('', 404),
+        'https://vraie-friterie.be/' => Http::response(page()),
+    ]);
+
+    $this->artisan('eveil:discover-companies')->assertSuccessful();
+
+    expect(Company::sole()->source)->toBe('web_search');
+});
+
+it('waits out a busy Overpass instead of reporting an empty area', function (int $status) {
+    activeTargetProfile();
+    config()->set('eveil.sources.overpass.retry_wait_ms', 0);
+
+    DiscoveryPlanner::fake([plan(overpass: [overpassProbe()])]);
+    CompanyQualifier::fake([verdict()]);
+
+    Http::fake([
+        '*/api/interpreter' => Http::sequence()
+            // 429: every slot taken. 504: the gateway gave up on a query still
+            // running. Both mean "come back", neither means the area is empty.
+            ->push('busy', $status)
+            ->push(['elements' => [osmElement('Friterie du Centre', 'https://friterie-centre.be')]]),
+        '*/robots.txt' => Http::response('', 404),
+        'https://friterie-centre.be/' => Http::response(page()),
+    ]);
+
+    $this->artisan('eveil:discover-companies')->assertSuccessful();
+
+    expect(Company::sole()->domain)->toBe('friterie-centre.be')
+        ->and(DiscoveryRun::sole()->stats['source_failures'])->toBe([]);
+})->with([429, 504]);

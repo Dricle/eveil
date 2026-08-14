@@ -245,12 +245,18 @@ class RunDiscovery
     }
 
     /**
+     * Interleaved, one source then the other, because `max_queries` is spent in
+     * order: run every Overpass probe first and a rate-limited or dead Overpass
+     * takes the entire budget with it, so the web queries the plan asked for
+     * never run and the run reports an empty market it never looked at.
+     *
      * @param  array<string, mixed>  $plan
      * @return array<int, array{0: string, 1: array<string, mixed>}>
      */
     private function probes(array $plan): array
     {
-        $probes = [];
+        $overpass = [];
+        $web = [];
 
         foreach ($plan['overpass_probes'] ?? [] as $probe) {
             $tags = [];
@@ -261,7 +267,7 @@ class RunDiscovery
                 }
             }
 
-            $probes[] = ['overpass', [
+            $overpass[] = ['overpass', [
                 'area' => $probe['area'] ?? '',
                 'country' => $probe['country'] ?? '',
                 'tags' => $tags,
@@ -269,10 +275,16 @@ class RunDiscovery
         }
 
         foreach ($plan['web_queries'] ?? [] as $query) {
-            $probes[] = ['web_search', [
+            $web[] = ['web_search', [
                 'query' => $query['query'] ?? '',
                 'language' => $query['language'] ?? 'auto',
             ]];
+        }
+
+        $probes = [];
+
+        for ($i = 0; $i < max(count($overpass), count($web)); $i++) {
+            $probes = array_merge($probes, array_filter([$overpass[$i] ?? null, $web[$i] ?? null]));
         }
 
         return $probes;

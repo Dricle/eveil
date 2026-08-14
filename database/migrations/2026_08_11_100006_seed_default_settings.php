@@ -1,6 +1,5 @@
 <?php
 
-use App\Support\Settings;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
@@ -80,14 +79,10 @@ return new class extends Migration
                 ['value' => json_encode($value), 'is_encrypted' => false, 'updated_at' => now(), 'created_at' => now()],
             );
         }
-
-        app(Settings::class)->flush();
     }
 
     public function down(): void
     {
         DB::table('settings')->whereIn('key', array_keys(self::DEFAULTS))->delete();
-
-        app(Settings::class)->flush();
     }
 };

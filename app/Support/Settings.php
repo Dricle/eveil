@@ -85,6 +85,17 @@ class Settings
         $value = $this->get($key);
 
         if ($value === null) {
+            // The snapshot is remembered forever, so one taken while `settings`
+            // was empty outlives a `migrate:fresh` against a shared store and
+            // then looks exactly like a missing key. Re-read once before
+            // calling it a bug: the flush cannot live in the defaults migration
+            // because migrations must run without Redis reachable.
+            $this->flush();
+
+            $value = $this->get($key);
+        }
+
+        if ($value === null) {
             throw new RuntimeException(
                 "Setting [{$key}] is missing. Run `php artisan migrate` — defaults ship as a migration."
             );

@@ -1,12 +1,14 @@
 <?php
 
+use App\Enums\CampaignLeadStatus;
+use App\Models\Lead;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
 /**
  * The two partial unique indexes encode business rules that no application code
  * would otherwise enforce. They are also the reason PostgreSQL is mandatory in
- * tests (ADR-010) — SQLite would not reproduce either of them.
+ * tests — SQLite would not reproduce either of them.
  */
 function makeProject(): int
 {
@@ -28,9 +30,13 @@ function makeProject(): int
 
 function makeLead(int $projectId, ?string $email): int
 {
+    // Raw inserts on purpose: this file checks what the DATABASE refuses, not
+    // what the model prevents. So the hash is written by hand here — in the app
+    // the `email` mutator keeps it in step.
     return DB::table('leads')->insertGetId([
         'project_id' => $projectId,
         'email' => $email,
+        'email_hash' => $email === null ? null : Lead::hashFor($email),
         'source' => 'test',
         'discovered_at' => now(),
         'created_at' => now(),
@@ -105,4 +111,20 @@ it('allows a new campaign once the previous membership is finished', function ()
     }
 
     expect(DB::table('campaign_leads')->where('lead_id', $leadId)->count())->toBe(2);
+});
+
+it('keeps CampaignLeadStatus::live() in step with the partial index', function () {
+    $definition = DB::table('pg_indexes')
+        ->where('schemaname', 'public')
+        ->where('indexname', 'campaign_leads_one_active_per_lead')
+        ->value('indexdef');
+
+    expect($definition)->not->toBeNull();
+
+    foreach (CampaignLeadStatus::cases() as $status) {
+        // The index is the enforcement; the enum is the readable copy. Drift
+        // between them would silently let a lead into two live campaigns.
+        expect(str_contains((string) $definition, "'{$status->value}'"))
+            ->toBe($status->isLive(), "status {$status->value} disagrees with the index");
+    }
 });

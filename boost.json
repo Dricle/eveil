@@ -10,6 +10,7 @@
     "sail": false,
     "skills": [
         "infer-conventions",
+        "ai-sdk-development",
         "laravel-best-practices",
         "wayfinder-development",
         "pest-testing",

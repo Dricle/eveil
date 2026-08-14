@@ -8,8 +8,8 @@ use Illuminate\Support\Facades\Schema;
  * What the Website agent produces, and what the Sales agent targets with.
  *
  * `project_analyses` keeps the history so a re-run can be diffed against the
- * previous one (story 4.2). `icps` holds as many profiles as the agent derives,
- * freely editable by the user (ADR-015) — a product usually serves several
+ * previous one. `target_profiles` holds as many profiles as the agent derives,
+ * freely editable by the user — a product usually serves several
  * markets, and flattening them into one average profile targets nobody.
  */
 return new class extends Migration
@@ -19,10 +19,35 @@ return new class extends Migration
      */
     public function up(): void
     {
+        /**
+         * The code behind the product. Several rows per project on purpose: a
+         * front end and an API are two repositories describing one product, and
+         * a single column could only ever hold half the answer.
+         *
+         * Not `github_repositories` — the same product self-hosts on GitLab or
+         * Gitea, and the provider is a property of the URL, not of the table.
+         */
+        Schema::create('code_repositories', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('project_id')->constrained()->cascadeOnDelete();
+
+            $table->string('url');
+            $table->string('name');
+
+            $table->timestamps();
+
+            $table->unique(['project_id', 'url']);
+        });
+
         Schema::create('project_analyses', function (Blueprint $table) {
             $table->id();
             $table->foreignId('project_id')->constrained()->cascadeOnDelete();
             $table->foreignId('agent_run_id')->nullable()->constrained()->nullOnDelete();
+
+            // Which repository this run read. Null for a website analysis, and
+            // the reason repositories are a table: with several of them, "type
+            // = repo" alone no longer says what was analysed.
+            $table->foreignId('code_repository_id')->nullable()->constrained()->cascadeOnDelete();
 
             $table->string('type');   // website|repo
             $table->string('status'); // pending|running|succeeded|partial|failed
@@ -39,7 +64,7 @@ return new class extends Migration
             $table->index(['project_id', 'created_at']);
         });
 
-        Schema::create('icps', function (Blueprint $table) {
+        Schema::create('target_profiles', function (Blueprint $table) {
             $table->id();
             $table->foreignId('project_id')->constrained()->cascadeOnDelete();
 
@@ -62,7 +87,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('icps');
+        Schema::dropIfExists('target_profiles');
         Schema::dropIfExists('project_analyses');
+        Schema::dropIfExists('code_repositories');
     }
 };

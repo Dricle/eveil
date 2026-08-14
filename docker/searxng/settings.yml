@@ -1,0 +1,16 @@
+# Minimal SearXNG for Eveil (ADR-006). The stock image serves HTML only — the
+# JSON format below is what makes it usable as a discovery source, and it is
+# off by default.
+use_default_settings: true
+
+server:
+    secret_key: 'eveil-dev-secret-change-me'
+    limiter: false
+    image_proxy: false
+
+search:
+    safe_search: 0
+    autocomplete: ''
+    formats:
+        - html
+        - json

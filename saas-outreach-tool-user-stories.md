@@ -1,8 +1,7 @@
 # Eveil — spécification produit
 
 > Outil marketing/sales piloté par IA, multi-projet, en édition self-hosted gratuite et cloud payante.
-> Dernière révision : 2026-08-10 (brainstorm Clément + Claude).
-> Sources : lemlist.com, github.com/moaljumaa/linki, braindump Clément du 2026-08-09.
+> Sources : lemlist.com, github.com/moaljumaa/linki.
 
 ---
 
@@ -10,7 +9,8 @@
 
 ### Vision finale
 
-> **Je donne l'URL et les infos de mon produit. L'app me trouve des clients.**
+> **Je donne l'URL et les infos de mon produit. L'app me trouve des clients** — directement, ou via
+> ceux qui les touchent déjà.
 
 Une entrée, une sortie. Tout le reste est de la plomberie que l'utilisateur ne devrait idéalement
 jamais avoir à toucher.
@@ -64,7 +64,7 @@ Ce que l'auto-hébergement débloque, et qui n'est pas cosmétique :
 3. **Pas de facturation au siège, et le multi-utilisateur en self-hosted.** Organizations, rôles et
    invitations sont dans le cœur, pas derrière le cloud (ADR-025). Une équipe de 6 ne paie pas six
    fois — elle ne paie pas du tout si elle s'héberge.
-4. **Zéro configuration de ciblage.** L'ICP est dérivé du produit au lieu d'être rempli dans un
+4. **Zéro configuration de ciblage.** L'profil cible est dérivé du produit au lieu d'être rempli dans un
    formulaire. Aucun concurrent de la catégorie ne part de l'URL du produit.
 5. **Contexte partagé de bout en bout.** Découverte, qualification et personnalisation puisent dans
    la même base de connaissance : Eveil sait *pourquoi* ce contact, et le dit dans le mail.
@@ -81,7 +81,7 @@ source lemlist alternative »). Open sourcé en mars 2026, LinkedIn-first (le re
 « Self-hosted LinkedIn outreach automation tool »), il pilote un vrai navigateur Chrome, avec un
 ciblage manuel.
 
-**Testé par Clément le 2026-08-10 : le produit ne tient pas.** L'évaluation est qu'il s'agit d'un
+**Testé : le produit ne tient pas.** L'évaluation est qu'il s'agit d'un
 véhicule d'acquisition pour l'hébergement managé Opsily plus que d'un produit autonome. Conclusion
 pratique : le slot est revendiqué mais **pas occupé**. Il reste à prendre.
 
@@ -186,6 +186,9 @@ l'API GitHub sont également gratuits et sans clé.
 argument d'onboarding majeur. Risque assumé : SearXNG se fait rate-limiter ; si ça devient bloquant,
 un driver Brave/Serper se branche derrière la même interface.
 
+Complété par **ADR-033** : les annuaires et les registres officiels sont eux aussi gratuits et sans
+clé, et réduisent la dépendance à SearXNG comme point d'entrée unique.
+
 ### ADR-007 — Vérification email maison
 MX check puis sonde SMTP `RCPT TO` sans envoi. Détection obligatoire des domaines catch-all → ces
 adresses sont marquées `risky`, pas `valid`. Gmail et Outlook bloquent les sondes → statut `unknown`,
@@ -196,17 +199,15 @@ Login serveur + relais 2FA + empreinte navigateur stable + proxy par compte = un
 par utilisateur. C'est un produit à lui seul. Quand ça arrivera, ce sera dans son propre container,
 optionnel.
 Risque assumé par ailleurs : automatiser LinkedIn viole ses CGU (risque de ban du compte utilisateur).
-Décision de Clément le 2026-08-09 : on l'inclura quand même, même risque que Linki.
+Décision : on l'inclura quand même, même risque que Linki.
 
 ### ADR-009 — L'autonomie est un réglage à trois crans, par projet
-> *Interprétation de la validation de Clément le 2026-08-10 : les trois niveaux sont implémentés comme
-> un réglage, pas comme un choix unique figé dans le produit. À corriger si l'intention était de n'en
-> retenir qu'un.*
+> *Les trois niveaux sont un réglage, pas un choix unique figé dans le produit.*
 
 | Cran | Comportement | Pour qui |
 |---|---|---|
-| **Supervisé** | Validation humaine à chaque étape : ICP, liste de sociétés, séquence, et premier lot d'envois | Premier projet, utilisateur méfiant, secteur sensible |
-| **Semi-auto** *(défaut)* | Validation une fois de l'ICP et de la séquence sur un échantillon, puis pilote automatique avec retour à l'humain sur anomalie | Le cas normal |
+| **Supervisé** | Validation humaine à chaque étape : profil cible, liste de sociétés, séquence, et premier lot d'envois | Premier projet, utilisateur méfiant, secteur sensible |
+| **Semi-auto** *(défaut)* | Validation une fois de le profil cible et de la séquence sur un échantillon, puis pilote automatique avec retour à l'humain sur anomalie | Le cas normal |
 | **Autonome** | Envoi dès l'URL, sans point d'arrêt | Utilisateur aguerri, projet secondaire, opt-in explicite |
 
 Réglage porté par le projet (`projects.autonomy_level`), modifiable à tout moment. **Défaut =
@@ -226,14 +227,14 @@ Le cran autonome ne désactive pas ces gardes-fous. Il ne supprime que les point
 ---
 
 ### ADR-010 — PostgreSQL partout, tests inclus
-*(résout A1, tranché le 2026-08-10)*
+*(résout A1)*
 
 PostgreSQL est le seul moteur supporté, en dev, en test, en CI et en prod. Pas de SQLite, même pour
 la suite de tests.
 
 **Pourquoi Postgres** : les discovery runs écrivent en parallèle depuis plusieurs workers pendant
 plusieurs minutes — SQLite n'accepte qu'un écrivain à la fois, même en WAL. Le schéma est très JSON
-(`knowledge_base`, `icps.criteria`, `agent_runs.input/output`, `campaign_steps.config`) et JSONB est
+(`knowledge_base`, `target_profiles.criteria`, `agent_runs.input/output`, `campaign_steps.config`) et JSONB est
 indexable. La dédup a besoin d'index uniques partiels. La recherche dans les leads aura besoin du
 full-text natif. pgvector reste disponible si la knowledge base demande des embeddings plus tard.
 MySQL/MariaDB n'apportent rien ici et ont un JSON plus faible.
@@ -248,7 +249,7 @@ sur Postgres ; le `composer setup` doit échouer clairement si aucun Postgres n'
 que de retomber silencieusement sur SQLite.
 
 ### ADR-011 — Redis + Horizon pour la queue, le cache et les locks
-*(résout A2, tranché le 2026-08-10)*
+*(résout A2)*
 
 Redis rejoint le docker compose (6 services : app, worker, scheduler, Postgres, SearXNG, Redis).
 Horizon pilote les workers.
@@ -281,7 +282,7 @@ dashboard Horizon est réservé au superadmin ; le compose doit démarrer Horizo
 nu.
 
 ### ADR-012 — Clé de chiffrement dédiée aux credentials
-*(résout A3, tranché le 2026-08-10)*
+*(résout A3)*
 
 Les secrets utilisateurs — mots de passe SMTP/IMAP, clé du provider IA, futurs tokens OAuth — sont
 chiffrés avec une clé **distincte de l'`APP_KEY`** : `CREDENTIALS_KEY`, portée par son propre
@@ -307,7 +308,7 @@ organization (envelope encryption) et un KMS externe restent des questions ouver
 bloquantes pour le v0.
 
 ### ADR-013 — Suppression list à trois couches, opt-out scopé au projet
-*(résout A4, tranché le 2026-08-10)*
+*(résout A4)*
 
 | Couche | Contenu | Périmètre | Raison du périmètre |
 |---|---|---|---|
@@ -319,7 +320,7 @@ Seule la couche 3 traverse les tenants. Elle est alimentée par des listes publi
 détections, **jamais par le comportement des prospects d'un client** — sinon tester une adresse
 révélerait qui prospecte qui.
 
-Le choix du périmètre projet pour la couche 1 est délibéré (Clément, 2026-08-10) : il privilégie le
+Le choix du périmètre projet pour la couche 1 est délibéré : il privilégie le
 cas agence. Il ouvre un risque — un prospect désinscrit d'un produit peut être resollicité par la même
 entité pour un autre — compensé par deux soupapes obligatoires :
 
@@ -334,15 +335,15 @@ entité pour un autre — compensé par deux soupapes obligatoires :
 Toute vérification avant envoi consulte les trois couches.
 
 ### ADR-014 — Données cloisonnées par projet, cache de pages partagé
-*(résout A5, tranché le 2026-08-10)*
+*(résout A5)*
 
 Sociétés et leads restent **cloisonnés par projet**, sans registre partagé. Un **cache de pages
 brutes** au niveau instance évite les re-fetch : clé = URL normalisée, TTL, contenu public uniquement.
 
 **Pourquoi pas de registre partagé** : ce qui coûte cher dans la découverte n'est pas le fetch HTTP,
-c'est la qualification LLM. Or le score de fit et sa justification sont **spécifiques à l'ICP** — la
+c'est la qualification LLM. Or le score de fit et sa justification sont **spécifiques à le profil cible** — la
 même société vaut 90 pour un produit et 20 pour un autre. Le partage n'économiserait donc que la
-partie ICP-indépendante (contenu de page, firmographies), au prix d'une entité supplémentaire, d'une
+partie profil cible-indépendante (contenu de page, firmographies), au prix d'une entité supplémentaire, d'une
 jointure partout, et d'un arbitrage à inventer quand deux projets divergent sur les faits d'une même
 société.
 
@@ -354,10 +355,10 @@ Réserve mineure notée : l'existence d'une entrée en cache révèle en théori
 par quelqu'un. Jugé négligeable ; si ça devait poser problème en cloud, le cache se scope par
 organization sans rien changer d'autre.
 
-### ADR-015 — Autant d'ICP que nécessaire, en CRUD libre
-*(résout A6, tranché le 2026-08-10)*
+### ADR-015 — Autant de profil cible que nécessaire, en CRUD libre
+*(résout A6)*
 
-Un **ICP** (Ideal Customer Profile) est le portrait structuré du client visé : secteurs, taille,
+Un **profil cible** (Ideal Customer Profile) est le portrait structuré du client visé : secteurs, taille,
 géographie, postes, technologies, signaux déclencheurs. C'est l'objet que l'agent déduit de la
 knowledge base, et il pilote toute la recherche : l'agent choisit où chercher à partir de ces
 critères, puis note chaque société selon son écart avec ce portrait. Les outils concurrents le font
@@ -375,7 +376,7 @@ Conséquences de schéma, non négociables :
 
 ```
 companies                 faits firmographiques, dédupliqués par domaine au sein du projet
-company_icp_evaluations   company_id + icp_id → fit_score, fit_reason
+company_target_evaluations   company_id + target_profile_id → fit_score, fit_reason
 ```
 
   Sans ça, deux profils qui trouvent la même société écrasent mutuellement leur évaluation.
@@ -391,7 +392,7 @@ company_icp_evaluations   company_id + icp_id → fit_score, fit_reason
 L'écran principal reste une ligne droite : le CRUD est disponible, jamais obligatoire pour avancer.
 
 ### ADR-016 — Aucun tracking dans les emails en v0
-*(résout A7, tranché le 2026-08-10)*
+*(résout A7)*
 
 Ni pixel d'ouverture, ni réécriture de liens. `messages.opened_at` sort du schéma. La métrique
 suivie est la **réponse**.
@@ -407,9 +408,9 @@ utilisateur, donc un CNAME à configurer — ce qui percute la promesse « opér
 Reporté en v1, désactivé par défaut.
 
 ### ADR-017 — Sendboo n'est pas réutilisable, et c'est structurel
-*(question soulevée le 2026-08-10 : faut-il reconstruire un pseudo-Sendboo ?)*
+*(question : faut-il reconstruire un pseudo-Sendboo ?)*
 
-Sendboo (`/Users/mydnic/code/dricle/sendboo`) est une plateforme d'email marketing multi-tenant bâtie
+Sendboo est une plateforme d'email marketing multi-tenant bâtie
 sur Spatie Mailcoach, orientée e-commerce : listes, abonnés, automations, sending domains,
 Store/Product/DiscountCode, extension Shopify. Réponse : **non, et il n'y a pas de rattrapage à
 faire.**
@@ -438,7 +439,7 @@ dans ce qu'Eveil n'a pas à faire.
 vers une liste Sendboo pour le nurturing. Epic 12, jamais une dépendance.
 
 ### ADR-018 — Rétention : purge automatique, défauts CNIL, configurable
-*(résout A8, tranché le 2026-08-10)*
+*(résout A8)*
 
 | Donnée | Défaut | Repère |
 |---|---|---|
@@ -453,16 +454,23 @@ régler sur l'infini.
 
 Deux mécanismes obligatoires :
 
-- **Tombstone d'effacement.** Une demande de suppression ne peut pas se contenter de supprimer la
-  ligne : le prochain discovery run retrouverait la personne et la recontacterait. On conserve
-  l'email **haché** dans une liste d'effacement, consultée à la découverte comme à l'envoi. On ne
-  garde pas la personne, on garde le fait qu'il ne faut plus jamais la retrouver.
+- **Effacement porté par la ligne du lead.** Une demande de suppression ne peut pas se contenter de
+  supprimer la ligne : le prochain discovery run retrouverait la personne et la recontacterait. Et un
+  soft delete ne suffit pas non plus — `deleted_at` masque une ligne qui contient toujours le nom,
+  l'adresse et l'URL LinkedIn, c'est de la conservation avec un drapeau dessus. La ligne reste donc,
+  **vidée** : nom, prénom, titre, email, LinkedIn et `source_url` partent, ainsi que le sujet et le
+  corps des messages déjà envoyés, qui citent l'adresse. Survivent `email_hash` — un condensé à sens
+  unique, consulté à la découverte comme à l'envoi — et `erased_at`. On ne garde pas la personne, on
+  garde le fait qu'il ne faut plus jamais la retrouver. Pas de table `erasures` séparée : la portée est
+  le projet, exactement comme la ligne, car deux projets peuvent trouver la même personne et un seul
+  s'être vu demander de l'oublier. Un effacement à l'échelle de l'organization est la même opération
+  répétée par projet. Réserve assumée : trop effacer n'est jamais une infraction, pas assez si.
 - **Dissociation dans `agent_runs`.** Les payloads bruts sont purgés ou anonymisés tôt ; les métriques
   survivent sans limite. Purger les leads tout en gardant les runs indéfiniment reviendrait à laisser
   la donnée personnelle derrière soi dans le compteur de facturation.
 
 ### ADR-019 — Crédits IA en cloud, clé du user en self-hosted
-*(résout B1, tranché le 2026-08-11)*
+*(résout B1)*
 
 **Self-hosted** : le superadmin met sa propre clé API. **Aucun suivi de crédits, aucune facturation,
 aucun code de comptage.** `agent_runs` reste (debug et historique), pas le grand livre.
@@ -480,18 +488,43 @@ Opus 5 pour la planification, Haiku 4.5 pour extraction et qualification).
 
 | Action | Unité facturée | Crédits | Coût réel |
 |---|---|---|---|
-| `project.analyze` | par analyse de site | 150 | 0,15 $ |
-| `icp.derive` | par ICP | 60 | 0,06 $ |
+| `project.analyze` | par analyse de site | **200** | **0,19 $ — mesuré** |
+| `targets.derive` | par dérivation (tous profils) | **150** | **0,14 $ — mesuré** |
 | `discovery.plan` | par run | 500 | 0,53 $ |
-| `company.qualify` | par société évaluée | 4 | 0,0035 $ |
+| `company.qualify` | par société évaluée | **3** | **0,0025 $ — mesuré** |
 | `contact.extract` | par société retenue | 8 | 0,008 $ |
 | `sequence.generate` | par campagne | 100 | 0,10 $ |
 | `lead.personalize` | par lead | 3 | 0,003 $ |
 | `reply.classify` | par réponse | 1 | 0,001 $ |
+| `recommendations.generate` | par analyse | 120 | 0,12 $ — estimé |
+| `chat.message` | par message | 15 | 0,015 $ — estimé |
 | Vérification email, envoi SMTP, lecture IMAP | — | **0** | 0 $ |
 
 Campagne type de 100 leads ≈ **3 500 crédits**. Les actions non-IA à zéro crédit sont un argument
 commercial : la vérification d'email est facturée chez les concurrents.
+
+**Mesures réelles** :
+
+| Action | Estimé | Mesuré | Détail |
+|---|---|---|---|
+| `project.analyze` | 0,15 $ | **0,192 $** | 11 pages, 24 051 in / 2 877 out, 45 s |
+| `targets.derive` | 0,06 $ | **0,143 $** | 4 profils, 4 456 in / 4 833 out, 69 s |
+| `company.qualify` | 0,0035 $ | **0,0025 $** | moyenne sur 14 qualifications réelles |
+
+**Le biais n'est pas uniforme, et sa cause est la sortie.** Sur Opus 5 la sortie coûte 25 $/MTok
+contre 5 $ en entrée : les actions **génératives** confiées au planner produisent plus de tokens
+qu'elles n'en consomment (4 833 en sortie pour 4 456 en entrée sur la dérivation de profil cible) et coûtent
+donc **plus** que prévu. À l'inverse, les actions **d'extraction** confiées à Haiku rendent une sortie
+structurée courte et coûtent **moins** que prévu.
+
+La règle à appliquer aux lignes encore estimées : dimensionner la **sortie** d'abord, et se demander
+si l'action génère ou si elle extrait. `recommendations.generate` et `chat.message` sont génératives
+et tournent sur le planner — donc probablement sous-estimées, comme les deux premières lignes l'ont
+été.
+
+Grille corrigée : `project.analyze` 150 → 200, `targets.derive` 60 → 150, `company.qualify` 4 → 3. C'est
+exactement le mécanisme prévu par cet ADR : un chiffre faux se corrige en base, sans redéploiement,
+sans que le tarif client bouge.
 
 **Facturation à l'unité de travail, jamais au « run ».** Un run qui évalue 400 sociétés ne coûte pas
 ce qu'en coûte un qui en évalue 40 ; un forfait par run perd de l'argent sur les gros et vole les
@@ -509,27 +542,27 @@ Règles d'implémentation :
 - **Un run avorté par une erreur de notre côté n'est pas facturé** ; un run interrompu par l'utilisateur
   facture le travail réellement produit.
 
-Ce que ça change pour B1 : **la mesure n'est plus bloquante.** On livre sur les estimations,
+Ce que ça change pour B1 : **la mesure n'est pas bloquante.** On livre sur les estimations,
 `agent_runs` donne le coût réel, la grille s'ajuste en base. Seul le *ratio entre actions* doit être à
 peu près juste au départ, sinon une action se vend à perte sans que personne ne le voie.
 
 ### ADR-020 — Découverte insuffisante : diagnostic, puis élargissement borné
-*(résout B2, tranché le 2026-08-11)*
+*(résout B2)*
 
 « Rien trouvé » recouvre quatre pannes distinctes. **Diagnostiquer avant d'élargir n'est pas
 optionnel** :
 
 | Panne | Symptôme | Réponse |
 |---|---|---|
-| ICP trop étroit | 3 sociétés au lieu de 100 | Élargir un critère |
+| profil cible trop étroit | 3 sociétés au lieu de 100 | Élargir un critère |
 | Mauvaise source | 0 résultat mais le marché existe | Changer d'outil, pas de critère |
-| Fit systématiquement bas | 300 trouvées, aucune au-dessus de 40 | **L'ICP est faux — ne jamais élargir**, remonter à l'utilisateur |
+| Fit systématiquement bas | 300 trouvées, aucune au-dessus de 40 | **L'profil cible est faux — ne jamais élargir**, remonter à l'utilisateur |
 | Pas d'emails | Sociétés qualifiées, contacts introuvables | Problème d'extraction, pas de ciblage |
 
 Élargir dans le troisième cas est le pire scénario possible : l'agent produit 100 leads hors cible,
 l'utilisateur les contacte, son domaine encaisse les plaintes.
 
-**L'épuisement du marché est un résultat, pas un échec.** Un ICP « agences web à Namur, 5 à 20
+**L'épuisement du marché est un résultat, pas un échec.** Un profil cible « agences web à Namur, 5 à 20
 personnes » a une taille finie. Annoncer « ton marché fait 40 sociétés, les voici » est plus utile que
 racler du bruit pour remplir un quota — et aucun concurrent ne le dit, ils vendent au volume.
 
@@ -549,7 +582,7 @@ Les tentatives d'élargissement **se comptent dans le budget du run initial** et
 nouveau : sans ça une boucle d'élargissement brûle des crédits sans rien produire.
 
 ### ADR-021 — Langue détectée par société, contenu généré dedans
-*(résout B3, tranché le 2026-08-11)*
+*(résout B3)*
 
 Trois choses distinctes, à ne pas confondre :
 
@@ -577,7 +610,7 @@ coût est marginal à l'échelle. La version traduite est visible en prévisuali
 découvre jamais après coup ce qui est parti en son nom.
 
 ### ADR-022 — Métrique nord : réponses positives, plus le gain marqué à la main
-*(résout B4, tranché le 2026-08-11)*
+*(résout B4)*
 
 L'app ne voit que des réponses, jamais un contrat signé. Le taux de réponse **brut** est un mauvais
 indicateur : il compte les « non merci » et les absences du bureau à égalité avec les vrais intérêts.
@@ -610,7 +643,7 @@ Ce qui reste **hors scope** (§8) : les stades de pipeline complets saisis à la
 ça demande une discipline de saisie que personne n'a.
 
 ### ADR-023 — Pas de warm-up : position assumée et documentée
-*(résout B5, tranché le 2026-08-11)*
+*(résout B5)*
 
 Eveil ne construit **aucun** mécanisme de warm-up — ni réseau mutualisé, ni échange local entre les
 boîtes de l'utilisateur.
@@ -639,7 +672,7 @@ point d'intégration pour brancher un service tiers si l'utilisateur y tient vra
 **Tier B entièrement tranché** (ADR-019 à ADR-023). Les écrans du v0 peuvent être dessinés.
 
 ### ADR-024 — Tarification cloud : crédits seuls, avec dotation d'essai
-*(résout C1, tranché le 2026-08-11)*
+*(résout C1)*
 
 **Modèle unique : les crédits.** Pas de formule « apporte ta clé » en cloud — celui qui veut fournir sa
 propre clé installe le self-hosted, qui est gratuit et fait pour ça.
@@ -679,7 +712,7 @@ valables 12 mois. Sans expiration, on accumule une dette de crédits non consomm
 revenir trois ans plus tard avec un stock acheté au tarif de l'époque.
 
 ### ADR-025 — AGPL partout, CLA à sortie libre (modèle Postiz)
-*(résout C2, tranché le 2026-08-11)*
+*(résout C2)*
 
 **Un seul `LICENSE`, AGPL-3.0, tout le repo — `app/Cloud/` compris.** Pas de dossier sous licence
 distincte, pas de fonctionnalité retenue côté cloud.
@@ -688,7 +721,7 @@ distincte, pas de fonctionnalité retenue côté cloud.
 juridique, seulement un mécanisme de chargement conditionnel. Sans cette précision, quelqu'un y
 mettra du code dans six mois en le croyant protégé.
 
-**Périmètre de `app/Cloud/`, arrêté le 2026-08-11 : facturation et comptage de crédits, rien d'autre.**
+**Périmètre de `app/Cloud/` : facturation et comptage de crédits, rien d'autre.**
 Stripe, `credit_prices`, `credit_wallets`, `credit_transactions`, garde-fous d'essai. Tout le reste est
 dans le cœur — organizations, rôles, invitations, accès par projet compris, donc **disponibles en
 self-hosted**. Le cloud n'ajoute que l'hébergement géré, la facturation et le support. C'est ce
@@ -722,33 +755,49 @@ protégerait rien et abîmerait le message.
 vérification CLA, et **faire relire l'ensemble par un juriste** — c'est la seule décision du projet
 qu'on ne peut pas défaire.
 
-### ADR-026 — Provider et modèle configurables par agent
-*(résout C3, tranché le 2026-08-11)*
+### ADR-026 — Provider, modèle et timeout configurables par agent
+*(résout C3)*
 
-Le superadmin choisit **le provider et le modèle pour chaque classe d'agent**, depuis un écran de
-settings. `laravel/ai` expose déjà la liste des providers et modèles disponibles ; la liste des agents
-vient du code. Pas de taxonomie de rôles inventée à maintenir en parallèle.
+Le superadmin choisit **le provider, le modèle et le timeout pour chaque classe d'agent**, depuis un
+écran de settings. `laravel/ai` expose déjà la liste des providers et modèles disponibles ; la liste
+des agents vient du code — `AgentSettings::known()` scanne `app/Ai/Agents/`, donc ajouter un agent
+ajoute une ligne à l'écran sans rien enregistrer nulle part.
 
-**Défauts livrés** — une install fraîche fonctionne sans toucher à l'écran :
+**La clé de réglage est le slug de l'agent**, kebab-case du nom de classe (`EveilAgent::slug()`), et
+`agent_runs.agent` stocke le même slug. Une taxonomie plus grossière — un enum `AgentType` à cinq
+rôles — a été essayée puis **supprimée** : trois travaux sans rapport partageaient la ligne `planner`,
+si bien que le compteur ne distinguait pas `project.analyze` de `targets.derive` alors que la grille de
+crédits les facture séparément, et qu'on ne pouvait pas mettre la dérivation de profil cible sur Opus en
+laissant la planification de recherche sur un modèle moins cher. Un agent = une ligne de réglage =
+une ligne de coût.
 
-| Agent | Rôle | Défaut | Sortie structurée requise |
-|---|---|---|---|
-| Planner | Où chercher, dérivation ICP, séquence | Opus 5 | non |
-| Extractor | Lecture de page → structuré | Haiku 4.5 | **oui** |
-| Qualifier | Score de fit vs ICP | Haiku 4.5 | **oui** |
-| Writer | Personnalisation, traduction | Haiku 4.5 | non |
-| Classifier | Classement des réponses | Haiku 4.5 | **oui** |
+**Défauts livrés** (`config/eveil.php`) — une install fraîche fonctionne sans toucher à l'écran :
+
+| Slug | Rôle | Défaut | Timeout | Sortie structurée requise |
+|---|---|---|---|---|
+| `website-analyst` | Site → base de connaissance | Opus 5 | 300s | non |
+| `target-profile-deriver` | Base de connaissance → profils cibles | Opus 5 | 300s | non |
+| `discovery-planner` | Où chercher, quelles requêtes | Opus 5 | 300s | non |
+| `company-qualifier` | Score de fit vs profil cible | Haiku 4.5 | 60s | **oui** |
+| `contact-extractor` | Lecture de page → contacts structurés | Haiku 4.5 | 60s | **oui** |
+
+Les agents à venir (writer de séquence, classifier de réponses, recommandations d'acquisition)
+s'ajoutent à cette liste avec leur propre slug, pas à une catégorie existante.
 
 **L'écran marque les agents exigeant de la sortie structurée.** Un self-hoster qui branche un petit
-modèle local via Ollama sur `Extractor` obtiendra des extractions **cassées**, pas médiocres. Le
-`Planner` se dégrade proprement ; les trois autres non.
+modèle local via Ollama sur `contact-extractor` obtiendra des extractions **cassées**, pas médiocres.
+Les agents génératifs se dégradent proprement ; ces deux-là non.
+
+**Le timeout est réglable par agent pour une raison mesurée** : la première dérivation de profil cible réelle a
+pris 69 secondes et est morte sur le défaut HTTP de 60s. 300s pour les agents qui réfléchissent, 60s
+pour les lectures courtes — où un timeout long ne ferait que bloquer un worker.
 
 **Réglage de scope instance** (ADR-003), au même titre que la clé du provider : réservé au
 superadmin. Aucun admin ni membre d'organization ne le voit. En cloud, le seul superadmin est
 l'exploitant de l'instance — un client ne peut donc pas changer le mapping.
 
 Note d'exploitation, pas de garde-fou produit : la grille de crédits (ADR-019) est calibrée sur ce mix
-précis. Basculer `Qualifier` sur Opus 5 multiplie par cinq le coût réel de `company.qualify`. Si
+précis. Basculer `company-qualifier` sur Opus 5 multiplie par cinq le coût réel de `company.qualify`. Si
 l'exploitant change le mapping en cloud, il ajuste `credit_prices` dans la foulée.
 
 **Repli** : backoff et reprise via Horizon, **pas de bascule automatique vers un autre provider**. La
@@ -757,7 +806,7 @@ cours de run produirait des scores issus de deux barèmes différents sans que �
 provider reste une opération de config assumée.
 
 ### ADR-027 — SMTP/IMAP classique uniquement, pas d'OAuth
-*(résout C4, tranché le 2026-08-11)*
+*(résout C4)*
 
 **Aucun OAuth**, ni en self-hosted ni en cloud. Connexion des boîtes par identifiants SMTP/IMAP
 seulement. Aucune vérification Google, aucune évaluation CASA, aucun délai administratif sur le
@@ -770,9 +819,9 @@ IMAP/SMTP client. C4 avait été formulé sur cette hypothèse, elle est fausse.
 Microsoft 365 — OVH, Infomaniak, Gandi, Zoho, cPanel, serveurs internes, tous en SMTP/IMAP classique
 sans échéance. C'est particulièrement vrai des PME européennes, qui sont la cible.
 
-**Risque assumé, consigné pour mémoire** (décision de Clément le 2026-08-11) :
+**Risque assumé, consigné pour mémoire** :
 
-| Fournisseur | État au 2026-08-11 |
+| Fournisseur | État |
 |---|---|
 | Google Workspace | Basic auth supprimée depuis le 1er mai 2025. App passwords disponibles avec 2FA, mais **un admin peut les couper pour toute l'organisation** |
 | Gmail grand public | App password + 2FA : fonctionnel |
@@ -789,7 +838,7 @@ courant, avec la procédure pas à pas. Quelques heures de travail, et ça trans
 déblocage de trente secondes.
 
 ### ADR-028 — Export CSV en v0, archive portable avant le cloud
-*(résout C5, tranché le 2026-08-11)*
+*(résout C5)*
 
 **v0** : export CSV des leads et des sociétés. Un jour de travail, utile de toute façon.
 
@@ -810,7 +859,7 @@ En cloud, l'export reste **conditionné à un premier paiement** (ADR-024), sino
 devient une machine à extraire des fichiers gratuits.
 
 ### ADR-029 — Mails indiscernables d'un envoi manuel, opt-out par « STOP »
-*(résout C6, tranché le 2026-08-11)*
+*(résout C6)*
 
 Les mails partent depuis la boîte de l'utilisateur et doivent **ressembler exactement à ce qu'il
 aurait tapé lui-même**. Tout ce qui signale un outil disparaît.
@@ -837,7 +886,7 @@ Pas d'en-tête `List-Unsubscribe` : les destinataires ne se sont abonnés à rie
 **Rien d'hébergé, rien de généré côté juridique.** Pas de page de notice, pas de texte art. 14, pas
 d'identité légale collectée. L'obligation d'information subsiste en droit européen mais **pèse sur
 l'utilisateur en tant que responsable de traitement** — Eveil est sous-traitant en cloud, hors boucle
-en self-hosted. Décision de Clément le 2026-08-11, risque assumé et documenté.
+en self-hosted. Risque assumé et documenté.
 
 ⚠️ **Conséquence technique majeure** : « répondez STOP » devient **l'unique canal de désinscription**.
 La classification des réponses (ADR-022) passe donc de métrique à **mécanisme de conformité**. Rater
@@ -853,12 +902,12 @@ horodatées en base. Eveil y est sous-traitant ; le document est standard et ne 
 de PDF signés.
 
 ### ADR-030 — Le nom reste Eveil, le domaine se choisira plus tard
-*(résout C8, tranché le 2026-08-11)*
+*(résout C8)*
 
 Le produit s'appelle **Eveil**. Le choix du domaine est reporté ; il ne bloque ni le code ni le
 schéma.
 
-État des domaines au 2026-08-11 : `eveil.com`, `.app`, `.io`, `.ai` et `.be` sont **pris**. Libres :
+État des domaines : `eveil.com`, `.app`, `.io`, `.ai` et `.be` sont **pris**. Libres :
 `eveil.dev`, `eveil.email`, `eveil.so`, `geteveil.com`, `useeveil.com`.
 
 Limites connues et assumées :
@@ -877,6 +926,214 @@ public — après, ça coûte le repo, la doc, les étoiles GitHub et le SEO acc
 **Tier C entièrement tranché** (ADR-024 à ADR-030). Le registre §9 est vide : plus aucune question
 ouverte bloquante.
 
+### ADR-031 — Un profil cible peut viser un partenaire, pas seulement un client
+
+Les profil cible portent un **type** : `customer` ou `partner`. Un profil partenaire décrit non pas qui achète,
+mais **qui touche déjà l'acheteur** — qui lui rend visite, qui le facture chaque mois, qui lui est
+légalement imposé.
+
+**Pourquoi ça mérite d'exister** : la première campagne réelle a mesuré le mur. Quatre friteries
+qualifiées ont donné deux leads, tous deux `info@` devinés et `risky` — les micro-commerces locaux
+publient un téléphone, pas un email. Or leurs intermédiaires — un grossiste, une brasserie, une
+fiduciaire spécialisée, une agence web sectorielle — sont des sociétés B2B avec un site, des personnes
+nommées et des adresses publiées. **Joignabilité proche de 100 %, et un levier sans commune mesure :
+une fiduciaire horeca, c'est cinquante restaurants d'un coup.**
+
+**Ce que ça coûte en code : presque rien**, et c'est ce qui rend la piste sérieuse.
+
+| Brique | Change ? |
+|---|---|
+| Knowledge base, découverte, qualification, contacts | non |
+| `target_profiles.type` | ajouté |
+| Dérivation | un mode partenaire, avec ses propres critères |
+| Séquence d'envoi | **oui, en profondeur** |
+
+Le dernier point n'est pas cosmétique : le mail à un grossiste n'est pas « achetez ce produit », c'est
+« vos conseillers visitent 3 000 restaurants, voici le partage de revenus ». Autre proposition de
+valeur, autre séquence, autre définition d'une réponse positive.
+
+Un profil partenaire porte deux champs que le profil client n'a pas :
+- **`access_angle`** — par quoi cet acteur touche le client cible, et à quelle fréquence
+- **`partnership_angle`** — pourquoi l'accord est gagnant pour lui, ce qui devient l'accroche du mail
+
+**Le signal prioritaire est l'obligation.** Caisse blanche, HACCP, AFSCA, guichet d'entreprise : les
+acteurs légalement imposés ont une clientèle captive, sont peu nombreux et sont énumérables. C'est la
+meilleure première cible d'un profil partenaire.
+
+**Ce que la découverte partenaire n'a pas le droit de faire : citer une société sans l'avoir vérifiée.**
+Un LLM produit volontiers des noms plausibles et faux. Comme pour les clients, une société n'entre en
+base qu'après avoir été trouvée, son site récupéré et qualifiée.
+
+**Conséquence sur la boussole** (§1) : la formule devient « je donne l'URL, l'app me trouve des clients
+— directement, ou via ceux qui les touchent déjà ».
+
+### ADR-032 — Recommandations d'acquisition : ancrées, priorisées, avec un état
+
+L'agent Website ne produit pas que des pistes d'amélioration du site : il propose aussi des **leviers
+d'acquisition absents** — programme de parrainage, contenu éditorial, présence sur un salon, offre aux
+écoles du secteur. Beaucoup de fondateurs n'y pensent tout simplement pas.
+
+**Ce n'est pas un document de stratégie.** Un rapport se lit une fois et ne fait rien. Trois règles le
+séparent du playbook générique qu'un LLM sort en trente secondes :
+
+- **Ancrage obligatoire.** Une recommandation cite la preuve tirée de la knowledge base ou du crawl.
+  « Faites du contenu » ne passe pas ; « ton site n'a pas de blog alors que les trois concurrents que
+  tu cites publient chaque semaine » passe. Sans preuve vérifiable, la recommandation n'est pas émise.
+- **Priorisation impact / effort**, comme les pistes de l'Epic 4.
+- **Un état, et il est respecté.** `proposed` → `done` ou `archived`. Une recommandation archivée ne
+  revient **jamais** — même règle que l'édition manuelle de la knowledge base et que le tombstone
+  d'effacement : quand l'utilisateur a tranché une fois, on ne le lui redemande pas.
+
+**Identité stable.** Chaque recommandation porte une clé, pas un libellé. Une ré-analyse qui
+reformulerait la même idée doit la reconnaître, sinon la liste se remplit de doublons à chaque passage.
+
+**Piloté par la conversation.** Une surface de chat par projet, dans laquelle l'utilisateur dit « c'est
+fait » ou « ça ne m'intéresse pas », et l'agent met l'état à jour. Personne ne gère un backlog à la
+main — c'est ce qui distingue cette liste d'un outil de tâches, explicitement hors scope (§8).
+`laravel/ai` fournit déjà la persistance des conversations (`RemembersConversations`), donc la
+plomberie est quasi gratuite ; ce qui reste à écrire, c'est l'outil que l'agent appelle pour changer un
+état.
+
+**Affichage** : liste latérale du chat, « propositions d'amélioration », les faites et archivées
+masquées par défaut.
+
+### ADR-033 — Découverte en graphe de jobs, et les annuaires sont une source à part entière
+
+**Le problème : la découverte par moteur de recherche est biaisée par le SEO.** Elle trouve les
+sociétés qui savent se référencer. Or une partie du marché visé n'a pas de site, ou seulement une page
+Facebook, ou un site que personne ne trouve avant la vingtième page de résultats. Ces sociétés-là sont
+souvent les meilleures cibles — elles n'ont personne pour les démarcher.
+
+Jeter tout résultat pointant vers un annuaire supprime la solution : `pagesdor.be/friteries/namur`
+n'est pas une société, c'est **deux cents sociétés** — et c'est le seul endroit où une société sans
+site publie une adresse email. La liste noire est un aiguillage, pas un filtre.
+
+#### Cinq décisions
+
+**1. Un résultat de recherche a deux natures, pas une.** *Entité* (une société → un candidat) ou
+*index* (une page de liste → à récolter). Un résultat n'est pas filtré, il est trié.
+
+**2. Le modèle navigue, PHP extrait.** L'IA décide **où** regarder ; le code fait le volume. Un job
+`HarvestListing` récolte une page de liste en pur PHP — `sitemap.xml`, puis JSON-LD `LocalBusiness` /
+`Organization`, puis sélecteurs CSS enregistrés, puis en dernier recours l'extracteur LLM. Le modèle ne
+voit jamais les deux cents fiches, seulement « 60 enregistrées, 41 avec site, 12 avec email ».
+
+> **Ne pas parier sur le JSON-LD.** « Les annuaires en émettent presque tous, le SEO est leur métier »
+> est faux : personne n'en met. Sur trois annuaires belges essayés en réel, **aucun** — pagesdor.be
+> renvoie une page de challenge Imperva, infobel.com répond 403 aux User-Agents inconnus et bloque
+> nommément les crawlers IA dans son robots.txt, resto.be sert 737 Ko sans un seul `ld+json` parce que
+> c'est une application JS.
+>
+> **L'extraction LLM est donc le modèle de coût par défaut, pas un dernier recours.** 0,019 $ la page,
+> contre 0,0025 $ une qualification de société. Le JSON-LD reste tenté en premier parce qu'il ne coûte
+> rien à essayer et qu'il est parfait quand il est là — c'est une aubaine, plus une hypothèse de
+> conception. Trois conséquences qui en découlent :
+>
+> - **Une extraction n'est jamais repayée deux fois.** Le résultat est mis en cache sur le hash de
+>   l'URL, sinon relancer une récolte pour tester un annuaire rebille chaque page.
+> - **Les sélecteurs CSS deviennent le vrai gain, et non plus une optimisation spéculative.** Si le
+>   modèle est le chemin normal, apprendre les sélecteurs d'un hôte **depuis la sortie du modèle**, une
+>   fois, puis les rejouer gratuitement sur les pages suivantes, transforme un coût récurrent en coût
+>   unique. À construire quand un annuaire aura effectivement produit plusieurs fois — pas avant.
+> - Le registre `directories` mémorise **pourquoi** un hôte échoue (`blocked`, `js_only`, `jsonld`,
+>   `llm`) pour ne jamais repayer un annuaire bloqué.
+
+**3. La découverte est un graphe de jobs, pas une boucle d'outils.** Chaque nœud est un job en queue
+avec son contexte minimal, sa propre ligne en base, son propre coût.
+
+```
+discovery_runs  (projet, profil cible, budget, credits_left, status)
+│
+├─ PlanDiscovery          1 appel IA   → produit le plan, enfile les sondes
+│
+├─ RunSearchQuery × N     sans IA      → résultats bruts
+│   └─ TriageResults      1 appel IA, par lot d'~20 URL
+│                                      → entity | directory | skip
+│       ├─ HarvestListing × M  sans IA → sitemap → JSON-LD → sélecteurs → pagination
+│       │   └─ ExtractEntities  IA seulement si le JSON-LD a échoué
+│       └─ lignes companies
+│
+├─ RunOverpassProbe × N   sans IA
+│
+└─ ReflectAndExpand       1 appel IA, lit les agrégats → enfile la vague suivante
+```
+
+La majorité des nœuds ne touche jamais un LLM. L'IA n'intervient qu'aux points de jugement.
+
+**4. Le registre d'annuaires s'auto-alimente.** Une table `directories` enregistre ce qui a produit :
+hôte, rendement, secteurs, pays, mode d'extraction. Découvert par le tri, pas curé à la main — sinon
+c'est l'œuf et la poule, on ne peut pas savoir d'avance que `pagesdor.be` compte pour les friteries.
+Aux runs suivants, le planificateur interroge directement les annuaires déjà rentables, sans repasser
+par un moteur de recherche. Le registre est livré amorcé avec les évidences, et **une contribution
+« nouvel annuaire » est une ligne, pas une classe PHP** — un levier open source volontaire.
+
+**5. Un seul drapeau porte le budget et l'annulation.** `discovery_runs.status` : plus de crédits →
+`exhausted`, l'utilisateur annule → `cancelled`. Les jobs déjà en file le lisent à la reprise et se
+suppriment. Pas de registre de jobs à tenir, pas de worker à tuer. En cloud les crédits s'épuisent et
+le run s'arrête là ; l'utilisateur en rachète s'il veut continuer. En self-hosted la consommation
+détaillée s'affiche et le bouton annuler écrit le même drapeau.
+
+#### Pourquoi pas une boucle d'outils agentique
+
+La question a été posée sérieusement et trois objections sur quatre sont tombées : `laravel/ai` cumule
+déjà l'usage sur toutes les étapes (`TextGenerationLoop::buildFinalResponse()`), donc le comptage
+fonctionne sans rien écrire ; `Contracts/Approvable` met en pause et reprend par outil, donc le cran
+supervisé (ADR-009) se règle outil par outil ; et le cran supervisé porte de toute façon sur la
+**stratégie et le contenu des emails**, pas sur chaque fetch — laisser l'agent parcourir le web est
+acceptable tant qu'un plafond de crédits l'arrête.
+
+Il reste **une** raison, et elle est dimensionnante : **le coût d'une boucle croît de façon
+quadratique avec sa profondeur**, puisque chaque étape renvoie tout l'historique. Un scout à 40 étapes
+ne coûte pas quatre fois un scout à 10 étapes. Le graphe de jobs garde un contexte plat.
+
+S'y ajoutent trois bénéfices qui ne sont pas des arguments théoriques : un job se **rejoue depuis
+l'interface** (la ligne en base *est* le bouton), un job vérifie en démarrant si sa page est déjà en
+cache et **se supprime** si son travail n'a plus lieu d'être, et un crash à l'étape 35 ne perd pas les
+34 précédentes.
+
+**Ce que ça coûte, honnêtement** : la continuité de raisonnement. Un agent conversationnel se souvient
+que « pagesdor a rendu 60 à Namur, essayons Charleroi » ; des jobs en éventail sont amnésiques. Cette
+mémoire doit être **conçue** en base au lieu d'être offerte par la fenêtre de contexte — c'est le rôle
+de `ReflectAndExpand`, qui lit des agrégats (rendement par annuaire, requêtes stériles, communes non
+couvertes) et enfile la vague suivante. Il lit des compteurs, pas des pages : c'est ce qui le rend
+abordable. Coût secondaire : plus de classes qu'une boucle d'outils.
+
+La boucle d'outils n'est pas interdite pour autant — elle reste le bon choix **à l'intérieur d'un
+annuaire** dont la pagination résiste. Locale et bornée, pas l'architecture d'ensemble.
+
+#### Conséquence technique immédiate : HTML → markdown
+
+`HtmlText` renvoie aujourd'hui le texte et les liens **séparément**, en jetant le libellé des ancres.
+Acceptable pour la page d'une société, rédhibitoire pour une page de liste : on obtient deux cents noms
+d'un côté, deux cents URL de l'autre, et rien ne les apparie. Le markdown les garde ensemble —
+`[Chez Marcel](/friterie/chez-marcel-4412)`. Ce n'est pas une optimisation de tokens, c'est ce qui rend
+la page exploitable. Second défaut du même ordre : `STRIP` retire `nav`, `header` et `footer`, donc
+supprime les liens de pagination — « page suivante » disparaît.
+
+#### Effets sur les décisions existantes
+
+- **ADR-006** (découverte sans clé API) : inchangée et renforcée. Annuaires, registres et OSM sont
+  gratuits et sans clé, et réduisent la dépendance à SearXNG, dont le rate-limit était le risque assumé.
+- **ADR-014** (cache de pages partagé) : `crawled_pages` devient le point de contrôle d'idempotence des
+  jobs, en plus d'un cache. Le même raisonnement fonde `known_hosts` — du web public, pas de la donnée
+  client, donc partageable sans réserve entre organizations.
+- **ADR-020** (élargissement borné) : `ReflectAndExpand` est l'endroit où ce diagnostic s'exécute. Une
+  panne `wrong_source` a maintenant une réponse concrète — changer d'annuaire — au lieu d'un constat.
+- **`DiscoverySourceInterface`** : l'interface survit pour les sources en un coup (Overpass, recherche web,
+  registres officiels). La récolte d'annuaire ne rentre pas dedans : elle est multi-pages et budgétée,
+  donc c'est un job, pas une `search()`.
+
+#### Piste retenue, non chiffrée : les registres officiels d'entreprises
+
+BCE/KBO (Belgique), SIRENE (France, ~30 M d'établissements), Companies House (UK) sont ouverts,
+gratuits et **exhaustifs par construction** — aucun biais SEO possible. Code NACE plus commune est un
+meilleur filtre de profil cible que n'importe quelle requête. Limite connue : ni email ni site, donc ils
+alimentent l'enrichissement, pas l'envoi. À traiter comme des `DiscoverySourceInterface` supplémentaires quand
+la récolte d'annuaires sera en place, pas avant.
+
+**Pas de scraper Facebook.** Bloqué, contraire aux CGU, fragile. Les sociétés qui n'ont qu'une page
+Facebook se rattrapent par OSM (`contact:facebook`) et par les annuaires.
+
 ---
 
 ## 4. Architecture
@@ -887,7 +1144,7 @@ ouverte bloquante.
 User ──< Organization (entité facturable en cloud)
             └──< Project (un produit/site à faire connaître)
                     ├── Knowledge base (issue de l'analyse du site)
-                    ├── ICP (dérivé, éditable)
+                    ├── profil cible (dérivé, éditable)
                     ├── Companies ──< Leads
                     ├── Email accounts
                     └── Campaigns ──< Steps ──< Variants
@@ -901,7 +1158,7 @@ Tout ce qui appartient à un projet porte `project_id` et passe par un global sc
 | Agent | Entrée | Sortie |
 |---|---|---|
 | **Website** | URL du projet, repo GitHub optionnel | Knowledge base (ce que fait le produit, pour qui, positionnement) + pistes d'amélioration du site |
-| **Sales** | Knowledge base + ICP | Sociétés qualifiées, contacts vérifiés, séquences d'outreach, réponses traitées |
+| **Sales** | Knowledge base + profil cible | Sociétés qualifiées, contacts vérifiés, séquences d'outreach, réponses traitées |
 
 L'agent Website n'est **pas** un outil d'audit SEO. Ce dont l'agent Sales a besoin, c'est la knowledge
 base ; les suggestions d'amélioration tombent gratuitement du même appel LLM. Ne pas construire un
@@ -910,7 +1167,7 @@ produit SEO à côté.
 ### Pipeline de découverte (5 étages, chacun testable seul)
 
 ```
-1. ICP derivation      knowledge base → LLM → critères structurés → édition utilisateur
+1. profil cible derivation      knowledge base → LLM → critères structurés → édition utilisateur
 2. Company discovery   l'agent planifie OÙ chercher, puis exécute ses tools
 3. Qualification       fetch du site → petit modèle → score de fit + justification
 4. Contact discovery   /about, /team, mentions légales → noms + postes → inférence de pattern email
@@ -927,7 +1184,7 @@ Toolset de découverte :
 | `web_search` (SearXNG) | universel, requêtes générées par le LLM | gratuit, sans clé |
 | `overpass_query` (OSM) | commerces locaux par catégorie + zone | gratuit, sans clé |
 | `fetch_page` | annuaires, pages clients de concurrents, témoignages | gratuit |
-| `github_search` | ICP développeurs | gratuit |
+| `github_search` | profil cible développeurs | gratuit |
 | `job_board_search` | signal déclencheur : qui recrute pour le poste X a le besoin | gratuit |
 
 Contraintes techniques :
@@ -967,28 +1224,73 @@ Structure indicative, pas des migrations.
 users                  is_super_admin
 organizations
 organization_user      role: owner|admin|member
-projects               organization_id, name, url, github_repo, knowledge_base (json, éditable)
+projects               organization_id, name, url, knowledge_base (json, éditable)
+code_repositories      project_id, url, name
+                       ← plusieurs par projet : un front et une API décrivent le même produit.
+                         Pas `github_repositories` — le provider se lit dans l'URL, GitLab et
+                         Gitea auto-hébergé comptent autant
 project_user           droit d'accès
 
-project_analyses       project_id, type: website|repo, raw, summary, status, agent_run_id
-icps                   project_id, name, criteria (json), source: agent|human, active
+project_analyses       project_id, type: website|repo, raw, summary, status, agent_run_id,
+                       code_repository_id ← null pour une analyse de site ; avec plusieurs dépôts,
+                       `type = repo` ne suffit plus à dire ce qui a été analysé
+target_profiles                   project_id, name, type: customer|partner, criteria (json),
+                       source: agent|human, active
                        ← autant que l'agent en déduit, CRUD libre (ADR-015)
+                       ← un profil partenaire porte access_angle et partnership_angle (ADR-031)
 
-discovery_runs         project_id, icp_id, status, budget (json), stats
+recommendations        project_id, key (identité stable), title, rationale, evidence,
+                       category, impact, effort, status: proposed|done|archived,
+                       decided_at, agent_run_id
+                       ← archivée = ne réapparaît jamais (ADR-032)
+
+path_hints             kind: contact|product, token, matched, hits, is_locked
+                       ← les fragments d'URL qui marquent une page à lire. Table VIDE au
+                         départ : aucune liste nulle part, ni en const ni en seeder. Le
+                         premier site interroge le modèle, la réponse est écrite, et en
+                         quelques sites les mots courants y sont — pour toute l'instance.
+                         `matched`/`hits` classe, et supprime ce qui choisit des pages sans
+                         jamais livrer : c'est aussi le garde-fou contre un fragment trop
+                         générique, sans liste de mots interdits
+known_hosts            host (unique), kind: index|entity|social|other, reason,
+                       harvest_status: jsonld|llm|blocked|js_only, pages_harvested,
+                       businesses_found, is_locked, last_verified_at
+                       ← ce que l'app a appris du web public, partagé toute l'instance. Un projet
+                         paie le modèle une fois, tous les autres en profitent. `is_locked` = un
+                         humain a tranché, aucun modèle ne réécrit ; `last_verified_at` fait expirer
+                         les verdicts, sinon `blocked` serait une condamnation à perpétuité
+discovery_runs         project_id, target_profile_id, status, budget (json), credits_left, stats
+                       ← status porte aussi exhausted|cancelled : un seul drapeau pour le
+                         plafond de crédits et l'annulation (ADR-033)
+discovery_tasks        discovery_run_id, kind: plan|search|triage|harvest|extract|overpass|reflect,
+                       payload (json), status, attempts, agent_run_id, error, timings
+                       ← un nœud du graphe de jobs : la ligne EST le bouton « rejouer » (ADR-033).
+                         Table dédiée et non la table `jobs` de Laravel, qui perd la ligne au succès
+directories            host, name, countries, sectors, discovery_mode: sitemap|pattern|search,
+                       extraction_mode: jsonld|selectors|llm, selectors (json),
+                       yield, last_harvested_at, healthy_at
+                       ← auto-alimentée par ce qui a produit, amorcée avec les évidences (ADR-033)
 companies              project_id, domain (unique/projet), name, website, industry, size,
                        location, language, source, source_url  ← faits seulement, pas de score
                        ← language détectée au crawl (ADR-021)
-company_icp_evaluations company_id, icp_id, fit_score, fit_reason
-                       ← le fit dépend de l'ICP, jamais de la société (ADR-015)
+company_target_evaluations company_id, target_profile_id, fit_score, fit_reason
+                       ← le fit dépend de le profil cible, jamais de la société (ADR-015)
 leads                  project_id, company_id, first/last_name, title, email,
+                       email_hash  ← sha256, survit à l'effacement et sert de clé de dédup
                        email_status: valid|risky|unknown|invalid,
                        email_source: scraped|inferred|provided|imported,
                        linkedin_url, source, source_url, discovered_at, status,
                        won_at   ← marquage manuel du gain (ADR-022)
+                       erased_at ← la ligne vidée EST le tombstone, pas de table à part
 suppressions           email|domain, reason  ← global, hors scope projet
 
-email_accounts         project_id (nullable = partagé), smtp/imap chiffrés,
+email_accounts         organization_id, smtp/imap chiffrés,
                        daily_limit, ramp_up_started_at
+                       ← l'organization POSSÈDE la boîte ; le quota est à elle, pas au projet
+email_account_project  email_account_id, project_id
+                       ← quels projets ont le droit d'envoyer par cette boîte. Pivot et non
+                         `project_id` nullable : « null = tous les projets » offrirait
+                         silencieusement l'adresse perso du fondateur au prochain projet créé
 campaigns              project_id, name, status
 campaign_steps         campaign_id, position, type: email|wait|linkedin, delay, config
 step_variants          campaign_step_id, subject, body, weight       ← A/B
@@ -997,8 +1299,12 @@ messages               campaign_lead_id, direction, email_account_id, message_id
                        in_reply_to, subject, body, sent_at, replied_at, status
                        ← pas de opened_at : aucun tracking en v0 (ADR-016)
 
-agent_runs             project_id, type, status, input, output,
-                       tokens_in, tokens_out, cost, duration, error
+agent_runs             project_id, agent (slug de la classe), status, input, output,
+                       tokens_in, tokens_out, duration, error
+                       ← des tokens, jamais des euros : aucun provider ne renvoie de prix, donc
+                         tout montant serait notre propre multiplication par un tarif qui dérive.
+                         Le self-hosted paie son provider et veut des tokens ; le cloud facture en
+                         crédits, calibrés par l'exploitant depuis ces compteurs et sa vraie facture
                        ← les deux éditions (debug + historique)
 
 ── cloud uniquement, app/Cloud/ (ADR-019) ───────────────────────────────────
@@ -1019,7 +1325,7 @@ credit_transactions    organization_id, type: purchase|hold|charge|release|refun
 Mono-projet. **Pas** d'organizations, pas de multi-utilisateur, pas de LinkedIn, pas de facturation.
 
 ```
-URL du site → knowledge base → ICP éditable → DiscoveryRun (search + overpass + fetch)
+URL du site → knowledge base → profil cible éditable → DiscoveryRun (search + overpass + fetch)
 → sociétés qualifiées → contacts + emails vérifiés → séquence IA 2 étapes
 → envoi SMTP plafonné → détection réponse IMAP → pause auto → inbox unifiée
 ```
@@ -1044,147 +1350,267 @@ LinkedIn (container dédié), API publique, serveur MCP, webhooks CRM, drivers p
 Format : `En tant que <persona>, je veux <action>, pour <bénéfice>.`
 Chaque story porte ses critères d'acceptation. Sans critères, impossible de dire « c'est fini ».
 
+### Avancement
+
+Chaque story porte un marqueur, mis à jour **dans le même commit que le code**. Une story non marquée
+est une story pas faite.
+
+| Marqueur | Sens |
+|---|---|
+| `✅` | Fait et couvert par des tests |
+| `🟡` | Backend ou CLI fait, **pas d'interface** — le reste est indiqué sur la story |
+| `⬜` | Pas commencé |
+
+État actuel :
+
+| Epic | Avancement |
+|---|---|
+| 1 — Setup & configuration | 🟡 réglages en base et en CLI, aucun écran, pas d'auth |
+| 2 — Projets | 🟡 cloisonnement fait et testé, pas de CRUD |
+| 3 — Analyse & knowledge base | 🟡 `eveil:analyze` tourne, rien n'est déclenché automatiquement |
+| 4 — Agent Website | ⬜ table `recommendations` pas encore créée |
+| 5 — Découverte de leads | 🟡 chaîne complète en CLI, récolte d'annuaires, registre d'hôtes appris ; manquent `target_profiles.type`, l'import CSV, le rendu JS (5.9, reporté) |
+| 6 — Séquences | ⬜ |
+| 7 — Envoi | ⬜ |
+| 8 — Réponses & inbox | ⬜ |
+| 9 — Organizations & permissions | ⬜ tables faites, rien au-dessus |
+| 10 — Facturation | ⬜ |
+| 11 — LinkedIn / 12 — Intégrations | ⬜ hors v0 et v1 |
+
+**Ce qui existe vraiment** : le schéma complet, les modèles, cinq agents, le crawler, la vérification
+d'emails, et quatre commandes — `eveil:analyze`, `eveil:derive-targets`, `eveil:discover-companies`,
+`eveil:find-contacts` et `eveil:harvest` — plus `eveil:agent-model` et `eveil:credentials-key`. Aucune interface, aucune
+authentification, aucun envoi.
+
 ### Epic 1 — Setup & configuration `v0`
 
-**1.1** En tant que superadmin, je veux déployer l'app via `docker compose up -d` avec un `.env`
+**1.1** ⬜ En tant que superadmin, je veux déployer l'app via `docker compose up -d` avec un `.env`
 minimal, pour être opérationnel en quelques minutes.
 - Le compose démarre app, queue worker, scheduler, base, SearXNG
 - `.env.example` documente le minimum vital : URL, `APP_KEY`, mot de passe admin initial
 - Aucune clé API tierce n'est requise pour un premier run de découverte
 - Premier accès à l'URL → écran de setup, pas une erreur 500
 
-**1.2** En tant que superadmin, je veux me connecter avec le mot de passe défini au setup.
+**1.2** ⬜ En tant que superadmin, je veux me connecter avec le mot de passe défini au setup.
 - Le mot de passe initial vient de l'env ou du premier écran de setup
 - Changeable depuis les settings
 
-**1.3** En tant que superadmin, je veux choisir mon provider IA et saisir ma clé depuis les settings.
+**1.3** 🟡 En tant que superadmin, je veux choisir mon provider IA et saisir ma clé depuis les settings.
 - Clé chiffrée avec `CREDENTIALS_KEY` (ADR-012), jamais loggée, jamais renvoyée en clair au frontend
 - Bouton « tester la connexion » avec retour immédiat
 - Vaut pour toutes les organizations et tous les projets de l'instance
 
-**1.6** En tant que superadmin, je veux choisir le provider et le modèle **par agent IA** (ADR-026).
+**1.7** ⬜ En tant que superadmin, je veux voir et corriger ce que l'app a appris sur les hôtes.
+- Table `known_hosts` : hôte, verdict, motif, rendement, dernier statut de récolte
+- Éditer un verdict le **verrouille** — un modèle ne le réécrira plus jamais
+- Nécessaire parce qu'un mauvais verdict se met en cache avec exactement la même confiance qu'un bon,
+  et à l'échelle de l'instance : un vrai prospect classé `noise` devient invisible pour tous les projets
+
+**1.6** 🟡 En tant que superadmin, je veux choisir le provider, le modèle et le timeout **par agent IA** (ADR-026).
 - Réglage de scope instance, réservé au superadmin — invisible pour les admins et membres d'organization
-- Liste des providers et modèles fournie par `laravel/ai`, liste des agents issue du code
+- Une ligne par agent, clé = le slug de la classe (`website-analyst`, `target-profile-deriver`, …) ; pas de regroupement par catégorie
+- Liste des providers et modèles fournie par `laravel/ai`, liste des agents découverte dans `app/Ai/Agents/`
 - Défauts livrés : une install fraîche fonctionne sans ouvrir cet écran
 - Les agents exigeant une sortie structurée sont marqués comme tels
+- L'écran affiche, par agent, ce qu'il a déjà coûté et sur combien d'appels
+- **État** : la couche base est faite et pilotable en CLI (`eveil:agent-model`) ; l'écran reste à construire avec l'auth
 
-**1.4** En tant que superadmin, je veux désactiver les inscriptions via variable d'env.
+**1.4** ⬜ En tant que superadmin, je veux désactiver les inscriptions via variable d'env.
 - `REGISTRATION_ENABLED=false` → la route register renvoie 404, pas un message d'erreur
 
-**1.5** En tant que superadmin, je veux modifier la configuration depuis une section settings.
+**1.5** ⬜ En tant que superadmin, je veux modifier la configuration depuis une section settings.
 - Ce qui est réglable en UI est explicitement listé ; le reste reste en env
 
 ### Epic 2 — Projets `v0`
 
-**2.1** En tant qu'utilisateur, je veux créer un projet avec un nom et une URL.
+**2.1** 🟡 En tant qu'utilisateur, je veux créer un projet avec un nom et une URL.
 - URL validée et joignable avant création
 - L'analyse initiale se déclenche automatiquement à l'enregistrement
 
-**2.2** En tant qu'utilisateur, je veux que tout soit cloisonné par projet.
+**2.2** ✅ En tant qu'utilisateur, je veux que tout soit cloisonné par projet.
 - Leads, sociétés, campagnes, comptes email, analyses, runs d'agent portent `project_id`
 - Un global scope l'applique ; un test vérifie qu'aucune requête ne fuit entre deux projets
 
-**2.3** `v1` En tant qu'utilisateur, je veux basculer d'un projet à l'autre depuis un sélecteur global.
+**2.3** ⬜ `v1` En tant qu'utilisateur, je veux basculer d'un projet à l'autre depuis un sélecteur global.
 - Le projet courant est en session, pas dans l'URL de chaque page
 - Le changement de projet ne perd pas le contexte de travail
 
-**2.4** `v1` En tant qu'utilisateur, je veux un dashboard multi-projet.
+**2.4** ⬜ `v1` En tant qu'utilisateur, je veux un dashboard multi-projet.
 - Par projet : leads actifs, campagnes en cours, dernières suggestions, consommation IA
 
 ### Epic 3 — Analyse & knowledge base `v0`
 
-**3.1** En tant qu'utilisateur, quand j'enregistre un projet, je veux que le site soit analysé
+**3.1** 🟡 En tant qu'utilisateur, quand j'enregistre un projet, je veux que le site soit analysé
 automatiquement.
 - Crawl plafonné (nb de pages, profondeur, timeout) et affiché en cours de route
 - robots.txt respecté
 - Un échec partiel produit quand même une knowledge base, avec la liste de ce qui a échoué
 
-**3.2** En tant qu'utilisateur, je veux voir un résumé du produit que je peux corriger.
+**3.2** 🟡 En tant qu'utilisateur, je veux voir un résumé du produit que je peux corriger.
 - Champs : ce que fait le produit, pour qui, positionnement, proposition de valeur, concurrents
 - L'édition manuelle prime sur toute ré-analyse ultérieure, et est marquée comme telle
 
-**3.3** `v1` En tant qu'utilisateur, je veux lier le repo GitHub pour une analyse plus poussée.
+**3.3** ⬜ `v1` En tant qu'utilisateur, je veux lier le repo GitHub pour une analyse plus poussée.
 - Repos publics d'abord ; stack technique, README, issues ouvertes
 - Sert à repérer les features pas assez mises en avant sur le site
 
-**3.4** En tant qu'utilisateur, je veux que cette analyse serve de contexte aux deux agents.
+**3.4** ✅ En tant qu'utilisateur, je veux que cette analyse serve de contexte aux deux agents.
 - Un seul objet knowledge base, référencé par Website et Sales, jamais dupliqué
 
-### Epic 4 — Agent Website `v1`
+### Epic 4 — Agent Website : pistes d'amélioration et d'acquisition `v1`
 
-**4.1** En tant qu'utilisateur, je veux une liste de pistes d'amélioration du site.
+**4.1** ⬜ En tant qu'utilisateur, je veux une liste de pistes d'amélioration du site.
 - Chaque suggestion : catégorie, impact estimé, justification, effort
 - Tri par impact par défaut
 
-**4.2** En tant qu'utilisateur, je veux relancer une analyse à la demande.
+**4.4** ⬜ En tant qu'utilisateur, je veux qu'on me signale les leviers d'acquisition qui me manquent (ADR-032). — **table `recommendations` pas encore créée**
+- Parrainage, contenu éditorial, salons, écoles du secteur, programme revendeur…
+- **Chaque recommandation cite sa preuve** dans la knowledge base ou le crawl ; sans preuve, pas de
+  recommandation — c'est ce qui la sépare d'un conseil générique
+- Priorisée par impact et effort
+
+**4.5** ⬜ En tant qu'utilisateur, je veux marquer une recommandation faite ou sans intérêt, en le disant.
+- États : `proposed` → `done` ou `archived`
+- Une recommandation archivée ne réapparaît **jamais**, même après une ré-analyse
+- Identité par clé stable, pas par libellé, sinon une reformulation crée un doublon
+- Mise à jour depuis la conversation : l'utilisateur ne gère aucun backlog
+
+**4.6** ⬜ En tant qu'utilisateur, je veux discuter de mon projet avec l'agent.
+- Une conversation par projet, avec la knowledge base pour contexte
+- Les propositions d'amélioration en liste latérale, faites et archivées masquées par défaut
+- Persistance fournie par `laravel/ai` (`RemembersConversations`)
+
+**4.2** ⬜ En tant qu'utilisateur, je veux relancer une analyse à la demande.
 - L'écart avec l'analyse précédente est visible : résolu / toujours ouvert / nouveau
 
-**4.3** En tant qu'utilisateur, je veux l'historique des analyses par projet.
+**4.3** ⬜ En tant qu'utilisateur, je veux l'historique des analyses par projet.
 
 ### Epic 5 — Découverte de leads `v0` — *cœur du produit*
 
-**5.1** En tant qu'utilisateur, je veux que l'ICP soit déduit de mon produit, sans le saisir.
+**5.1** 🟡 En tant qu'utilisateur, je veux que le profil cible soit déduit de mon produit, sans le saisir.
 - Critères structurés : secteurs, taille, géographie, intitulés de poste, technologies, signaux
 - Entièrement éditable ; l'édition est conservée entre les runs
 
-**5.2** En tant qu'utilisateur, je veux lancer une recherche de sociétés correspondant à l'ICP.
-- L'agent choisit ses sources selon l'ICP et **explique son plan avant d'exécuter**
+**5.1 bis** ⬜ En tant qu'utilisateur, je veux aussi des profils de **partenaires**, pas seulement de clients (ADR-031).
+- `target_profiles.type` : `customer` ou `partner` — **colonne pas encore créée**
+- Un profil partenaire répond à : qui visite mon client, qui le facture chaque mois, qui lui est
+  **légalement imposé** — ce dernier signal en premier, sa clientèle est captive
+- Il porte `access_angle` (par quoi il touche le client) et `partnership_angle` (pourquoi c'est
+  gagnant pour lui, et donc l'accroche du mail)
+- Découverte et qualification identiques ; **la séquence d'envoi, elle, diffère en profondeur**
+- Aucune société n'est citée sans avoir été trouvée, récupérée et qualifiée
+
+**5.2** 🟡 En tant qu'utilisateur, je veux lancer une recherche de sociétés correspondant à le profil cible.
+- L'agent choisit ses sources selon le profil cible et **explique son plan avant d'exécuter**
 - Progression visible en direct : sources interrogées, sociétés trouvées, budget consommé
 - Budget dur (pages, tokens, leads) ; arrêt propre à la limite avec résultats partiels conservés
 - Un re-run ne duplique pas : dédup par domaine
 
-**5.3** En tant qu'utilisateur, je veux que chaque société soit scorée et justifiée.
+**5.2 bis** 🟡 En tant qu'utilisateur, je veux trouver aussi les sociétés que les moteurs ne classent pas (ADR-033).
+- Les résultats pointant vers un **annuaire** sont récoltés, plus jetés : une page de liste vaut des
+  dizaines de sociétés, et c'est le seul endroit où une société sans site publie un email
+- Récolte en PHP : `sitemap.xml`, JSON-LD, sélecteurs, extracteur LLM en dernier recours
+- Un annuaire qui a produit est mémorisé avec son rendement, son pays et ses secteurs, et réinterrogé
+  directement au run suivant sans repasser par un moteur de recherche
+- Ajouter un annuaire ne demande pas de code
+- Les hôtes sont **classés par l'IA, une fois pour toutes** : impossible d'énumérer à la main tous les
+  annuaires du monde, et la liste noire écrite à la main jetait justement les résultats les plus utiles
+- Le verdict est **structurel, jamais une question de pertinence** : « ce site liste-t-il des
+  organisations ? », pas « est-ce que ça intéresse quelqu'un ? ». Un job board est un index — une agence
+  de recrutement prospecte les entreprises qui recrutent ; un journal est une `entity` — c'est une
+  société, cliente potentielle de qui vend aux éditeurs. C'est cette neutralité qui rend le registre
+  partageable entre tous les projets ; la pertinence se juge à la qualification, par profil
+- Un annuaire est **aussi une société** : un hôte `index` est à la fois récolté ET retenu comme
+  candidat. Un fondateur dont la cible est « les plateformes de lancement » veut Product Hunt et
+  BetaList comme leads, pas seulement comme sources
+- **État** : fait et testé — `ListingHarvester` (JSON-LD, repli LLM, pagination, budget),
+  `HostRegistry` + agent `ResultTriage`, table `known_hosts` amorcée, branchement dans
+  `eveil:discover-companies`. Reste : les sociétés sans site sont comptées mais pas exploitables
+  (`companies.domain` est NOT NULL), et l'écran superadmin du registre
+
+**5.2 ter** ⬜ En tant qu'utilisateur, je veux voir et reprendre la main sur ce que fait la découverte (ADR-033).
+- La découverte est un graphe de jobs : chaque étape a sa ligne, son état, son coût, son erreur
+- **Rejouer une étape** depuis l'interface, sans relancer le run
+- **Annuler** le run : les étapes en file se suppriment à la reprise, les résultats acquis restent
+- En cloud, l'épuisement des crédits arrête le run proprement — l'utilisateur en rachète s'il veut suivre
+- En self-hosted, la consommation détaillée par run et par étape est affichée
+
+**5.3** 🟡 En tant qu'utilisateur, je veux que chaque société soit scorée et justifiée.
 - Score de fit + phrase de justification exploitable comme accroche
 - Filtrage par score, rejet manuel possible
 
-**5.4** En tant qu'utilisateur, je veux des contacts avec des emails utilisables.
+**5.4** 🟡 En tant qu'utilisateur, je veux des contacts avec des emails utilisables.
 - Scrape des pages équipe/contact/mentions légales
 - Inférence de pattern à partir d'une adresse connue sur le domaine
 - Fallback générique (`contact@`) marqué comme tel
 - Chaque email porte `email_source` et `email_status`
 
-**5.5** En tant qu'utilisateur, je veux que les emails soient vérifiés avant tout envoi.
+**5.5** 🟡 En tant qu'utilisateur, je veux que les emails soient vérifiés avant tout envoi.
 - MX, domaine jetable, catch-all, sonde SMTP sans envoi
 - Catch-all → `risky`. Gmail/Outlook bloquant la sonde → `unknown`, jamais `invalid`
 - Les `invalid` ne sont jamais envoyés
 
-**5.6** En tant qu'utilisateur, je veux importer un CSV.
+**5.6** ⬜ En tant qu'utilisateur, je veux importer un CSV.
 - Template téléchargeable ; email **ou** URL LinkedIn suffit pour qu'une ligne soit valide
 - Rapport d'import : importés, dédupliqués, rejetés avec motif
 
-**5.7** `v1` En tant qu'utilisateur, je veux brancher un provider tiers avec ma clé.
+**5.7** ⬜ `v1` En tant qu'utilisateur, je veux brancher un provider tiers avec ma clé.
 - Interface `LeadSource` commune à CSV, scraping et providers
+- Même porte d'entrée pour les registres officiels ouverts — BCE/KBO, SIRENE, Companies House :
+  exhaustifs et sans biais SEO, mais sans email, donc ils enrichissent et n'envoient pas (ADR-033)
 
-**5.8** En tant qu'utilisateur, je veux une fiche contact centralisée.
+**5.9** ⬜ `v1` En tant qu'exploitant, je veux lire les annuaires qui ne rendent rien côté serveur.
+*(reporté volontairement — déclencheur écrit, pas encore atteint)*
+- **Cas mesurés à ce jour : zéro.** `resto.be` n'est pas JS-only — le serveur envoie 737 Ko et l'extracteur y lit 23 sociétés ;
+  `pagesdor.be` est `blocked`, pas non-rendu
+- `known_hosts.harvest_status` distingue les quatre issues : `blocked` (rien récupéré),
+  `js_only` (récupéré mais moins de 500 caractères — une coquille), `no_listing` (lu correctement,
+  rien dessus), `jsonld`/`llm` (a marché). Seul `js_only` serait réglé par un navigateur
+- **Déclencheur : 10 hôtes ou plus en `js_only`.** En dessous, un gigaoctet de Chromium n'achète rien
+- **Un navigateur ne règle PAS `blocked`** : Imperva et Cloudflare détectent aussi un headless. Y aller
+  demanderait des plugins furtifs et des proxys résidentiels, contre un site qui a mis une protection
+  devant ses données et `Disallow` dans son robots.txt. On respecte robots.txt — on ne le fera pas, et
+  on le dira plutôt que de laisser croire le contraire
+- Forme retenue : chaîne de renderers en config, **escalade sur le RÉSULTAT** et non par réglage
+  d'hôte — fetch HTTP simple, et on ne réessaie via un renderer que si l'extraction est revenue
+  `js_only`. Le verdict est écrit dans `known_hosts`, donc l'hôte suivant y va directement
+- **Le sidecar est le chemin principal, une API hébergée l'alternative**, jamais l'inverse : ADR-006
+  impose que la découverte tourne en self-hosted sans souscrire à quoi que ce soit. `browserless/chromium`
+  en profil compose **optionnel**, désactivé par défaut — image ~1 Go, 200 à 500 Mo par page, 2 à 5 s
+  par page contre ~200 ms. Sur un petit VPS c'est la machine entière
+- Cloudflare Browser Rendering, ScrapingBee ou Zyte se branchent au même endroit pour qui préfère payer
+  plutôt qu'exploiter Chromium. Optionnel, avec clé, jamais supposé
+
+**5.8** ⬜ En tant qu'utilisateur, je veux une fiche contact centralisée.
 - Historique d'outreach, statut de vérification, activité par campagne, provenance
 - Société en objet séparé et dédupliqué, jamais recopiée sur chaque contact
 
 ### Epic 6 — Séquences & personnalisation `v0`
 
-**6.1** En tant qu'utilisateur, je veux que l'IA génère une séquence complète à partir du contexte projet.
+**6.1** ⬜ En tant qu'utilisateur, je veux que l'IA génère une séquence complète à partir du contexte projet.
 - Séquence par défaut : email → attente → relance
 - Générée en moins de 5 minutes, entièrement éditable avant activation
 
-**6.2** En tant qu'utilisateur, je veux une accroche personnalisée par lead.
+**6.2** ⬜ En tant qu'utilisateur, je veux une accroche personnalisée par lead.
 - Construite à partir de la knowledge base + de la justification de fit de la société
 - Aucune recherche manuelle par contact
 - Prévisualisation sur un échantillon avant lancement
 
-**6.3** En tant qu'utilisateur, je veux composer les étapes moi-même.
+**6.3** ⬜ En tant qu'utilisateur, je veux composer les étapes moi-même.
 - Types en v0 : email, attente. LinkedIn plus tard, même structure
 - Réordonnancement, délais configurables
 
-**6.4** `v1` En tant qu'utilisateur, je veux plusieurs variantes par étape en A/B automatique.
+**6.4** ⬜ `v1` En tant qu'utilisateur, je veux plusieurs variantes par étape en A/B automatique.
 - Répartition par poids, résultats par variante
 
-**6.5** `v1` En tant qu'utilisateur, je veux des variables et des blocs conditionnels dans mes templates.
+**6.5** ⬜ `v1` En tant qu'utilisateur, je veux des variables et des blocs conditionnels dans mes templates.
 - Variables sur les champs lead et société, avec valeur de repli obligatoire
 - Blocs conditionnels : afficher un paragraphe seulement si un champ est renseigné
 - Prévisualisation rendue sur un lead réel, et refus d'envoi si une variable ne résout pas
 
 ### Epic 7 — Envoi `v0`
 
-**7.1** En tant qu'utilisateur, je veux connecter un ou plusieurs comptes email SMTP/IMAP.
+**7.1** ⬜ En tant qu'utilisateur, je veux connecter un ou plusieurs comptes email SMTP/IMAP.
 - Identifiants chiffrés avec `CREDENTIALS_KEY` (ADR-012) ; test de connexion à l'enregistrement
 - Partagés entre projets ou dédiés à un projet, au choix
 - **Pas d'OAuth** (ADR-027) — SMTP/IMAP classique uniquement
@@ -1192,14 +1618,14 @@ automatiquement.
   l'administrateur Workspace, SMTP AUTH coupé sur le tenant M365, port bloqué, TLS refusé…
 - Une page de documentation par fournisseur courant (OVH, Infomaniak, Gandi, Zoho, Gmail, M365)
 
-**7.2** En tant qu'utilisateur, je veux une limite d'envoi quotidienne par compte.
+**7.2** ⬜ En tant qu'utilisateur, je veux une limite d'envoi quotidienne par compte.
 - Le surplus est reporté au lendemain, la campagne ne s'arrête pas
 - Envois répartis dans la journée, pas en rafale
 
-**7.3** `v1` En tant qu'utilisateur, je veux un ramp-up progressif sur un nouveau compte.
+**7.3** ⬜ `v1` En tant qu'utilisateur, je veux un ramp-up progressif sur un nouveau compte.
 - Courbe de montée configurable, appliquée automatiquement
 
-**7.4** `v1` En tant qu'utilisateur, je veux que mes envois tournent sur plusieurs boîtes.
+**7.4** ⬜ `v1` En tant qu'utilisateur, je veux que mes envois tournent sur plusieurs boîtes.
 - Une campagne répartit ses envois sur un pool de comptes, chacun avec son propre plafond
 - Un lead donné reste sur la même boîte pour toute la séquence, thread préservé
 - Une boîte en échec ou en pause est retirée du pool sans interrompre la campagne
@@ -1208,7 +1634,7 @@ automatiquement.
 **7.5** ~~Warm-up des boîtes~~ — **hors scope, décision assumée (ADR-023)**.
 - Remplacé par une page de documentation expliquant pourquoi, et un point d'intégration tiers
 
-**7.6** En tant qu'utilisateur, je veux que tout envoi soit conforme.
+**7.6** ⬜ En tant qu'utilisateur, je veux que tout envoi soit conforme.
 - Phrase d'opt-out générée dans le corps ; « STOP » détecté → suppression immédiate (ADR-029)
 - Aucun lien, aucune image, aucun en-tête révélant un outil — indiscernable d'un envoi manuel
 - Suppression list vérifiée avant chaque envoi
@@ -1216,48 +1642,48 @@ automatiquement.
 
 ### Epic 8 — Réponses & inbox `v0`
 
-**8.1** En tant qu'utilisateur, je veux que la campagne se mette en pause sur un lead qui répond.
+**8.1** ⬜ En tant qu'utilisateur, je veux que la campagne se mette en pause sur un lead qui répond.
 - Attribution par `Message-ID` / `In-Reply-To`
 - Auto-reply détecté → **pas** de pause
 - Pause visible avec son motif
 
-**8.2** En tant qu'utilisateur, je veux une inbox unifiée sur tous mes comptes email.
+**8.2** ⬜ En tant qu'utilisateur, je veux une inbox unifiée sur tous mes comptes email.
 - Seuls les contacts ayant réellement répondu apparaissent
 - Filtrable par projet et par campagne
 
-**8.3** En tant qu'utilisateur, je veux répondre depuis l'app.
+**8.3** ⬜ En tant qu'utilisateur, je veux répondre depuis l'app.
 - Réponse envoyée depuis le compte email d'origine, thread préservé
 
-**8.4** En tant qu'utilisateur, je veux voir l'état de chaque lead dans le pipeline.
+**8.4** ⬜ En tant qu'utilisateur, je veux voir l'état de chaque lead dans le pipeline.
 - Vue funnel par étape, comptages par statut : en cours, terminé, répondu, échoué, supprimé
 
-**8.5** En tant qu'utilisateur, je veux un dashboard projet avec les stats clés.
+**8.5** ⬜ En tant qu'utilisateur, je veux un dashboard projet avec les stats clés.
 - Campagnes actives, contacts, taux de réponse, activité récente, consommation IA
 
 ### Epic 9 — Organizations & permissions `v1` — **cœur, pas cloud**
 
 > Disponible dans les deux éditions. `app/Cloud/` ne contient que facturation et crédits (ADR-025).
 
-**9.1** En tant qu'utilisateur cloud, je veux créer mon compte et devenir owner de mon organization.
-**9.2** En tant qu'admin, je veux inviter des membres avec un rôle.
-**9.3** En tant qu'admin, je veux accorder l'accès projet par projet.
+**9.1** ⬜ En tant qu'utilisateur cloud, je veux créer mon compte et devenir owner de mon organization.
+**9.2** ⬜ En tant qu'admin, je veux inviter des membres avec un rôle.
+**9.3** ⬜ En tant qu'admin, je veux accorder l'accès projet par projet.
 - Un membre sans accès à un projet ne le voit pas, ne le devine pas via une URL, et reçoit un 404
 
 ### Epic 10 — Facturation `v1`
 
-**10.1** En tant qu'utilisateur cloud, je veux m'abonner par carte (Stripe).
-**10.2** En tant qu'utilisateur cloud, je veux voir ma consommation par rapport à mon plan.
+**10.1** ⬜ En tant qu'utilisateur cloud, je veux m'abonner par carte (Stripe).
+**10.2** ⬜ En tant qu'utilisateur cloud, je veux voir ma consommation par rapport à mon plan.
 - Leads découverts, emails envoyés, coût IA — ventilés par projet, alimentés par `agent_runs`
-**10.3** En tant qu'utilisateur self-hosted, je veux que le core reste gratuit sans limite artificielle.
+**10.3** ⬜ En tant qu'utilisateur self-hosted, je veux que le core reste gratuit sans limite artificielle.
 - Le cloud ajoute uniquement : **hébergement géré, facturation, clé IA fournie, support**
 - Le multi-utilisateur n'en fait **pas** partie — il est dans le cœur (ADR-025)
 
 ### Epic 11 — LinkedIn `plus tard`
 
-**11.1** Enchaîner visite / connexion / message dans une campagne, en parallèle des étapes email.
-**11.2** Se connecter à LinkedIn côté serveur, avec gestion des codes email/SMS et de l'approbation mobile.
-**11.3** Rythme humain : délais randomisés.
-**11.4** Empreinte navigateur stable dans le temps, y compris après un rebuild du container.
+**11.1** ⬜ Enchaîner visite / connexion / message dans une campagne, en parallèle des étapes email.
+**11.2** ⬜ Se connecter à LinkedIn côté serveur, avec gestion des codes email/SMS et de l'approbation mobile.
+**11.3** ⬜ Rythme humain : délais randomisés.
+**11.4** ⬜ Empreinte navigateur stable dans le temps, y compris après un rebuild du container.
 
 > *Sales Navigator* (mentionné dans la version précédente du doc) est l'abonnement LinkedIn payant pour
 > commerciaux : on y construit une recherche filtrée dont l'URL encode les filtres, et « importer cette
@@ -1266,9 +1692,9 @@ automatiquement.
 
 ### Epic 12 — Intégrations `plus tard`
 
-**12.1** API pour créer projets, leads et campagnes par programmation.
-**12.2** Serveur MCP pour piloter l'outil depuis un agent IA externe.
-**12.3** Webhooks pour brancher un CRM.
+**12.1** ⬜ API pour créer projets, leads et campagnes par programmation.
+**12.2** ⬜ Serveur MCP pour piloter l'outil depuis un agent IA externe.
+**12.3** ⬜ Webhooks pour brancher un CRM.
 
 ---
 
@@ -1288,6 +1714,11 @@ automatiquement.
 - **Tracking d'ouverture comme métrique centrale.** Apple Mail Privacy Protection a rendu les taux
   d'ouverture ininterprétables. La métrique qui compte est le taux de réponse.
 - **CRM.** On s'y branche, on ne le remplace pas.
+- **Gestionnaire de tâches.** Les propositions d'amélioration (ADR-032) ont un état, pas un backlog :
+  l'agent le met à jour depuis la conversation. Dès qu'il faut ranger, assigner ou dater des tâches à
+  la main, on a franchi la ligne.
+- **Document de stratégie.** Une recommandation sans preuve vérifiable et sans exécution derrière est
+  un conseil générique. Eveil trouve et contacte ; il ne rédige pas de plans.
 
 ---
 
@@ -1312,7 +1743,7 @@ chiffrement par organization et KMS externe en cloud.
 
 ~~**A5 — Sociétés et leads : cloisonnés ou partagés ?**~~ → tranché, voir **ADR-014**.
 
-~~**A6 — Plusieurs ICP par projet ?**~~ → tranché, voir **ADR-015**.
+~~**A6 — Plusieurs profil cible par projet ?**~~ → tranché, voir **ADR-015**.
 
 ~~**A7 — Tracking d'ouverture et de clic**~~ → tranché, voir **ADR-016**.
 

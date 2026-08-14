@@ -28,6 +28,7 @@ services:
         depends_on:
             - pgsql
             - redis
+            - searxng
     pgsql:
         image: 'postgres:18-alpine'
         ports:
@@ -67,6 +68,20 @@ services:
                 - redis-cli
                 - ping
             retries: 3
+            timeout: 5s
+    searxng:
+        image: 'searxng/searxng:latest'
+        ports:
+            - '${FORWARD_SEARXNG_PORT:-8090}:8080'
+        environment:
+            SEARXNG_BASE_URL: 'http://localhost:${FORWARD_SEARXNG_PORT:-8090}/'
+        volumes:
+            - './docker/searxng:/etc/searxng:ro'
+        networks:
+            - sail
+        healthcheck:
+            test: ['CMD-SHELL', 'wget -q --spider http://127.0.0.1:8080/ || exit 1']
+            retries: 5
             timeout: 5s
 networks:
     sail:

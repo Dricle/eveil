@@ -31,16 +31,39 @@ Installed: Laravel 13, Inertia v3 + Vue 3, Wayfinder, Pest 5, Larastan, Pint, Bo
 
 Run PHP through Sail: `./vendor/bin/sail artisan …`, `sail composer lint`, `sail artisan test`. The host's default `php` is 8.3 and fails composer's platform check; Herd's 8.4 binary lives at `~/Library/Application Support/Herd/bin/php84` if a host-side command is unavoidable.
 
-Run JS tooling on the HOST (`npm run dev`, `npm run lint:check`). `node_modules` is installed with macOS-arm64 binaries and mounted into the Linux container, so eslint and Vite fail inside Sail. That is why `composer ci:check` fails in the container while every PHP check passes — run the PHP checks in Sail and the JS checks on the host.
+Run JS tooling on the HOST, with **Yarn 4** (`yarn dev`, `yarn lint:check`) — Corepack picks the version from `packageManager` in `package.json`, and there is no `package-lock.json` any more. The host `php` must be 8.4+: `yarn dev` and `yarn build` shell out to `php artisan wayfinder:generate`, and on an older binary the build dies with `RolldownError: Error generating types` and every page then 500s on a missing Vite manifest. `node_modules` is installed with macOS-arm64 binaries and mounted into the Linux container, so eslint and Vite fail inside Sail. That is why `composer ci:check` fails in the container while every PHP check passes — run the PHP checks in Sail and the JS checks on the host.
 
 The self-hosted deployment compose promised by Epic 1 is a SEPARATE artifact from `compose.yaml`. Do not turn the Sail file into the shipped one.
 
+Also installed: laravel/fortify 1.38 and @nuxt/ui 4.10 — see "Auth is Fortify" and "The app lives under /app" below.
+
 Planned:
 - laravel/ai — pinned at 0.10.3. Do NOT wrap it: the package already provides every hook a wrapper would reinvent. See `.ai/rules/ai.md` — agents extend `EveilAgent` and are called directly.
-- laravel/fortify — v1.37.x, stable.
-- @nuxt/ui v4.10 — declares `@inertiajs/vue3: ^2 || ^3` as peer dep, so Inertia use is officially supported (not Nuxt-only). Tailwind v4 already installed, which Nuxt UI 4 needs.
 
 Do not add deps without approval.
+
+## Auth is Fortify: 2FA, reset, and a setup screen for the first account
+`laravel/fortify` owns login, logout, password reset, password confirmation and TOTP two-factor. It is headless — the screens are Inertia pages wired in `FortifyServiceProvider::registerViews()`, which is where you add or change one. Never hand-roll an auth route beside it.
+
+- **Sign-ups follow the edition: open on cloud, closed on self-hosted**, and `REGISTRATION_ENABLED` overrides either way (`config('eveil.registration_enabled')`). Fortify's registration feature stays REGISTERED whatever the setting, and `BlockDisabledRegistration` (appended to the `web` group) answers 404 on `register`/`register.store` when it is off. Do not "simplify" this back to filtering the feature out of `config/fortify.php`: that changes the route table, so `wayfinder:generate` emits different TypeScript per environment and a CI build fails on an import of `@/routes/register` that exists only on someone's laptop. Pages read the shared `registrationEnabled` prop before linking to it.
+- **The first account comes from `/app/setup`** (`Auth\SetupController`), not from registration: it creates the super admin AND the organization they own, because self-hosted runs the same organization code path as cloud. `Fortify::loginView()` redirects there while `users` is empty, so a fresh instance never shows a login form nobody can pass.
+- **Every account is created by `App\Actions\CreateAccount`** — setup and registration both go through it, so "a user always owns an organization" holds in one place. A user without one can own nothing and dies on the first project they create. It also de-duplicates the organization slug: two companies picking the same name is ordinary, and the column is unique.
+- **Passkeys are deliberately not enabled**, though `laravel/passkeys` arrives as a Fortify dependency. The feature and its published migration were removed; turn it on only when someone asks for it.
+- **2FA enrolment is server-rendered.** `SecurityController` passes the QR SVG and recovery codes as props and the page posts back to Fortify's own routes, so no page has to assemble state from Fortify's JSON endpoints.
+- **Fortify caches the code just used**, so replaying the same OTP inside its window fails. In tests, confirm enrolment with an OTP and pass the CHALLENGE with a recovery code — otherwise the second step fails for a reason that looks nothing like the real cause.
+- The app's own mail (resets, later invitations) is plain `MAIL_*` config, and is NOT the outreach sender — campaigns go through the email accounts a user connects. The Sail stack ships Mailpit; its dashboard is on `http://localhost:8035` (host ports are shifted here, as everywhere in `compose.yaml`).
+
+## The app lives under /app, the public site is Blade
+Two front ends, on purpose:
+- `routes/web.php` — the public site, plain Blade under `resources/views/marketing/`. No Inertia, no Vue. It is served only when `APP_EDITION=cloud` (`config('eveil.edition')`); a self-hosted instance has nothing to sell, so `/` redirects to `/app`.
+- `routes/app.php` — the Inertia + Vue application, mounted at the `/app` prefix by `bootstrap/app.php`. Fortify's `prefix` in `config/fortify.php` is set to `app` to match, so every auth URL sits under the same prefix. Adding a screen means adding it here, not in `web.php`.
+
+Nuxt UI 4 supplies the components. Three things it needs, already wired:
+- `ui({ router: 'inertia' })` in `vite.config.ts`. Without the option its `ULink` imports `vue-router`, which this app does not have, and the build dies on `"RouterLink" is not exported`. The plugin also registers `@tailwindcss/vite` itself — do not add that plugin again.
+- `@import '@nuxt/ui'` in `resources/css/app.css`.
+- `app.use(ui)` through `withApp`, plus `layout: () => RootLayout` so every page renders inside `<UApp>` (toasts, overlays and tooltips need it). Components auto-import, so `<UButton>` and friends need no import line.
+
+Theme: Vue mode has no `app.config.ts`, so what the Nuxt UI theme builder puts there goes in the plugin's `ui` option instead — currently `colors: { primary: 'cyan', neutral: 'neutral' }`. The font is Raleway, declared twice on purpose: `bunny('Raleway')` in `vite.config.ts` fetches it, `--font-sans` in `resources/css/app.css` uses it. Do not go looking for `--ui-color-primary-*` in the built CSS: Nuxt UI injects the palettes at runtime from a Vue plugin, so they only ever exist in the bundle and in the live DOM.
 
 ## Decisions: licence AGPL, edition split, v0 scope
 - Licence: AGPL-3.0. Anyone hosting a modified version must publish their code — blocks a competing cloud. Do not add code under an incompatible licence.

@@ -19,6 +19,20 @@ return [
     |
     */
 
+    /*
+     * self|cloud. Decides whether the marketing homepage is served at all —
+     * a self-hosted instance has nothing to sell, so `/` goes straight to
+     * the application.
+     */
+    'edition' => env('APP_EDITION', 'self'),
+
+    /*
+     * Cloud sells sign-ups. A self-hosted box is one team's instance whose first
+     * account comes from the setup screen, so it stays closed unless its
+     * operator opens it.
+     */
+    'registration_enabled' => env('REGISTRATION_ENABLED', env('APP_EDITION', 'self') === 'cloud'),
+
     'sources' => [
         'searxng' => [
             'url' => env('SEARXNG_URL', 'http://searxng:8080'),

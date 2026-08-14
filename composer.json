@@ -12,6 +12,7 @@
         "php": "^8.3",
         "inertiajs/inertia-laravel": "^3.0",
         "laravel/ai": "0.10.3",
+        "laravel/fortify": "^1.38",
         "laravel/framework": "^13.17",
         "laravel/tinker": "^3.0",
         "laravel/wayfinder": "^0.1.14"
@@ -48,8 +49,8 @@
             "@php artisan key:generate",
             "@php artisan eveil:credentials-key",
             "@php artisan migrate --force",
-            "npm install",
-            "npm run build"
+            "yarn install",
+            "yarn build"
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
@@ -63,9 +64,9 @@
         ],
         "ci:check": [
             "Composer\\Config::disableProcessTimeout",
-            "npm run lint:check",
-            "npm run format:check",
-            "npm run types:check",
+            "yarn lint:check",
+            "yarn format:check",
+            "yarn types:check",
             "@test"
         ],
         "types:check": [

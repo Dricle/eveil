@@ -41,6 +41,9 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            // Pages must not link to a route that does not exist on an
+            // instance with sign-ups closed.
+            'registrationEnabled' => (bool) config('eveil.registration_enabled'),
         ];
     }
 }

@@ -2,7 +2,12 @@
 import { Form, Head, Link } from '@inertiajs/vue3';
 import AuthCard from '@/layouts/AuthCard.vue';
 import { login } from '@/routes';
-import { store } from '@/routes/register';
+
+// The action comes from the server, not from Wayfinder: with sign-ups closed
+// the route does not exist and its generated module is not emitted.
+defineProps<{
+    action: string;
+}>();
 </script>
 
 <template>
@@ -10,7 +15,8 @@ import { store } from '@/routes/register';
         <Head title="Register" />
 
         <Form
-            v-bind="store.form()"
+            :action="action"
+            method="post"
             v-slot="{ errors, processing }"
             class="space-y-4"
         >

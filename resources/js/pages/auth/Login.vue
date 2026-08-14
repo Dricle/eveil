@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, Link, usePage } from '@inertiajs/vue3';
 import AuthCard from '@/layouts/AuthCard.vue';
-import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 
@@ -66,8 +65,8 @@ const page = usePage();
             </Link>
 
             <Link
-                v-if="page.props.registrationEnabled"
-                :href="register.url()"
+                v-if="page.props.registerUrl"
+                :href="page.props.registerUrl"
                 class="block text-center text-sm text-neutral-500 underline"
             >
                 No account yet? Register

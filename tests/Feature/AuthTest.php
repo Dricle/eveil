@@ -5,6 +5,7 @@ use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Route;
 use PragmaRX\Google2FA\Google2FA;
 
 it('sends a fresh instance to setup instead of a dead-end login screen', function () {
@@ -149,16 +150,22 @@ it('challenges for a second factor once two-factor is confirmed', function () {
     $this->assertAuthenticatedAs($user->fresh());
 });
 
-it('answers 404 on registration when sign-ups are closed', function () {
-    config()->set('eveil.registration_enabled', false);
+it('does not register the sign-up routes when sign-ups are closed', function () {
+    $_SERVER['REGISTRATION_ENABLED'] = 'false';
 
-    $this->get(route('register'))->assertNotFound();
-    $this->post(route('register.store'))->assertNotFound();
+    try {
+        $this->refreshApplication();
+
+        expect(Route::has('register'))->toBeFalse();
+
+        $this->get('/app/register')->assertNotFound();
+        $this->post('/app/register')->assertNotFound();
+    } finally {
+        $_SERVER['REGISTRATION_ENABLED'] = 'true';
+    }
 });
 
 it('registers a user with their own organization when sign-ups are open', function () {
-    config()->set('eveil.registration_enabled', true);
-
     $this->post(route('register.store'), [
         'name' => 'Ada',
         'organization' => 'Acme Tools',
@@ -177,8 +184,6 @@ it('registers a user with their own organization when sign-ups are open', functi
 });
 
 it('gives two organizations of the same name distinct slugs', function () {
-    config()->set('eveil.registration_enabled', true);
-
     foreach (['ada@example.test', 'grace@example.test'] as $email) {
         $this->post(route('register.store'), [
             'name' => 'Someone',

@@ -144,11 +144,11 @@ return [
     */
 
     'features' => array_filter([
-        // Whether sign-ups are open is `eveil.registration_enabled`, enforced
-        // by BlockDisabledRegistration. The feature stays registered either
-        // way so the route table — and the TypeScript Wayfinder builds from
-        // it — does not change shape with an env var.
-        Features::registration(),
+        // Cloud sells sign-ups; a self-hosted box is one team's instance whose
+        // first account comes from the setup screen, so it stays closed unless
+        // its operator opens it. Off means the routes are never registered, so
+        // `/app/register` is a genuine 404.
+        env('REGISTRATION_ENABLED', env('APP_EDITION', 'self') === 'cloud') ? Features::registration() : null,
         Features::resetPasswords(),
         // Features::emailVerification(),
         Features::updateProfileInformation(),

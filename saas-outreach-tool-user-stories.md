@@ -1427,8 +1427,9 @@ minimal, pour être opérationnel en quelques minutes.
 - `REGISTRATION_ENABLED=false` → la route register renvoie 404, pas un message d'erreur
 - Défaut lié à l'édition : ouvert en cloud, fermé en self-hosted ; `REGISTRATION_ENABLED` tranche
   dans les deux sens
-- Fermé = `BlockDisabledRegistration` renvoie un vrai 404, pas un formulaire qui refuse. La route
-  Fortify reste enregistrée pour que le TypeScript généré par Wayfinder ne change pas selon l'env
+- Fermé = Fortify n'enregistre pas les routes : `/app/register` est un vrai 404, pas un formulaire
+  qui refuse. Corollaire : aucune page n'importe `@/routes/register`, l'URL vient d'une prop
+  partagée (`registerUrl`)
 - L'écran d'inscription crée l'utilisateur **et** son organization (`App\Actions\CreateAccount`)
 
 **1.5** ⬜ En tant que superadmin, je veux modifier la configuration depuis une section settings.

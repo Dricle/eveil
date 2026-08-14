@@ -66,7 +66,9 @@ class FortifyServiceProvider extends ServiceProvider
             ]);
         });
 
-        Fortify::registerView(fn () => Inertia::render('auth/Register'));
+        Fortify::registerView(fn () => Inertia::render('auth/Register', [
+            'action' => route('register.store'),
+        ]));
 
         Fortify::requestPasswordResetLinkView(fn () => Inertia::render('auth/ForgotPassword', [
             'status' => session('status'),

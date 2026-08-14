@@ -6,7 +6,6 @@ use App\Enums\OrganizationRole;
 use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 /**
  * Creates a user together with the organization they own. Every user reaches
@@ -32,30 +31,11 @@ class CreateAccount
                 $user->forceFill(['is_super_admin' => true])->save();
             }
 
-            $organization = Organization::create([
-                'name' => $data['organization'],
-                'slug' => $this->uniqueSlug($data['organization']),
-            ]);
+            $organization = Organization::create(['name' => $data['organization']]);
 
             $organization->users()->attach($user, ['role' => OrganizationRole::Owner->value]);
 
             return $user;
         });
-    }
-
-    /**
-     * Two companies picking the same name is ordinary, and the slug is unique.
-     */
-    protected function uniqueSlug(string $name): string
-    {
-        $base = Str::slug($name) ?: 'organization';
-        $slug = $base;
-        $suffix = 1;
-
-        while (Organization::query()->where('slug', $slug)->exists()) {
-            $slug = $base.'-'.++$suffix;
-        }
-
-        return $slug;
     }
 }

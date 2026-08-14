@@ -148,7 +148,7 @@ return [
         // first account comes from the setup screen, so it stays closed unless
         // its operator opens it. Off means the routes are never registered, so
         // `/app/register` is a genuine 404.
-        env('REGISTRATION_ENABLED', env('APP_EDITION', 'self') === 'cloud') ? Features::registration() : null,
+        env('REGISTRATION_ENABLED', true) ? Features::registration() : null,
         Features::resetPasswords(),
         // Features::emailVerification(),
         Features::updateProfileInformation(),

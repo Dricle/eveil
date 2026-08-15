@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { Form, Head, Link } from '@inertiajs/vue3';
-import AuthCard from '@/layouts/AuthCard.vue';
-import { login } from '@/routes';
+import { Form, Head, Link } from '@inertiajs/vue3'
+import AuthCard from '@/layouts/AuthCard.vue'
+import { login } from '@/routes'
 
 // The action comes from the server, not from Wayfinder: with sign-ups closed
 // the route does not exist and its generated module is not emitted.
 defineProps<{
-    action: string;
-}>();
+    action: string
+}>()
 </script>
 
 <template>
@@ -15,13 +15,22 @@ defineProps<{
         <Head title="Register" />
 
         <Form
+            v-slot="{ errors, processing }"
             :action="action"
             method="post"
-            v-slot="{ errors, processing }"
             class="space-y-4"
         >
-            <UFormField label="Your name" name="name" :error="errors.name">
-                <UInput name="name" required autofocus class="w-full" />
+            <UFormField
+                label="Your name"
+                name="name"
+                :error="errors.name"
+            >
+                <UInput
+                    name="name"
+                    required
+                    autofocus
+                    class="w-full"
+                />
             </UFormField>
 
             <UFormField
@@ -29,10 +38,18 @@ defineProps<{
                 name="organization"
                 :error="errors.organization"
             >
-                <UInput name="organization" required class="w-full" />
+                <UInput
+                    name="organization"
+                    required
+                    class="w-full"
+                />
             </UFormField>
 
-            <UFormField label="Email" name="email" :error="errors.email">
+            <UFormField
+                label="Email"
+                name="email"
+                :error="errors.email"
+            >
                 <UInput
                     name="email"
                     type="email"
@@ -56,7 +73,10 @@ defineProps<{
                 />
             </UFormField>
 
-            <UFormField label="Confirm password" name="password_confirmation">
+            <UFormField
+                label="Confirm password"
+                name="password_confirmation"
+            >
                 <UInput
                     name="password_confirmation"
                     type="password"
@@ -76,8 +96,9 @@ defineProps<{
             <Link
                 :href="login.url()"
                 class="block text-center text-sm text-neutral-500 underline"
-                >Already have an account? Log in</Link
             >
+                Already have an account? Log in
+            </Link>
         </Form>
     </AuthCard>
 </template>

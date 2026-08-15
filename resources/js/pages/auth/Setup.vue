@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3';
-import { store } from '@/actions/App/Http/Controllers/Auth/SetupController';
-import AuthCard from '@/layouts/AuthCard.vue';
+import { Form, Head } from '@inertiajs/vue3'
+import { store } from '@/actions/App/Http/Controllers/Auth/SetupController'
+import AuthCard from '@/layouts/AuthCard.vue'
 </script>
 
 <template>
@@ -12,12 +12,21 @@ import AuthCard from '@/layouts/AuthCard.vue';
         <Head title="Setup" />
 
         <Form
-            v-bind="store.form()"
             v-slot="{ errors, processing }"
+            v-bind="store.form()"
             class="space-y-4"
         >
-            <UFormField label="Your name" name="name" :error="errors.name">
-                <UInput name="name" required autofocus class="w-full" />
+            <UFormField
+                label="Your name"
+                name="name"
+                :error="errors.name"
+            >
+                <UInput
+                    name="name"
+                    required
+                    autofocus
+                    class="w-full"
+                />
             </UFormField>
 
             <UFormField
@@ -25,10 +34,18 @@ import AuthCard from '@/layouts/AuthCard.vue';
                 name="organization"
                 :error="errors.organization"
             >
-                <UInput name="organization" required class="w-full" />
+                <UInput
+                    name="organization"
+                    required
+                    class="w-full"
+                />
             </UFormField>
 
-            <UFormField label="Email" name="email" :error="errors.email">
+            <UFormField
+                label="Email"
+                name="email"
+                :error="errors.email"
+            >
                 <UInput
                     name="email"
                     type="email"
@@ -52,7 +69,10 @@ import AuthCard from '@/layouts/AuthCard.vue';
                 />
             </UFormField>
 
-            <UFormField label="Confirm password" name="password_confirmation">
+            <UFormField
+                label="Confirm password"
+                name="password_confirmation"
+            >
                 <UInput
                     name="password_confirmation"
                     type="password"

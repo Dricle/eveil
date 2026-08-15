@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { usePage } from '@inertiajs/vue3';
-import type { NavigationMenuItem } from '@nuxt/ui';
-import { computed } from 'vue';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { deleteMethod, password, profile, twoFactor } from '@/routes/account';
+import { usePage } from '@inertiajs/vue3'
+import type { NavigationMenuItem } from '@nuxt/ui'
+import { computed } from 'vue'
+import AppLayout from '@/layouts/AppLayout.vue'
+import { deleteMethod, password, profile, twoFactor } from '@/routes/account'
 
 defineProps<{
-    title: string;
-}>();
+    title: string
+}>()
 
-const page = usePage();
+const page = usePage()
 
 const items = computed<NavigationMenuItem[]>(() =>
     [
@@ -18,21 +18,23 @@ const items = computed<NavigationMenuItem[]>(() =>
         {
             label: 'Two-factor authentication',
             icon: 'i-lucide-shield-check',
-            to: twoFactor.url(),
+            to: twoFactor.url()
         },
         {
             label: 'Delete account',
             icon: 'i-lucide-trash-2',
-            to: deleteMethod.url(),
-        },
-    ].map((item) => ({ ...item, active: page.url.startsWith(item.to) })),
-);
+            to: deleteMethod.url()
+        }
+    ].map(item => ({ ...item, active: page.url.startsWith(item.to) }))
+)
 </script>
 
 <template>
     <AppLayout>
         <template #header>
-            <h1 class="font-medium">{{ title }}</h1>
+            <h1 class="font-medium">
+                {{ title }}
+            </h1>
         </template>
 
         <div class="flex h-full flex-1">

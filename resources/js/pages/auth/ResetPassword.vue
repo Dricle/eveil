@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3';
-import AuthCard from '@/layouts/AuthCard.vue';
-import { update } from '@/routes/password';
+import { Form, Head } from '@inertiajs/vue3'
+import AuthCard from '@/layouts/AuthCard.vue'
+import { update } from '@/routes/password'
 
 defineProps<{
-    email: string;
-    token: string;
-}>();
+    email: string
+    token: string
+}>()
 </script>
 
 <template>
@@ -14,13 +14,21 @@ defineProps<{
         <Head title="Reset password" />
 
         <Form
-            v-bind="update.form()"
             v-slot="{ errors, processing }"
+            v-bind="update.form()"
             class="space-y-4"
         >
-            <input type="hidden" name="token" :value="token" />
+            <input
+                type="hidden"
+                name="token"
+                :value="token"
+            >
 
-            <UFormField label="Email" name="email" :error="errors.email">
+            <UFormField
+                label="Email"
+                name="email"
+                :error="errors.email"
+            >
                 <UInput
                     name="email"
                     type="email"
@@ -46,7 +54,10 @@ defineProps<{
                 />
             </UFormField>
 
-            <UFormField label="Confirm password" name="password_confirmation">
+            <UFormField
+                label="Confirm password"
+                name="password_confirmation"
+            >
                 <UInput
                     name="password_confirmation"
                     type="password"

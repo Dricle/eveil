@@ -1,22 +1,22 @@
 <script setup lang="ts">
-import { router, usePage } from '@inertiajs/vue3';
-import type { NavigationMenuItem } from '@nuxt/ui';
-import { computed, ref } from 'vue';
-import { dashboard, logout } from '@/routes';
-import { profile } from '@/routes/account';
+import { router, usePage } from '@inertiajs/vue3'
+import type { NavigationMenuItem } from '@nuxt/ui'
+import { computed, ref } from 'vue'
+import { dashboard, logout } from '@/routes'
+import { profile } from '@/routes/account'
 
-const page = usePage();
+const page = usePage()
 
-const open = ref(true);
+const open = ref(true)
 
 const items = computed<NavigationMenuItem[]>(() => [
     {
         label: 'Dashboard',
         icon: 'i-lucide-house',
         to: dashboard.url(),
-        active: page.url === dashboard.url(),
-    },
-]);
+        active: page.url === dashboard.url()
+    }
+])
 
 const userMenu = computed(() => [
     [
@@ -24,10 +24,10 @@ const userMenu = computed(() => [
         {
             label: 'Log out',
             icon: 'i-lucide-log-out',
-            onSelect: () => router.post(logout.url()),
-        },
-    ],
-]);
+            onSelect: () => router.post(logout.url())
+        }
+    ]
+])
 </script>
 
 <template>
@@ -52,7 +52,10 @@ const userMenu = computed(() => [
             />
 
             <template #footer>
-                <UDropdownMenu :items="userMenu" class="w-full">
+                <UDropdownMenu
+                    :items="userMenu"
+                    class="w-full"
+                >
                     <UButton
                         :label="page.props.auth.user.name"
                         icon="i-lucide-user"

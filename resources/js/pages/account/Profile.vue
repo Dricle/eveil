@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { Form, Head, usePage } from '@inertiajs/vue3';
-import AccountLayout from '@/layouts/AccountLayout.vue';
-import { update } from '@/routes/user-profile-information';
+import { Form, Head, usePage } from '@inertiajs/vue3'
+import AccountLayout from '@/layouts/AccountLayout.vue'
+import { update } from '@/routes/user-profile-information'
 
-const page = usePage();
+const page = usePage()
 </script>
 
 <template>
@@ -12,19 +12,25 @@ const page = usePage();
 
         <UCard>
             <template #header>
-                <h2 class="font-medium">Profile</h2>
+                <h2 class="font-medium">
+                    Profile
+                </h2>
                 <p class="mt-1 text-sm text-neutral-500">
                     Your name and the address you sign in with.
                 </p>
             </template>
 
             <Form
+                v-slot="{ errors, processing, recentlySuccessful }"
                 v-bind="update.form()"
                 error-bag="updateProfileInformation"
-                v-slot="{ errors, processing, recentlySuccessful }"
                 class="space-y-4"
             >
-                <UFormField label="Name" name="name" :error="errors.name">
+                <UFormField
+                    label="Name"
+                    name="name"
+                    :error="errors.name"
+                >
                     <UInput
                         name="name"
                         :default-value="page.props.auth.user.name"
@@ -33,7 +39,11 @@ const page = usePage();
                     />
                 </UFormField>
 
-                <UFormField label="Email" name="email" :error="errors.email">
+                <UFormField
+                    label="Email"
+                    name="email"
+                    :error="errors.email"
+                >
                     <UInput
                         name="email"
                         type="email"
@@ -45,12 +55,15 @@ const page = usePage();
                 </UFormField>
 
                 <div class="flex items-center gap-3">
-                    <UButton type="submit" :loading="processing" label="Save" />
+                    <UButton
+                        type="submit"
+                        :loading="processing"
+                        label="Save"
+                    />
                     <span
                         v-if="recentlySuccessful"
                         class="text-sm text-neutral-500"
-                        >Saved.</span
-                    >
+                    >Saved.</span>
                 </div>
             </Form>
         </UCard>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3';
-import AccountLayout from '@/layouts/AccountLayout.vue';
-import { update } from '@/routes/user-password';
+import { Form, Head } from '@inertiajs/vue3'
+import AccountLayout from '@/layouts/AccountLayout.vue'
+import { update } from '@/routes/user-password'
 </script>
 
 <template>
@@ -10,17 +10,19 @@ import { update } from '@/routes/user-password';
 
         <UCard>
             <template #header>
-                <h2 class="font-medium">Password</h2>
+                <h2 class="font-medium">
+                    Password
+                </h2>
                 <p class="mt-1 text-sm text-neutral-500">
                     Changing it does not sign your other sessions out.
                 </p>
             </template>
 
             <Form
+                v-slot="{ errors, processing, recentlySuccessful }"
                 v-bind="update.form()"
                 error-bag="updatePassword"
                 reset-on-success
-                v-slot="{ errors, processing, recentlySuccessful }"
                 class="space-y-4"
             >
                 <UFormField
@@ -73,8 +75,7 @@ import { update } from '@/routes/user-password';
                     <span
                         v-if="recentlySuccessful"
                         class="text-sm text-neutral-500"
-                        >Changed.</span
-                    >
+                    >Changed.</span>
                 </div>
             </Form>
         </UCard>

@@ -1,10 +1,10 @@
-import inertia from '@inertiajs/vite';
-import { wayfinder } from '@laravel/vite-plugin-wayfinder';
-import ui from '@nuxt/ui/vite';
-import vue from '@vitejs/plugin-vue';
-import laravel from 'laravel-vite-plugin';
-import { bunny } from 'laravel-vite-plugin/fonts';
-import { defineConfig } from 'vite';
+import inertia from '@inertiajs/vite'
+import { wayfinder } from '@laravel/vite-plugin-wayfinder'
+import ui from '@nuxt/ui/vite'
+import vue from '@vitejs/plugin-vue'
+import laravel from 'laravel-vite-plugin'
+import { bunny } from 'laravel-vite-plugin/fonts'
+import { defineConfig } from 'vite'
 
 export default defineConfig({
     plugins: [
@@ -13,9 +13,9 @@ export default defineConfig({
             refresh: true,
             fonts: [
                 bunny('Geist', {
-                    weights: [400, 500, 600, 700],
-                }),
-            ],
+                    weights: [400, 500, 600, 700]
+                })
+            ]
         }),
         inertia(),
         // Nuxt UI registers @tailwindcss/vite itself — adding it here too
@@ -28,20 +28,20 @@ export default defineConfig({
             ui: {
                 colors: {
                     primary: 'cyan',
-                    neutral: 'neutral',
-                },
-            },
+                    neutral: 'neutral'
+                }
+            }
         }),
         vue({
             template: {
                 transformAssetUrls: {
                     base: null,
-                    includeAbsolute: false,
-                },
-            },
+                    includeAbsolute: false
+                }
+            }
         }),
         wayfinder({
-            formVariants: true,
-        }),
-    ],
-});
+            formVariants: true
+        })
+    ]
+})

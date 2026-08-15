@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3';
-import AuthCard from '@/layouts/AuthCard.vue';
-import { store } from '@/routes/password/confirm';
+import { Form, Head } from '@inertiajs/vue3'
+import AuthCard from '@/layouts/AuthCard.vue'
+import { store } from '@/routes/password/confirm'
 </script>
 
 <template>
@@ -12,8 +12,8 @@ import { store } from '@/routes/password/confirm';
         <Head title="Confirm password" />
 
         <Form
-            v-bind="store.form()"
             v-slot="{ errors, processing }"
+            v-bind="store.form()"
             class="space-y-4"
         >
             <UFormField

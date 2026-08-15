@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
+import { Head } from '@inertiajs/vue3'
+import AppLayout from '@/layouts/AppLayout.vue'
 </script>
 
 <template>
     <AppLayout>
         <template #header>
-            <h1 class="font-medium">Dashboard</h1>
+            <h1 class="font-medium">
+                Dashboard
+            </h1>
         </template>
 
         <Head title="Dashboard" />

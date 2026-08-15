@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3';
-import AccountLayout from '@/layouts/AccountLayout.vue';
-import { destroy } from '@/routes/account';
+import { Form, Head } from '@inertiajs/vue3'
+import AccountLayout from '@/layouts/AccountLayout.vue'
+import { destroy } from '@/routes/account'
 </script>
 
 <template>
@@ -10,7 +10,9 @@ import { destroy } from '@/routes/account';
 
         <UCard>
             <template #header>
-                <h2 class="font-medium">Delete account</h2>
+                <h2 class="font-medium">
+                    Delete account
+                </h2>
                 <p class="mt-1 text-sm text-neutral-500">
                     This cannot be undone. Any organization left without a
                     member goes with it, and so do its projects, leads and
@@ -19,8 +21,8 @@ import { destroy } from '@/routes/account';
             </template>
 
             <Form
-                v-bind="destroy.form()"
                 v-slot="{ errors, processing }"
+                v-bind="destroy.form()"
                 class="space-y-4"
             >
                 <UFormField

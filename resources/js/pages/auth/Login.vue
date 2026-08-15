@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { Form, Head, Link, usePage } from '@inertiajs/vue3';
-import AuthCard from '@/layouts/AuthCard.vue';
-import { store } from '@/routes/login';
-import { request } from '@/routes/password';
+import { Form, Head, Link, usePage } from '@inertiajs/vue3'
+import AuthCard from '@/layouts/AuthCard.vue'
+import { store } from '@/routes/login'
+import { request } from '@/routes/password'
 
 defineProps<{
-    status?: string;
-}>();
+    status?: string
+}>()
 
-const page = usePage();
+const page = usePage()
 </script>
 
 <template>
@@ -24,11 +24,15 @@ const page = usePage();
         />
 
         <Form
-            v-bind="store.form()"
             v-slot="{ errors, processing }"
+            v-bind="store.form()"
             class="space-y-4"
         >
-            <UFormField label="Email" name="email" :error="errors.email">
+            <UFormField
+                label="Email"
+                name="email"
+                :error="errors.email"
+            >
                 <UInput
                     name="email"
                     type="email"
@@ -53,9 +57,18 @@ const page = usePage();
                 />
             </UFormField>
 
-            <UCheckbox name="remember" value="1" label="Remember me" />
+            <UCheckbox
+                name="remember"
+                value="1"
+                label="Remember me"
+            />
 
-            <UButton type="submit" :loading="processing" block label="Log in" />
+            <UButton
+                type="submit"
+                :loading="processing"
+                block
+                label="Log in"
+            />
 
             <Link
                 :href="request.url()"

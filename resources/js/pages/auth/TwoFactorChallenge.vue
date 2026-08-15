@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3';
-import { ref } from 'vue';
-import AuthCard from '@/layouts/AuthCard.vue';
-import { store } from '@/routes/two-factor/login';
+import { Form, Head } from '@inertiajs/vue3'
+import { ref } from 'vue'
+import AuthCard from '@/layouts/AuthCard.vue'
+import { store } from '@/routes/two-factor/login'
 
-const useRecoveryCode = ref(false);
+const useRecoveryCode = ref(false)
 </script>
 
 <template>
@@ -19,8 +19,8 @@ const useRecoveryCode = ref(false);
         <Head title="Two-factor authentication" />
 
         <Form
-            v-bind="store.form()"
             v-slot="{ errors, processing }"
+            v-bind="store.form()"
             class="space-y-4"
         >
             <UFormField

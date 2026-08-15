@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { Form, Head, Link } from '@inertiajs/vue3';
-import AuthCard from '@/layouts/AuthCard.vue';
-import { login } from '@/routes';
-import { email } from '@/routes/password';
+import { Form, Head, Link } from '@inertiajs/vue3'
+import AuthCard from '@/layouts/AuthCard.vue'
+import { login } from '@/routes'
+import { email } from '@/routes/password'
 
 defineProps<{
-    status?: string;
-}>();
+    status?: string
+}>()
 </script>
 
 <template>
@@ -25,11 +25,15 @@ defineProps<{
         />
 
         <Form
-            v-bind="email.form()"
             v-slot="{ errors, processing }"
+            v-bind="email.form()"
             class="space-y-4"
         >
-            <UFormField label="Email" name="email" :error="errors.email">
+            <UFormField
+                label="Email"
+                name="email"
+                :error="errors.email"
+            >
                 <UInput
                     name="email"
                     type="email"
@@ -50,8 +54,9 @@ defineProps<{
             <Link
                 :href="login.url()"
                 class="block text-center text-sm text-neutral-500 underline"
-                >Back to log in</Link
             >
+                Back to log in
+            </Link>
         </Form>
     </AuthCard>
 </template>

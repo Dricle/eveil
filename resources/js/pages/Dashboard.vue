@@ -5,18 +5,16 @@ import AppLayout from '@/layouts/AppLayout.vue';
 
 <template>
     <AppLayout>
-        <UDashboardPanel id="dashboard">
-            <template #header>
-                <UDashboardNavbar title="Dashboard" />
-            </template>
+        <template #header>
+            <h1 class="font-medium">Dashboard</h1>
+        </template>
 
-            <template #body>
-                <Head title="Dashboard" />
+        <Head title="Dashboard" />
 
-                <p class="text-sm text-neutral-500">
-                    Nothing here yet — projects land next.
-                </p>
-            </template>
-        </UDashboardPanel>
+        <div class="p-4">
+            <p class="text-sm text-muted">
+                Nothing here yet — projects land next.
+            </p>
+        </div>
     </AppLayout>
 </template>

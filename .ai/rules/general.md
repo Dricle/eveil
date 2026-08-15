@@ -62,7 +62,9 @@ Two front ends, on purpose:
 - `routes/web.php` — the public site, plain Blade under `resources/views/marketing/`. No Inertia, no Vue. It is served only when `APP_EDITION=cloud` (`config('eveil.edition')`); a self-hosted instance has nothing to sell, so `/` redirects to `/app`.
 - `routes/app.php` — the Inertia + Vue application, mounted at the `/app` prefix by `bootstrap/app.php`. Fortify's `prefix` in `config/fortify.php` is set to `app` to match, so every auth URL sits under the same prefix. Adding a screen means adding it here, not in `web.php`.
 
-**The application is full width, always.** Every authenticated page composes `AppLayout.vue` (a `UDashboardGroup` with the collapsible sidebar) and puts its content in a `UDashboardPanel` — never in an `mx-auto max-w-*` container. Panels handle their own scrolling, so a page that centres itself in a column both fights the shell and disagrees with the page next to it. `AccountLayout.vue` is the pattern for a sub-section: a narrow nav panel plus a content panel, both inside `AppLayout`.
+**The application is full width, always.** Every authenticated page composes `AppLayout.vue` — a `USidebar` (`collapsible="icon"`) beside a scrolling content column — and never wraps itself in an `mx-auto max-w-*` container. A page that centres itself in a column both fights the shell and disagrees with the page next to it. Pages fill the header bar through the layout's `#header` slot. `AccountLayout.vue` is the pattern for a sub-section: a fixed-width `aside` of links plus the content, inside `AppLayout`.
+
+`AppLayout` sizes itself with `h-screen`, not the `flex-1` the Nuxt UI docs example uses: that example sits inside their own page frame, and this layout IS the frame.
 
 Two deliberate exceptions, and only these: the marketing Blade page, where a reading column is right, and `AuthCard.vue`, which centres one card on an otherwise empty screen.
 

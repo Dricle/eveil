@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { usePage } from '@inertiajs/vue3';
+import type { NavigationMenuItem } from '@nuxt/ui';
 import { computed } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { deleteMethod, password, profile, twoFactor } from '@/routes/account';
@@ -10,7 +11,7 @@ defineProps<{
 
 const page = usePage();
 
-const items = computed(() => [
+const items = computed<NavigationMenuItem[]>(() =>
     [
         { label: 'Profile', icon: 'i-lucide-user', to: profile.url() },
         { label: 'Password', icon: 'i-lucide-key-round', to: password.url() },
@@ -25,35 +26,27 @@ const items = computed(() => [
             to: deleteMethod.url(),
         },
     ].map((item) => ({ ...item, active: page.url.startsWith(item.to) })),
-]);
+);
 </script>
 
 <template>
     <AppLayout>
-        <UDashboardPanel
-            id="account-nav"
-            :default-size="20"
-            :min-size="15"
-            :max-size="30"
-            resizable
-        >
-            <template #header>
-                <UDashboardNavbar title="Account" />
-            </template>
+        <template #header>
+            <h1 class="font-medium">{{ title }}</h1>
+        </template>
 
-            <template #body>
-                <UNavigationMenu :items="items" orientation="vertical" />
-            </template>
-        </UDashboardPanel>
+        <div class="flex h-full flex-1">
+            <aside class="w-64 shrink-0 border-e border-default p-4">
+                <UNavigationMenu
+                    :items="items"
+                    orientation="vertical"
+                    :ui="{ link: 'p-1.5 overflow-hidden' }"
+                />
+            </aside>
 
-        <UDashboardPanel id="account-content">
-            <template #header>
-                <UDashboardNavbar :title="title" />
-            </template>
-
-            <template #body>
+            <div class="min-w-0 flex-1 p-4">
                 <slot />
-            </template>
-        </UDashboardPanel>
+            </div>
+        </div>
     </AppLayout>
 </template>

@@ -19,6 +19,13 @@ return [
     |
     */
 
+    /*
+     * self|cloud. Decides whether the marketing homepage is served at all —
+     * a self-hosted instance has nothing to sell, so `/` goes straight to
+     * the application.
+     */
+    'edition' => env('APP_EDITION', 'self'),
+
     'sources' => [
         'searxng' => [
             'url' => env('SEARXNG_URL', 'http://searxng:8080'),

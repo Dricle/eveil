@@ -69,6 +69,13 @@ services:
                 - ping
             retries: 3
             timeout: 5s
+    mailpit:
+        image: 'axllent/mailpit:latest'
+        ports:
+            - '${FORWARD_MAILPIT_PORT:-1035}:1025'
+            - '${FORWARD_MAILPIT_DASHBOARD_PORT:-8035}:8025'
+        networks:
+            - sail
     searxng:
         image: 'searxng/searxng:latest'
         ports:

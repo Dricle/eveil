@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Illuminate\Http\Request;
 use Inertia\Middleware;
+use Laravel\Fortify\Features;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -41,6 +42,10 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            // A URL rather than a flag: with sign-ups closed the route is not
+            // registered at all, so neither Wayfinder nor `route()` can name
+            // it and pages have nothing to link to.
+            'registerUrl' => Features::enabled(Features::registration()) ? route('register') : null,
         ];
     }
 }

@@ -33,6 +33,10 @@
              only has to exist: the commands refuse to run without one. -->
         <env name="ANTHROPIC_API_KEY" value="test-key"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
+        <!-- Fortify registers the sign-up routes from config at boot, so the
+             suite runs with them on and the closed case is covered by a test
+             that reboots the app with the flag off. -->
+        <env name="REGISTRATION_ENABLED" value="true"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>

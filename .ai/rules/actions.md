@@ -15,6 +15,8 @@ The line to hold:
 
 The mistake to avoid: a class does not belong in `app/Ai/` because it mentions an agent, only because it IS one. `AnalyzeWebsite` calls an agent and contains no AI itself, so it is an action.
 
+`app/Actions/Fortify/` is the one exception: Fortify publishes and resolves those classes by that path, and they are its callbacks rather than our use cases. Leave them there, and do not model new actions on them.
+
 An action stays thin by construction. When one grows a private method that parses HTML, verifies an address or talks to an API, that method belongs in `app/Services/Discovery/` (or a new domain folder) and the action calls it.
 
 ## Where a class goes

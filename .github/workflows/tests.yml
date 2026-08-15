@@ -55,10 +55,15 @@ jobs:
           tools: composer:v2
           coverage: none
 
+      # Yarn 4 ships through Corepack, pinned by `packageManager` in
+      # package.json — enable it before the cache step, which shells out to yarn.
       - name: Setup Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '22'
+
+      - name: Enable Corepack
+        run: corepack enable
 
       # phpunit.xml runs the suite against a separate `testing` database; the
       # service image only creates `eveil`.

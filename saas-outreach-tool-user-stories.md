@@ -1365,7 +1365,7 @@ est une story pas faite.
 
 | Epic | Avancement |
 |---|---|
-| 1 — Setup & configuration | 🟡 réglages en base et en CLI, aucun écran, pas d'auth |
+| 1 — Setup & configuration | 🟡 auth complète (Fortify : login, reset, 2FA) et écran de setup faits ; réglages toujours en base et en CLI, aucun écran |
 | 2 — Projets | 🟡 cloisonnement fait et testé, pas de CRUD |
 | 3 — Analyse & knowledge base | 🟡 `eveil:analyze` tourne, rien n'est déclenché automatiquement |
 | 4 — Agent Website | ⬜ table `recommendations` pas encore créée |
@@ -1379,8 +1379,10 @@ est une story pas faite.
 
 **Ce qui existe vraiment** : le schéma complet, les modèles, cinq agents, le crawler, la vérification
 d'emails, et quatre commandes — `eveil:analyze`, `eveil:derive-targets`, `eveil:discover-companies`,
-`eveil:find-contacts` et `eveil:harvest` — plus `eveil:agent-model` et `eveil:credentials-key`. Aucune interface, aucune
-authentification, aucun envoi.
+`eveil:find-contacts` et `eveil:harvest` — plus `eveil:agent-model` et `eveil:credentials-key`. Côté interface : l'app Inertia + Nuxt UI vit
+sous `/app` (le site public est en Blade, servi seulement en édition cloud) et couvre setup, login,
+reset de mot de passe, 2FA et un dashboard vide. Aucun écran de réglages, aucun CRUD projet, aucun
+envoi.
 
 ### Epic 1 — Setup & configuration `v0`
 
@@ -1389,11 +1391,17 @@ minimal, pour être opérationnel en quelques minutes.
 - Le compose démarre app, queue worker, scheduler, base, SearXNG
 - `.env.example` documente le minimum vital : URL, `APP_KEY`, mot de passe admin initial
 - Aucune clé API tierce n'est requise pour un premier run de découverte
-- Premier accès à l'URL → écran de setup, pas une erreur 500
+- Premier accès à l'URL → écran de setup, pas une erreur 500 — **fait** (voir 1.2) ; le reste de la
+  story, le compose de déploiement et le `.env.example`, reste à faire
 
-**1.2** ⬜ En tant que superadmin, je veux me connecter avec le mot de passe défini au setup.
+**1.2** 🟡 En tant que superadmin, je veux me connecter avec le mot de passe défini au setup.
 - Le mot de passe initial vient de l'env ou du premier écran de setup
 - Changeable depuis les settings
+- **État** : Fortify installé ; écran de setup (`/app/setup`, superadmin + organization owner),
+  login, logout, inscription, mot de passe oublié + réinitialisation par email, confirmation de mot
+  de passe faits et testés. Section compte sous `/app/account` avec sa sidebar : profil, mot de
+  passe, 2FA TOTP (activation, QR, codes de secours, désactivation) et suppression de compte.
+  Manque le mot de passe initial par l'env, qui arrive avec 1.5
 
 **1.3** 🟡 En tant que superadmin, je veux choisir mon provider IA et saisir ma clé depuis les settings.
 - Clé chiffrée avec `CREDENTIALS_KEY` (ADR-012), jamais loggée, jamais renvoyée en clair au frontend
@@ -1415,8 +1423,13 @@ minimal, pour être opérationnel en quelques minutes.
 - L'écran affiche, par agent, ce qu'il a déjà coûté et sur combien d'appels
 - **État** : la couche base est faite et pilotable en CLI (`eveil:agent-model`) ; l'écran reste à construire avec l'auth
 
-**1.4** ⬜ En tant que superadmin, je veux désactiver les inscriptions via variable d'env.
+**1.4** ✅ En tant que superadmin, je veux désactiver les inscriptions via variable d'env.
 - `REGISTRATION_ENABLED=false` → la route register renvoie 404, pas un message d'erreur
+- Ouvert par défaut ; `REGISTRATION_ENABLED=false` ferme une instance destinée à une seule équipe
+- Fermé = Fortify n'enregistre pas les routes : `/app/register` est un vrai 404, pas un formulaire
+  qui refuse. Corollaire : aucune page n'importe `@/routes/register`, l'URL vient d'une prop
+  partagée (`registerUrl`)
+- L'écran d'inscription crée l'utilisateur **et** son organization (`App\Actions\CreateAccount`)
 
 **1.5** ⬜ En tant que superadmin, je veux modifier la configuration depuis une section settings.
 - Ce qui est réglable en UI est explicitement listé ; le reste reste en env

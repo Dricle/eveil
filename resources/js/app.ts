@@ -2,7 +2,7 @@ import { createInertiaApp } from '@inertiajs/vue3'
 import ui from '@nuxt/ui/vue-plugin'
 import RootLayout from '@/layouts/RootLayout.vue'
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel'
+const appName = 'Eveil'
 
 createInertiaApp({
     title: title => (title ? `${title} - ${appName}` : appName),

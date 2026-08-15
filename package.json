@@ -6,8 +6,6 @@
         "build": "vite build",
         "build:ssr": "vite build && vite build --ssr",
         "dev": "vite",
-        "format": "prettier --write resources/",
-        "format:check": "prettier --check resources/",
         "lint": "eslint . --fix",
         "lint:check": "eslint .",
         "types:check": "vue-tsc --noEmit"
@@ -21,12 +19,9 @@
         "@types/node": "^22.13.5",
         "@vue/eslint-config-typescript": "^14.3.0",
         "eslint": "^10.8.1",
-        "eslint-config-prettier": "^10.0.1",
         "eslint-import-resolver-typescript": "^4.4.4",
         "eslint-plugin-import": "^2.32.0",
         "eslint-plugin-vue": "^9.32.0",
-        "prettier": "^3.4.2",
-        "prettier-plugin-tailwindcss": "^0.6.11",
         "typescript-eslint": "^8.23.0",
         "vue-tsc": "^2.2.4"
     },

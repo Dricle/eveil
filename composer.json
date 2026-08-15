@@ -65,7 +65,6 @@
         "ci:check": [
             "Composer\\Config::disableProcessTimeout",
             "yarn lint:check",
-            "yarn format:check",
             "yarn types:check",
             "@test"
         ],

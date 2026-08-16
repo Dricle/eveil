@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
@@ -87,6 +88,17 @@ class Project extends Model
     public function analyses(): HasMany
     {
         return $this->hasMany(ProjectAnalysis::class);
+    }
+
+    /**
+     * The most recent run, which is what the project page reports on — a
+     * failed one is the only place the user learns the site could not be read.
+     *
+     * @return HasOne<ProjectAnalysis, $this>
+     */
+    public function latestAnalysis(): HasOne
+    {
+        return $this->hasOne(ProjectAnalysis::class)->latestOfMany();
     }
 
     /**

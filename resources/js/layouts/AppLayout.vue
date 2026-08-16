@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { router, usePage } from '@inertiajs/vue3'
-import type { NavigationMenuItem } from '@nuxt/ui'
+import type { DropdownMenuItem, NavigationMenuItem } from '@nuxt/ui'
 import { computed, ref } from 'vue'
 import { dashboard, logout } from '@/routes'
 import { profile } from '@/routes/account'
-import { index as projects } from '@/routes/projects'
+import { update as switchProject } from '@/routes/current-project'
+import { create } from '@/routes/projects'
+import projectSettings from '@/routes/settings/project'
 
 const page = usePage()
 
@@ -18,14 +20,33 @@ const items = computed<NavigationMenuItem[]>(() => [
         active: page.url === dashboard.url()
     },
     {
-        label: 'Projects',
-        icon: 'i-lucide-folder',
-        to: projects.url(),
-        active: page.url.startsWith(projects.url())
+        label: 'Settings',
+        icon: 'i-lucide-settings',
+        to: projectSettings.edit.url(),
+        active: page.url.startsWith('/app/settings')
     }
 ])
 
-const userMenu = computed(() => [
+// The project list is the switcher, not a nav entry: every screen below the
+// dashboard belongs to one project, so choosing it is context, not navigation.
+const projectMenu = computed<DropdownMenuItem[][]>(() => [
+    page.props.projects.map(project => ({
+        label: project.name,
+        icon: project.id === page.props.currentProject?.id
+            ? 'i-lucide-check'
+            : 'i-lucide-folder',
+        onSelect: () => router.put(switchProject.url(project.id))
+    })),
+    [
+        {
+            label: 'New project',
+            icon: 'i-lucide-plus',
+            to: create.url()
+        }
+    ]
+])
+
+const userMenu = computed<DropdownMenuItem[][]>(() => [
     [
         { label: 'Account', icon: 'i-lucide-user', to: profile.url() },
         {
@@ -47,9 +68,20 @@ const userMenu = computed(() => [
             :ui="{ container: 'h-full' }"
         >
             <template #header>
-                <span class="truncate font-semibold">{{
-                    page.props.name
-                }}</span>
+                <UDropdownMenu
+                    :items="projectMenu"
+                    class="w-full"
+                >
+                    <UButton
+                        :label="page.props.currentProject?.name ?? 'No project'"
+                        icon="i-lucide-folder"
+                        trailing-icon="i-lucide-chevrons-up-down"
+                        color="neutral"
+                        variant="ghost"
+                        block
+                        class="justify-start overflow-hidden font-semibold"
+                    />
+                </UDropdownMenu>
             </template>
 
             <UNavigationMenu

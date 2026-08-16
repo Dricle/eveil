@@ -15,15 +15,20 @@ class ProjectPolicy
      * Denied as a 404 rather than a 403: a project in somebody else's
      * organization must not even confirm that it exists.
      */
-    public function update(User $user, Project $project): Response
+    public function view(User $user, Project $project): Response
     {
         return $user->organizations()->whereKey($project->organization_id)->exists()
             ? Response::allow()
             : Response::denyAsNotFound();
     }
 
+    public function update(User $user, Project $project): Response
+    {
+        return $this->view($user, $project);
+    }
+
     public function delete(User $user, Project $project): Response
     {
-        return $this->update($user, $project);
+        return $this->view($user, $project);
     }
 }

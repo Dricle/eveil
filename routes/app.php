@@ -3,7 +3,9 @@
 use App\Http\Controllers\Account\AccountDeletionController;
 use App\Http\Controllers\Account\TwoFactorController;
 use App\Http\Controllers\Auth\SetupController;
+use App\Http\Controllers\CurrentProjectController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ProjectKnowledgeBaseController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -17,26 +19,43 @@ Route::middleware('guest')->group(function (): void {
     Route::post('setup', [SetupController::class, 'store']);
 });
 
-Route::middleware('auth')->group(function (): void {
-    Route::inertia('/', 'Dashboard')->name('dashboard');
-
+Route::middleware(['auth', 'project.set'])->group(function (): void {
     /*
-     * Creating and editing happen in a dialog on the index, so there is no
-     * `create` or `edit` screen to route to.
-     *
-     * Authorisation is middleware rather than a call inside the controller so
-     * that it runs BEFORE the form request: validating first would have a
-     * stranger's payload fetch a URL of their choosing on the way to being
-     * told the project does not exist.
+     * Switching projects and creating one are the two things reachable without
+     * a project already selected — everything else would have nothing to show.
      */
-    Route::resource('projects', ProjectController::class)
-        ->only(['index', 'store', 'update', 'destroy'])
-        ->middlewareFor('update', 'can:update,project')
-        ->middlewareFor('destroy', 'can:delete,project');
+    Route::put('current-project/{project}', [CurrentProjectController::class, 'update'])
+        ->middleware('can:view,project')
+        ->name('current-project.update');
+
+    Route::get('projects/create', [ProjectController::class, 'create'])->name('projects.create');
+    Route::post('projects', [ProjectController::class, 'store'])->name('projects.store');
+
+    Route::middleware('project.require')->group(function (): void {
+        Route::inertia('/', 'Dashboard')->name('dashboard');
+
+        /*
+         * The current project comes from the session, so none of these carry it
+         * in the URL: switching projects leaves you on the page you were on.
+         */
+        Route::prefix('settings')->name('settings.')->group(function (): void {
+            Route::redirect('/', '/app/settings/project');
+
+            Route::get('project', [ProjectController::class, 'edit'])->name('project.edit');
+            Route::put('project', [ProjectController::class, 'update'])->name('project.update');
+            Route::delete('project', [ProjectController::class, 'destroy'])->name('project.destroy');
+
+            Route::get('knowledge-base', [ProjectKnowledgeBaseController::class, 'edit'])
+                ->name('knowledge-base.edit');
+            Route::put('knowledge-base', [ProjectKnowledgeBaseController::class, 'update'])
+                ->name('knowledge-base.update');
+        });
+    });
 
     /*
      * Account management. The forms post to Fortify's own update routes, so
-     * most of these only need to render a page.
+     * most of these only need to render a page. Deliberately outside
+     * `project.require`: somebody with no project still has an account.
      */
     Route::prefix('account')->name('account.')->group(function (): void {
         Route::redirect('/', '/app/account/profile');

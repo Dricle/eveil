@@ -1366,8 +1366,8 @@ est une story pas faite.
 | Epic | Avancement |
 |---|---|
 | 1 — Setup & configuration | 🟡 auth complète (Fortify : login, reset, 2FA) et écran de setup faits ; réglages toujours en base et en CLI, aucun écran |
-| 2 — Projets | 🟡 cloisonnement fait et testé, CRUD fait ; manquent le sélecteur de projet et le dashboard multi-projet (`v1`) |
-| 3 — Analyse & knowledge base | 🟡 `eveil:analyze` tourne et l'enregistrement d'un projet déclenche l'analyse ; pas d'écran de knowledge base |
+| 2 — Projets | 🟡 cloisonnement fait et testé, CRUD fait, sélecteur de projet fait ; manque le dashboard multi-projet (`v1`) |
+| 3 — Analyse & knowledge base | 🟡 analyse déclenchée à l'enregistrement, knowledge base visible et éditable ; manquent la progression du crawl et le lien vers un repo (`v1`) |
 | 4 — Agent Website | ⬜ table `recommendations` pas encore créée |
 | 5 — Découverte de leads | 🟡 chaîne complète en CLI, récolte d'annuaires, registre d'hôtes appris ; manquent `target_profiles.type`, l'import CSV, le rendu JS (5.9, reporté) |
 | 6 — Séquences | ⬜ |
@@ -1381,9 +1381,11 @@ est une story pas faite.
 d'emails, et quatre commandes — `eveil:analyze`, `eveil:derive-targets`, `eveil:discover-companies`,
 `eveil:find-contacts` et `eveil:harvest` — plus `eveil:agent-model` et `eveil:credentials-key`. Côté interface : l'app Inertia + Nuxt UI vit
 sous `/app` (le site public est en Blade, servi seulement en édition cloud) et couvre setup, login,
-reset de mot de passe, 2FA, un dashboard vide et le CRUD projet, qui déclenche l'analyse. Horizon
-tourne les workers, un supervisor par queue, tableau de bord réservé au superadmin. Aucun écran
-de réglages, aucune knowledge base éditable, aucun envoi.
+reset de mot de passe, 2FA, un dashboard de projet vide, le CRUD projet — qui déclenche l'analyse —
+et une section réglages où le projet se renomme et où la knowledge base se lit et se corrige. On
+ouvre l'app dans un projet : le projet courant est en session, choisi dans le sélecteur en tête de
+sidebar. Horizon tourne les workers, un supervisor par queue, tableau de bord réservé au superadmin.
+Aucun réglage d'instance, aucun écran de découverte, aucun envoi.
 
 ### Epic 1 — Setup & configuration `v0`
 
@@ -1450,9 +1452,15 @@ minimal, pour être opérationnel en quelques minutes.
 - Leads, sociétés, campagnes, comptes email, analyses, runs d'agent portent `project_id`
 - Un global scope l'applique ; un test vérifie qu'aucune requête ne fuit entre deux projets
 
-**2.3** ⬜ `v1` En tant qu'utilisateur, je veux basculer d'un projet à l'autre depuis un sélecteur global.
+**2.3** ✅ En tant qu'utilisateur, je veux basculer d'un projet à l'autre depuis un sélecteur global.
 - Le projet courant est en session, pas dans l'URL de chaque page
 - Le changement de projet ne perd pas le contexte de travail
+- **État** : remontée de `v1` — toute page sous le dashboard appartient à un projet, donc le choisir
+  est du contexte et pas de la navigation. Le sélecteur est en tête de sidebar et porte aussi
+  « nouveau projet » ; il n'y a plus de liste de projets dans le menu. `SetCurrentProject` relit l'id
+  de session à travers `visibleTo` à chaque requête et retombe sur le premier projet lisible, donc
+  une session trafiquée ne donne accès à rien. `RequireCurrentProject` envoie vers l'écran de
+  création quand il n'y en a aucun ; la section compte reste accessible sans projet
 
 **2.4** ⬜ `v1` En tant qu'utilisateur, je veux un dashboard multi-projet.
 - Par projet : leads actifs, campagnes en cours, dernières suggestions, consommation IA
@@ -1464,13 +1472,20 @@ automatiquement.
 - Crawl plafonné (nb de pages, profondeur, timeout) et affiché en cours de route
 - robots.txt respecté
 - Un échec partiel produit quand même une knowledge base, avec la liste de ce qui a échoué
-- **État** : le déclenchement est fait (`App\Jobs\AnalyzeProject`, queue `ai`) ; la liste des projets
-  ne montre qu'« analysé / en cours ». Manquent la progression du crawl et le compte rendu d'échec
-  partiel
+- **État** : le déclenchement est fait (`App\Jobs\AnalyzeProject`, queue `ai`) et la page projet
+  montre l'échec du dernier run quand le site n'a pas pu être lu. Manquent la progression du crawl
+  en cours de route et la liste page par page de ce qui a échoué (`project_analyses.failures` n'est
+  encore écrit par personne)
 
-**3.2** 🟡 En tant qu'utilisateur, je veux voir un résumé du produit que je peux corriger.
+**3.2** ✅ En tant qu'utilisateur, je veux voir un résumé du produit que je peux corriger.
 - Champs : ce que fait le produit, pour qui, positionnement, proposition de valeur, concurrents
 - L'édition manuelle prime sur toute ré-analyse ultérieure, et est marquée comme telle
+- **État** : la page projet (`/app/projects/{project}`) porte les onze champs du portrait. Les cinq
+  champs texte et les quatre listes sont éditables ; `language` et `confidence` sont le compte rendu
+  du modèle sur son propre run et ne sont pas redemandés, donc l'enregistrement les fusionne au lieu
+  de remplacer. Les listes voyagent une ligne par item et sont découpées côté serveur — pas d'éditeur
+  de tags à maintenir. Sauvegarder pose `knowledge_base_edited_by_user`, que la page affiche et que
+  `AnalyzeWebsite::applyToProject()` respectait déjà
 
 **3.3** ⬜ `v1` En tant qu'utilisateur, je veux lier le repo GitHub pour une analyse plus poussée.
 - Repos publics d'abord ; stack technique, README, issues ouvertes

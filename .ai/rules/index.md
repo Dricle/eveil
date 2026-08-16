@@ -15,3 +15,4 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Models/**, app/Models/EmailAccount.php | .ai/rules/models.md |
 | app/Services/Outreach/** | .ai/rules/outreach.md |
 | app/Http/Resources/** | .ai/rules/resources.md |
+| routes/** | .ai/rules/routes.md |

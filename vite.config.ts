@@ -29,6 +29,13 @@ export default defineConfig({
                 colors: {
                     primary: 'cyan',
                     neutral: 'neutral'
+                },
+                // Menus portal into <body> with no z-index of their own, so the
+                // sidebar's fixed `z-10` container paints over them.
+                dropdownMenu: {
+                    slots: {
+                        content: 'z-20'
+                    }
                 }
             }
         }),

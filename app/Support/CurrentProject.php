@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\Project;
 use Closure;
+use RuntimeException;
 
 /**
  * Holds the project the current request or job is acting on, so the
@@ -23,6 +24,16 @@ class CurrentProject
     public function get(): ?Project
     {
         return $this->project;
+    }
+
+    /**
+     * For the code that only ever runs with a project selected. The middleware
+     * sends a projectless user somewhere useful; this is what lets everything
+     * behind it be typed, instead of every controller re-testing for null.
+     */
+    public function getOrFail(): Project
+    {
+        return $this->project ?? throw new RuntimeException('No current project is set.');
     }
 
     public function id(): ?int

@@ -5,6 +5,8 @@ namespace App\Models;
 use App\Enums\AutonomyLevel;
 use Database\Factories\ProjectFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -31,6 +33,18 @@ class Project extends Model
 {
     /** @use HasFactory<ProjectFactory> */
     use HasFactory;
+
+    /**
+     * The projects a user may see. Access follows the organization until
+     * per-project grants get a screen of their own.
+     *
+     * @param  Builder<$this>  $query
+     */
+    #[Scope]
+    protected function visibleTo(Builder $query, User $user): void
+    {
+        $query->whereIn('organization_id', $user->organizations()->select('organizations.id'));
+    }
 
     /**
      * @return BelongsTo<Organization, $this>

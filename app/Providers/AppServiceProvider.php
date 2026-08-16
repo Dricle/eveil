@@ -9,6 +9,7 @@ use App\Support\CurrentProject;
 use App\Support\DisposableDomains;
 use App\Support\Settings;
 use Carbon\CarbonImmutable;
+use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
@@ -54,6 +55,11 @@ class AppServiceProvider extends ServiceProvider
     protected function configureDefaults(): void
     {
         Date::use(CarbonImmutable::class);
+
+        // Resources feed Inertia props, not a JSON API. The `data` envelope
+        // buys nothing here and would put `projects.data` in every page that
+        // reads a collection.
+        JsonResource::withoutWrapping();
 
         DB::prohibitDestructiveCommands(
             app()->isProduction(),

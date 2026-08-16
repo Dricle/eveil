@@ -14,6 +14,7 @@
         "laravel/ai": "0.10.3",
         "laravel/fortify": "^1.38",
         "laravel/framework": "^13.17",
+        "laravel/horizon": "^5.48",
         "laravel/tinker": "^3.0",
         "laravel/wayfinder": "^0.1.14"
     },

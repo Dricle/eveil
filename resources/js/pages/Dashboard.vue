@@ -15,7 +15,7 @@ import AppLayout from '@/layouts/AppLayout.vue'
 
         <div class="p-4">
             <p class="text-sm text-muted">
-                Nothing here yet — projects land next.
+                Nothing here yet — start from Projects.
             </p>
         </div>
     </AppLayout>

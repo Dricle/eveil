@@ -29,6 +29,30 @@ services:
             - pgsql
             - redis
             - searxng
+    # The workers, in the same image as the app so they share its PHP and its
+    # code mount. Nothing queued moves without this container running.
+    horizon:
+        build:
+            context: './vendor/laravel/sail/runtimes/8.5'
+            dockerfile: Dockerfile
+            args:
+                WWWGROUP: '${WWWGROUP}'
+        image: 'sail-8.5/app'
+        command: ['php', '/var/www/html/artisan', 'horizon']
+        stop_signal: SIGTERM
+        extra_hosts:
+            - 'host.docker.internal:host-gateway'
+        environment:
+            WWWUSER: '${WWWUSER}'
+            LARAVEL_SAIL: 1
+        volumes:
+            - '.:/var/www/html'
+        networks:
+            - sail
+        depends_on:
+            - pgsql
+            - redis
+            - searxng
     pgsql:
         image: 'postgres:18-alpine'
         ports:

@@ -4,6 +4,7 @@ import type { NavigationMenuItem } from '@nuxt/ui'
 import { computed, ref } from 'vue'
 import { dashboard, logout } from '@/routes'
 import { profile } from '@/routes/account'
+import { index as projects } from '@/routes/projects'
 
 const page = usePage()
 
@@ -15,6 +16,12 @@ const items = computed<NavigationMenuItem[]>(() => [
         icon: 'i-lucide-house',
         to: dashboard.url(),
         active: page.url === dashboard.url()
+    },
+    {
+        label: 'Projects',
+        icon: 'i-lucide-folder',
+        to: projects.url(),
+        active: page.url.startsWith(projects.url())
     }
 ])
 

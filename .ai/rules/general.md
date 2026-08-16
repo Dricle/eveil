@@ -24,7 +24,7 @@ Two per-project AI roles: Website (crawls the site → knowledge base, plus site
 Ships in two editions from one codebase: free self-hosted (docker compose) and paid cloud. Scope lives in saas-outreach-tool-user-stories.md at repo root — read it before planning features.
 
 ## Stack: verified versions and traps
-Installed: Laravel 13, Inertia v3 + Vue 3, Wayfinder, Pest 5, Larastan, Pint, Boost. PostgreSQL everywhere, tests included (ADR-010) — the SQLite the starter shipped with is gone. Redis for queues, cache and locks; Horizon still to be added (ADR-011).
+Installed: Laravel 13, Inertia v3 + Vue 3, Wayfinder, Pest 5, Larastan, Pint, Boost. PostgreSQL everywhere, tests included (ADR-010) — the SQLite the starter shipped with is gone. Redis for queues, cache and locks, with `laravel/horizon` running the workers (ADR-011) — see `.ai/rules/jobs.md`.
 
 ## Local development runs on Laravel Sail
 `compose.yaml` at the repo root is the SAIL dev stack (`laravel.test` on PHP 8.5, `pgsql`, `redis`). Host ports are deliberately shifted — app 8080, Postgres 5442, Redis 6382 — because other local projects already hold 80/5432/6379.

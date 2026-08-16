@@ -68,7 +68,10 @@ return [
             'driver' => 'redis',
             'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
             'queue' => env('REDIS_QUEUE', 'default'),
-            'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 90),
+            // Must outlast the longest worker timeout in config/horizon.php,
+            // otherwise a slow model call is handed to a second worker while
+            // the first is still on it — and an outreach mail goes out twice.
+            'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 1200),
             'block_for' => null,
             'after_commit' => false,
         ],

@@ -29,3 +29,13 @@ Discovery fans out into queued jobs rather than running one long agent tool loop
 - **State lives in `discovery_tasks`, not in Laravel's `jobs` table**, which drops the row on success and so cannot back a history, a cost breakdown, or a re-run button. `ShouldBeUnique` still guards against double-enqueue.
 - **A failing job fails its own row, never the run.** One unreadable directory must not cost the leads already found — a single malformed page (a NUL byte in a response body is enough) otherwise takes down the whole run.
 
+## Horizon is installed: one supervisor per queue, and retry_after outlasts them all
+`laravel/horizon` runs the workers, and `compose.yaml` has a `horizon` service in the app image — nothing queued moves without that container up. Locally: `sail up -d`, or `sail artisan horizon` if you want the log in front of you.
+
+`config/horizon.php` defines one supervisor PER QUEUE (`discovery`, `crawl`, `ai`, `sending`, `imap`, `default`), not one pool over all of them: each is limited by something different, and a shared pool lets the noisiest starve the rest. `sending` is deliberately capped at one process — bursty cold outreach is what gets a mailbox blocked. `crawl` concurrency is how many requests one site sees at once, since the politeness delay is per worker.
+
+The trap: `retry_after` on the redis queue connection must outlast the LONGEST supervisor `timeout` (currently `ai` at 900s, so it is 1200). Get that order wrong and a slow model call is handed to a second worker while the first is still running — which for the `sending` queue means the same outreach mail goes out twice.
+
+Adding a supervisor means adding it to `defaults` AND to both `environments` blocks; `environments` merges the keys you name into `defaults` rather than replacing the block.
+
+The `/horizon` dashboard shows every job payload (lead names, addresses, message bodies), so the gate is `is_super_admin` — instance scope, never granted through an organization. Horizon 5.48 no longer publishes assets; there is nothing to add to `post-update-cmd`. Metrics stay blank without the scheduled `horizon:snapshot` in `routes/console.php`, which means the scheduler has to be running too.

@@ -1366,8 +1366,8 @@ est une story pas faite.
 | Epic | Avancement |
 |---|---|
 | 1 — Setup & configuration | 🟡 auth complète (Fortify : login, reset, 2FA) et écran de setup faits ; réglages toujours en base et en CLI, aucun écran |
-| 2 — Projets | 🟡 cloisonnement fait et testé, pas de CRUD |
-| 3 — Analyse & knowledge base | 🟡 `eveil:analyze` tourne, rien n'est déclenché automatiquement |
+| 2 — Projets | 🟡 cloisonnement fait et testé, CRUD fait ; manquent le sélecteur de projet et le dashboard multi-projet (`v1`) |
+| 3 — Analyse & knowledge base | 🟡 `eveil:analyze` tourne et l'enregistrement d'un projet déclenche l'analyse ; pas d'écran de knowledge base |
 | 4 — Agent Website | ⬜ table `recommendations` pas encore créée |
 | 5 — Découverte de leads | 🟡 chaîne complète en CLI, récolte d'annuaires, registre d'hôtes appris ; manquent `target_profiles.type`, l'import CSV, le rendu JS (5.9, reporté) |
 | 6 — Séquences | ⬜ |
@@ -1381,8 +1381,9 @@ est une story pas faite.
 d'emails, et quatre commandes — `eveil:analyze`, `eveil:derive-targets`, `eveil:discover-companies`,
 `eveil:find-contacts` et `eveil:harvest` — plus `eveil:agent-model` et `eveil:credentials-key`. Côté interface : l'app Inertia + Nuxt UI vit
 sous `/app` (le site public est en Blade, servi seulement en édition cloud) et couvre setup, login,
-reset de mot de passe, 2FA et un dashboard vide. Aucun écran de réglages, aucun CRUD projet, aucun
-envoi.
+reset de mot de passe, 2FA, un dashboard vide et le CRUD projet, qui déclenche l'analyse. Horizon
+tourne les workers, un supervisor par queue, tableau de bord réservé au superadmin. Aucun écran
+de réglages, aucune knowledge base éditable, aucun envoi.
 
 ### Epic 1 — Setup & configuration `v0`
 
@@ -1436,9 +1437,14 @@ minimal, pour être opérationnel en quelques minutes.
 
 ### Epic 2 — Projets `v0`
 
-**2.1** 🟡 En tant qu'utilisateur, je veux créer un projet avec un nom et une URL.
+**2.1** ✅ En tant qu'utilisateur, je veux créer un projet avec un nom et une URL.
 - URL validée et joignable avant création
 - L'analyse initiale se déclenche automatiquement à l'enregistrement
+- **État** : `/app/projects` liste, crée, renomme et supprime. Le schéma est ajouté si l'utilisateur
+  n'en tape pas (`example.com` suffit), la page est réellement récupérée avant l'enregistrement — et
+  atterrit dans le cache de crawl, donc l'analyse qui suit ne la repaye pas. `App\Jobs\AnalyzeProject`
+  part à la création et à chaque changement d'URL, jamais sur un simple renommage. L'accès suit
+  l'organization ; le pivot `project_user` n'est pas encore utilisé
 
 **2.2** ✅ En tant qu'utilisateur, je veux que tout soit cloisonné par projet.
 - Leads, sociétés, campagnes, comptes email, analyses, runs d'agent portent `project_id`
@@ -1458,6 +1464,9 @@ automatiquement.
 - Crawl plafonné (nb de pages, profondeur, timeout) et affiché en cours de route
 - robots.txt respecté
 - Un échec partiel produit quand même une knowledge base, avec la liste de ce qui a échoué
+- **État** : le déclenchement est fait (`App\Jobs\AnalyzeProject`, queue `ai`) ; la liste des projets
+  ne montre qu'« analysé / en cours ». Manquent la progression du crawl et le compte rendu d'échec
+  partiel
 
 **3.2** 🟡 En tant qu'utilisateur, je veux voir un résumé du produit que je peux corriger.
 - Champs : ce que fait le produit, pour qui, positionnement, proposition de valeur, concurrents

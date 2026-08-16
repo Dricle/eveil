@@ -3,6 +3,7 @@
 use App\Http\Controllers\Account\AccountDeletionController;
 use App\Http\Controllers\Account\TwoFactorController;
 use App\Http\Controllers\Auth\SetupController;
+use App\Http\Controllers\ProjectController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -18,6 +19,20 @@ Route::middleware('guest')->group(function (): void {
 
 Route::middleware('auth')->group(function (): void {
     Route::inertia('/', 'Dashboard')->name('dashboard');
+
+    /*
+     * Creating and editing happen in a dialog on the index, so there is no
+     * `create` or `edit` screen to route to.
+     *
+     * Authorisation is middleware rather than a call inside the controller so
+     * that it runs BEFORE the form request: validating first would have a
+     * stranger's payload fetch a URL of their choosing on the way to being
+     * told the project does not exist.
+     */
+    Route::resource('projects', ProjectController::class)
+        ->only(['index', 'store', 'update', 'destroy'])
+        ->middlewareFor('update', 'can:update,project')
+        ->middlewareFor('destroy', 'can:delete,project');
 
     /*
      * Account management. The forms post to Fortify's own update routes, so

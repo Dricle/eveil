@@ -73,6 +73,27 @@ class Url
     }
 
     /**
+     * Turns what somebody typed into a URL. `example.com` is how people write
+     * an address, and demanding the scheme would turn it into a second field
+     * to get right. Returns the input untouched when nothing can be made of
+     * it, so validation reports what was actually entered.
+     */
+    public static function fromInput(string $url): string
+    {
+        $url = trim($url);
+
+        if ($url === '') {
+            return $url;
+        }
+
+        if (! preg_match('#^https?://#i', $url)) {
+            $url = 'https://'.$url;
+        }
+
+        return self::normalize($url) ?? $url;
+    }
+
+    /**
      * The host without `www.`, which is a display prefix rather than a
      * different site — and the key companies are deduped on.
      */

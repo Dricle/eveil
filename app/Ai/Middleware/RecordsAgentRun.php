@@ -29,14 +29,26 @@ class RecordsAgentRun
             return $next($prompt);
         }
 
-        $run = AgentRun::create([
+        $attributes = [
             'project_id' => $agent->project->id,
-            'agent' => $agent->slug(),
+            'agent' => $agent::slug(),
             'status' => AgentRunStatus::Running,
             'provider' => $prompt->provider->name(),
             'model' => $prompt->model,
             'input' => ['prompt' => $prompt->prompt],
-        ]);
+        ];
+
+        // A run queued from a screen already has its row, opened as `pending`
+        // at dispatch so the page could report the work before a worker existed
+        // to do it. Claim it rather than opening a second one — one invocation
+        // is one row, and the meter is that count.
+        $run = $agent->run;
+
+        if ($run === null) {
+            $run = AgentRun::create($attributes);
+        } else {
+            $run->update($attributes);
+        }
 
         $startedAt = microtime(true);
 

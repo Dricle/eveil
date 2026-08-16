@@ -2,12 +2,12 @@
 
 namespace App\Http\Requests;
 
+use App\Support\Lines;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
  * The portrait of the product, as corrected by the person who actually sells
- * it. The list fields arrive as one item per line — a textarea is what people
- * paste into, and a tag editor would be a component to maintain for no gain.
+ * it. The list fields arrive as one item per line.
  */
 class KnowledgeBaseRequest extends FormRequest
 {
@@ -41,13 +41,8 @@ class KnowledgeBaseRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         foreach (self::LISTS as $field) {
-            $value = $this->input($field);
-
-            if (is_string($value)) {
-                $this->merge([$field => array_values(array_filter(
-                    array_map(trim(...), preg_split('/\R/', $value) ?: []),
-                    fn (string $line): bool => $line !== '',
-                ))]);
+            if (! is_array($this->input($field))) {
+                $this->merge([$field => Lines::split($this->input($field))]);
             }
         }
     }

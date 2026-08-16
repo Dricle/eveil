@@ -1369,7 +1369,7 @@ est une story pas faite.
 | 2 — Projets | 🟡 cloisonnement fait et testé, CRUD fait, sélecteur de projet fait ; manque le dashboard multi-projet (`v1`) |
 | 3 — Analyse & knowledge base | 🟡 analyse déclenchée à l'enregistrement, knowledge base visible et éditable ; manquent la progression du crawl et le lien vers un repo (`v1`) |
 | 4 — Agent Website | ⬜ table `recommendations` pas encore créée |
-| 5 — Découverte de leads | 🟡 chaîne complète en CLI, récolte d'annuaires, registre d'hôtes appris ; manquent `target_profiles.type`, l'import CSV, le rendu JS (5.9, reporté) |
+| 5 — Découverte de leads | 🟡 chaîne complète en CLI, récolte d'annuaires, registre d'hôtes appris ; profils cibles éditables à l'écran, `target_profiles.type` créée ; manquent les écrans de run, l'import CSV, le rendu JS (5.9, reporté) |
 | 6 — Séquences | ⬜ |
 | 7 — Envoi | ⬜ |
 | 8 — Réponses & inbox | ⬜ |
@@ -1382,7 +1382,8 @@ d'emails, et quatre commandes — `eveil:analyze`, `eveil:derive-targets`, `evei
 `eveil:find-contacts` et `eveil:harvest` — plus `eveil:agent-model` et `eveil:credentials-key`. Côté interface : l'app Inertia + Nuxt UI vit
 sous `/app` (le site public est en Blade, servi seulement en édition cloud) et couvre setup, login,
 reset de mot de passe, 2FA, un dashboard de projet vide, le CRUD projet — qui déclenche l'analyse —
-et une section réglages où le projet se renomme et où la knowledge base se lit et se corrige. On
+et une section réglages où le projet se renomme, où la knowledge base se lit et se corrige, et où les
+profils cibles se dérivent, s'éditent et se suppriment. On
 ouvre l'app dans un projet : le projet courant est en session, choisi dans le sélecteur en tête de
 sidebar. Horizon tourne les workers, un supervisor par queue, tableau de bord réservé au superadmin.
 Aucun réglage d'instance, aucun écran de découverte, aucun envoi.
@@ -1524,12 +1525,26 @@ automatiquement.
 
 ### Epic 5 — Découverte de leads `v0` — *cœur du produit*
 
-**5.1** 🟡 En tant qu'utilisateur, je veux que le profil cible soit déduit de mon produit, sans le saisir.
+**5.1** ✅ En tant qu'utilisateur, je veux que le profil cible soit déduit de mon produit, sans le saisir.
 - Critères structurés : secteurs, taille, géographie, intitulés de poste, technologies, signaux
 - Entièrement éditable ; l'édition est conservée entre les runs
+- **État** : `/app/target-profiles` — « Targets » dans la nav principale, pas dans les réglages : on
+  relit et corrige ces profils avant chaque run, et les runs viendront à côté. L'écran liste les
+  profils, en crée, en corrige et en supprime, et
+  déclenche la dérivation (`App\Jobs\DeriveTargets`, queue `ai`). Les listes voyagent une ligne par
+  item comme la knowledge base ; `confidence` est le compte rendu du modèle sur son propre run et est
+  fusionné plutôt que remplacé. Corriger un profil le passe en `source = human`, ce qui le protège de
+  la dérivation suivante — laquelle ne remplace que ce que l'agent avait écrit. Pendant la
+  dérivation l'écran le dit et se rafraîchit tout seul (`usePoll`, 3 s), et un échec s'affiche au
+  lieu de disparaître : l'état est une ligne `agent_runs` ouverte en `pending` au dispatch, que le
+  middleware de métrage réclame au lieu d'en créer une seconde. `pending` était prévu dans l'enum et
+  jamais utilisé — c'est exactement le trou que la file possède. Le détail étape par étape arrive
+  avec l'écran de run (5.2 ter)
 
-**5.1 bis** ⬜ En tant qu'utilisateur, je veux aussi des profils de **partenaires**, pas seulement de clients (ADR-031).
-- `target_profiles.type` : `customer` ou `partner` — **colonne pas encore créée**
+**5.1 bis** 🟡 En tant qu'utilisateur, je veux aussi des profils de **partenaires**, pas seulement de clients (ADR-031).
+- `target_profiles.type` : `customer` ou `partner` — colonne créée, choisie à l'écran, et par défaut
+  `customer`. Reste à faire : l'agent n'en dérive aucun de lui-même, `access_angle` et
+  `partnership_angle` ne sont pas demandés, et la séquence d'envoi ne les distingue pas encore
 - Un profil partenaire répond à : qui visite mon client, qui le facture chaque mois, qui lui est
   **légalement imposé** — ce dernier signal en premier, sa clientèle est captive
 - Il porte `access_angle` (par quoi il touche le client) et `partnership_angle` (pourquoi c'est

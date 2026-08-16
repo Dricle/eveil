@@ -7,6 +7,7 @@ import { profile } from '@/routes/account'
 import { update as switchProject } from '@/routes/current-project'
 import { create } from '@/routes/projects'
 import projectSettings from '@/routes/settings/project'
+import targetProfiles from '@/routes/target-profiles'
 
 const page = usePage()
 
@@ -18,6 +19,12 @@ const items = computed<NavigationMenuItem[]>(() => [
         icon: 'i-lucide-house',
         to: dashboard.url(),
         active: page.url === dashboard.url()
+    },
+    {
+        label: 'Targets',
+        icon: 'i-lucide-crosshair',
+        to: targetProfiles.index.url(),
+        active: page.url.startsWith(targetProfiles.index.url())
     },
     {
         label: 'Settings',

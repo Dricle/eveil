@@ -6,6 +6,8 @@ use App\Http\Controllers\Auth\SetupController;
 use App\Http\Controllers\CurrentProjectController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectKnowledgeBaseController;
+use App\Http\Controllers\TargetProfileController;
+use App\Http\Controllers\TargetProfileDerivationController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -50,6 +52,16 @@ Route::middleware(['auth', 'project.set'])->group(function (): void {
             Route::put('knowledge-base', [ProjectKnowledgeBaseController::class, 'update'])
                 ->name('knowledge-base.update');
         });
+
+        /*
+         * Not under settings: who the search goes after is read and corrected
+         * before every run, and the runs themselves land beside it. Settings is
+         * for what you set once.
+         */
+        Route::post('target-profiles/derive', [TargetProfileDerivationController::class, 'store'])
+            ->name('target-profiles.derive');
+        Route::resource('target-profiles', TargetProfileController::class)
+            ->only(['index', 'store', 'update', 'destroy']);
     });
 
     /*

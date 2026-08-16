@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\TargetProfileSource;
+use App\Enums\TargetProfileType;
 use App\Models\Concerns\BelongsToProject;
 use Database\Factories\TargetProfileFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -25,13 +26,14 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $project_id
  * @property string $name
+ * @property TargetProfileType $type
  * @property array<string, mixed> $criteria
  * @property TargetProfileSource $source
  * @property bool $is_active
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['project_id', 'name', 'criteria', 'source', 'is_active'])]
+#[Fillable(['project_id', 'name', 'type', 'criteria', 'source', 'is_active'])]
 class TargetProfile extends Model
 {
     /** @use HasFactory<TargetProfileFactory> */
@@ -60,6 +62,7 @@ class TargetProfile extends Model
     {
         return [
             'criteria' => 'array',
+            'type' => TargetProfileType::class,
             'source' => TargetProfileSource::class,
             'is_active' => 'boolean',
         ];

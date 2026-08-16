@@ -64,3 +64,10 @@ The Website agent also proposes acquisition levers the product is missing — re
 Identity is a stable `key`, never the wording — a re-analysis that rephrases the same idea must recognise it or the list fills with duplicates.
 
 State is driven by conversation: the user says "done" or "not interested" and the agent updates it. Nobody grooms a backlog — that boundary is what keeps this out of task-manager territory, which §8 lists as out of scope. `laravel/ai` already persists conversations (`RemembersConversations`, with its own migration), so what remains to build is the tool the agent calls to change a state.
+
+## A queued agent opens its agent_runs row as pending, at dispatch
+`RecordsAgentRun` writes its row when the provider call starts, so between a user clicking and a worker picking the job up there is nothing to report — a screen cannot tell "queued" from "never happened". `AgentRunStatus::Pending` is that gap and exists for it.
+
+Whoever queues the job creates the row (`status: Pending`, `agent: SomeAgent::slug()`) and passes it to the job; the action hands it to the agent with `recordInto($run)`, and the middleware CLAIMS it instead of opening a second one — one invocation stays one row, which is what the meter counts. The job's `failed()` marks the row failed so a crash before or after the call does not leave it pending for good.
+
+Do not track job state in the cache: a deploy or a Redis flush wipes it, and queue state is not the job's to hold. `AgentRun::isInFlight()` also refuses to believe a run older than 15 minutes — with no worker draining the queue the row would otherwise spin a UI forever.

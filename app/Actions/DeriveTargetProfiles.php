@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\Ai\Agents\TargetProfileDeriver;
 use App\Enums\TargetProfileSource;
+use App\Models\AgentRun;
 use App\Models\Project;
 use App\Models\TargetProfile;
 use Illuminate\Support\Collection;
@@ -20,7 +21,7 @@ class DeriveTargetProfiles
     /**
      * @return Collection<int, TargetProfile>
      */
-    public function handle(Project $project, bool $replace = false): Collection
+    public function handle(Project $project, bool $replace = false, ?AgentRun $run = null): Collection
     {
         if ($project->knowledge_base === null) {
             throw new RuntimeException(
@@ -29,8 +30,16 @@ class DeriveTargetProfiles
             );
         }
 
+        $agent = new TargetProfileDeriver($project);
+
+        // The caller already opened a run row when it queued this — report into
+        // it instead of leaving a `pending` row behind next to a second one.
+        if ($run !== null) {
+            $agent->recordInto($run);
+        }
+
         /** @var StructuredAgentResponse $response */
-        $response = (new TargetProfileDeriver($project))->prompt($this->prompt($project));
+        $response = $agent->prompt($this->prompt($project));
 
         /** @var array<int, array<string, mixed>> $profiles */
         $profiles = $response->structured['profiles'] ?? [];

@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\TargetProfileSource;
+use App\Enums\TargetProfileType;
 use App\Models\Project;
 use App\Models\TargetProfile;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -22,6 +23,7 @@ class TargetProfileFactory extends Factory
         return [
             'project_id' => Project::factory(),
             'name' => fake()->words(3, true),
+            'type' => TargetProfileType::Customer,
             'criteria' => [
                 'sectors' => ['web agencies'],
                 'geography' => ['BE'],

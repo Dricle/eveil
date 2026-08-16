@@ -28,6 +28,27 @@ export type Analysis = {
     finished_at: string | null
 }
 
+/** Who the search goes after. Everything but the name lives in `criteria`. */
+export type TargetProfile = {
+    id: number
+    name: string
+    type: 'customer' | 'partner'
+    source: 'agent' | 'human'
+    is_active: boolean
+    criteria: {
+        rationale?: string
+        company_size?: string
+        estimated_market_size?: string
+        sectors?: string[]
+        geography?: string[]
+        job_titles?: string[]
+        technologies?: string[]
+        trigger_signals?: string[]
+        search_queries?: string[]
+        confidence?: number
+    }
+}
+
 /** What the project settings screens get, on top of what the switcher needs. */
 export type ProjectDetail = Project & {
     edited_by_user: boolean

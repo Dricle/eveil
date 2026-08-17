@@ -6,6 +6,7 @@ import { dashboard, logout } from '@/routes'
 import companies from '@/routes/companies'
 import { profile } from '@/routes/account'
 import { update as switchProject } from '@/routes/current-project'
+import appSettings from '@/routes/app-settings/provider'
 import { create } from '@/routes/projects'
 import projectSettings from '@/routes/settings/project'
 import targets from '@/routes/targets'
@@ -60,9 +61,16 @@ const projectMenu = computed<DropdownMenuItem[][]>(() => [
     ]
 ])
 
+// App settings are a scope of their own — whoever runs the install, never
+// somebody granted access through an organization — so the entry only exists
+// for them and hangs off the user menu rather than the project nav. "Settings"
+// in the sidebar is the current project's; this one is the whole app's.
 const userMenu = computed<DropdownMenuItem[][]>(() => [
     [
         { label: 'Account', icon: 'i-lucide-user', to: profile.url() },
+        ...(page.props.auth.user.is_super_admin
+            ? [{ label: 'App settings', icon: 'i-lucide-server-cog', to: appSettings.edit.url() }]
+            : []),
         {
             label: 'Log out',
             icon: 'i-lucide-log-out',

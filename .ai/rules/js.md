@@ -30,3 +30,8 @@ Neither is caught by eslint, `tsc`, the Vite build, or a Pest feature test (the 
 
 ## A select option never carries an empty-string value
 Reka (under Nuxt UI's `USelect`) reserves `''` for clearing a selection, so a `SelectItem` whose value is `''` throws on mount: "A <SelectItem /> must have a value prop that is not an empty string". An "everything / no filter" option therefore uses a sentinel — `'all'`, or `0` for numeric filters — and the page maps it to `undefined` when building the query string so the parameter is simply absent.
+
+## Instance settings are their own section, and `status` is the one flash prop
+App settings (instance scope) live at `/app/app-settings/*` behind `can:manage-app-settings` (`users.is_super_admin`), with `AppSettingsLayout.vue` as their aside: AI provider key, per-agent model mapping, tunable limits, host registry. The entry sits in the user menu and only renders for a superadmin — it is a third permission scope, never granted through an organization, so it must not be mixed into project settings (`SettingsLayout.vue`).
+
+`HandleInertiaRequests` shares a single `status` prop (a flashed sentence) for actions whose result is invisible on the page they redirect to — a saved key, a provider that answered. `InstanceLayout` renders it. Failures use `withErrors()` instead, so the existing form fields show them.

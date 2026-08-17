@@ -2,6 +2,11 @@
 
 use App\Http\Controllers\Account\AccountDeletionController;
 use App\Http\Controllers\Account\TwoFactorController;
+use App\Http\Controllers\AppSettings\AgentController;
+use App\Http\Controllers\AppSettings\KnownHostController;
+use App\Http\Controllers\AppSettings\LimitController;
+use App\Http\Controllers\AppSettings\ProviderController;
+use App\Http\Controllers\AppSettings\ProviderTestController;
 use App\Http\Controllers\Auth\SetupController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\CompanyRejectionController;
@@ -107,6 +112,30 @@ Route::middleware(['auth', 'project.set'])->group(function (): void {
          */
         Route::get('contacts', [ContactController::class, 'index'])->name('contacts.index');
         Route::post('contacts/search', [ContactSearchController::class, 'store'])->name('contacts.search');
+    });
+
+    /*
+     * App settings: instance scope — one install, one operator, never granted through an
+     * organization. Outside `project.require` on purpose — which model an agent
+     * runs on has nothing to do with whichever project is selected.
+     */
+    Route::prefix('app-settings')->name('app-settings.')->middleware('can:manage-app-settings')->group(function (): void {
+        Route::redirect('/', '/app/app-settings/provider');
+
+        Route::get('provider', [ProviderController::class, 'edit'])->name('provider.edit');
+        Route::put('provider', [ProviderController::class, 'update'])->name('provider.update');
+        Route::delete('provider/{provider}', [ProviderController::class, 'destroy'])->name('provider.destroy');
+        Route::post('provider/{provider}/test', [ProviderTestController::class, 'store'])->name('provider.test');
+
+        Route::get('agents', [AgentController::class, 'index'])->name('agents.index');
+        Route::put('agents/{agent}', [AgentController::class, 'update'])->name('agents.update');
+        Route::delete('agents/{agent}', [AgentController::class, 'destroy'])->name('agents.destroy');
+
+        Route::get('limits', [LimitController::class, 'edit'])->name('limits.edit');
+        Route::put('limits', [LimitController::class, 'update'])->name('limits.update');
+
+        Route::get('hosts', [KnownHostController::class, 'index'])->name('hosts.index');
+        Route::put('hosts/{known_host}', [KnownHostController::class, 'update'])->name('hosts.update');
     });
 
     /*

@@ -1365,7 +1365,7 @@ est une story pas faite.
 
 | Epic | Avancement |
 |---|---|
-| 1 — Setup & configuration | 🟡 auth complète (Fortify : login, reset, 2FA) et écran de setup faits ; réglages toujours en base et en CLI, aucun écran |
+| 1 — Setup & configuration | 🟡 auth complète (Fortify : login, reset, 2FA), écran de setup, et section « App settings » réservée au superadmin — clé provider, mapping par agent, limites, registre d'hôtes. Manque le compose de déploiement et le `.env.example` (1.1) |
 | 2 — Projets | 🟡 cloisonnement fait et testé, CRUD fait, sélecteur de projet fait ; manque le dashboard multi-projet (`v1`) |
 | 3 — Analyse & knowledge base | 🟡 analyse déclenchée à l'enregistrement, knowledge base visible et éditable ; manquent la progression du crawl et le lien vers un repo (`v1`) |
 | 4 — Agent Website | ⬜ table `recommendations` pas encore créée |
@@ -1390,7 +1390,9 @@ trouvées avec leur score, leur justification par profil, des filtres et un reje
 contacts, avec leur adresse, sa provenance et son verdict de vérification. On
 ouvre l'app dans un projet : le projet courant est en session, choisi dans le sélecteur en tête de
 sidebar. Horizon tourne les workers, un supervisor par queue, tableau de bord réservé au superadmin.
-Aucun réglage d'instance, aucune séquence, aucun envoi.
+Une section `/app/app-settings`, visible du seul superadmin depuis son menu, porte la clé du provider,
+le mapping par agent avec sa consommation, les limites tunables et le registre d'hôtes. Aucune
+séquence, aucun envoi.
 
 ### Epic 1 — Setup & configuration `v0`
 
@@ -1409,27 +1411,46 @@ minimal, pour être opérationnel en quelques minutes.
   login, logout, inscription, mot de passe oublié + réinitialisation par email, confirmation de mot
   de passe faits et testés. Section compte sous `/app/account` avec sa sidebar : profil, mot de
   passe, 2FA TOTP (activation, QR, codes de secours, désactivation) et suppression de compte.
-  Manque le mot de passe initial par l'env, qui arrive avec 1.5
+  Manque le mot de passe initial par l'env, qui arrive avec le compose de déploiement (1.1)
 
-**1.3** 🟡 En tant que superadmin, je veux choisir mon provider IA et saisir ma clé depuis les settings.
+**1.3** ✅ En tant que superadmin, je veux choisir mon provider IA et saisir ma clé depuis les settings.
 - Clé chiffrée avec `CREDENTIALS_KEY` (ADR-012), jamais loggée, jamais renvoyée en clair au frontend
 - Bouton « tester la connexion » avec retour immédiat
 - Vaut pour toutes les organizations et tous les projets de l'instance
+- **État** : `/app/app-settings/provider`. Une clé par provider dans `settings` (`ai.keys.<provider>`),
+  chiffrée, écrite seulement — l'écran dit « stockée », « depuis l'environnement » ou « aucune clé »,
+  jamais la valeur. `App\Ai\ProviderCredentials` la pousse dans la config de `laravel/ai` juste avant
+  qu'un agent résolve son provider, donc rien n'est lu en base au boot et une instance configurée
+  entièrement par variables d'env continue de marcher. Le test envoie le plus petit prompt possible
+  et affiche la cause exacte du refus : le premier signe d'une mauvaise clé était jusqu'ici un run qui
+  meurt dans la file une heure plus tard
 
-**1.7** ⬜ En tant que superadmin, je veux voir et corriger ce que l'app a appris sur les hôtes.
+**1.7** ✅ En tant que superadmin, je veux voir et corriger ce que l'app a appris sur les hôtes.
 - Table `known_hosts` : hôte, verdict, motif, rendement, dernier statut de récolte
 - Éditer un verdict le **verrouille** — un modèle ne le réécrira plus jamais
 - Nécessaire parce qu'un mauvais verdict se met en cache avec exactement la même confiance qu'un bon,
   et à l'échelle de l'instance : un vrai prospect classé `noise` devient invisible pour tous les projets
+- **État** : `/app/app-settings/hosts` — recherche, filtre par verdict, rendement (sociétés trouvées /
+  pages lues) et statut de récolte par ligne. Changer le verdict pose `is_locked`, que
+  `KnownHost::isAuthoritative()` respectait déjà ; un bouton le relâche pour rendre l'hôte au modèle
 
-**1.6** 🟡 En tant que superadmin, je veux choisir le provider, le modèle et le timeout **par agent IA** (ADR-026).
+**1.6** ✅ En tant que superadmin, je veux choisir le provider, le modèle et le timeout **par agent IA** (ADR-026).
 - Réglage de scope instance, réservé au superadmin — invisible pour les admins et membres d'organization
 - Une ligne par agent, clé = le slug de la classe (`website-analyst`, `target-profile-deriver`, …) ; pas de regroupement par catégorie
 - Liste des providers et modèles fournie par `laravel/ai`, liste des agents découverte dans `app/Ai/Agents/`
 - Défauts livrés : une install fraîche fonctionne sans ouvrir cet écran
 - Les agents exigeant une sortie structurée sont marqués comme tels
 - L'écran affiche, par agent, ce qu'il a déjà coûté et sur combien d'appels
-- **État** : la couche base est faite et pilotable en CLI (`eveil:agent-model`) ; l'écran reste à construire avec l'auth
+- **État** : `/app/app-settings/agents`. Une ligne par agent, découverte dans `app/Ai/Agents/` — ajouter
+  une classe ajoute une ligne, sans rien enregistrer. Provider en liste ; modèle en liste ouverte —
+  `laravel/ai` ne publie pas d'énumération d'ids, seulement trois modèles nommés par provider
+  (défaut, le moins cher, le plus fort), donc ce sont des suggestions et on peut toujours taper le
+  modèle sorti ce matin —
+  timeout borné, badge « réglé ici » ou « défaut livré », bouton reset, et les tokens in/out et le
+  nombre d'appels déjà consommés. Un agent qui casse au lieu de se dégrader sur un petit modèle le
+  dit lui-même (`EveilAgent::requiresStrictStructure()`, vrai pour `company-qualifier` et
+  `contact-extractor`) plutôt que par une liste tenue à la main. La ligne signale aussi un provider
+  sans clé. `eveil:agent-model` fait le même travail en SSH et reste
 
 **1.4** ✅ En tant que superadmin, je veux désactiver les inscriptions via variable d'env.
 - `REGISTRATION_ENABLED=false` → la route register renvoie 404, pas un message d'erreur
@@ -1439,8 +1460,16 @@ minimal, pour être opérationnel en quelques minutes.
   partagée (`registerUrl`)
 - L'écran d'inscription crée l'utilisateur **et** son organization (`App\Actions\CreateAccount`)
 
-**1.5** ⬜ En tant que superadmin, je veux modifier la configuration depuis une section settings.
+**1.5** ✅ En tant que superadmin, je veux modifier la configuration depuis une section settings.
 - Ce qui est réglable en UI est explicitement listé ; le reste reste en env
+- **État** : `/app/app-settings`, quatre pages derrière `can:manage-app-settings` — provider, agents, limites,
+  registre d'hôtes. L'entrée est dans le menu utilisateur et n'existe que pour un superadmin : c'est
+  un troisième scope, jamais accordé par une organization, donc elle ne se mélange pas aux réglages
+  de projet. La page « Limites » EST la liste demandée : budgets d'un run, plafonds de crawl et
+  délai de politesse, pages par recherche de contacts, sonde SMTP, plafonds par source et expiration
+  des verdicts d'hôte. Chaque borne a un plancher — un zéro n'est pas « sans limite », c'est un run
+  qui ne fait rien ou un crawler qui martèle le serveur de quelqu'un sous notre user agent. Le mot
+  de passe initial par l'env reste à faire, avec le compose de déploiement (1.1)
 
 ### Epic 2 — Projets `v0`
 

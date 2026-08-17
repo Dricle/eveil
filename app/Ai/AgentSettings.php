@@ -143,13 +143,24 @@ class AgentSettings
      */
     public function known(): array
     {
+        return array_keys($this->classes());
+    }
+
+    /**
+     * The same discovery, keyed by slug, for whoever needs the class itself —
+     * the screen asks each one whether a weak model would break it rather than
+     * merely make it worse.
+     *
+     * @return array<string, class-string<Agents\EveilAgent>>
+     */
+    public function classes(): array
+    {
         return collect(glob(app_path('Ai/Agents/*.php')) ?: [])
             ->map(fn (string $path): string => 'App\\Ai\\Agents\\'.basename($path, '.php'))
             ->filter(fn (string $class): bool => is_subclass_of($class, Agents\EveilAgent::class)
                 && ! (new \ReflectionClass($class))->isAbstract())
-            ->map(fn (string $class): string => Str::kebab(class_basename($class)))
-            ->sort()
-            ->values()
+            ->mapWithKeys(fn (string $class): array => [Str::kebab(class_basename($class)) => $class])
+            ->sortKeys()
             ->all();
     }
 }

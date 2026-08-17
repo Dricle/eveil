@@ -16,6 +16,15 @@ use Stringable;
  */
 class CompanyQualifier extends EveilAgent implements HasStructuredOutput
 {
+    /**
+     * A model that cannot hold the schema returns a score and a sentence that
+     * both look plausible and describe nothing on the page.
+     */
+    public static function requiresStrictStructure(): bool
+    {
+        return true;
+    }
+
     public function instructions(): Stringable|string
     {
         return <<<'PROMPT'

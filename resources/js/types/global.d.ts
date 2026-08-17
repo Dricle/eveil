@@ -22,6 +22,7 @@ declare module '@inertiajs/core' {
             currentProject: Project | null
             projects: Project[]
             registerUrl: string | null
+            status: string | null
             sidebarOpen: boolean
             [key: string]: unknown
         }

@@ -66,6 +66,9 @@ class HandleInertiaRequests extends Middleware
             // registered at all, so neither Wayfinder nor `route()` can name
             // it and pages have nothing to link to.
             'registerUrl' => Features::enabled(Features::registration()) ? route('register') : null,
+            // One flashed sentence, for actions whose result is not visible on
+            // the page they return to — a saved key, a provider that answered.
+            'status' => fn (): ?string => $request->session()->get('status'),
         ];
     }
 }

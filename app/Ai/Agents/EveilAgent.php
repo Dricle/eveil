@@ -4,6 +4,7 @@ namespace App\Ai\Agents;
 
 use App\Ai\AgentSettings;
 use App\Ai\Middleware\RecordsAgentRun;
+use App\Ai\ProviderCredentials;
 use App\Models\AgentRun;
 use App\Models\Project;
 use Illuminate\Support\Str;
@@ -48,6 +49,21 @@ abstract class EveilAgent implements Agent, HasMiddleware
         return Str::kebab(class_basename(static::class));
     }
 
+    /**
+     * Whether a weaker model BREAKS this agent rather than merely making it
+     * worse. The generative agents degrade gracefully — a cheaper model writes
+     * a flatter summary, and the run still means something. The ones that read
+     * a page and return fields do not: a small local model returns broken
+     * extractions, which look like results and are not.
+     *
+     * Declared on the class so the settings screen reads it from the code, the
+     * same way it discovers the agents themselves.
+     */
+    public static function requiresStrictStructure(): bool
+    {
+        return false;
+    }
+
     public function recordInto(AgentRun $run): static
     {
         $this->run = $run;
@@ -57,6 +73,10 @@ abstract class EveilAgent implements Agent, HasMiddleware
 
     public function provider(): Lab|string
     {
+        // The key the provider is called with is a stored secret, and this is
+        // the last moment before `laravel/ai` builds the driver from config.
+        app(ProviderCredentials::class)->apply();
+
         return $this->settings()->provider(static::slug());
     }
 

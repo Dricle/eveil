@@ -15,6 +15,11 @@ use Stringable;
  */
 class ContactExtractor extends EveilAgent implements HasStructuredOutput
 {
+    public static function requiresStrictStructure(): bool
+    {
+        return true;
+    }
+
     public function instructions(): Stringable|string
     {
         return <<<'PROMPT'

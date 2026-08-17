@@ -41,15 +41,38 @@ class Settings
 
     public function set(string $key, mixed $value, bool $encrypted = false): void
     {
+        $stored = is_string($value) ? $value : json_encode($value);
+
         Setting::updateOrCreate(
             ['key' => $key],
             [
-                'value' => is_string($value) ? $value : json_encode($value),
+                'value' => $encrypted ? app(CredentialsCipher::class)->encrypt((string) $stored) : $stored,
                 'is_encrypted' => $encrypted,
             ],
         );
 
         $this->flush();
+    }
+
+    /**
+     * A value written with `$encrypted`, read back in the clear.
+     *
+     * Separate from `get()` on purpose: the plain getter is on the hot path of
+     * every agent call and must not touch the cipher, and a secret should be
+     * asked for by name rather than arriving unannounced in a general read.
+     */
+    public function secret(string $key): ?string
+    {
+        $value = $this->all()[$key] ?? null;
+
+        return $value === null || $value === ''
+            ? null
+            : app(CredentialsCipher::class)->decrypt($value);
+    }
+
+    public function hasSecret(string $key): bool
+    {
+        return ($this->all()[$key] ?? null) !== null;
     }
 
     /**

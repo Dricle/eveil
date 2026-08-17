@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Ai\ProviderCredentials;
+use App\Models\User;
 use App\Services\Discovery\PageFetcher;
 use App\Services\Discovery\RobotsPolicy;
 use App\Support\CredentialsCipher;
@@ -12,6 +14,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -33,6 +36,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(DisposableDomains::class);
         $this->app->singleton(Settings::class);
 
+        // Memoises the config push, so the stored provider keys are decrypted
+        // once per process rather than once per agent call.
+        $this->app->singleton(ProviderCredentials::class);
+
         // Both hold per-process crawl state: the parsed robots.txt per host,
         // and the last-fetch timestamp the politeness delay is measured from.
         // Rebuilding them per crawl would re-fetch robots.txt and drop the
@@ -47,6 +54,12 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        // Instance scope, distinct from the organization role and from project
+        // access: the person who runs the instance decides which models it
+        // calls, with whose key, and what it believes about a host. Nobody is
+        // granted this through an organization.
+        Gate::define('manage-app-settings', fn (User $user): bool => $user->is_super_admin === true);
     }
 
     /**

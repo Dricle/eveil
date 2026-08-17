@@ -11,6 +11,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | database/** | .ai/rules/database.md |
 | app/Services/Discovery/** | .ai/rules/discovery.md |
 | **, composer.json | .ai/rules/general.md |
+| app/Jobs/Discovery/** | .ai/rules/jobs-discovery.md |
 | app/Jobs/** | .ai/rules/jobs.md |
 | resources/js/** | .ai/rules/js.md |
 | app/Models/**, app/Models/EmailAccount.php | .ai/rules/models.md |

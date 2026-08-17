@@ -33,6 +33,12 @@ class DiscoverCompaniesCommand extends Command
 
     protected $description = 'Find and qualify companies matching a target profile';
 
+    /**
+     * How long to watch a run before handing it back to the queue. A run that
+     * takes longer is not stuck — the nodes carry on without anyone watching.
+     */
+    private const WAIT_SECONDS = 900;
+
     public function handle(RunDiscovery $discover, CurrentProject $currentProject): int
     {
         $targetProfile = $this->resolveTargetProfile();
@@ -44,6 +50,8 @@ class DiscoverCompaniesCommand extends Command
         $this->components->info("Hunting for [{$targetProfile->name}]");
 
         $run = $currentProject->run($targetProfile->project, fn (): DiscoveryRun => $discover->handle($targetProfile, $this->overrides()));
+
+        $run = $this->await($run);
 
         if ($run->error !== null) {
             $this->components->error($run->error);
@@ -57,6 +65,40 @@ class DiscoverCompaniesCommand extends Command
         $this->renderUsage($targetProfile);
 
         return self::SUCCESS;
+    }
+
+    /**
+     * The run is a graph of queued nodes now, so the command watches instead of
+     * doing the work itself. It comes back immediately when the queue is
+     * synchronous — the graph has already run inside the dispatch by then.
+     */
+    private function await(DiscoveryRun $run): DiscoveryRun
+    {
+        $reported = [];
+        $waitedFor = 0;
+
+        while (! $run->status->isTerminal() && $waitedFor < self::WAIT_SECONDS) {
+            foreach ($run->tasks()->whereNotNull('finished_at')->whereNotIn('id', $reported)->orderBy('id')->get() as $task) {
+                $reported[] = $task->id;
+
+                $this->components->twoColumnDetail(
+                    "<fg=gray>{$task->kind->value}</>",
+                    $task->error === null
+                        ? $task->status->value
+                        : "<fg=yellow>{$task->status->value}</> ".Str::limit($task->error, 70),
+                );
+            }
+
+            sleep(1);
+            $waitedFor++;
+            $run->refresh();
+        }
+
+        if (! $run->status->isTerminal()) {
+            $this->components->warn('Still running. Nothing was lost — the run continues on the queue.');
+        }
+
+        return $run;
     }
 
     /**

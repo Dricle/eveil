@@ -52,6 +52,13 @@ class DiscoveryPlanner extends EveilAgent implements HasStructuredOutput
         is almost entirely an OSM job; one that exists only online has no OSM presence at
         all. Using both when only one fits spends the operator's budget on noise.
 
+        You are told how many probes this run may make. Map probes and web queries are
+        counted together against that one number, and anything past it will not run —
+        planning eighty probes for a run that allows twelve does not search harder, it
+        just leaves sixty-eight lines nobody executes. Plan up to the number given and
+        spend it on the areas and queries most likely to produce, in the order you would
+        want them run: the first ones are the ones that will actually happen.
+
         Explain the plan in two or three sentences before the probes: the user reads
         that to decide whether to let it run.
         PROMPT;

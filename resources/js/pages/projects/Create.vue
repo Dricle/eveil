@@ -8,12 +8,6 @@ const page = usePage()
 
 <template>
     <AppLayout>
-        <template #header>
-            <h1 class="font-medium">
-                New project
-            </h1>
-        </template>
-
         <Head title="New project" />
 
         <div class="mx-auto max-w-lg p-4 py-16">

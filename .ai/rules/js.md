@@ -11,3 +11,22 @@ The main nav follows the order work flows, not the data model: Dashboard (the ru
 Every other screen is a tab or a drill-down inside one of those five — never a sixth line. CSV import is a button on Leads, the lead sheet is a drill-down, the sequence editor is inside Campaigns.
 
 Settings holds only what you set once and forget: project name/URL, the knowledge base, mailboxes, suppression and retention. Anything reread before each run belongs in the nav — that is why target profiles moved out of `/app/settings/`. Instance settings (AI models, host registry, registration) are a separate superadmin section, never mixed into project settings; organization members and billing are a third scope again.
+
+## The app bar stays empty, and sections navigate in their own content
+`AppLayout`'s header bar holds the sidebar toggle and nothing else. It is reserved for app-wide things still to come — a search field, a notification bell — so no page or layout puts a title, tabs or actions in the `#header` slot. Section navigation and page titles live in the content area (`<h2>`, a `UNavigationMenu` at the top of the panel, or an aside).
+
+Targets is navigated BY its profiles, not by tabs: `/app/targets` redirects to the first profile (or renders `targets/Empty` with a derive button when there are none), the aside lists every profile as a link, and "New profile" plus "Derive again" sit at the BOTTOM of that list — opening the section is normally to read a profile, not to rewrite them all. Each profile then has two pages of its own, `targets/Profile` and `targets/Searches`, switched by tabs inside the content.
+
+A discovery run belongs to the profile that asked for it (`/app/targets/{id}/searches`), never to a project-wide list: a run means nothing without the criteria it was given. The profile list, the deriving flag and the last derivation error are shared by the `targets.share` middleware, so every page under the section has them without repeating the query.
+
+## Never name a route import after a prop, and never type props with an imported alias
+Two silent failures, both cost an afternoon on the Companies page:
+
+1. In `<script setup>`, template expressions resolve setup bindings BEFORE props. `import companies from '@/routes/companies'` next to a `companies` prop means `companies.data` in the template reads the Wayfinder module, not the prop — no warning, just `undefined`. Wayfinder module names match resource prop names by nature, so suffix the import: `companyRoutes`, `contactRoutes`.
+
+2. `defineProps<SomeAlias>()` where the alias is imported through the `@/types` barrel declares NO props at all — the compiler cannot resolve it and fails silently. Write the prop object inline; the member types (`Company`, `Paginated<Contact>`) can still be imported.
+
+Neither is caught by eslint, `tsc`, the Vite build, or a Pest feature test (the server sends the props fine). To check a page compiled its props, run `@vue/compiler-sfc`'s `compileScript()` on it and look at the emitted `props:` object.
+
+## A select option never carries an empty-string value
+Reka (under Nuxt UI's `USelect`) reserves `''` for clearing a selection, so a `SelectItem` whose value is `''` throws on mount: "A <SelectItem /> must have a value prop that is not an empty string". An "everything / no filter" option therefore uses a sentinel — `'all'`, or `0` for numeric filters — and the page maps it to `undefined` when building the query string so the parameter is simply absent.

@@ -2,14 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Ai\Agents\TargetProfileDeriver;
-use App\Enums\AgentRunStatus;
 use App\Enums\TargetProfileSource;
 use App\Http\Requests\TargetProfileRequest;
 use App\Http\Resources\TargetProfileResource;
-use App\Models\AgentRun;
 use App\Models\TargetProfile;
-use App\Support\CurrentProject;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -18,49 +14,52 @@ use Inertia\Response;
  * Who the search goes after. The agent writes these from the product portrait;
  * this is where the person who knows the market corrects them.
  *
- * Nothing here carries a project: the profiles of the current project are the
- * only ones the global scope will return, which is also what makes a profile id
- * from another project a 404 rather than a leak.
+ * A profile is a place rather than a row in a list: it has its own page and its
+ * own searches, and the section's navigation is the profiles themselves. So
+ * there is no index page — landing on the section lands on a profile.
  *
- * That is why the row is looked up here rather than type-hinted into the
- * action. Route model binding is resolved by the `web` group, which runs BEFORE
- * the route middleware that sets the current project — so a bound model is
- * fetched while the scope is still inert, and any id in the table resolves.
+ * Ids are looked up here rather than type-hinted into the action: route model
+ * binding resolves in the `web` group, before the middleware that sets the
+ * current project, so a bound model is fetched while the scope is still inert
+ * and any id in the table would resolve.
  */
 class TargetProfileController extends Controller
 {
-    public function __construct(private CurrentProject $currentProject) {}
-
-    public function index(): Response
+    public function index(): Response|RedirectResponse
     {
-        $derivation = AgentRun::query()->latestFor(TargetProfileDeriver::slug())->first();
+        $first = TargetProfile::query()->orderBy('id')->first();
 
-        return Inertia::render('TargetProfiles', [
-            'profiles' => TargetProfileResource::collection(
-                TargetProfile::query()->orderBy('id')->get()
-            ),
-            'analyzed' => $this->currentProject->getOrFail()->knowledge_base !== null,
-            'deriving' => $derivation?->isInFlight() ?? false,
-            'derivationError' => $derivation?->status === AgentRunStatus::Failed
-                ? $derivation->error
-                : null,
-        ]);
+        return $first === null
+            ? Inertia::render('targets/Empty')
+            : to_route('targets.show', $first);
+    }
+
+    public function create(): Response
+    {
+        return Inertia::render('targets/Profile', ['profile' => null]);
     }
 
     public function store(TargetProfileRequest $request): RedirectResponse
     {
-        TargetProfile::create([
+        $profile = TargetProfile::create([
             ...$request->columns(),
             'criteria' => $request->criteria(),
             'source' => TargetProfileSource::Human,
         ]);
 
-        return to_route('target-profiles.index');
+        return to_route('targets.show', $profile);
     }
 
-    public function update(TargetProfileRequest $request, int $targetProfile): RedirectResponse
+    public function show(int $target): Response
     {
-        $profile = TargetProfile::query()->findOrFail($targetProfile);
+        return Inertia::render('targets/Profile', [
+            'profile' => TargetProfileResource::make(TargetProfile::query()->findOrFail($target)),
+        ]);
+    }
+
+    public function update(TargetProfileRequest $request, int $target): RedirectResponse
+    {
+        $profile = TargetProfile::query()->findOrFail($target);
 
         $profile->update([
             ...$request->columns(),
@@ -75,13 +74,13 @@ class TargetProfileController extends Controller
             'source' => TargetProfileSource::Human,
         ]);
 
-        return to_route('target-profiles.index');
+        return to_route('targets.show', $profile);
     }
 
-    public function destroy(int $targetProfile): RedirectResponse
+    public function destroy(int $target): RedirectResponse
     {
-        TargetProfile::query()->findOrFail($targetProfile)->delete();
+        TargetProfile::query()->findOrFail($target)->delete();
 
-        return to_route('target-profiles.index');
+        return to_route('targets.index');
     }
 }

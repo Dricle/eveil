@@ -3,7 +3,14 @@
 use App\Http\Controllers\Account\AccountDeletionController;
 use App\Http\Controllers\Account\TwoFactorController;
 use App\Http\Controllers\Auth\SetupController;
+use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\CompanyRejectionController;
+use App\Http\Controllers\ContactController;
+use App\Http\Controllers\ContactSearchController;
 use App\Http\Controllers\CurrentProjectController;
+use App\Http\Controllers\DiscoveryRunCancellationController;
+use App\Http\Controllers\DiscoveryRunController;
+use App\Http\Controllers\DiscoveryTaskReplayController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectKnowledgeBaseController;
 use App\Http\Controllers\TargetProfileController;
@@ -58,10 +65,48 @@ Route::middleware(['auth', 'project.set'])->group(function (): void {
          * before every run, and the runs themselves land beside it. Settings is
          * for what you set once.
          */
-        Route::post('target-profiles/derive', [TargetProfileDerivationController::class, 'store'])
-            ->name('target-profiles.derive');
-        Route::resource('target-profiles', TargetProfileController::class)
-            ->only(['index', 'store', 'update', 'destroy']);
+        /*
+         * Targets. The profiles ARE the navigation of this section — each one
+         * has its own page and its own searches — so every route under it
+         * shares the list and the state of a running derivation.
+         */
+        Route::middleware('targets.share')->group(function (): void {
+            Route::post('targets/derive', [TargetProfileDerivationController::class, 'store'])
+                ->name('targets.derive');
+            Route::get('targets/{target}/searches', [DiscoveryRunController::class, 'index'])
+                ->name('targets.searches');
+            Route::resource('targets', TargetProfileController::class)
+                ->only(['index', 'create', 'store', 'show', 'update', 'destroy']);
+
+            /*
+             * One flag stops a run and one dispatch replays a single node,
+             * which is why neither needs more than a POST.
+             */
+            Route::post('discovery-runs/{discovery_run}/cancel', [DiscoveryRunCancellationController::class, 'store'])
+                ->name('discovery-runs.cancel');
+            Route::post('discovery-tasks/{discovery_task}/replay', [DiscoveryTaskReplayController::class, 'store'])
+                ->name('discovery-tasks.replay');
+            Route::resource('discovery-runs', DiscoveryRunController::class)
+                ->only(['show', 'store']);
+        });
+
+        /*
+         * What those searches came back with. Rejecting keeps the row: deleting
+         * it would only mean the next run finds the company again.
+         */
+        Route::get('companies', [CompanyController::class, 'index'])->name('companies.index');
+        Route::post('companies/{company}/reject', [CompanyRejectionController::class, 'store'])
+            ->name('companies.reject');
+        Route::delete('companies/{company}/reject', [CompanyRejectionController::class, 'destroy'])
+            ->name('companies.restore');
+
+        /*
+         * And the people at them. One search covers one company, or every kept
+         * company nobody has looked at yet — clicking forty times is work the
+         * app should be doing.
+         */
+        Route::get('contacts', [ContactController::class, 'index'])->name('contacts.index');
+        Route::post('contacts/search', [ContactSearchController::class, 'store'])->name('contacts.search');
     });
 
     /*

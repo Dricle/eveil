@@ -1369,7 +1369,7 @@ est une story pas faite.
 | 2 — Projets | 🟡 cloisonnement fait et testé, CRUD fait, sélecteur de projet fait ; manque le dashboard multi-projet (`v1`) |
 | 3 — Analyse & knowledge base | 🟡 analyse déclenchée à l'enregistrement, knowledge base visible et éditable ; manquent la progression du crawl et le lien vers un repo (`v1`) |
 | 4 — Agent Website | ⬜ table `recommendations` pas encore créée |
-| 5 — Découverte de leads | 🟡 chaîne complète en CLI, récolte d'annuaires, registre d'hôtes appris ; profils cibles éditables à l'écran, `target_profiles.type` créée ; manquent les écrans de run, l'import CSV, le rendu JS (5.9, reporté) |
+| 5 — Découverte de leads | 🟡 graphe de jobs (`discovery_tasks`) avec son écran — lancer, suivre, rejouer, arrêter ; profils cibles éditables ; sociétés scorées, filtrables, rejetables ; contacts listés avec leur verdict de vérification, recherche déclenchable par société ou en masse. Manquent la fiche contact (5.8), l'import CSV, le rendu JS (5.9, reporté) |
 | 6 — Séquences | ⬜ |
 | 7 — Envoi | ⬜ |
 | 8 — Réponses & inbox | ⬜ |
@@ -1382,11 +1382,15 @@ d'emails, et quatre commandes — `eveil:analyze`, `eveil:derive-targets`, `evei
 `eveil:find-contacts` et `eveil:harvest` — plus `eveil:agent-model` et `eveil:credentials-key`. Côté interface : l'app Inertia + Nuxt UI vit
 sous `/app` (le site public est en Blade, servi seulement en édition cloud) et couvre setup, login,
 reset de mot de passe, 2FA, un dashboard de projet vide, le CRUD projet — qui déclenche l'analyse —
-et une section réglages où le projet se renomme, où la knowledge base se lit et se corrige, et où les
-profils cibles se dérivent, s'éditent et se suppriment. On
+et une section réglages où le projet se renomme et où la knowledge base se lit et se corrige. La
+section « Targets » navigue par profil : chaque profil a sa page de critères et sa page de recherches
+— liste de ses runs, page d'un run avec son plan, son budget consommé, une ligne par nœud du graphe,
+un bouton rejouer par nœud et un bouton arrêter. « Leads » porte deux onglets : les sociétés
+trouvées avec leur score, leur justification par profil, des filtres et un rejet manuel ; et les
+contacts, avec leur adresse, sa provenance et son verdict de vérification. On
 ouvre l'app dans un projet : le projet courant est en session, choisi dans le sélecteur en tête de
 sidebar. Horizon tourne les workers, un supervisor par queue, tableau de bord réservé au superadmin.
-Aucun réglage d'instance, aucun écran de découverte, aucun envoi.
+Aucun réglage d'instance, aucune séquence, aucun envoi.
 
 ### Epic 1 — Setup & configuration `v0`
 
@@ -1528,9 +1532,16 @@ automatiquement.
 **5.1** ✅ En tant qu'utilisateur, je veux que le profil cible soit déduit de mon produit, sans le saisir.
 - Critères structurés : secteurs, taille, géographie, intitulés de poste, technologies, signaux
 - Entièrement éditable ; l'édition est conservée entre les runs
-- **État** : `/app/target-profiles` — « Targets » dans la nav principale, pas dans les réglages : on
-  relit et corrige ces profils avant chaque run, et les runs viendront à côté. L'écran liste les
-  profils, en crée, en corrige et en supprime, et
+- **État** : `/app/targets` — « Targets » dans la nav principale, pas dans les réglages : on relit et
+  corrige ces profils avant chaque run. **Les profils SONT la navigation de la section** : chacun est
+  un endroit, avec sa page de critères (`/app/targets/{id}`) et ses recherches
+  (`/app/targets/{id}/searches`), listés dans une colonne à gauche. Sans aucun profil, un état vide
+  avec le bouton « dériver » ; avec des profils, « Derive again » est le dernier élément de la liste et
+  ouvre deux choix : **ajouter** des profils (le défaut, non destructif) ou **remplacer** ceux que
+  l'agent avait écrits, derrière une confirmation qui dit ce qui part avec eux (les scores donnés aux
+  sociétés ; les sociétés et les runs restent). Ce que l'utilisateur a écrit ou corrigé survit dans
+  les deux cas.
+  On y crée, corrige et supprime un profil, et on
   déclenche la dérivation (`App\Jobs\DeriveTargets`, queue `ai`). Les listes voyagent une ligne par
   item comme la knowledge base ; `confidence` est le compte rendu du modèle sur son propre run et est
   fusionné plutôt que remplacé. Corriger un profil le passe en `source = human`, ce qui le protège de
@@ -1552,11 +1563,18 @@ automatiquement.
 - Découverte et qualification identiques ; **la séquence d'envoi, elle, diffère en profondeur**
 - Aucune société n'est citée sans avoir été trouvée, récupérée et qualifiée
 
-**5.2** 🟡 En tant qu'utilisateur, je veux lancer une recherche de sociétés correspondant à le profil cible.
+**5.2** ✅ En tant qu'utilisateur, je veux lancer une recherche de sociétés correspondant à le profil cible.
 - L'agent choisit ses sources selon le profil cible et **explique son plan avant d'exécuter**
 - Progression visible en direct : sources interrogées, sociétés trouvées, budget consommé
 - Budget dur (pages, tokens, leads) ; arrêt propre à la limite avec résultats partiels conservés
 - Un re-run ne duplique pas : dédup par domaine
+- **État** : la chaîne est un **graphe de jobs** (`app/Jobs/Discovery/`) et non plus un appel bloquant.
+  Une ligne `discovery_tasks` par nœud — `plan`, `probe`, `harvest`, `qualify` — avec son état, son
+  `agent_run_id`, ses compteurs et son erreur ; `RunDiscovery` crée le run et enfile le premier nœud,
+  chaque nœud enfile ses enfants, et le dernier à finir clôt le run. Le budget vit dans des colonnes
+  incrémentées atomiquement (`queries_used`, `candidates_found`, `pages_used`, `qualified_count`),
+  parce que plusieurs workers dépensent la même enveloppe en même temps. `eveil:discover-companies`
+  suit le run au lieu de l'exécuter. Manque l'écran (5.2 ter) et `ReflectAndExpand`
 
 **5.2 bis** 🟡 En tant qu'utilisateur, je veux trouver aussi les sociétés que les moteurs ne classent pas (ADR-033).
 - Les résultats pointant vers un **annuaire** sont récoltés, plus jetés : une page de liste vaut des
@@ -1580,18 +1598,39 @@ automatiquement.
   `eveil:discover-companies`. Reste : les sociétés sans site sont comptées mais pas exploitables
   (`companies.domain` est NOT NULL), et l'écran superadmin du registre
 
-**5.2 ter** ⬜ En tant qu'utilisateur, je veux voir et reprendre la main sur ce que fait la découverte (ADR-033).
+**5.2 ter** ✅ En tant qu'utilisateur, je veux voir et reprendre la main sur ce que fait la découverte (ADR-033).
 - La découverte est un graphe de jobs : chaque étape a sa ligne, son état, son coût, son erreur
 - **Rejouer une étape** depuis l'interface, sans relancer le run
 - **Annuler** le run : les étapes en file se suppriment à la reprise, les résultats acquis restent
 - En cloud, l'épuisement des crédits arrête le run proprement — l'utilisateur en rachète s'il veut suivre
 - En self-hosted, la consommation détaillée par run et par étape est affichée
+- **État** : fait. `/app/targets/{id}/searches` liste les recherches de CE profil et en lance une —
+  un run ne veut rien dire sans les critères qu'on lui a donnés, donc il appartient à son profil ;
+  `/app/discovery-runs/{id}` montre le plan, les quatre lignes de budget consommées, le diagnostic, et
+  une ligne par nœud avec son sujet, son état, ses compteurs, son erreur, ses tokens et sa durée.
+  Bouton rejouer par nœud (le run se rouvre s'il était clos, puis se referme tout seul), bouton
+  arrêter sur le run. La page se rafraîchit toute seule tant que le run tourne (`usePoll`, 2 s).
+  Manque l'élargissement automatique (`ReflectAndExpand`), volontairement
 
-**5.3** 🟡 En tant qu'utilisateur, je veux que chaque société soit scorée et justifiée.
+**5.3** ✅ En tant qu'utilisateur, je veux que chaque société soit scorée et justifiée.
 - Score de fit + phrase de justification exploitable comme accroche
 - Filtrage par score, rejet manuel possible
+- **État** : `/app/companies` (« Leads » dans la nav) liste les sociétés, meilleur fit en tête,
+  chacune avec une ligne par profil : nom du profil, score, et la phrase qui le justifie. Filtres par
+  profil et par score minimum, bascule « voir les rejetées », pagination par 25. Le tri prend le
+  **meilleur** score et jamais une moyenne — une société qui colle à un profil sur trois est une
+  bonne société. `companies.rejected_at` porte le rejet : il est sur la société et non sur
+  l'évaluation (un concurrent n'est pas à contacter sous aucun profil), et la ligne reste, sinon le
+  run suivant retrouve la société et la repropose
 
-**5.4** 🟡 En tant qu'utilisateur, je veux des contacts avec des emails utilisables.
+**5.4** ✅ En tant qu'utilisateur, je veux des contacts avec des emails utilisables.
+- **État** : onglet « Contacts » sous Leads. La recherche se déclenche depuis la liste des sociétés —
+  une société, ou toutes celles que personne n'a encore regardées (`App\Jobs\FindCompanyContacts`,
+  queue `ai`). L'état vit sur la société (`contacts_status` : `queued|done|failed` +
+  `contacts_searched_at`), donc la ligne dit « en cours », « personne trouvé » ou « site illisible »
+  au lieu de paraître intacte — et « cherché, personne » est une vraie réponse sur une société, pas
+  un échec. La liste affiche `email_source` en clair sous chaque adresse et lie vers la page où elle
+  a été trouvée
 - Scrape des pages équipe/contact/mentions légales
 - Inférence de pattern à partir d'une adresse connue sur le domaine
 - Fallback générique (`contact@`) marqué comme tel
@@ -1601,6 +1640,10 @@ automatiquement.
 - MX, domaine jetable, catch-all, sonde SMTP sans envoi
 - Catch-all → `risky`. Gmail/Outlook bloquant la sonde → `unknown`, jamais `invalid`
 - Les `invalid` ne sont jamais envoyés
+- **État** : ✅ côté écran — chaque contact porte son verdict en toutes lettres (« vérifiée », « non
+  vérifiable », « catch-all », « invalide ») avec la phrase qui dit ce que ça prouve. Les `invalid`
+  sont hors liste par défaut et ne s'affichent que si on les demande. Le tri met les envoyables en
+  tête. Le blocage à l'envoi reste à écrire avec l'Epic 7
 
 **5.6** ⬜ En tant qu'utilisateur, je veux importer un CSV.
 - Template téléchargeable ; email **ou** URL LinkedIn suffit pour qu'une ligne soit valide

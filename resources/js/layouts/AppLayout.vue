@@ -3,11 +3,12 @@ import { router, usePage } from '@inertiajs/vue3'
 import type { DropdownMenuItem, NavigationMenuItem } from '@nuxt/ui'
 import { computed, ref } from 'vue'
 import { dashboard, logout } from '@/routes'
+import companies from '@/routes/companies'
 import { profile } from '@/routes/account'
 import { update as switchProject } from '@/routes/current-project'
 import { create } from '@/routes/projects'
 import projectSettings from '@/routes/settings/project'
-import targetProfiles from '@/routes/target-profiles'
+import targets from '@/routes/targets'
 
 const page = usePage()
 
@@ -23,8 +24,14 @@ const items = computed<NavigationMenuItem[]>(() => [
     {
         label: 'Targets',
         icon: 'i-lucide-crosshair',
-        to: targetProfiles.index.url(),
-        active: page.url.startsWith(targetProfiles.index.url())
+        to: targets.index.url(),
+        active: page.url.startsWith(targets.index.url()) || page.url.startsWith('/app/discovery-runs')
+    },
+    {
+        label: 'Leads',
+        icon: 'i-lucide-building-2',
+        to: companies.index.url(),
+        active: page.url.startsWith(companies.index.url())
     },
     {
         label: 'Settings',

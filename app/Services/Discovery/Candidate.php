@@ -32,4 +32,38 @@ readonly class Candidate
     {
         return $this->website === null ? null : Url::host($this->website);
     }
+
+    /**
+     * Small enough to travel in a task payload, which is how one node hands a
+     * candidate to the next without either of them holding a page in memory.
+     *
+     * @return array{name: string, website: ?string, source: string, source_url: ?string, domain: ?string, facts: array<string, mixed>}
+     */
+    public function toArray(): array
+    {
+        return [
+            'name' => $this->name,
+            'website' => $this->website,
+            'source' => $this->source,
+            'source_url' => $this->sourceUrl,
+            // Stored rather than derived, so a task row can be looked up by the
+            // domain it is about without unpacking every payload.
+            'domain' => $this->domain(),
+            'facts' => $this->facts,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    public static function fromArray(array $payload): self
+    {
+        return new self(
+            name: (string) $payload['name'],
+            website: $payload['website'] ?? null,
+            source: (string) $payload['source'],
+            sourceUrl: $payload['source_url'] ?? null,
+            facts: $payload['facts'] ?? [],
+        );
+    }
 }

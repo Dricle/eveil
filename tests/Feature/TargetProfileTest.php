@@ -21,6 +21,15 @@ function targeter(): User
     return $user;
 }
 
+function pendingDerivation(Project $project): AgentRun
+{
+    return AgentRun::factory()->create([
+        'project_id' => $project->id,
+        'agent' => 'target-profile-deriver',
+        'status' => AgentRunStatus::Pending,
+    ]);
+}
+
 /**
  * @return array<string, mixed>
  */
@@ -43,41 +52,61 @@ function profileForm(array $overrides = []): array
     ];
 }
 
-it('lists the profiles of the current project', function () {
+it('opens the section on a profile, since the profiles are the navigation', function () {
     $user = targeter();
     $project = Project::factory()->for($user->organizations()->sole())->create();
 
-    TargetProfile::factory()->create(['project_id' => $project->id, 'name' => 'Independent physiotherapy practices']);
+    $profile = TargetProfile::factory()->create([
+        'project_id' => $project->id,
+        'name' => 'Independent physiotherapy practices',
+    ]);
 
-    $this->actingAs($user)->get(route('target-profiles.index'))
+    $this->actingAs($user)->get(route('targets.index'))
+        ->assertRedirect(route('targets.show', $profile));
+
+    $this->actingAs($user)->get(route('targets.show', $profile))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->component('TargetProfiles')
+            ->component('targets/Profile')
+            ->where('profile.name', 'Independent physiotherapy practices')
+            // Shared, because the profile list is this section's navigation.
             ->where('profiles.0.name', 'Independent physiotherapy practices')
             ->where('profiles.0.type', 'customer')
             ->where('analyzed', false));
+});
+
+it('offers to derive when there is nothing to show', function () {
+    $user = targeter();
+    Project::factory()->for($user->organizations()->sole())->create();
+
+    $this->actingAs($user)->get(route('targets.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->component('targets/Empty')->where('profiles', []));
 });
 
 it('never shows a profile belonging to another project', function () {
     $user = targeter();
     Project::factory()->for($user->organizations()->sole())->create();
 
-    TargetProfile::factory()->create(['name' => 'Somebody else\'s market']);
+    $other = TargetProfile::factory()->create(['name' => 'Somebody else\'s market']);
 
-    $this->actingAs($user)->get(route('target-profiles.index'))
-        ->assertOk()
-        ->assertInertia(fn ($page) => $page->where('profiles', []));
+    $this->actingAs($user)->get(route('targets.index'))
+        ->assertInertia(fn ($page) => $page->component('targets/Empty')->where('profiles', []));
+
+    $this->actingAs($user)->get(route('targets.show', $other))->assertNotFound();
 });
 
 it('creates a profile from the form, one list item per line', function () {
     $user = targeter();
     $project = Project::factory()->for($user->organizations()->sole())->create();
 
-    $this->actingAs($user)
-        ->post(route('target-profiles.store'), profileForm())
-        ->assertRedirect(route('target-profiles.index'));
+    $profile = TargetProfile::query()->withoutGlobalScopes();
 
-    $profile = TargetProfile::query()->withoutGlobalScopes()->sole();
+    $this->actingAs($user)
+        ->post(route('targets.store'), profileForm())
+        ->assertRedirect(route('targets.show', $profile->sole()));
+
+    $profile = $profile->sole();
 
     expect($profile->project_id)->toBe($project->id)
         ->and($profile->source)->toBe(TargetProfileSource::Human)
@@ -97,11 +126,11 @@ it('keeps what the model reported about itself when the user corrects a profile'
     ]);
 
     $this->actingAs($user)
-        ->put(route('target-profiles.update', $profile), profileForm([
+        ->put(route('targets.update', $profile), profileForm([
             'type' => 'partner',
             'is_active' => false,
         ]))
-        ->assertRedirect(route('target-profiles.index'));
+        ->assertRedirect(route('targets.show', $profile));
 
     $profile->refresh();
 
@@ -119,7 +148,7 @@ it('refuses to save a profile with no name', function () {
     Project::factory()->for($user->organizations()->sole())->create();
 
     $this->actingAs($user)
-        ->post(route('target-profiles.store'), profileForm(['name' => '']))
+        ->post(route('targets.store'), profileForm(['name' => '']))
         ->assertSessionHasErrors('name');
 });
 
@@ -130,7 +159,7 @@ it('does not let a project delete another project\'s profile', function () {
     $other = TargetProfile::factory()->create();
 
     $this->actingAs($user)
-        ->delete(route('target-profiles.destroy', $other))
+        ->delete(route('targets.destroy', $other))
         ->assertNotFound();
 
     expect(TargetProfile::query()->withoutGlobalScopes()->count())->toBe(1);
@@ -143,8 +172,8 @@ it('deletes a profile', function () {
     $profile = TargetProfile::factory()->create(['project_id' => $project->id]);
 
     $this->actingAs($user)
-        ->delete(route('target-profiles.destroy', $profile))
-        ->assertRedirect(route('target-profiles.index'));
+        ->delete(route('targets.destroy', $profile))
+        ->assertRedirect(route('targets.index'));
 
     expect(TargetProfile::query()->withoutGlobalScopes()->count())->toBe(0);
 });
@@ -156,8 +185,9 @@ it('queues a derivation for the current project', function () {
     $project = Project::factory()->for($user->organizations()->sole())->create();
 
     $this->actingAs($user)
-        ->post(route('target-profiles.derive'))
-        ->assertRedirect(route('target-profiles.index'));
+        ->from(route('targets.index'))
+        ->post(route('targets.derive'))
+        ->assertRedirect(route('targets.index'));
 
     Queue::assertPushed(DeriveTargets::class, fn (DeriveTargets $job): bool => $job->project->is($project));
 
@@ -168,8 +198,55 @@ it('queues a derivation for the current project', function () {
     expect($run->agent)->toBe('target-profile-deriver')
         ->and($run->status)->toBe(AgentRunStatus::Pending);
 
-    $this->actingAs($user)->get(route('target-profiles.index'))
+    $this->actingAs($user)->get(route('targets.index'))
         ->assertInertia(fn ($page) => $page->where('deriving', true));
+});
+
+it('adds to the profiles by default, and only replaces when asked', function () {
+    Queue::fake();
+
+    $user = targeter();
+    Project::factory()->for($user->organizations()->sole())->create();
+
+    $this->actingAs($user)->from(route('targets.index'))->post(route('targets.derive'));
+
+    Queue::assertPushed(DeriveTargets::class, fn (DeriveTargets $job): bool => $job->replace === false);
+
+    $this->actingAs($user)->from(route('targets.index'))->post(route('targets.derive'), ['replace' => true]);
+
+    Queue::assertPushed(DeriveTargets::class, fn (DeriveTargets $job): bool => $job->replace === true);
+});
+
+it('keeps the profiles already derived unless replacing was asked for', function () {
+    $user = targeter();
+    $project = Project::factory()->for($user->organizations()->sole())->create([
+        'knowledge_base' => ['what_it_does' => 'Routes vans.'],
+    ]);
+
+    $kept = TargetProfile::factory()->create([
+        'project_id' => $project->id,
+        'name' => 'Derived earlier',
+        'source' => TargetProfileSource::Agent,
+    ]);
+
+    TargetProfileDeriver::fake([
+        ['profiles' => [['name' => 'Newly derived', 'sectors' => ['food wholesale']]]],
+        ['profiles' => [['name' => 'After the replacement', 'sectors' => ['food wholesale']]]],
+    ]);
+
+    // The test queue is synchronous, so each dispatch runs the job here and now.
+    DeriveTargets::dispatch($project, pendingDerivation($project), replace: false);
+
+    expect(TargetProfile::query()->withoutGlobalScopes()->pluck('name')->all())
+        ->toBe(['Derived earlier', 'Newly derived']);
+
+    DeriveTargets::dispatch($project, pendingDerivation($project), replace: true);
+
+    // Both of the agent's own profiles went; a human one would have survived.
+    expect(TargetProfile::query()->withoutGlobalScopes()->pluck('name')->all())
+        ->toBe(['After the replacement'])
+        ->and($kept->exists())->toBeTrue()
+        ->and(TargetProfile::query()->withoutGlobalScopes()->find($kept->id))->toBeNull();
 });
 
 it('stops reporting a derivation once the run is finished', function () {
@@ -182,7 +259,7 @@ it('stops reporting a derivation once the run is finished', function () {
         'status' => AgentRunStatus::Succeeded,
     ]);
 
-    $this->actingAs($user)->get(route('target-profiles.index'))
+    $this->actingAs($user)->get(route('targets.index'))
         ->assertInertia(fn ($page) => $page
             ->where('deriving', false)
             ->where('derivationError', null));
@@ -201,7 +278,7 @@ it('stops believing a run that has been pending far too long', function () {
         'created_at' => now()->subHour(),
     ]);
 
-    $this->actingAs($user)->get(route('target-profiles.index'))
+    $this->actingAs($user)->get(route('targets.index'))
         ->assertInertia(fn ($page) => $page->where('deriving', false));
 });
 
@@ -219,7 +296,7 @@ it('reports a failed derivation instead of falling silent', function () {
 
     (new DeriveTargets($project, $run))->failed(new RuntimeException('The provider refused the request.'));
 
-    $this->actingAs($user)->get(route('target-profiles.index'))
+    $this->actingAs($user)->get(route('targets.index'))
         ->assertInertia(fn ($page) => $page
             ->where('deriving', false)
             ->where('derivationError', 'The provider refused the request.'));

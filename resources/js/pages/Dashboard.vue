@@ -7,15 +7,13 @@ const page = usePage()
 
 <template>
     <AppLayout>
-        <template #header>
-            <h1 class="font-medium">
-                {{ page.props.currentProject?.name }}
-            </h1>
-        </template>
-
         <Head title="Dashboard" />
 
-        <div class="p-4">
+        <div class="space-y-4 p-4">
+            <h2 class="font-medium">
+                {{ page.props.currentProject?.name }}
+            </h2>
+
             <p class="text-sm text-muted">
                 Nothing here yet — leads, campaigns and suggestions for this
                 project land on this page.

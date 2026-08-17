@@ -2,421 +2,49 @@
 
 namespace App\Actions;
 
-use App\Ai\Agents\CompanyQualifier;
-use App\Ai\Agents\DiscoveryPlanner;
-use App\Enums\DiscoveryDiagnosis;
 use App\Enums\DiscoveryRunStatus;
-use App\Enums\HostKind;
-use App\Models\Company;
-use App\Models\CompanyTargetEvaluation;
+use App\Enums\DiscoveryTaskKind;
+use App\Enums\DiscoveryTaskStatus;
+use App\Jobs\Discovery\PlanDiscovery;
 use App\Models\DiscoveryRun;
-use App\Models\KnownHost;
+use App\Models\DiscoveryTask;
 use App\Models\TargetProfile;
-use App\Services\Discovery\Candidate;
-use App\Services\Discovery\HostRegistry;
-use App\Services\Discovery\ListingHarvester;
-use App\Services\Discovery\PageFetcher;
-use App\Services\Discovery\Sources\DiscoverySourceInterface;
-use App\Services\Discovery\Sources\OverpassSource;
-use App\Services\Discovery\Sources\WebSearchSource;
-use App\Support\HtmlText;
-use App\Support\ParsedPage;
 use App\Support\Settings;
-use App\Support\Url;
-use Illuminate\Support\Collection;
-use Laravel\Ai\Responses\StructuredAgentResponse;
-use Throwable;
 
 /**
- * Plan, search, qualify. The whole discovery pipeline minus the widening
- * loop.
+ * Starts a search for companies matching one target profile, and comes back
+ * immediately: the work is a graph of queued nodes, not a call that blocks for
+ * several minutes.
  *
  * ponytail: a run that comes up short is diagnosed and reported, not widened.
- * Automatic widening needs the autonomy notches wired up and a
- * re-plan cycle; the diagnosis is the half that makes the other half safe, and
- * it is worth having first.
+ * Automatic widening needs the autonomy notches wired up and a re-plan cycle;
+ * the diagnosis is the half that makes the other half safe, and it is worth
+ * having first.
  */
 class RunDiscovery
 {
-    /** @var array<string, DiscoverySourceInterface> */
-    private array $sources;
-
-    /** @var array<int, string> */
-    private array $candidateFailures = [];
-
-    public function __construct(
-        private PageFetcher $fetcher,
-        private HtmlText $html,
-        private HostRegistry $hosts,
-        private ListingHarvester $harvester,
-        OverpassSource $overpass,
-        WebSearchSource $webSearch,
-        private Settings $settings,
-    ) {
-        $this->sources = [$overpass->name() => $overpass, $webSearch->name() => $webSearch];
-    }
+    public function __construct(private Settings $settings) {}
 
     /**
      * @param  array{max_companies?: int, max_qualified?: int, max_pages?: int, max_queries?: int}  $overrides
      */
     public function handle(TargetProfile $targetProfile, array $overrides = []): DiscoveryRun
     {
-        $budget = array_merge($this->settings->array('discovery'), $overrides);
-
         $run = DiscoveryRun::create([
             'project_id' => $targetProfile->project_id,
             'target_profile_id' => $targetProfile->id,
             'status' => DiscoveryRunStatus::Planning,
-            'budget' => $budget,
+            'budget' => [...$this->settings->array('discovery'), ...$overrides],
             'started_at' => now(),
         ]);
 
-        try {
-            $plan = $this->plan($targetProfile);
-        } catch (Throwable $e) {
-            return tap($run)->update([
-                'status' => DiscoveryRunStatus::Failed,
-                'error' => $e->getMessage(),
-                'finished_at' => now(),
-            ]);
-        }
-
-        $run->update(['status' => DiscoveryRunStatus::Running, 'stats' => ['plan' => $plan['plan'] ?? null]]);
-
-        $candidates = $this->gather($targetProfile, $plan, $budget);
-        $qualified = $this->qualify($targetProfile, $run, $candidates, $budget);
-
-        $diagnosis = $this->diagnose($candidates, $qualified, $budget);
-
-        $run->update([
-            'status' => $diagnosis === null ? DiscoveryRunStatus::Succeeded : DiscoveryRunStatus::Exhausted,
-            'diagnosis' => $diagnosis,
-            'stats' => array_merge($run->stats ?? [], [
-                'candidates_found' => $candidates->count(),
-                'companies_qualified' => $qualified,
-                // Without this, a dead source and an empty market look
-                // identical — and the diagnosis below would be confidently
-                // wrong about which one happened.
-                'source_failures' => $this->sourceFailures(),
-                'candidate_failures' => $this->candidateFailures,
-            ]),
-            'finished_at' => now(),
-        ]);
+        PlanDiscovery::dispatch(DiscoveryTask::create([
+            'project_id' => $run->project_id,
+            'discovery_run_id' => $run->id,
+            'kind' => DiscoveryTaskKind::Plan,
+            'status' => DiscoveryTaskStatus::Pending,
+        ]));
 
         return $run->refresh();
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function plan(TargetProfile $targetProfile): array
-    {
-        /** @var StructuredAgentResponse $response */
-        $response = (new DiscoveryPlanner($targetProfile->project))->prompt(
-            "Target profile [{$targetProfile->name}]:\n\n".json_encode(
-                $targetProfile->criteria,
-                JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
-            ),
-        );
-
-        return $response->structured;
-    }
-
-    /**
-     * Runs every probe, drops anything already known to this project, and stops
-     * at the candidate ceiling.
-     *
-     * @param  array<string, mixed>  $plan
-     * @param  array<string, int>  $budget
-     * @return Collection<int, Candidate>
-     */
-    private function gather(TargetProfile $targetProfile, array $plan, array $budget): Collection
-    {
-        $known = Company::query()->where('project_id', $targetProfile->project_id)->pluck('domain')->all();
-
-        /** @var Collection<int, Candidate> $candidates */
-        $candidates = new Collection;
-        $queries = 0;
-
-        foreach ($this->probes($plan) as [$source, $probe]) {
-            if ($queries >= $budget['max_queries'] || $candidates->count() >= $budget['max_companies']) {
-                break;
-            }
-
-            $queries++;
-
-            $found = $this->sources[$source]->search($probe);
-
-            foreach ($this->sorted($found, $targetProfile, $budget) as $candidate) {
-                $domain = $candidate->domain();
-
-                if ($domain === null || in_array($domain, $known, true)) {
-                    continue;
-                }
-
-                $known[] = $domain;
-                $candidates->push($candidate);
-            }
-        }
-
-        return $candidates->take($budget['max_companies'])->values();
-    }
-
-    /**
-     * Turns one source's raw results into companies worth qualifying.
-     *
-     * A result is either a company or a LIST of companies, and telling them
-     * apart used to be a hand-written blocklist of aggregator domains — which
-     * could never be complete, and which threw away the most valuable results
-     * of all. A directory's page for one trade in one town is not a company, it
-     * is hundreds, and for a business with no site of its own it is the only
-     * place an address is published.
-     *
-     * @param  Collection<int, Candidate>  $found
-     * @param  array<string, int>  $budget
-     * @return Collection<int, Candidate>
-     */
-    private function sorted(Collection $found, TargetProfile $targetProfile, array $budget): Collection
-    {
-        if ($found->isEmpty()) {
-            return $found;
-        }
-
-        $kinds = $this->hosts->classify(
-            $found->map(fn (Candidate $candidate): string => (string) ($candidate->sourceUrl ?? $candidate->website)),
-            $targetProfile->project,
-        );
-
-        /** @var Collection<int, Candidate> $out */
-        $out = new Collection;
-        $harvested = [];
-
-        foreach ($found as $candidate) {
-            $url = (string) ($candidate->sourceUrl ?? $candidate->website);
-            $host = Url::host($url);
-            $kind = $kinds[$host] ?? HostKind::Entity;
-
-            if ($kind === HostKind::Entity) {
-                $out->push($candidate);
-
-                continue;
-            }
-
-            // Social and `other` are dropped — `other` because we read hosts
-            // and not pages, so a forum thread that names ten businesses goes
-            // with them. A limit worth revisiting, not a claim that the page
-            // was worthless.
-            if ($kind !== HostKind::Index || $host === null || isset($harvested[$host])) {
-                continue;
-            }
-
-            $harvested[$host] = true;
-
-            // A directory is ALSO a company, and somebody's target profile is
-            // "launch platforms" or "review sites". Harvesting and qualifying
-            // are not alternatives: the host goes in as a candidate too, and
-            // qualification decides what it is worth. For a restaurant profile
-            // that costs one page and scores near zero; leaving it out would
-            // silently make a whole category of buyer unserviceable.
-            $out->push(new Candidate(
-                name: $host,
-                website: 'https://'.$host,
-                source: $candidate->source,
-                sourceUrl: $url,
-                facts: ['host_kind' => $kind->value],
-            ));
-
-            $known = KnownHost::query()->firstWhere('host', $host);
-
-            if ($known !== null && ! $known->isWorthHarvesting()) {
-                $this->candidateFailures[] = "{$host}: skipped, {$known->harvest_status?->value} last time";
-
-                continue;
-            }
-
-            $harvest = $this->harvester->harvest($url, $targetProfile->project, $budget['max_pages'] ?? null);
-
-            $this->hosts->recordHarvest($host, $harvest);
-
-            $out = $out->merge($harvest->candidates);
-        }
-
-        return $out;
-    }
-
-    /**
-     * Interleaved, one source then the other, because `max_queries` is spent in
-     * order: run every Overpass probe first and a rate-limited or dead Overpass
-     * takes the entire budget with it, so the web queries the plan asked for
-     * never run and the run reports an empty market it never looked at.
-     *
-     * @param  array<string, mixed>  $plan
-     * @return array<int, array{0: string, 1: array<string, mixed>}>
-     */
-    private function probes(array $plan): array
-    {
-        $overpass = [];
-        $web = [];
-
-        foreach ($plan['overpass_probes'] ?? [] as $probe) {
-            $tags = [];
-
-            foreach ($probe['tags'] ?? [] as $tag) {
-                if (isset($tag['key'], $tag['value'])) {
-                    $tags[(string) $tag['key']] = (string) $tag['value'];
-                }
-            }
-
-            $overpass[] = ['overpass', [
-                'area' => $probe['area'] ?? '',
-                'country' => $probe['country'] ?? '',
-                'tags' => $tags,
-            ]];
-        }
-
-        foreach ($plan['web_queries'] ?? [] as $query) {
-            $web[] = ['web_search', [
-                'query' => $query['query'] ?? '',
-                'language' => $query['language'] ?? 'auto',
-            ]];
-        }
-
-        $probes = [];
-
-        for ($i = 0; $i < max(count($overpass), count($web)); $i++) {
-            $probes = array_merge($probes, array_filter([$overpass[$i] ?? null, $web[$i] ?? null]));
-        }
-
-        return $probes;
-    }
-
-    /**
-     * @param  Collection<int, Candidate>  $candidates
-     * @param  array<string, int>  $budget
-     */
-    private function qualify(TargetProfile $targetProfile, DiscoveryRun $run, Collection $candidates, array $budget): int
-    {
-        $criteria = (string) json_encode($targetProfile->criteria, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        $pages = 0;
-        $qualified = 0;
-
-        foreach ($candidates as $candidate) {
-            if ($pages >= $budget['max_pages'] || $qualified >= $budget['max_qualified']) {
-                break;
-            }
-
-            $pages++;
-
-            // One unreadable site must never cost the run everything already
-            // found. The first live run died two thirds of the way through on a
-            // single mis-encoded page and lost the lot.
-            try {
-                if ($this->qualifyOne($targetProfile, $run, $candidate, $criteria)) {
-                    $qualified++;
-                }
-            } catch (Throwable $e) {
-                $this->candidateFailures[] = "{$candidate->website}: {$e->getMessage()}";
-            }
-        }
-
-        return $qualified;
-    }
-
-    private function qualifyOne(TargetProfile $targetProfile, DiscoveryRun $run, Candidate $candidate, string $criteria): bool
-    {
-        $page = $this->fetcher->fetch($candidate->website);
-
-        if ($page === null) {
-            return false;
-        }
-
-        $parsed = $this->html->parse((string) $page->content, $candidate->website);
-
-        if ($parsed->isEmpty()) {
-            return false;
-        }
-
-        /** @var StructuredAgentResponse $verdict */
-        $verdict = (new CompanyQualifier($targetProfile->project))->prompt(
-            "Target profile [{$targetProfile->name}]:\n{$criteria}\n\n"
-            ."Company website ({$candidate->website}):\n".mb_substr($parsed->text, 0, 8_000),
-        );
-
-        if (! ($verdict['is_a_prospect'] ?? false)) {
-            return false;
-        }
-
-        $this->store($targetProfile, $run, $candidate, $parsed, $verdict->structured);
-
-        return true;
-    }
-
-    /**
-     * @param  array<string, mixed>  $verdict
-     */
-    private function store(TargetProfile $targetProfile, DiscoveryRun $run, Candidate $candidate, ParsedPage $page, array $verdict): void
-    {
-        $company = Company::updateOrCreate(
-            ['project_id' => $targetProfile->project_id, 'domain' => (string) $candidate->domain()],
-            [
-                'name' => $verdict['company_name'] ?: $candidate->name,
-                'website' => $candidate->website,
-                'industry' => $verdict['industry'] ?? null,
-                'size' => $verdict['size'] ?? null,
-                'location' => $verdict['location'] ?? null,
-                // Detected here, not per project: Belgium runs FR, NL and EN in
-                // one city, and this drives the language of the email.
-                'language' => $page->language ?? mb_substr((string) ($verdict['language'] ?? ''), 0, 2) ?: null,
-                'facts' => $candidate->facts,
-                'source' => $candidate->source,
-                'source_url' => $candidate->sourceUrl,
-                'discovered_at' => now(),
-            ],
-        );
-
-        CompanyTargetEvaluation::updateOrCreate(
-            ['company_id' => $company->id, 'target_profile_id' => $targetProfile->id],
-            [
-                'discovery_run_id' => $run->id,
-                'fit_score' => (int) ($verdict['fit_score'] ?? 0),
-                'fit_reason' => (string) ($verdict['fit_reason'] ?? ''),
-            ],
-        );
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    private function sourceFailures(): array
-    {
-        return collect($this->sources)
-            ->flatMap(fn (DiscoverySourceInterface $source): array => method_exists($source, 'failures') ? $source->failures() : [])
-            ->all();
-    }
-
-    /**
-     * Why a run came up short decides what should happen next — and one of the
-     * answers is "do not widen". Widening a wrong profile produces
-     * off-target leads the user then emails, and the complaints land on their
-     * own domain.
-     *
-     * @param  Collection<int, Candidate>  $candidates
-     * @param  array<string, int>  $budget
-     */
-    private function diagnose(Collection $candidates, int $qualified, array $budget): ?DiscoveryDiagnosis
-    {
-        if ($candidates->isEmpty()) {
-            return DiscoveryDiagnosis::WrongSource;
-        }
-
-        if ($qualified === 0) {
-            return DiscoveryDiagnosis::BadTargetProfile;
-        }
-
-        if ($qualified < $budget['max_qualified'] / 2) {
-            return DiscoveryDiagnosis::TooNarrow;
-        }
-
-        return null;
     }
 }

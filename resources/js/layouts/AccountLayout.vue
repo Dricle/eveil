@@ -31,12 +31,6 @@ const items = computed<NavigationMenuItem[]>(() =>
 
 <template>
     <AppLayout>
-        <template #header>
-            <h1 class="font-medium">
-                {{ title }}
-            </h1>
-        </template>
-
         <div class="flex h-full flex-1">
             <aside class="w-64 shrink-0 border-e border-default p-4">
                 <UNavigationMenu
@@ -46,7 +40,11 @@ const items = computed<NavigationMenuItem[]>(() =>
                 />
             </aside>
 
-            <div class="min-w-0 flex-1 p-4">
+            <div class="min-w-0 flex-1 space-y-4 p-4">
+                <h2 class="font-medium">
+                    {{ title }}
+                </h2>
+
                 <slot />
             </div>
         </div>

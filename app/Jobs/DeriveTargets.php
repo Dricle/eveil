@@ -24,18 +24,22 @@ class DeriveTargets implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(public Project $project, public AgentRun $run)
+    /**
+     * `$replace` is the user's answer to "and the profiles I already have":
+     * true throws away what the agent wrote last time, false adds to it. Either
+     * way a profile the user wrote or corrected survives — the agent only ever
+     * discards its own work.
+     */
+    public function __construct(public Project $project, public AgentRun $run, public bool $replace = false)
     {
         $this->onQueue('ai');
     }
 
     public function handle(DeriveTargetProfiles $derive, CurrentProject $currentProject): void
     {
-        // Only what the agent wrote last time is replaced. A profile the user
-        // wrote or corrected survives every re-derivation.
         $currentProject->run(
             $this->project,
-            fn () => $derive->handle($this->project, replace: true, run: $this->run),
+            fn () => $derive->handle($this->project, replace: $this->replace, run: $this->run),
         );
     }
 

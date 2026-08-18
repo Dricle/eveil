@@ -1369,7 +1369,7 @@ est une story pas faite.
 | 2 — Projets | 🟡 cloisonnement fait et testé, CRUD fait, sélecteur de projet fait ; manque le dashboard multi-projet (`v1`) |
 | 3 — Analyse & knowledge base | 🟡 analyse déclenchée à l'enregistrement, progression du crawl et pages en échec affichées, knowledge base visible et éditable ; manque le lien vers un repo (`v1`) |
 | 4 — Agent Website | ⬜ table `recommendations` pas encore créée |
-| 5 — Découverte de leads | 🟡 graphe de jobs (`discovery_tasks`) avec son écran — lancer, suivre, rejouer, arrêter ; profils cibles éditables ; sociétés scorées, filtrables, rejetables ; contacts listés avec leur verdict de vérification, recherche déclenchable par société ou en masse. Manquent la fiche contact (5.8), l'import CSV, le rendu JS (5.9, reporté) |
+| 5 — Découverte de leads | 🟡 graphe de jobs (`discovery_tasks`) avec son écran — lancer, suivre, rejouer, arrêter ; profils cibles éditables ; sociétés scorées, filtrables, rejetables ; contacts listés avec leur verdict de vérification, recherche déclenchable par société ou en masse ; import CSV avec son rapport ligne à ligne. Manquent la fiche contact (5.8) et le rendu JS (5.9, reporté) |
 | 6 — Séquences | ⬜ |
 | 7 — Envoi | ⬜ |
 | 8 — Réponses & inbox | ⬜ |
@@ -1680,9 +1680,25 @@ automatiquement.
   sont hors liste par défaut et ne s'affichent que si on les demande. Le tri met les envoyables en
   tête. Le blocage à l'envoi reste à écrire avec l'Epic 7
 
-**5.6** ⬜ En tant qu'utilisateur, je veux importer un CSV.
+**5.6** ✅ En tant qu'utilisateur, je veux importer un CSV.
 - Template téléchargeable ; email **ou** URL LinkedIn suffit pour qu'une ligne soit valide
 - Rapport d'import : importés, dédupliqués, rejetés avec motif
+- **État** : bouton « Import CSV » sur Leads — pas une section, importer est une façon dont les
+  leads arrivent et pas un endroit où l'on va. La lecture du fichier est faite par
+  `maatwebsite/excel` (choisi aussi pour l'export à venir) : en-tête normalisé (`First Name` →
+  `first_name`), BOM d'Excel enlevé, et xlsx accepté sans code en plus. `App\Imports\LeadsImport`
+  (généré par `make:import`, à sa place standard) ne garde que ce qui nous appartient — décider ce que vaut chaque ligne (ordre et casse des
+  colonnes libres, colonnes inconnues ignorées : les gens ajoutent leur colonne de notes) — et rend une
+  ligne de rapport par ligne refusée avec son numéro — « 412 sur 500 importés » sans la liste est un
+  ticket de support, pas un résultat. Refusés : ni adresse ni LinkedIn, adresse malformée, doublon
+  dans le fichier, **personne effacée** (la demande d'oubli survit à ce qu'elle a détruit, un
+  fichier ne doit pas être le chemin du retour) et adresse en suppression list. Déjà connue dans le
+  projet = dédupliquée, pas refusée. Une société est créée ou retrouvée par domaine quand la ligne
+  en porte un. Les lignes importées arrivent **sans vérification** (`email_status` null) : une
+  résolution MX et une sonde SMTP par ligne, c'est des minutes de spinner — la vérification est au
+  moment de l'envoi. L'écran Contacts les montre avec le badge « Not checked » ; le filtre par
+  défaut demandait `email_status != 'invalid'`, qui est NULL pour une adresse non vérifiée et les
+  rendait toutes invisibles. Import borné à 5 000 lignes dans la requête, avec le message qui le dit
 
 **5.7** ⬜ `v1` En tant qu'utilisateur, je veux brancher un provider tiers avec ma clé.
 - Interface `LeadSource` commune à CSV, scraping et providers

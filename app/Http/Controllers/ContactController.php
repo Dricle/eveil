@@ -27,8 +27,12 @@ class ContactController extends Controller
             ->when($request->integer('company'), fn ($query, int $id) => $query->where('company_id', $id))
             ->when($status !== '', fn ($query) => $query->where('email_status', $status))
             // An address that will never be sent to is not a contact — it is
-            // kept for the record and shown only when asked for.
-            ->when($status === '', fn ($query) => $query->where('email_status', '!=', EmailStatus::Invalid))
+            // kept for the record and shown only when asked for. An address
+            // nobody has checked yet is a different thing and stays on the
+            // list: an imported row has no verdict until something sends to it.
+            ->when($status === '', fn ($query) => $query->where(
+                fn ($inner) => $inner->whereNull('email_status')->orWhere('email_status', '!=', EmailStatus::Invalid),
+            ))
             ->orderByRaw("case email_status when 'valid' then 0 when 'unknown' then 1 when 'risky' then 2 else 3 end")
             ->orderByDesc('id')
             ->paginate(25)
@@ -36,6 +40,9 @@ class ContactController extends Controller
 
         return Inertia::render('leads/Contacts', [
             'contacts' => ContactResource::collection($contacts),
+            // Flashed by the importer, so it appears once on the list it just
+            // changed and is gone on the next request.
+            'import' => $request->session()->get('import'),
             'filters' => [
                 'email_status' => $status ?: null,
                 'company' => $request->integer('company') ?: null,

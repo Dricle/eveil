@@ -11,6 +11,13 @@ const props = defineProps<{
     contacts: Paginated<Contact>
     filters: { email_status: string | null, company: number | null }
     counts: Record<string, number>
+    import?: {
+        imported: number
+        duplicates: number
+        rejected: { line: number, value: string, reason: string }[]
+        rejected_count: number
+        truncated: boolean
+    } | null
 }>()
 
 // `all` rather than an empty string: reka reserves '' for clearing a select, and
@@ -70,6 +77,46 @@ const FILTERS = [
                     class="w-56"
                 />
             </div>
+
+            <!-- "412 of 500 imported" with no list is a support ticket, so
+                 every rejected row comes back with its line and its reason. -->
+            <UAlert
+                v-if="props.import"
+                :color="props.import.rejected_count ? 'warning' : 'success'"
+                variant="subtle"
+                icon="i-lucide-upload"
+                :title="`${props.import.imported} imported, ${props.import.duplicates} already known, ${props.import.rejected_count} rejected`"
+            >
+                <template
+                    v-if="props.import.rejected.length"
+                    #description
+                >
+                    <ul class="mt-1 space-y-1">
+                        <li
+                            v-for="row in props.import.rejected"
+                            :key="row.line"
+                            class="truncate"
+                        >
+                            <span class="text-dimmed">Line {{ row.line }}</span>
+                            <span v-if="row.value"> · {{ row.value }}</span> — {{ row.reason }}
+                        </li>
+                    </ul>
+
+                    <p
+                        v-if="props.import.rejected_count > props.import.rejected.length"
+                        class="mt-1 text-dimmed"
+                    >
+                        and {{ props.import.rejected_count - props.import.rejected.length }} more.
+                    </p>
+
+                    <p
+                        v-if="props.import.truncated"
+                        class="mt-1"
+                    >
+                        The file was longer than one import can take. Split it and run the rest.
+                    </p>
+                </template>
+            </UAlert>
 
             <UAlert
                 v-if="filters.company"
@@ -137,6 +184,16 @@ const FILTERS = [
                     :color="STATUS[contact.email_status].color"
                     variant="subtle"
                     :label="STATUS[contact.email_status].label"
+                />
+
+                <!-- Imported rows arrive with no verdict: verifying at import
+                     would be a DNS lookup and an SMTP probe per line, with
+                     somebody watching a spinner. -->
+                <UBadge
+                    v-else-if="contact.email"
+                    color="neutral"
+                    variant="outline"
+                    label="Not checked"
                 />
             </div>
 

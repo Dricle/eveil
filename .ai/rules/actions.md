@@ -33,3 +33,10 @@ Subsystems are grouped under `app/Services/<Domain>/`, never at the top level ne
 **`app/Ai/` is the documented exception and stays put.** `laravel/ai` scaffolds `make:agent` to `App\Ai\Agents`, `make:tool` to `App\Ai\Tools` and `make:agent-middleware` to `App\Ai\Middleware`. Moving it under `Services/` would mean renaming the namespace of every generated class forever, which buys a tidier folder listing and nothing else.
 
 DTOs live beside the services that produce them — `Candidate`, `ParsedPage` and `Harvest` are in `Services/Discovery/`, not a separate `Data/`. Splitting them out is more honest about types and worse for everything else: a change to harvesting would touch three top-level folders instead of one.
+
+## Spreadsheets go through maatwebsite/excel, both ways
+`maatwebsite/excel` v4 is the reader and writer for every CSV/xlsx the app touches. Do not hand-roll `fgetcsv`/`SplFileObject` parsing beside it, and use it for the CSV export of leads and companies too.
+
+Import and export classes live where the package puts them — `app/Imports/`, `app/Exports/`, generated with `php artisan make:import` / `make:export`, never modelled as an action. `App\Imports\LeadsImport` is the pattern: `OnEachRow` + `WithHeadingRow` + `SkipsEmptyRows`, the project passed to the constructor, and a `report()` the caller reads after `Excel::import()`. `ToModel` is shorter and cannot express this — rejected, duplicate and imported are three outcomes and only one of them is a model. The package normalises the heading row (`First Name` → `first_name`) and strips Excel's BOM, so the class only decides what a row means; `Row::getIndex()` is the line number the report shows, and it matches what the person sees in their spreadsheet.
+
+Imported rows are deliberately unverified (`email_status` null, `email_source = imported`): an MX lookup and SMTP probe per row would be minutes of spinner. Anything reading leads for sending must treat a null status as "not checked yet", and the Contacts list has to ask for the null case explicitly — `email_status != 'invalid'` is NULL for those rows and silently hides them.

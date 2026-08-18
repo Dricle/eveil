@@ -16,6 +16,7 @@ use App\Http\Controllers\CurrentProjectController;
 use App\Http\Controllers\DiscoveryRunCancellationController;
 use App\Http\Controllers\DiscoveryRunController;
 use App\Http\Controllers\DiscoveryTaskReplayController;
+use App\Http\Controllers\LeadImportController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectKnowledgeBaseController;
 use App\Http\Controllers\TargetProfileController;
@@ -112,6 +113,14 @@ Route::middleware(['auth', 'project.set'])->group(function (): void {
          */
         Route::get('contacts', [ContactController::class, 'index'])->name('contacts.index');
         Route::post('contacts/search', [ContactSearchController::class, 'store'])->name('contacts.search');
+
+        /*
+         * A list somebody already had. A button on Leads, never a section of
+         * its own — importing is one way leads arrive, not a place you go.
+         */
+        Route::get('contacts/import/template', [LeadImportController::class, 'show'])
+            ->name('contacts.template');
+        Route::post('contacts/import', [LeadImportController::class, 'store'])->name('contacts.import');
     });
 
     /*

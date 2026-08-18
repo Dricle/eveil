@@ -4,7 +4,7 @@ namespace App\Models;
 
 use App\Enums\EmailSource;
 use App\Enums\EmailStatus;
-use App\Enums\LeadStatus;
+use App\Enums\OutreachStatus;
 use App\Models\Concerns\BelongsToProject;
 use Database\Factories\LeadFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -41,7 +41,7 @@ use Illuminate\Support\Carbon;
  * @property string $source
  * @property string|null $source_url
  * @property Carbon $discovered_at
- * @property LeadStatus $status
+ * @property OutreachStatus $status
  * @property Carbon|null $last_contacted_at
  * @property Carbon|null $won_at
  * @property Carbon|null $erased_at
@@ -87,6 +87,30 @@ class Lead extends Model
     public function messages(): HasMany
     {
         return $this->hasMany(Message::class);
+    }
+
+    /**
+     * The people outreach may still go to: not erased, not marked won, lost,
+     * already a client or unsubscribed, and not working at a company the user
+     * took out of the running. A lead with no company passes — plenty arrive
+     * from an import with nothing but an address.
+     *
+     * Anything that ends in a mail being written goes through this scope. It
+     * says nothing about the address itself; `isSendable()` is that question.
+     *
+     * @param  Builder<Lead>  $query
+     */
+    #[Scope]
+    protected function contactable(Builder $query): void
+    {
+        $query->whereNull('erased_at')
+            ->whereNotIn('status', OutreachStatus::excluded())
+            // A subquery rather than `orWhereHas`, so the company's own rule
+            // stays in one place — `Company::contactable()` — instead of being
+            // spelled out a second time here.
+            ->where(fn (Builder $lead) => $lead
+                ->whereNull('company_id')
+                ->orWhereIn('company_id', Company::query()->contactable()->select('id')));
     }
 
     /**
@@ -207,7 +231,7 @@ class Lead extends Model
             'linkedin_url' => null,
             // Points at a page that names her, so it identifies her too.
             'source_url' => null,
-            'status' => LeadStatus::Suppressed,
+            'status' => OutreachStatus::Suppressed,
             'erased_at' => now(),
         ])->save();
     }
@@ -237,7 +261,7 @@ class Lead extends Model
         return [
             'email_status' => EmailStatus::class,
             'email_source' => EmailSource::class,
-            'status' => LeadStatus::class,
+            'status' => OutreachStatus::class,
             'email_verified_at' => 'datetime',
             'discovered_at' => 'datetime',
             'erased_at' => 'datetime',

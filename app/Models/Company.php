@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ContactSearchStatus;
+use App\Enums\OutreachStatus;
 use App\Models\Concerns\BelongsToProject;
 use Database\Factories\CompanyFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -31,7 +32,7 @@ use Illuminate\Support\Carbon;
  * @property string $source
  * @property string|null $source_url
  * @property Carbon $discovered_at
- * @property Carbon|null $rejected_at
+ * @property OutreachStatus $status
  * @property ContactSearchStatus|null $contacts_status
  * @property Carbon|null $contacts_searched_at
  * @property int|null $fit_score only loaded by the `withBestFit` scope
@@ -39,7 +40,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['project_id', 'domain', 'name', 'website', 'industry', 'size', 'location', 'language', 'facts', 'source', 'source_url', 'discovered_at', 'rejected_at', 'contacts_status', 'contacts_searched_at'])]
+#[Fillable(['project_id', 'domain', 'name', 'website', 'industry', 'size', 'location', 'language', 'facts', 'source', 'source_url', 'discovered_at', 'status', 'contacts_status', 'contacts_searched_at'])]
 class Company extends Model
 {
     /** @use HasFactory<CompanyFactory> */
@@ -70,6 +71,20 @@ class Company extends Model
     public function evaluations(): HasMany
     {
         return $this->hasMany(CompanyTargetEvaluation::class);
+    }
+
+    /**
+     * The companies outreach may still go to. Five statuses take a company out
+     * — see `OutreachStatus::excluded()` — and every query that leads to a mail
+     * being written has to go through this one, or the first thing an existing
+     * client receives is a cold pitch.
+     *
+     * @param  Builder<Company>  $query
+     */
+    #[Scope]
+    protected function contactable(Builder $query): void
+    {
+        $query->whereNotIn('status', OutreachStatus::excluded());
     }
 
     /**
@@ -144,7 +159,7 @@ class Company extends Model
         return [
             'facts' => 'array',
             'discovered_at' => 'datetime',
-            'rejected_at' => 'datetime',
+            'status' => OutreachStatus::class,
             'contacts_status' => ContactSearchStatus::class,
             'contacts_searched_at' => 'datetime',
         ];

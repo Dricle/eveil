@@ -3,6 +3,8 @@ import { Head, router } from '@inertiajs/vue3'
 import type { TableColumn } from '@nuxt/ui'
 import { ref, watch } from 'vue'
 import LeadsLayout from '@/layouts/LeadsLayout.vue'
+import StatusSelect from '@/components/StatusSelect.vue'
+import { OUTREACH_STATUSES } from '@/lib/status'
 import { useTableQuery } from '@/lib/table'
 import contactRoutes from '@/routes/contacts'
 import type { Contact, Paginated } from '@/types'
@@ -88,7 +90,8 @@ const COLUMNS = [
     { key: 'email_status', label: 'Verification', sortable: true, filterable: false },
     { key: 'email_source', label: 'Source', sortable: true, filterable: false },
     { key: 'company', label: 'Company', sortable: true, filterable: true },
-    { key: 'discovered_at', label: 'Found', sortable: true, filterable: false }
+    { key: 'discovered_at', label: 'Found', sortable: true, filterable: false },
+    { key: 'status', label: 'Status', sortable: true, filterable: false }
 ]
 
 const columns: TableColumn<Contact>[] = COLUMNS.map(column => ({
@@ -250,7 +253,7 @@ function sourceLabel (contact: Contact) {
             <UTable
                 :data="contacts.data"
                 :columns="columns"
-                :ui="{ td: 'align-top' }"
+                :ui="{ td: 'align-top whitespace-normal break-words' }"
             >
                 <!-- Headers sort and nothing else; narrowing the list happens
                      in one bar above it. -->
@@ -311,6 +314,17 @@ function sourceLabel (contact: Contact) {
                         color="neutral"
                         variant="outline"
                         label="Not checked"
+                    />
+                </template>
+
+                <!-- Outreach writes this column itself once sending exists;
+                     the select is the user overruling it, and four of the
+                     values stop anything going out at all. -->
+                <template #status-cell="{ row }">
+                    <StatusSelect
+                        :status="row.original.status"
+                        :options="OUTREACH_STATUSES"
+                        :url="contactRoutes.status.url(row.original.id)"
                     />
                 </template>
 

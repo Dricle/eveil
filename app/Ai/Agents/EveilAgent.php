@@ -64,6 +64,33 @@ abstract class EveilAgent implements Agent, HasMiddleware
         return false;
     }
 
+    /**
+     * The project's own instructions for anything written in its name — tone,
+     * language, words to avoid. Appended by the agents that WRITE, and by them
+     * only: an extractor returns fields nobody reads as prose, and telling it
+     * to avoid emoji is prompt it has to spend attention on for nothing.
+     *
+     * Placed last and stated as overriding, because that is what the user
+     * expects of a box they filled in themselves.
+     */
+    protected function projectInstructions(): string
+    {
+        $instructions = trim((string) $this->project->prompt_instructions);
+
+        if ($instructions === '') {
+            return '';
+        }
+
+        return <<<PROMPT
+
+
+            The user's own instructions for how this product writes. Where they disagree
+            with anything above, follow these:
+
+            {$instructions}
+            PROMPT;
+    }
+
     public function recordInto(AgentRun $run): static
     {
         $this->run = $run;

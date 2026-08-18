@@ -1,7 +1,9 @@
 <?php
 
+use App\Enums\OutreachStatus;
 use App\Models\Company;
 use App\Models\CompanyTargetEvaluation;
+use App\Models\Lead;
 use App\Models\Organization;
 use App\Models\Project;
 use App\Models\TargetProfile;
@@ -65,29 +67,46 @@ it('filters by score and by profile', function () {
             ->where('companies.data.0.domain', 'fort.be'));
 });
 
-it('hides a rejected company until asked for it, and keeps the row', function () {
+it('hides a company set aside until asked for it, and keeps the row', function () {
     [$user, $project] = lister();
 
     $company = scored($project, 'concurrent.be', 88);
 
-    $this->actingAs($user)->post(route('companies.reject', $company))->assertRedirect();
+    $this->actingAs($user)
+        ->put(route('companies.status', $company), ['status' => 'client'])
+        ->assertRedirect();
 
-    expect($company->refresh()->rejected_at)->not->toBeNull();
+    expect($company->refresh()->status)->toBe(OutreachStatus::Client);
 
     $this->actingAs($user)->get(route('companies.index'))
         ->assertInertia(fn ($page) => $page->count('companies.data', 0)->where('total', 0));
 
-    $this->actingAs($user)->get(route('companies.index', ['rejected' => 1]))
+    $this->actingAs($user)->get(route('companies.index', ['excluded' => 1]))
         ->assertInertia(fn ($page) => $page
             ->count('companies.data', 1)
-            ->where('companies.data.0.rejected', true));
+            ->where('companies.data.0.status', 'client')
+            ->where('companies.data.0.excluded', true));
 
-    $this->actingAs($user)->delete(route('companies.restore', $company))->assertRedirect();
+    $this->actingAs($user)
+        ->put(route('companies.status', $company), ['status' => 'new'])
+        ->assertRedirect();
 
-    expect($company->refresh()->rejected_at)->toBeNull();
+    expect($company->refresh()->status)->toBe(OutreachStatus::New);
 });
 
-it('never shows or rejects a company from another project', function () {
+it('refuses a status that is not one of ours', function () {
+    [$user, $project] = lister();
+
+    $company = scored($project, 'concurrent.be', 88);
+
+    $this->actingAs($user)
+        ->put(route('companies.status', $company), ['status' => 'maybe'])
+        ->assertSessionHasErrors('status');
+
+    expect($company->refresh()->status)->toBe(OutreachStatus::New);
+});
+
+it('never shows or restatuses a company from another project', function () {
     [$user] = lister();
 
     $other = Company::factory()->create();
@@ -95,9 +114,11 @@ it('never shows or rejects a company from another project', function () {
     $this->actingAs($user)->get(route('companies.index'))
         ->assertInertia(fn ($page) => $page->count('companies.data', 0));
 
-    $this->actingAs($user)->post(route('companies.reject', $other))->assertNotFound();
+    $this->actingAs($user)
+        ->put(route('companies.status', $other), ['status' => 'rejected'])
+        ->assertNotFound();
 
-    expect($other->refresh()->rejected_at)->toBeNull();
+    expect($other->refresh()->status)->toBe(OutreachStatus::New);
 });
 
 it('sorts on the best profile rather than an average', function () {
@@ -176,4 +197,29 @@ it('ignores a sort column nobody put on the screen', function () {
     $this->actingAs($user)->get(route('companies.index', ['sort' => 'name); drop table companies--']))
         ->assertOk()
         ->assertInertia(fn ($page) => $page->where('companies.data.0.domain', 'excellent.be'));
+});
+
+it('carries a company verdict down to every person at it', function () {
+    [$user, $project] = lister();
+
+    $company = scored($project, 'client-existant.be', 88);
+    $lead = Lead::factory()->create(['project_id' => $project->id, 'company_id' => $company->id]);
+    $erased = Lead::factory()->create([
+        'project_id' => $project->id,
+        'company_id' => $company->id,
+        'erased_at' => now(),
+        'status' => OutreachStatus::Suppressed,
+    ]);
+    $elsewhere = Lead::factory()->create(['project_id' => $project->id]);
+
+    $this->actingAs($user)
+        ->put(route('companies.status', $company), ['status' => 'client'])
+        ->assertRedirect();
+
+    // A company already served says the same thing about every address at it —
+    // otherwise the contacts still read `new` and the cold pitch goes out.
+    expect($lead->refresh()->status)->toBe(OutreachStatus::Client)
+        // An erasure outlives any later verdict on the company.
+        ->and($erased->refresh()->status)->toBe(OutreachStatus::Suppressed)
+        ->and($elsewhere->refresh()->status)->toBe(OutreachStatus::New);
 });

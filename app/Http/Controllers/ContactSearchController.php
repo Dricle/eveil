@@ -18,7 +18,7 @@ class ContactSearchController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $companies = Company::query()
-            ->whereNull('rejected_at')
+            ->contactable()
             ->when(
                 $request->integer('company'),
                 fn ($query, int $id) => $query->whereKey($id),

@@ -80,3 +80,8 @@ The AI provider key is a user secret: it lives in `settings` as `ai.keys.<provid
 The env still wins until somebody saves a key on the screen, so an instance configured entirely from environment variables keeps working after an upgrade.
 
 `EveilAgent::requiresStrictStructure()` (false by default, true on `CompanyQualifier` and `ContactExtractor`) is how the settings screen marks the agents a weak model BREAKS rather than merely blunts — read from the class, never from a hand-kept list.
+
+## Project writing instructions belong to the agents that write
+`projects.prompt_instructions` is the user's house style (tone, language, banned words), set in project settings. `EveilAgent::projectInstructions()` formats it; the agents that WRITE append it to their own `instructions()` last, stated as overriding the prompt above it — `SequenceWriter` and `MessagePersonalizer` today.
+
+Do not append it in `EveilAgent::instructions()` (there is none — each agent owns its prompt) and do not give it to the extractors/qualifiers: their output is fields nobody reads as prose, so "never use emoji" is prompt spent for nothing, and `requiresStrictStructure()` agents break rather than blur when the prompt grows.

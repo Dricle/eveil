@@ -21,6 +21,7 @@ class ProjectDetailResource extends ProjectResource
         return [
             ...parent::toArray($request),
             'knowledge_base' => $this->knowledge_base,
+            'prompt_instructions' => $this->prompt_instructions,
             'edited_by_user' => $this->knowledge_base_edited_by_user,
             'last_analysis' => $this->latestAnalysis === null
                 ? null

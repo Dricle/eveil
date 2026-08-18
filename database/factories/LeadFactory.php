@@ -4,7 +4,7 @@ namespace Database\Factories;
 
 use App\Enums\EmailSource;
 use App\Enums\EmailStatus;
-use App\Enums\LeadStatus;
+use App\Enums\OutreachStatus;
 use App\Models\Lead;
 use App\Models\Project;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -30,7 +30,7 @@ class LeadFactory extends Factory
             'email_source' => EmailSource::Scraped,
             'source' => 'web_search',
             'discovered_at' => now(),
-            'status' => LeadStatus::New,
+            'status' => OutreachStatus::New,
         ];
     }
 }

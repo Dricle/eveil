@@ -1425,10 +1425,10 @@ est une story pas faite.
 | Epic | Avancement |
 |---|---|
 | 1 — Setup & configuration | 🟡 auth complète (Fortify : login, reset, 2FA), écran de setup, et section « App settings » réservée au superadmin — clé provider, mapping par agent, limites, registre d'hôtes. Manque le compose de déploiement et le `.env.example` (1.1) |
-| 2 — Projets | 🟡 cloisonnement fait et testé, CRUD fait, sélecteur de projet fait ; manque le dashboard multi-projet (`v1`) |
+| 2 — Projets | 🟡 cloisonnement fait et testé, CRUD fait, sélecteur de projet fait, instructions d'écriture par projet suivies par les agents qui écrivent ; manque le dashboard multi-projet (`v1`) |
 | 3 — Analyse & knowledge base | 🟡 analyse déclenchée à l'enregistrement, progression du crawl et pages en échec affichées, knowledge base visible et éditable ; manque le lien vers un repo (`v1`) |
 | 4 — Agent Website | ⬜ table `recommendations` pas encore créée |
-| 5 — Découverte de leads | 🟡 graphe de jobs (`discovery_tasks`) avec son écran — lancer, suivre, rejouer, arrêter ; profils cibles éditables ; sociétés scorées, filtrables, rejetables ; contacts listés avec leur verdict de vérification, recherche déclenchable par société ou en masse ; import CSV avec son rapport ligne à ligne ; profils partenaires dérivés par l'agent avec leurs deux angles ; sociétés sans site qualifiées sur la ligne d'annuaire et jointes à l'adresse qu'elle publie. Manquent la fiche contact (5.8) et le rendu JS (5.9, reporté) |
+| 5 — Découverte de leads | 🟡 graphe de jobs (`discovery_tasks`) avec son écran — lancer, suivre, rejouer, arrêter ; profils cibles éditables ; sociétés scorées, filtrables, et portant le verdict de l'utilisateur, recopié dans les deux sens entre une société et ses contacts (`client`, `won`, `lost`, `rejected`, `suppressed` sortent de l'outreach) ; contacts listés avec leur verdict de vérification et le même statut, recherche déclenchable par société ou en masse ; import CSV avec son rapport ligne à ligne ; profils partenaires dérivés par l'agent avec leurs deux angles ; sociétés sans site qualifiées sur la ligne d'annuaire et jointes à l'adresse qu'elle publie. Manquent la fiche contact (5.8) et le rendu JS (5.9, reporté) |
 | 6 — Séquences | 🟡 génération IA, personnalisation par lead avec prévisualisation, éditeur d'étapes complet ; manquent l'A/B (6.4) et les variables conditionnelles (6.5), tous deux `v1` |
 | 7 — Envoi | ⬜ |
 | 8 — Réponses & inbox | ⬜ |
@@ -1446,8 +1446,8 @@ et une section réglages où le projet se renomme et où la knowledge base se li
 section « Targets » navigue par profil : chaque profil a sa page de critères et sa page de recherches
 — liste de ses runs, page d'un run avec son plan, son budget consommé, une ligne par nœud du graphe,
 un bouton rejouer par nœud et un bouton arrêter. « Leads » porte deux onglets : les sociétés
-trouvées avec leur score, leur justification par profil, des filtres et un rejet manuel ; et les
-contacts, avec leur adresse, sa provenance et son verdict de vérification. On
+trouvées avec leur score, leur justification par profil, des filtres et un statut posé à la main ; et les
+contacts, avec leur adresse, sa provenance, son verdict de vérification et leur propre statut. On
 ouvre l'app dans un projet : le projet courant est en session, choisi dans le sélecteur en tête de
 sidebar. Horizon tourne les workers, un supervisor par queue, tableau de bord réservé au superadmin.
 Une section `/app/app-settings`, visible du seul superadmin depuis son menu, porte la clé du provider,
@@ -1558,6 +1558,17 @@ minimal, pour être opérationnel en quelques minutes.
 
 **2.4** ⬜ `v1` En tant qu'utilisateur, je veux un dashboard multi-projet.
 - Par projet : leads actifs, campagnes en cours, dernières suggestions, consommation IA
+
+**2.5** ✅ En tant qu'utilisateur, je veux dicter comment l'IA écrit pour mon produit.
+- Ton, langue, mots interdits — en une seule zone de texte, pas un formulaire de réglages
+- Suivi par tout ce qui est écrit au nom du projet, et par rien d'autre
+- **État** : `projects.prompt_instructions`, dans le même formulaire que le nom et l'adresse sous
+  `/app/settings/project` — un second formulaire sur cette route revérifierait que le site répond à
+  chaque fois qu'on corrige le ton. Ajouté en fin d'instructions par les agents qui **écrivent**
+  (`sequence-writer`, `message-personalizer`) via `EveilAgent::projectInstructions()`, et énoncé
+  comme prioritaire sur le prompt au-dessus : c'est une case que l'utilisateur a remplie lui-même.
+  Les extracteurs ne le lisent pas — leur sortie est un jeu de champs que personne ne lit comme de
+  la prose, et leur demander d'éviter les emoji est du prompt dépensé pour rien
 
 ### Epic 3 — Analyse & knowledge base `v0`
 
@@ -1725,18 +1736,42 @@ automatiquement.
   dans **une barre de filtres au-dessus** — recherche libre, une case par colonne texte (repliée,
   avec le compte des filtres actifs et un bouton pour tout effacer), et les filtres qui ne sont pas
   des colonnes. Filtres par profil et par score
-  minimum, bascule « voir les rejetées », pagination par 25. Tri et filtres sont faits par la base et
+  minimum, bascule « voir les mises de côté », pagination par 25. Tri et filtres sont faits par la base et
   jamais dans le navigateur : la liste est paginée, donc trier côté client ne trierait que les
   vingt-cinq lignes à l'écran. Les colonnes triables sont une liste blanche sur le modèle
   (`Company::SORTS`) — le nom arrive dans la query string et `orderBy` l'interpole. Le tri prend le
   **meilleur** score et jamais une moyenne — une société qui colle à un profil sur trois est une
-  bonne société. `companies.rejected_at` porte le rejet : il est sur la société et non sur
-  l'évaluation (un concurrent n'est pas à contacter sous aucun profil), et la ligne reste, sinon le
-  run suivant retrouve la société et la repropose
+  bonne société. `companies.status` porte le verdict de l'utilisateur, dans une liste déroulante en
+  deuxième colonne — juste après le nom, parce que c'est la commande qu'on clique et qu'au bord droit
+  elle tombait dans ce que le tableau rogne. Il est sur la société et non sur l'évaluation (un
+  concurrent n'est à contacter sous aucun profil), et la ligne reste quel que soit le verdict, sinon
+  le run suivant retrouve la société et la repropose. `won`, `lost`, `client`, `rejected` et
+  `suppressed` la sortent de l'outreach, `client` en premier : une société qu'on sert déjà est la
+  seule ligne qu'un mail à froid ne doit jamais atteindre, et aucun score ne peut le savoir. Une
+  seule requête porte cette règle (`Company::contactable()`) — deux façons d'exclure, c'est celle
+  qu'on oublie qui envoie le mail. Remplace `rejected_at`, qui ne disait qu'oui ou non ; la bascule
+  au-dessus de la liste s'appelle maintenant « voir les mises de côté ».
+  **Sociétés et contacts partagent un seul vocabulaire** (`App\Enums\OutreachStatus`, neuf valeurs)
+  et le statut est **recopié dans les deux sens** par `App\Actions\SetOutreachStatus` : marquer une
+  société « déjà cliente » marque toutes ses personnes, et gagner un deal avec quelqu'un le gagne
+  pour sa société. Deux enums auraient demandé une correspondance dont les trous sont justement les
+  cas intéressants — pas de `rejected` sur une personne, pas de `replied` sur une société. Deux
+  limites, portantes : un lead effacé n'est jamais réécrit, et `suppressed` ne remonte jamais — une
+  désinscription concerne une personne, pas ses collègues, qui n'ont rien demandé
 
 **5.4** ✅ En tant qu'utilisateur, je veux des contacts avec des emails utilisables.
 - **État** : onglet « Contacts » sous Leads, en tableau lui aussi : nom, rôle, adresse, verdict de
-  vérification, provenance, société, date. Tri depuis chaque en-tête ; barre de filtres au-dessus avec la
+  vérification, provenance, société, date, statut. `leads.status` s'y change à la main dans la même
+  liste déroulante que les sociétés — même enum, mêmes neuf valeurs, et le choix remonte à la
+  société (5.3) : l'outreach écrira `queued`, `contacted` et `replied` tout seul, et `won`, `lost`,
+  `client`, `rejected` et `suppressed` sont l'utilisateur qui tranche — les cinq sortent la personne
+  de l'envoi (`Lead::contactable()`, qui refuse aussi les gens d'une société mise de côté).
+  Contrairement aux sociétés, la ligne reste visible : une personne n'est pas cachée, elle est
+  marquée, et c'est l'envoi qui lit la marque. Le tableau enveloppe (`whitespace-normal`, celui de
+  Nuxt UI est `nowrap` et faisait déborder les phrases sur les colonnes voisines) ; secteur et
+  taille sont bornés à trois lignes avec la valeur complète en `title`, la justification de fit ne
+  l'est pas — c'est la première ligne du mail, une version tronquée est la seule chose de la ligne
+  qu'on ne peut pas juger. Tri depuis chaque en-tête ; barre de filtres au-dessus avec la
   recherche libre (y compris le nom de la société via la relation), les listes déroulantes verdict
   et provenance, et une case par colonne texte (nom, rôle, adresse, société). La
   recherche de contacts se déclenche depuis la liste des sociétés —

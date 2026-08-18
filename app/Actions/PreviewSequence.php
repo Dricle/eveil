@@ -72,8 +72,11 @@ class PreviewSequence
      * Real leads, never invented ones: a preview written against a made-up
      * company proves nothing about the mails that will actually go out.
      *
-     * Invalid addresses are left out because they are never sent to. A null
-     * status means imported and unverified, which is not the same as bad.
+     * `contactable()` is what keeps an existing client out of the sample — and
+     * out of the sending, since this is the query that says who a step is
+     * written for. Invalid addresses are left out because they are never sent
+     * to; a null status means imported and unverified, which is not the same
+     * as bad.
      *
      * @return Collection<int, Lead>
      */
@@ -83,7 +86,7 @@ class PreviewSequence
             ->with('company')
             ->where('project_id', $campaign->project_id)
             ->whereNotNull('email')
-            ->whereNull('erased_at')
+            ->contactable()
             ->where(fn ($query) => $query->where('email_status', '!=', EmailStatus::Invalid)->orWhereNull('email_status'))
             ->latest('id')
             ->limit(self::SAMPLE)

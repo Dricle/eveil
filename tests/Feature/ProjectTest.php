@@ -92,6 +92,35 @@ it('re-analyses only when the address changes', function () {
     Queue::assertPushed(AnalyzeProject::class);
 });
 
+it('saves the writing instructions without touching the knowledge base', function () {
+    reachable();
+
+    $user = member();
+    $project = Project::factory()->for($user->organizations()->sole())->create(['url' => 'https://acme.test/']);
+
+    $this->actingAs($user)
+        ->put(route('settings.project.update'), [
+            'name' => $project->name,
+            'url' => 'https://acme.test/',
+            'prompt_instructions' => 'Write in French. Never use emoji.',
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($project->fresh()->prompt_instructions)->toBe('Write in French. Never use emoji.');
+
+    // The address did not change, so nothing is re-read: house style says
+    // nothing new about the product.
+    Queue::assertNothingPushed();
+
+    $this->actingAs($user)
+        ->put(route('settings.project.update'), [
+            'name' => $project->name,
+            'url' => 'https://acme.test/',
+            'prompt_instructions' => str_repeat('a', 2001),
+        ])
+        ->assertSessionHasErrors('prompt_instructions');
+});
+
 it('deletes the current project and falls back to the next one', function () {
     $user = member();
     $organization = $user->organizations()->sole();

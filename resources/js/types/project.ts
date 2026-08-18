@@ -54,6 +54,7 @@ export type TargetProfile = {
 /** What the project settings screens get, on top of what the switcher needs. */
 export type ProjectDetail = Project & {
     edited_by_user: boolean
+    prompt_instructions: string | null
     knowledge_base: KnowledgeBase | null
     last_analysis: Analysis | null
 }

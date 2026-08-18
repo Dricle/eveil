@@ -1,3 +1,5 @@
+import type { OutreachStatus } from '@/lib/status'
+
 export type CompanyEvaluation = {
     profile: string | null
     fit_score: number
@@ -15,7 +17,9 @@ export type Company = {
     language: string | null
     source: string
     source_url: string | null
-    rejected: boolean
+    status: OutreachStatus
+    /** True for the five statuses that take the company out of outreach. */
+    excluded: boolean
     contacts_status: 'queued' | 'done' | 'failed' | null
     contacts_count: number
     discovered_at: string
@@ -48,7 +52,7 @@ export type Contact = {
     linkedin_url: string | null
     language: string | null
     source_url: string | null
-    status: string
+    status: OutreachStatus
     discovered_at: string
     company: { id: number, name: string, domain: string | null, location: string | null } | null
 }

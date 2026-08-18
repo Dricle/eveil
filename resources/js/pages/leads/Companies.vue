@@ -3,6 +3,8 @@ import { Head, router, usePoll } from '@inertiajs/vue3'
 import type { TableColumn } from '@nuxt/ui'
 import { computed, ref, watch } from 'vue'
 import LeadsLayout from '@/layouts/LeadsLayout.vue'
+import StatusSelect from '@/components/StatusSelect.vue'
+import { OUTREACH_STATUSES } from '@/lib/status'
 import { useTableQuery } from '@/lib/table'
 import companyRoutes from '@/routes/companies'
 import contactRoutes from '@/routes/contacts'
@@ -17,7 +19,7 @@ const props = defineProps<{
     filters: {
         profile: number | null
         min_score: number
-        rejected: boolean
+        excluded: boolean
         search: string | null
         filter: Record<string, string>
         sort: string | null
@@ -36,7 +38,7 @@ watch(searching, busy => busy ? poll.start() : poll.stop())
 
 const profile = ref(props.filters.profile ?? 0)
 const minScore = ref(props.filters.min_score ?? 0)
-const rejected = ref(props.filters.rejected)
+const excluded = ref(props.filters.excluded)
 
 const table = useTableQuery(
     companyRoutes.index.url(),
@@ -45,11 +47,11 @@ const table = useTableQuery(
     () => ({
         profile: profile.value || undefined,
         min_score: minScore.value || undefined,
-        rejected: rejected.value ? 1 : undefined
+        excluded: excluded.value ? 1 : undefined
     })
 )
 
-watch([profile, minScore, rejected], () => table.reload())
+watch([profile, minScore, excluded], () => table.reload())
 
 const PROFILE_OPTIONS = computed(() => [
     { label: 'Every profile', value: 0 },
@@ -65,22 +67,28 @@ const SCORE_OPTIONS = [
 
 // The key doubles as the sort key the server accepts and as the slot name, so
 // a column sorts, filters and renders under one name on both sides.
+// `width` is a min/max pair per column, because the qualifier writes a whole
+// sentence into fields a table would like to keep to a word — "size" comes back
+// as "commune of medium size running several municipal nurseries". Without a
+// floor those columns squeeze to one word per line; without a ceiling they take
+// the room the fit reason needs, which is the one column here worth reading.
 const COLUMNS = [
-    { key: 'name', label: 'Company', sortable: true, filterable: true },
-    { key: 'domain', label: 'Domain', sortable: true, filterable: true },
-    { key: 'industry', label: 'Industry', sortable: true, filterable: true },
-    { key: 'size', label: 'Size', sortable: true, filterable: true },
-    { key: 'location', label: 'Location', sortable: true, filterable: true },
-    { key: 'fit_score', label: 'Fit', sortable: true, filterable: false },
-    { key: 'reason', label: 'Why it fits', sortable: false, filterable: false },
-    { key: 'contacts_count', label: 'Contacts', sortable: true, filterable: false },
-    { key: 'discovered_at', label: 'Found', sortable: true, filterable: false },
-    { key: 'actions', label: '', sortable: false, filterable: false }
+    { key: 'name', label: 'Company', sortable: true, filterable: true, width: 'min-w-32 max-w-40' },
+    { key: 'status', label: 'Status', sortable: true, filterable: false, width: 'min-w-32' },
+    { key: 'domain', label: 'Domain', sortable: true, filterable: true, width: 'min-w-28 max-w-32' },
+    { key: 'industry', label: 'Industry', sortable: true, filterable: true, width: 'min-w-32 max-w-40' },
+    { key: 'size', label: 'Size', sortable: true, filterable: true, width: 'min-w-32 max-w-40' },
+    { key: 'location', label: 'Location', sortable: true, filterable: true, width: 'min-w-24 max-w-32' },
+    { key: 'fit_score', label: 'Fit', sortable: true, filterable: false, width: '' },
+    { key: 'reason', label: 'Why it fits', sortable: false, filterable: false, width: 'min-w-48' },
+    { key: 'contacts_count', label: 'Contacts', sortable: true, filterable: false, width: '' },
+    { key: 'discovered_at', label: 'Found', sortable: true, filterable: false, width: '' }
 ]
 
 const columns: TableColumn<Company>[] = COLUMNS.map(column => ({
     accessorKey: column.key,
-    header: column.label
+    header: column.label,
+    meta: { class: { td: column.width, th: column.width } }
 }))
 
 // Precomputed: a dynamic slot name may not contain quotes, so it cannot be
@@ -148,8 +156,8 @@ function searchLabel (company: Company) {
                     />
 
                     <USwitch
-                        v-model="rejected"
-                        label="Show rejected"
+                        v-model="excluded"
+                        label="Show set aside"
                     />
 
                     <UButton
@@ -206,7 +214,7 @@ function searchLabel (company: Company) {
             <UTable
                 :data="companies.data"
                 :columns="columns"
-                :ui="{ td: 'align-top', tr: 'data-[rejected=true]:opacity-60' }"
+                :ui="{ td: 'align-top whitespace-normal break-words' }"
             >
                 <!-- Headers sort and nothing else; narrowing the list happens
                      in one bar above it. -->
@@ -235,13 +243,19 @@ function searchLabel (company: Company) {
                     <p class="font-medium">
                         {{ row.original.name }}
                     </p>
-                    <UBadge
-                        v-if="row.original.rejected"
-                        color="neutral"
-                        variant="subtle"
-                        size="sm"
-                        label="Rejected"
-                    />
+                </template>
+
+                <template
+                    v-for="key in ['industry', 'size'] as const"
+                    :key="key"
+                    #[`${key}-cell`]="{ row }"
+                >
+                    <p
+                        class="line-clamp-3 text-sm"
+                        :title="row.original[key] ?? undefined"
+                    >
+                        {{ row.original[key] }}
+                    </p>
                 </template>
 
                 <template #domain-cell="{ row }">
@@ -270,14 +284,16 @@ function searchLabel (company: Company) {
 
                 <!-- The reason is not a note to ourselves: it is the line the
                      first email opens with, so it stays on the row. -->
+                <!-- The whole sentence, wrapped: it is the opening line of
+                     the email, so a clamped version is the one thing on this
+                     row nobody can judge. -->
                 <template #reason-cell="{ row }">
                     <p
                         v-if="best(row.original)"
-                        class="max-w-md text-sm text-muted"
-                        :title="best(row.original)?.fit_reason ?? undefined"
+                        class="min-w-64 text-sm text-muted"
                     >
                         <span class="text-dimmed">{{ best(row.original)?.profile ?? 'Deleted profile' }} · </span>
-                        <span class="line-clamp-2">{{ best(row.original)?.fit_reason }}</span>
+                        {{ best(row.original)?.fit_reason }}
                     </p>
                 </template>
 
@@ -288,7 +304,7 @@ function searchLabel (company: Company) {
                     >{{ row.original.contacts_count }}</ULink>
 
                     <UButton
-                        v-else-if="!row.original.rejected"
+                        v-else-if="!row.original.excluded"
                         color="neutral"
                         variant="ghost"
                         size="xs"
@@ -304,16 +320,13 @@ function searchLabel (company: Company) {
                     <span class="text-sm text-muted">{{ day(row.original.discovered_at) }}</span>
                 </template>
 
-                <template #actions-cell="{ row }">
-                    <UButton
-                        :color="row.original.rejected ? 'neutral' : 'error'"
-                        variant="ghost"
-                        size="xs"
-                        :icon="row.original.rejected ? 'i-lucide-undo-2' : 'i-lucide-x'"
-                        :aria-label="row.original.rejected ? 'Put this company back' : 'Reject this company'"
-                        @click="row.original.rejected
-                            ? router.delete(companyRoutes.restore.url(row.original.id), { preserveScroll: true })
-                            : router.post(companyRoutes.reject.url(row.original.id), {}, { preserveScroll: true })"
+                <!-- A company somebody already sells to is the one row that
+                     must never be written to, and no score can know it. -->
+                <template #status-cell="{ row }">
+                    <StatusSelect
+                        :status="row.original.status"
+                        :options="OUTREACH_STATUSES"
+                        :url="companyRoutes.status.url(row.original.id)"
                     />
                 </template>
 

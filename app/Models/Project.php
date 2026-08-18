@@ -25,11 +25,12 @@ use Illuminate\Support\Carbon;
  * @property array<string, mixed>|null $knowledge_base
  * @property bool $knowledge_base_edited_by_user
  * @property string|null $default_language
+ * @property string|null $prompt_instructions
  * @property AutonomyLevel $autonomy_level
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['organization_id', 'name', 'url', 'knowledge_base', 'knowledge_base_edited_by_user', 'default_language', 'autonomy_level'])]
+#[Fillable(['organization_id', 'name', 'url', 'knowledge_base', 'knowledge_base_edited_by_user', 'default_language', 'prompt_instructions', 'autonomy_level'])]
 class Project extends Model
 {
     /** @use HasFactory<ProjectFactory> */

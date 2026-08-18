@@ -18,7 +18,7 @@ const confirmingDelete = ref(false)
             <UCard>
                 <template #header>
                     <h2 class="font-medium">
-                        Name and website
+                        Project
                     </h2>
                     <p class="mt-1 text-sm text-muted">
                         Changing the address re-reads the site and rebuilds the
@@ -53,6 +53,24 @@ const confirmingDelete = ref(false)
                             name="url"
                             :default-value="project.url"
                             required
+                            class="w-full"
+                        />
+                    </UFormField>
+
+                    <!-- Same form as the name and the address on purpose: a
+                         second one posting to this route would re-check that the
+                         website answers every time somebody edits the tone. -->
+                    <UFormField
+                        label="How the AI writes"
+                        name="prompt_instructions"
+                        :error="errors.prompt_instructions"
+                        help="Followed by every sequence and every mail personalised from one. E.g. write in French, never use emoji, say vous rather than tu."
+                    >
+                        <UTextarea
+                            name="prompt_instructions"
+                            :default-value="project.prompt_instructions ?? ''"
+                            :rows="5"
+                            :maxlength="2000"
                             class="w-full"
                         />
                     </UFormField>

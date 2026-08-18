@@ -8,6 +8,7 @@ use App\Enums\AgentRunStatus;
 use App\Enums\CampaignStatus;
 use App\Enums\CampaignStepType;
 use App\Enums\EmailStatus;
+use App\Enums\OutreachStatus;
 use App\Enums\TargetProfileType;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Jobs\WriteCampaign;
@@ -352,4 +353,80 @@ it('sends the props the pages actually read', function () {
             ->where('campaign.name', $campaign->name)
             ->has('campaign.steps', 1)
             ->where('campaign.steps.0.subject', 'vos commandes'));
+});
+
+it('never previews a lead the user has taken out of outreach', function () {
+    [$user, $project] = sequencer();
+
+    // Already a client of this product: the one row a cold sequence must never
+    // reach, and no fit score can know it.
+    $client = Company::factory()->create([
+        'project_id' => $project->id,
+        'name' => 'Friterie du Centre',
+        'status' => OutreachStatus::Client,
+    ]);
+
+    Lead::factory()->create([
+        'project_id' => $project->id,
+        'company_id' => $client->id,
+        'email' => 'patron@client.test',
+        'email_status' => EmailStatus::Valid,
+    ]);
+
+    // Same again one person at a time: the company is still in the running.
+    $prospect = Company::factory()->create(['project_id' => $project->id, 'name' => 'Friterie Neuve']);
+
+    Lead::factory()->create([
+        'project_id' => $project->id,
+        'company_id' => $prospect->id,
+        'email' => 'parti@neuve.test',
+        'email_status' => EmailStatus::Valid,
+        'status' => OutreachStatus::Lost,
+    ]);
+
+    Lead::factory()->create([
+        'project_id' => $project->id,
+        'company_id' => $prospect->id,
+        'email' => 'marcel@neuve.test',
+        'email_status' => EmailStatus::Valid,
+    ]);
+
+    MessagePersonalizer::fake([['subject' => 'votre carte', 'body' => 'Bonjour, …']]);
+
+    $campaign = campaignFor($project);
+
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->withHeaders([
+            'X-Inertia' => 'true',
+            'X-Inertia-Version' => app(HandleInertiaRequests::class)->version(request()),
+            'X-Inertia-Partial-Data' => 'sample',
+            'X-Inertia-Partial-Component' => 'campaigns/Show',
+        ])
+        ->get(route('campaigns.show', [
+            'campaign' => $campaign->id,
+            'preview_step' => $campaign->steps->first()->id,
+        ]))
+        ->assertJsonCount(1, 'props.sample.messages')
+        ->assertJsonPath('props.sample.messages.0.lead', 'marcel@neuve.test');
+});
+
+it("appends the project's own writing instructions to the agents that write", function () {
+    [, $project] = sequencer();
+
+    expect((string) (new SequenceWriter($project))->instructions())
+        ->not->toContain('Never use emoji')
+        ->and((string) (new MessagePersonalizer($project))->instructions())
+        ->not->toContain('Never use emoji');
+
+    $project->update(['prompt_instructions' => 'Write in French. Never use emoji.']);
+
+    expect((string) (new SequenceWriter($project))->instructions())
+        ->toContain('Never use emoji')
+        ->and((string) (new MessagePersonalizer($project))->instructions())
+        ->toContain('Never use emoji')
+        // Last and stated as overriding: it is a box the user filled in
+        // themselves, and they expect it to win.
+        ->and((string) (new MessagePersonalizer($project))->instructions())
+        ->toEndWith('Never use emoji.');
 });

@@ -3,6 +3,7 @@
 use App\Enums\ContactSearchStatus;
 use App\Enums\EmailSource;
 use App\Enums\EmailStatus;
+use App\Enums\OutreachStatus;
 use App\Jobs\FindCompanyContacts;
 use App\Models\Company;
 use App\Models\Lead;
@@ -114,12 +115,12 @@ it('searches every kept company nobody has looked at yet', function () {
     [$user, $project] = contacter();
 
     Company::factory()->create(['project_id' => $project->id]);
-    Company::factory()->create(['project_id' => $project->id, 'rejected_at' => now()]);
+    Company::factory()->create(['project_id' => $project->id, 'status' => OutreachStatus::Client]);
     Company::factory()->create(['project_id' => $project->id, 'contacts_status' => ContactSearchStatus::Done]);
 
     $this->actingAs($user)->post(route('contacts.search'))->assertRedirect();
 
-    // Not the rejected one, and not one already looked at: asking again is a
+    // Not the one set aside, and not one already looked at: asking again is a
     // deliberate click on that row.
     Queue::assertPushed(FindCompanyContacts::class, 1);
 });
@@ -195,4 +196,57 @@ it('sorts people by name across the two columns it lives in', function () {
 
     $this->actingAs($user)->get(route('contacts.index', ['sort' => 'name', 'direction' => 'asc']))
         ->assertInertia(fn ($page) => $page->where('contacts.data.0.name', 'Tom Aerts'));
+});
+
+it('records where one person stands, and only inside the project', function () {
+    [$user, $project] = contacter();
+
+    $lead = Lead::factory()->create(['project_id' => $project->id, 'first_name' => 'Sofia']);
+    $other = Lead::factory()->create();
+
+    $this->actingAs($user)
+        ->put(route('contacts.status', $lead), ['status' => 'client'])
+        ->assertRedirect();
+
+    expect($lead->refresh()->status)->toBe(OutreachStatus::Client);
+
+    // The list still shows them: a person who is already a client is not
+    // hidden, they are marked, and the sending is what reads the mark.
+    $this->actingAs($user)->get(route('contacts.index'))
+        ->assertInertia(fn ($page) => $page
+            ->has('contacts.data', 1)
+            ->where('contacts.data.0.status', 'client'));
+
+    $this->actingAs($user)
+        ->put(route('contacts.status', $other), ['status' => 'client'])
+        ->assertNotFound();
+
+    $this->actingAs($user)
+        ->put(route('contacts.status', $lead), ['status' => 'perhaps'])
+        ->assertSessionHasErrors('status');
+});
+
+it('carries a person\'s verdict up to their company, except an unsubscribe', function () {
+    [$user, $project] = contacter();
+
+    $company = Company::factory()->create(['project_id' => $project->id]);
+    $lead = Lead::factory()->create(['project_id' => $project->id, 'company_id' => $company->id]);
+    $colleague = Lead::factory()->create(['project_id' => $project->id, 'company_id' => $company->id]);
+
+    $this->actingAs($user)
+        ->put(route('contacts.status', $lead), ['status' => 'won'])
+        ->assertRedirect();
+
+    // Winning a deal with somebody wins it with the business they work for.
+    expect($company->refresh()->status)->toBe(OutreachStatus::Won);
+
+    $this->actingAs($user)
+        ->put(route('contacts.status', $lead), ['status' => 'suppressed'])
+        ->assertRedirect();
+
+    // One person asking to be left alone must not silence their colleagues,
+    // who never asked for anything.
+    expect($lead->refresh()->status)->toBe(OutreachStatus::Suppressed)
+        ->and($company->refresh()->status)->toBe(OutreachStatus::Won)
+        ->and($colleague->refresh()->status)->toBe(OutreachStatus::New);
 });

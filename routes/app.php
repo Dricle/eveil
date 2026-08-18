@@ -13,9 +13,10 @@ use App\Http\Controllers\CampaignGenerationController;
 use App\Http\Controllers\CampaignStepController;
 use App\Http\Controllers\CampaignStepOrderController;
 use App\Http\Controllers\CompanyController;
-use App\Http\Controllers\CompanyRejectionController;
+use App\Http\Controllers\CompanyStatusController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ContactSearchController;
+use App\Http\Controllers\ContactStatusController;
 use App\Http\Controllers\CurrentProjectController;
 use App\Http\Controllers\DiscoveryRunCancellationController;
 use App\Http\Controllers\DiscoveryRunController;
@@ -101,14 +102,14 @@ Route::middleware(['auth', 'project.set'])->group(function (): void {
         });
 
         /*
-         * What those searches came back with. Rejecting keeps the row: deleting
-         * it would only mean the next run finds the company again.
+         * What those searches came back with. Saying where a company stands
+         * keeps the row: deleting it would only mean the next run finds the
+         * company again, and four of the statuses exist precisely so it is
+         * never written to.
          */
         Route::get('companies', [CompanyController::class, 'index'])->name('companies.index');
-        Route::post('companies/{company}/reject', [CompanyRejectionController::class, 'store'])
-            ->name('companies.reject');
-        Route::delete('companies/{company}/reject', [CompanyRejectionController::class, 'destroy'])
-            ->name('companies.restore');
+        Route::put('companies/{company}/status', [CompanyStatusController::class, 'update'])
+            ->name('companies.status');
 
         /*
          * And the people at them. One search covers one company, or every kept
@@ -117,6 +118,8 @@ Route::middleware(['auth', 'project.set'])->group(function (): void {
          */
         Route::get('contacts', [ContactController::class, 'index'])->name('contacts.index');
         Route::post('contacts/search', [ContactSearchController::class, 'store'])->name('contacts.search');
+        Route::put('contacts/{contact}/status', [ContactStatusController::class, 'update'])
+            ->name('contacts.status');
 
         /*
          * What gets written to them. The agent writes the sequence from the

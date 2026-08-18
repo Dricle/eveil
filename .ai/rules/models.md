@@ -84,3 +84,13 @@ Two naming decisions worth keeping:
 
 `project_analyses` carries `code_repository_id`, nullable, null for a website analysis. That link is the real reason this is a table rather than a JSON array: with several repositories per project, `type = repo` no longer says WHICH one a run read, so the analysis history would be unreadable.
 
+## One status vocabulary, one exclusion path
+`companies.status` and `leads.status` are both cast to the SAME enum, `App\Enums\OutreachStatus` (new, queued, contacted, replied, won, lost, client, rejected, suppressed). Do not split it back into per-model enums: a company and the people at it are one relationship seen from two ends, and two vocabularies need a mapping whose holes are exactly the interesting cases (no `rejected` on a person, no `replied` on a company).
+
+`App\Actions\SetOutreachStatus` is the only writer of a user-set status, and it copies the value across the relationship — `forCompany()` down to every non-erased lead, `forLead()` up to the company. Two limits it enforces, both load-bearing: an erased lead is never written to, and `Suppressed` never propagates up (one person's unsubscribe must not silence colleagues who never asked for anything). `Lead::erase()` writes `Suppressed` directly, bypassing this, which is why the bypass is safe.
+
+Whether outreach may go to a company or a person is answered by ONE scope each — `Company::contactable()` (status not in `OutreachStatus::excluded()`) and `Lead::contactable()` (not erased, status not excluded, and its company still contactable). Every query that ends in a mail being written goes through them; `PreviewSequence` and `ContactSearchController` are the current callers.
+
+`companies.rejected_at` is gone — it said only yes or no, and a company somebody already sells to is a different fact from one they threw out. Do not add a second way to exclude: two mechanisms means the one somebody forgets is the one that cold-mails an existing client.
+
+`Lead::contactable()` uses `orWhereIn('company_id', Company::query()->contactable()->select('id'))` rather than `orWhereHas`, so the company rule is not spelled out twice (and Larastan cannot type the `whereHas` closure's builder).

@@ -56,7 +56,7 @@ class MessagePersonalizer extends EveilAgent implements HasStructuredOutput
 
         Address a named person by their first name when you are given one, and open on
         the company itself when you are not. Never guess a name.
-        PROMPT;
+        PROMPT.$this->projectInstructions();
     }
 
     /**

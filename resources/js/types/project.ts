@@ -44,6 +44,8 @@ export type TargetProfile = {
         sectors?: string[]
         geography?: string[]
         job_titles?: string[]
+        access_angle?: string
+        partnership_angle?: string
         technologies?: string[]
         trigger_signals?: string[]
         search_queries?: string[]

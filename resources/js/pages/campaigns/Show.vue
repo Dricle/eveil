@@ -189,17 +189,19 @@ function preview (step: Step) {
 
                         <template v-else>
                             <UInput
-                                v-model="step.subject"
+                                :model-value="step.subject ?? ''"
                                 placeholder="Subject"
                                 class="w-full"
+                                @update:model-value="value => step.subject = String(value)"
                                 @blur="save(step)"
                             />
 
                             <UTextarea
-                                v-model="step.body"
+                                :model-value="step.body ?? ''"
                                 :rows="8"
                                 autoresize
                                 class="w-full"
+                                @update:model-value="value => step.body = String(value)"
                                 @blur="save(step)"
                             />
 

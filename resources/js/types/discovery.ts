@@ -18,6 +18,7 @@ export type DiscoveryRun = {
     diagnosis: 'too_narrow' | 'wrong_source' | 'bad_target_profile' | 'no_contacts' | null
     error: string | null
     profile: string | null
+    profile_id: number | null
     plan: string | null
     budget: Record<string, number>
     spent: {

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3'
-import type { StatusOption } from '@/lib/status'
+import type { OutreachStatus, StatusOption } from '@/lib/status'
 
 const props = defineProps<{
-    status: string
+    status: OutreachStatus
     options: StatusOption[]
     url: string
 }>()
@@ -11,8 +11,8 @@ const props = defineProps<{
 // The row is the form: saying where somebody stands is a click in the list, not
 // a screen of its own. Nothing is sent when the value did not change — a select
 // emits on open-and-pick-the-same-thing too.
-function save (status: string) {
-    if (status !== props.status) {
+function save (status?: OutreachStatus) {
+    if (status !== undefined && status !== props.status) {
         router.put(props.url, { status }, { preserveScroll: true })
     }
 }

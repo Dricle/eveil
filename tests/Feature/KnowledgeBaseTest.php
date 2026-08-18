@@ -66,6 +66,46 @@ it('renders a project whose analysis has not landed yet', function () {
             ->where('project.last_analysis', null));
 });
 
+it('shows how far a running crawl has got', function () {
+    $user = owner();
+    $project = Project::factory()->for($user->organizations()->sole())->create(['knowledge_base' => null]);
+
+    ProjectAnalysis::factory()->create([
+        'project_id' => $project->id,
+        'type' => AnalysisType::Website,
+        'status' => AnalysisStatus::Running,
+        'raw' => ['max_pages' => 15, 'pages' => [['url' => 'https://acme.test/', 'title' => 'Acme', 'chars' => 800]]],
+    ]);
+
+    // Minutes with nothing on screen reads as broken rather than busy, so the
+    // page polls while `running` and counts what has been read.
+    $this->actingAs($user)->get(route('settings.knowledge-base.edit'))
+        ->assertInertia(fn ($page) => $page
+            ->where('project.last_analysis.running', true)
+            ->where('project.last_analysis.pages_read', 1)
+            ->where('project.last_analysis.pages_planned', 15));
+});
+
+it('names the pages a partial crawl could not read', function () {
+    $user = owner();
+    $project = Project::factory()->for($user->organizations()->sole())->create(['knowledge_base' => portrait()]);
+
+    ProjectAnalysis::factory()->create([
+        'project_id' => $project->id,
+        'type' => AnalysisType::Website,
+        'status' => AnalysisStatus::Partial,
+        'failures' => [['url' => 'https://acme.test/pricing', 'reason' => 'The server answered 404.']],
+    ]);
+
+    // A thin portrait with a list of what is missing is honest; a thin portrait
+    // with no explanation looks like a bad model.
+    $this->actingAs($user)->get(route('settings.knowledge-base.edit'))
+        ->assertInertia(fn ($page) => $page
+            ->where('project.last_analysis.status', 'partial')
+            ->where('project.last_analysis.failures.0.url', 'https://acme.test/pricing')
+            ->where('project.last_analysis.failures.0.reason', 'The server answered 404.'));
+});
+
 it('saves a correction and splits the list fields on newlines', function () {
     $user = owner();
     $project = Project::factory()->for($user->organizations()->sole())->create(['knowledge_base' => portrait()]);

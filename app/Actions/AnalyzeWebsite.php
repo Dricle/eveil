@@ -36,12 +36,28 @@ class AnalyzeWebsite
             'status' => AnalysisStatus::Running,
         ]);
 
-        $pages = $this->crawler->crawl($project->url, $maxPages);
+        $failures = [];
+
+        // Written after every page, not at the end: a crawl runs for minutes,
+        // and a screen with nothing on it cannot be told from a broken one.
+        $pages = $this->crawler->crawl(
+            $project->url,
+            $maxPages,
+            function (Collection $pages, array $crawlFailures, int $planned) use ($analysis, &$failures): void {
+                $failures = $crawlFailures;
+
+                $analysis->update([
+                    'raw' => $this->pagesRead($pages, $planned),
+                    'failures' => $crawlFailures,
+                ]);
+            },
+        );
 
         if ($pages->isEmpty()) {
             $analysis->update([
                 'status' => AnalysisStatus::Failed,
-                'error' => "Nothing could be read at {$project->url}: the site is unreachable, "
+                'error' => $failures[0]['reason']
+                    ?? "Nothing could be read at {$project->url}: the site is unreachable, "
                     .'blocked by robots.txt, or renders entirely in JavaScript.',
             ]);
 
@@ -58,18 +74,36 @@ class AnalyzeWebsite
         }
 
         $analysis->update([
-            'status' => AnalysisStatus::Succeeded,
+            // A crawl that lost pages still produces a knowledge base — the
+            // status says the portrait was built from part of the site, and
+            // `failures` says which part is missing.
+            'status' => $failures === [] ? AnalysisStatus::Succeeded : AnalysisStatus::Partial,
             'summary' => $response->structured,
-            'raw' => ['pages' => $pages->map(fn (ParsedPage $page): array => [
-                'url' => $page->url,
-                'title' => $page->title,
-                'chars' => $page->length(),
-            ])->all()],
+            'failures' => $failures,
         ]);
 
         $this->applyToProject($project, $response->structured, $pages);
 
         return $analysis->refresh();
+    }
+
+    /**
+     * What the crawl has read so far, and how far it may go — the two numbers a
+     * progress line is made of.
+     *
+     * @param  Collection<int, ParsedPage>  $pages
+     * @return array{max_pages: int, pages: array<int, array{url: string, title: string, chars: int}>}
+     */
+    private function pagesRead(Collection $pages, int $planned): array
+    {
+        return [
+            'max_pages' => $planned,
+            'pages' => $pages->map(fn (ParsedPage $page): array => [
+                'url' => $page->url,
+                'title' => $page->title,
+                'chars' => $page->length(),
+            ])->all(),
+        ];
     }
 
     /**

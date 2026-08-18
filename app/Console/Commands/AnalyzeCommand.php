@@ -59,10 +59,17 @@ class AnalyzeCommand extends Command
             fn () => $analyze->handle($project, $this->option('pages') ? (int) $this->option('pages') : null),
         );
 
-        if ($analysis->status !== AnalysisStatus::Succeeded) {
+        if ($analysis->status === AnalysisStatus::Failed) {
             $this->components->error($analysis->error ?? 'The analysis failed.');
 
             return self::FAILURE;
+        }
+
+        // A crawl that lost pages still produced a portrait. Say which pages
+        // are missing and carry on — the run is not a failure, it is a partial
+        // read, and the difference matters to whoever reads the summary.
+        foreach ($analysis->failures ?? [] as $failure) {
+            $this->components->warn("{$failure['url']} — {$failure['reason']}");
         }
 
         $this->render($analysis->summary ?? [], $analysis->raw['pages'] ?? []);

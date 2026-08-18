@@ -23,11 +23,20 @@ class PageFetcher
 
     public function __construct(private RobotsPolicy $robots, private Settings $settings) {}
 
-    public function fetch(string $url): ?CrawledPage
+    /**
+     * @param  string|null  $reason  why nothing came back, in words a user can
+     *                               act on. Only written when the fetch fails —
+     *                               every caller that does not care simply
+     *                               omits it.
+     */
+    public function fetch(string $url, ?string &$reason = null): ?CrawledPage
     {
+        $reason = null;
         $url = Url::normalize($url);
 
         if ($url === null) {
+            $reason = 'Not a usable address.';
+
             return null;
         }
 
@@ -38,6 +47,8 @@ class PageFetcher
         }
 
         if (! $this->robots->allows($url)) {
+            $reason = 'Disallowed by robots.txt.';
+
             return null;
         }
 
@@ -48,19 +59,31 @@ class PageFetcher
                 ->timeout((int) config('eveil.crawl.timeout'))
                 ->withOptions(['allow_redirects' => ['max' => 3]])
                 ->get($url);
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            $reason = 'Unreachable: '.$e->getMessage();
+
             return null;
         }
 
         $contentType = $response->header('Content-Type');
 
-        if (! $response->successful() || ! $this->isHtml($contentType)) {
+        if (! $response->successful()) {
+            $reason = 'The server answered '.$response->status().'.';
+
+            return null;
+        }
+
+        if (! $this->isHtml($contentType)) {
+            $reason = 'Not a web page ('.($contentType === '' ? 'no content type' : $contentType).').';
+
             return null;
         }
 
         $body = $response->body();
 
         if (mb_strlen($body, '8bit') > (int) config('eveil.crawl.max_bytes')) {
+            $reason = 'Too big to read safely.';
+
             return null;
         }
 

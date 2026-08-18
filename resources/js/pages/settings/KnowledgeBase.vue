@@ -1,10 +1,18 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3'
+import { Form, Head, usePoll } from '@inertiajs/vue3'
+import { computed, watch } from 'vue'
 import SettingsLayout from '@/layouts/SettingsLayout.vue'
 import knowledgeBase from '@/routes/settings/knowledge-base'
 import type { ProjectDetail } from '@/types'
 
 const props = defineProps<{ project: ProjectDetail }>()
+
+const analysing = computed(() => props.project.last_analysis?.running === true)
+
+// Only while a crawl is out. Nothing else on this page changes on its own.
+const poll = usePoll(3000, { only: ['project'] }, { autoStart: analysing.value })
+
+watch(analysing, busy => busy ? poll.start() : poll.stop())
 
 const TEXTS = [
     { name: 'what_it_does', label: 'What it does', help: 'What the product is, and the problem it removes.' },
@@ -42,6 +50,16 @@ function lines (field: typeof LISTS[number]['name']): string {
             />
 
             <UAlert
+                v-else-if="analysing"
+                color="neutral"
+                variant="subtle"
+                icon="i-lucide-loader"
+                :ui="{ icon: 'animate-spin' }"
+                title="Reading the site"
+                :description="`${project.last_analysis?.pages_read ?? 0} of up to ${project.last_analysis?.pages_planned ?? 0} pages read. The portrait appears here once the model has seen them.`"
+            />
+
+            <UAlert
                 v-else-if="!project.analyzed"
                 color="neutral"
                 variant="subtle"
@@ -49,6 +67,29 @@ function lines (field: typeof LISTS[number]['name']): string {
                 title="Reading the site"
                 description="The portrait appears here once the analysis finishes."
             />
+
+            <!-- A crawl that lost pages still produces a portrait. Saying which
+                 pages are missing is what separates a thin summary from a
+                 wrong one. -->
+            <UAlert
+                v-if="project.last_analysis?.failures.length"
+                color="warning"
+                variant="subtle"
+                icon="i-lucide-file-warning"
+                :title="`${project.last_analysis.failures.length} page(s) could not be read`"
+            >
+                <template #description>
+                    <ul class="mt-1 space-y-1">
+                        <li
+                            v-for="failure in project.last_analysis.failures"
+                            :key="failure.url"
+                            class="truncate"
+                        >
+                            <span class="text-dimmed">{{ failure.url }}</span> — {{ failure.reason }}
+                        </li>
+                    </ul>
+                </template>
+            </UAlert>
 
             <template v-if="project.knowledge_base">
                 <div class="flex flex-wrap items-center gap-2 text-sm text-muted">

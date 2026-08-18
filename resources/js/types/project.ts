@@ -25,6 +25,8 @@ export type Analysis = {
     error: string | null
     failures: { url: string, reason: string }[]
     pages_read: number
+    pages_planned: number
+    running: boolean
     finished_at: string | null
 }
 

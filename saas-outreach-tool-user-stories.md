@@ -1367,7 +1367,7 @@ est une story pas faite.
 |---|---|
 | 1 — Setup & configuration | 🟡 auth complète (Fortify : login, reset, 2FA), écran de setup, et section « App settings » réservée au superadmin — clé provider, mapping par agent, limites, registre d'hôtes. Manque le compose de déploiement et le `.env.example` (1.1) |
 | 2 — Projets | 🟡 cloisonnement fait et testé, CRUD fait, sélecteur de projet fait ; manque le dashboard multi-projet (`v1`) |
-| 3 — Analyse & knowledge base | 🟡 analyse déclenchée à l'enregistrement, knowledge base visible et éditable ; manquent la progression du crawl et le lien vers un repo (`v1`) |
+| 3 — Analyse & knowledge base | 🟡 analyse déclenchée à l'enregistrement, progression du crawl et pages en échec affichées, knowledge base visible et éditable ; manque le lien vers un repo (`v1`) |
 | 4 — Agent Website | ⬜ table `recommendations` pas encore créée |
 | 5 — Découverte de leads | 🟡 graphe de jobs (`discovery_tasks`) avec son écran — lancer, suivre, rejouer, arrêter ; profils cibles éditables ; sociétés scorées, filtrables, rejetables ; contacts listés avec leur verdict de vérification, recherche déclenchable par société ou en masse. Manquent la fiche contact (5.8), l'import CSV, le rendu JS (5.9, reporté) |
 | 6 — Séquences | ⬜ |
@@ -1501,15 +1501,21 @@ minimal, pour être opérationnel en quelques minutes.
 
 ### Epic 3 — Analyse & knowledge base `v0`
 
-**3.1** 🟡 En tant qu'utilisateur, quand j'enregistre un projet, je veux que le site soit analysé
+**3.1** ✅ En tant qu'utilisateur, quand j'enregistre un projet, je veux que le site soit analysé
 automatiquement.
 - Crawl plafonné (nb de pages, profondeur, timeout) et affiché en cours de route
 - robots.txt respecté
 - Un échec partiel produit quand même une knowledge base, avec la liste de ce qui a échoué
-- **État** : le déclenchement est fait (`App\Jobs\AnalyzeProject`, queue `ai`) et la page projet
-  montre l'échec du dernier run quand le site n'a pas pu être lu. Manquent la progression du crawl
-  en cours de route et la liste page par page de ce qui a échoué (`project_analyses.failures` n'est
-  encore écrit par personne)
+- **État** : `App\Jobs\AnalyzeProject` (queue `ai`) part à la création et à chaque changement d'URL.
+  Le crawler écrit la ligne d'analyse **après chaque page** — `raw.pages` et `raw.max_pages` — et la
+  page « Project knowledge » se rafraîchit toute seule tant que le run tourne (`usePoll`, 3 s) en
+  affichant « X sur Y pages lues » : un crawl dure des minutes, et un écran vide ne se distingue pas
+  d'un écran cassé. `PageFetcher::fetch()` rend maintenant la RAISON de l'échec (robots.txt, code
+  HTTP, timeout, pas une page web, trop gros) par référence, et `project_analyses.failures` la garde
+  une ligne par URL. Une page perdue coûte une tranche du site et non le run : le portrait est quand
+  même écrit et le statut passe à `partial`, avec la liste de ce qui manque sous le portrait. Seul un
+  site dont on ne lit RIEN reste `failed`, et l'erreur cite la cause exacte au lieu d'énumérer les
+  causes possibles
 
 **3.2** ✅ En tant qu'utilisateur, je veux voir un résumé du produit que je peux corriger.
 - Champs : ce que fait le produit, pour qui, positionnement, proposition de valeur, concurrents

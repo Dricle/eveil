@@ -6,6 +6,7 @@ use App\Support\HtmlText;
 use App\Support\ParsedPage;
 use App\Support\Settings;
 use App\Support\Url;
+use Closure;
 use Illuminate\Support\Collection;
 
 /**
@@ -32,36 +33,66 @@ class SiteCrawler
     public function __construct(private PageFetcher $fetcher, private HtmlText $html, private Settings $settings) {}
 
     /**
+     * @param  Closure|null  $onProgress  called after every page attempt with
+     *                                    the pages read so far, what failed and
+     *                                    the ceiling — a crawl takes minutes,
+     *                                    and a screen showing nothing until it
+     *                                    ends looks broken rather than busy.
+     *
+     * Signature: `fn (Collection<int, ParsedPage> $pages, array<int, array{url: string, reason: string}> $failures, int $maxPages)`
      * @return Collection<int, ParsedPage>
      */
-    public function crawl(string $seedUrl, ?int $maxPages = null): Collection
+    public function crawl(string $seedUrl, ?int $maxPages = null, ?Closure $onProgress = null): Collection
     {
         $maxPages = $maxPages ?? $this->settings->int('crawl.max_pages');
         $seed = Url::normalize($seedUrl);
 
+        /** @var Collection<int, ParsedPage> $pages */
+        $pages = new Collection;
+
+        /** @var array<int, array{url: string, reason: string}> $failures */
+        $failures = [];
+
+        $report = function () use (&$pages, &$failures, $maxPages, $onProgress): void {
+            if ($onProgress !== null) {
+                $onProgress($pages, $failures, $maxPages);
+            }
+        };
+
         if ($seed === null) {
-            return new Collection;
+            $failures[] = ['url' => $seedUrl, 'reason' => 'Not a usable address.'];
+            $report();
+
+            return $pages;
         }
 
-        $home = $this->fetcher->fetch($seed);
+        $home = $this->fetcher->fetch($seed, $reason);
 
         if ($home === null) {
-            return new Collection;
+            $failures[] = ['url' => $seed, 'reason' => $reason ?? 'Nothing came back.'];
+            $report();
+
+            return $pages;
         }
 
         $parsed = $this->html->parse((string) $home->content, $seed);
 
-        /** @var Collection<int, ParsedPage> $pages */
-        $pages = new Collection([$parsed]);
+        $pages->push($parsed);
+        $report();
 
         foreach ($this->pick($parsed->links, $seed, $maxPages - 1) as $url) {
-            $page = $this->fetcher->fetch($url);
+            $page = $this->fetcher->fetch($url, $reason);
 
+            // A page that will not open costs the analysis a slice of the site
+            // rather than the whole run, so the crawl keeps going and says so
+            // at the end.
             if ($page === null) {
-                continue;
+                $failures[] = ['url' => $url, 'reason' => $reason ?? 'Nothing came back.'];
+            } else {
+                $pages->push($this->html->parse((string) $page->content, $url));
             }
 
-            $pages->push($this->html->parse((string) $page->content, $url));
+            $report();
         }
 
         return $pages;

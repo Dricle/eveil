@@ -110,14 +110,75 @@ it('never overwrites a knowledge base the user edited', function () {
         ->and(ProjectAnalysis::count())->toBe(2);
 });
 
+it('still builds a portrait when part of the site will not open', function () {
+    app(Settings::class)->set('crawl.delay_ms', 0);
+
+    Http::fake([
+        '*/robots.txt' => Http::response('', 404),
+        'https://acme.test/' => Http::response(
+            '<!doctype html><html lang="fr"><head><title>Acme</title></head>'
+            .'<body><p>Acme vend des widgets.</p><a href="/about">A propos</a></body></html>'
+        ),
+        'https://acme.test/about' => Http::response('', 404),
+    ]);
+
+    WebsiteAnalyst::fake([knowledgeBase()]);
+
+    $this->artisan('eveil:analyze', ['url' => 'https://acme.test'])->assertSuccessful();
+
+    // A lost page costs a slice of the site, never the run — and the status
+    // says the portrait was written from part of it.
+    expect(Project::sole()->knowledge_base['what_it_does'])->toBe('Sells widgets to small factories.')
+        ->and(ProjectAnalysis::sole()->status)->toBe(AnalysisStatus::Partial)
+        ->and(ProjectAnalysis::sole()->failures)->toBe([
+            ['url' => 'https://acme.test/about', 'reason' => 'The server answered 404.'],
+        ]);
+});
+
+it('writes what it has read before the crawl is over', function () {
+    app(Settings::class)->set('crawl.delay_ms', 0);
+
+    Http::fake(function ($request) {
+        if (str_ends_with($request->url(), '/robots.txt')) {
+            return Http::response('', 404);
+        }
+
+        if (str_ends_with($request->url(), '/about')) {
+            // The homepage is already recorded by the time the second page is
+            // fetched: a crawl runs for minutes, and a screen with nothing on
+            // it cannot be told from a broken one.
+            expect(ProjectAnalysis::sole()->raw['pages'])->toHaveCount(1)
+                ->and(ProjectAnalysis::sole()->raw['max_pages'])->toBe(15);
+
+            return Http::response('<html><head><title>A propos</title></head><body>Namur.</body></html>');
+        }
+
+        return Http::response(
+            '<!doctype html><html lang="fr"><head><title>Acme</title></head>'
+            .'<body><p>Acme vend des widgets.</p><a href="/about">A propos</a></body></html>'
+        );
+    });
+
+    WebsiteAnalyst::fake([knowledgeBase()]);
+
+    $this->artisan('eveil:analyze', ['url' => 'https://acme.test'])->assertSuccessful();
+
+    expect(ProjectAnalysis::sole()->raw['pages'])->toHaveCount(2);
+});
+
 it('fails cleanly when nothing can be read', function () {
     app(Settings::class)->set('crawl.delay_ms', 0);
     Http::fake(['*' => Http::response('', 500)]);
 
     $this->artisan('eveil:analyze', ['url' => 'https://acme.test'])->assertFailed();
 
+    // The exact cause, not a list of things it might have been: "the server
+    // answered 500" is something the person who owns that site can act on.
     expect(ProjectAnalysis::sole()->status)->toBe(AnalysisStatus::Failed)
-        ->and(ProjectAnalysis::sole()->error)->toContain('unreachable');
+        ->and(ProjectAnalysis::sole()->error)->toContain('500')
+        ->and(ProjectAnalysis::sole()->failures)->toBe([
+            ['url' => 'https://acme.test/', 'reason' => 'The server answered 500.'],
+        ]);
 });
 
 it('rejects something that is not a url', function () {

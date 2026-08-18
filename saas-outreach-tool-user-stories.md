@@ -1429,7 +1429,7 @@ est une story pas faite.
 | 3 — Analyse & knowledge base | 🟡 analyse déclenchée à l'enregistrement, progression du crawl et pages en échec affichées, knowledge base visible et éditable ; manque le lien vers un repo (`v1`) |
 | 4 — Agent Website | ⬜ table `recommendations` pas encore créée |
 | 5 — Découverte de leads | 🟡 graphe de jobs (`discovery_tasks`) avec son écran — lancer, suivre, rejouer, arrêter ; profils cibles éditables ; sociétés scorées, filtrables, rejetables ; contacts listés avec leur verdict de vérification, recherche déclenchable par société ou en masse ; import CSV avec son rapport ligne à ligne ; profils partenaires dérivés par l'agent avec leurs deux angles ; sociétés sans site qualifiées sur la ligne d'annuaire et jointes à l'adresse qu'elle publie. Manquent la fiche contact (5.8) et le rendu JS (5.9, reporté) |
-| 6 — Séquences | ⬜ |
+| 6 — Séquences | 🟡 génération IA, personnalisation par lead avec prévisualisation, éditeur d'étapes complet ; manquent l'A/B (6.4) et les variables conditionnelles (6.5), tous deux `v1` |
 | 7 — Envoi | ⬜ |
 | 8 — Réponses & inbox | ⬜ |
 | 9 — Organizations & permissions | ⬜ tables faites, rien au-dessus |
@@ -1647,14 +1647,14 @@ automatiquement.
   jamais utilisé — c'est exactement le trou que la file possède. Le détail étape par étape arrive
   avec l'écran de run (5.2 ter)
 
-**5.1 bis** 🟡 En tant qu'utilisateur, je veux aussi des profils de **partenaires**, pas seulement de clients (ADR-031).
+**5.1 bis** ✅ En tant qu'utilisateur, je veux aussi des profils de **partenaires**, pas seulement de clients (ADR-031).
 - `target_profiles.type` : `customer` ou `partner` — colonne créée, choisie à l'écran, et par défaut
   `customer`. L'agent en dérive de lui-même : le prompt lui fait chercher qui est **légalement
   imposé** au client d'abord, puis qui le facture chaque mois, puis qui lui rend visite, et n'en
   propose un que si le partenaire est plus joignable que le client ou s'il en porte beaucoup.
   `access_angle` et `partnership_angle` sont produits par l'agent et éditables sur la fiche profil,
-  où ils n'apparaissent que pour un profil partenaire. **Reste** : la séquence d'envoi ne les
-  distingue pas encore — elle arrive avec l'Epic 6, qui n'existe pas
+  où ils n'apparaissent que pour un profil partenaire. La séquence écrite pour un profil partenaire
+  les lit et ouvre dessus (6.1) : ce n'est plus le même mail que pour un client
 - Un profil partenaire répond à : qui visite mon client, qui le facture chaque mois, qui lui est
   **légalement imposé** — ce dernier signal en premier, sa clientèle est captive
 - Il porte `access_angle` (par quoi il touche le client) et `partnership_angle` (pourquoi c'est
@@ -1813,18 +1813,34 @@ automatiquement.
 
 ### Epic 6 — Séquences & personnalisation `v0`
 
-**6.1** ⬜ En tant qu'utilisateur, je veux que l'IA génère une séquence complète à partir du contexte projet.
+**6.1** ✅ En tant qu'utilisateur, je veux que l'IA génère une séquence complète à partir du contexte projet.
 - Séquence par défaut : email → attente → relance
 - Générée en moins de 5 minutes, entièrement éditable avant activation
+- **État** : agent `sequence-writer` (Opus, 300 s), écrit depuis la knowledge base **et le profil
+  cible** — un profil `partner` produit une autre séquence, ancrée sur `access_angle` et
+  `partnership_angle` : c'est ce qui manquait à 5.1 bis. Le prompt interdit ce qu'ADR-029 interdit
+  (liens, footer, désinscription, HTML, signature, merge tags) et impose la phrase « STOP » dans le
+  premier mail. Écriture en queue avec sa ligne `agent_runs` ouverte au clic ; la campagne arrive en
+  `draft`, rien ne part
 
-**6.2** ⬜ En tant qu'utilisateur, je veux une accroche personnalisée par lead.
+**6.2** ✅ En tant qu'utilisateur, je veux une accroche personnalisée par lead.
 - Construite à partir de la knowledge base + de la justification de fit de la société
 - Aucune recherche manuelle par contact
 - Prévisualisation sur un échantillon avant lancement
+- **État** : agent `message-personalizer` (Haiku — un appel par lead, c'est l'étape de volume) qui
+  réécrit une étape pour une société, dans **sa** langue, en ouvrant sur le `fit_reason` écrit à la
+  qualification. Prévisualisation sur trois vrais leads, jamais inventés, en prop Inertia
+  `optional` : elle ne coûte un appel que quand le bouton le demande, jamais à l'affichage ni au
+  rafraîchissement. Rien n'est stocké — tant que l'envoi n'existe pas, un mail mis en cache est un
+  mail qui ne correspond plus à ce que l'utilisateur a édité depuis
 
-**6.3** ⬜ En tant qu'utilisateur, je veux composer les étapes moi-même.
+**6.3** ✅ En tant qu'utilisateur, je veux composer les étapes moi-même.
 - Types en v0 : email, attente. LinkedIn plus tard, même structure
 - Réordonnancement, délais configurables
+- **État** : éditeur sous `/app/campaigns/{id}` — ajout, édition, suppression, montée/descente. La
+  liste entière des ids voyage à chaque réordonnancement : `(campaign_id, position)` est unique, donc
+  renuméroter ligne à ligne entre en collision avec l'index à mi-chemin. Une campagne vide se crée
+  aussi à la main : l'éditeur n'est jamais inaccessible sans modèle
 
 **6.4** ⬜ `v1` En tant qu'utilisateur, je veux plusieurs variantes par étape en A/B automatique.
 - Répartition par poids, résultats par variante

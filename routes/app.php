@@ -8,6 +8,10 @@ use App\Http\Controllers\AppSettings\LimitController;
 use App\Http\Controllers\AppSettings\ProviderController;
 use App\Http\Controllers\AppSettings\ProviderTestController;
 use App\Http\Controllers\Auth\SetupController;
+use App\Http\Controllers\CampaignController;
+use App\Http\Controllers\CampaignGenerationController;
+use App\Http\Controllers\CampaignStepController;
+use App\Http\Controllers\CampaignStepOrderController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\CompanyRejectionController;
 use App\Http\Controllers\ContactController;
@@ -113,6 +117,21 @@ Route::middleware(['auth', 'project.set'])->group(function (): void {
          */
         Route::get('contacts', [ContactController::class, 'index'])->name('contacts.index');
         Route::post('contacts/search', [ContactSearchController::class, 'store'])->name('contacts.search');
+
+        /*
+         * What gets written to them. The agent writes the sequence from the
+         * product and the segment; the editor is where it gets corrected, and
+         * composing one by hand is the escape hatch rather than the front door.
+         */
+        Route::post('campaigns/generate', [CampaignGenerationController::class, 'store'])
+            ->name('campaigns.generate');
+        Route::put('campaigns/{campaign}/step-order', [CampaignStepOrderController::class, 'update'])
+            ->name('campaigns.step-order');
+        Route::resource('campaigns.steps', CampaignStepController::class)
+            ->only(['store', 'update', 'destroy'])
+            ->shallow(false);
+        Route::resource('campaigns', CampaignController::class)
+            ->only(['index', 'store', 'show', 'update', 'destroy']);
 
         /*
          * A list somebody already had. A button on Leads, never a section of

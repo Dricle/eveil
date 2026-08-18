@@ -3,6 +3,7 @@ import { router, usePage } from '@inertiajs/vue3'
 import type { DropdownMenuItem, NavigationMenuItem } from '@nuxt/ui'
 import { computed, ref } from 'vue'
 import { dashboard, logout } from '@/routes'
+import campaigns from '@/routes/campaigns'
 import companies from '@/routes/companies'
 import { profile } from '@/routes/account'
 import { update as switchProject } from '@/routes/current-project'
@@ -33,6 +34,12 @@ const items = computed<NavigationMenuItem[]>(() => [
         icon: 'i-lucide-building-2',
         to: companies.index.url(),
         active: page.url.startsWith(companies.index.url())
+    },
+    {
+        label: 'Campaigns',
+        icon: 'i-lucide-send',
+        to: campaigns.index.url(),
+        active: page.url.startsWith(campaigns.index.url())
     },
     {
         label: 'Settings',

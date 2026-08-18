@@ -137,7 +137,9 @@ it('lists every agent it finds in the code, not a hand-kept list', function () {
         'contact-page-finder',
         'discovery-planner',
         'listing-extractor',
+        'message-personalizer',
         'result-triage',
+        'sequence-writer',
         'target-profile-deriver',
         'website-analyst',
     ]);

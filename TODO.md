@@ -11,11 +11,12 @@
 **Critère de sortie** : un utilisateur donne une URL et obtient une campagne qui tourne, sans jamais
 fournir de liste de leads. Tant que ce n'est pas vrai, Eveil est un crawler avec un spec.
 
-### Epic 6 — Séquences & personnalisation `rien de fait`
+### Epic 6 — Séquences & personnalisation ✅
 
-- [ ] **6.1** L'IA génère une séquence complète depuis le contexte projet
-- [ ] **6.2** Accroche personnalisée par lead
-- [ ] **6.3** Composer les étapes à la main (porte de sortie, pas écran d'accueil)
+- [x] **6.1** L'IA génère une séquence complète depuis le contexte projet — et depuis le profil
+      cible, donc une séquence partenaire diffère (ce qui manquait à 5.1 bis)
+- [x] **6.2** Accroche personnalisée par lead, prévisualisée sur trois vrais leads
+- [x] **6.3** Composer, éditer et réordonner les étapes à la main
 
 ### Epic 7 — Envoi `rien de fait`
 
@@ -37,8 +38,8 @@ fournir de liste de leads. Tant que ce n'est pas vrai, Eveil est un crawler avec
 
 - [ ] **1.1** `docker compose up -d` + `.env.example` — **rien n'est déployable aujourd'hui**
 - [ ] **1.2** Mot de passe initial par variable d'env (le reste de l'auth est fait) — arrive avec 1.1
-- [x] **5.1 bis** Profils partenaires dérivés par l'agent, avec `access_angle` / `partnership_angle`
-      — reste la séquence d'envoi, qui arrive avec l'Epic 6
+- [x] **5.1 bis** Profils partenaires dérivés par l'agent, avec `access_angle` / `partnership_angle`,
+      et la séquence écrite pour un profil partenaire diffère (Epic 6)
 - [x] **5.2 bis** Sociétés sans site : `domain` nullable, qualifiées sur la ligne d'annuaire,
       l'adresse publiée devient le lead
 - [x] **5.2 bis** Écran superadmin du registre d'hôtes — existait déjà (`/app/app-settings/hosts`)

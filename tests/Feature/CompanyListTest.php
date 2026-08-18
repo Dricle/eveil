@@ -122,3 +122,58 @@ it('sorts on the best profile rather than an average', function () {
             ->where('companies.data.0.fit_score', 95)
             ->count('companies.data.0.evaluations', 2));
 });
+
+it('searches one box across the columns a person would type into', function () {
+    [$user, $project] = lister();
+
+    Company::factory()->create(['project_id' => $project->id, 'name' => 'Atelier Dubois', 'domain' => 'dubois.be', 'location' => 'Namur']);
+    Company::factory()->create(['project_id' => $project->id, 'name' => 'Verlinden', 'domain' => 'verlinden.nl', 'location' => 'Utrecht']);
+
+    // The name they remember, the domain they half-remember, or the town.
+    $this->actingAs($user)->get(route('companies.index', ['search' => 'namur']))
+        ->assertInertia(fn ($page) => $page
+            ->has('companies.data', 1)
+            ->where('companies.data.0.name', 'Atelier Dubois'));
+});
+
+it('narrows on one column at a time', function () {
+    [$user, $project] = lister();
+
+    Company::factory()->create(['project_id' => $project->id, 'name' => 'Dubois', 'industry' => 'Carpentry']);
+    Company::factory()->create(['project_id' => $project->id, 'name' => 'Verlinden', 'industry' => 'Logistics']);
+
+    $this->actingAs($user)->get(route('companies.index', ['filter' => ['industry' => 'carp']]))
+        ->assertInertia(fn ($page) => $page
+            ->has('companies.data', 1)
+            ->where('companies.data.0.name', 'Dubois')
+            // Echoed back so the box still holds what was typed after the visit.
+            ->where('filters.filter.industry', 'carp'));
+});
+
+it('sorts on the column that was clicked', function () {
+    [$user, $project] = lister();
+
+    scored($project, 'zeta.be', 90);
+    scored($project, 'alpha.be', 20);
+
+    // Sorting is the database's job: the list is paginated, so a column sorted
+    // in the browser would only sort the page on screen.
+    $this->actingAs($user)->get(route('companies.index', ['sort' => 'name', 'direction' => 'asc']))
+        ->assertInertia(fn ($page) => $page->where('companies.data.0.domain', 'alpha.be'));
+
+    $this->actingAs($user)->get(route('companies.index', ['sort' => 'name', 'direction' => 'desc']))
+        ->assertInertia(fn ($page) => $page->where('companies.data.0.domain', 'zeta.be'));
+});
+
+it('ignores a sort column nobody put on the screen', function () {
+    [$user, $project] = lister();
+
+    scored($project, 'moyen.be', 55);
+    scored($project, 'excellent.be', 92);
+
+    // The column name arrives in a query string and `orderBy` interpolates it,
+    // so anything outside the whitelist falls back to the default order.
+    $this->actingAs($user)->get(route('companies.index', ['sort' => 'name); drop table companies--']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('companies.data.0.domain', 'excellent.be'));
+});

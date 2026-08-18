@@ -9,8 +9,8 @@
 
 ### Vision finale
 
-> **Je donne l'URL et les infos de mon produit. L'app me trouve des clients** — directement, ou via
-> ceux qui les touchent déjà.
+> **Je donne l'URL et les infos de mon produit. L'app me trouve des clients** — directement, via
+> ceux qui les touchent déjà, ou en les faisant venir.
 
 Une entrée, une sortie. Tout le reste est de la plomberie que l'utilisateur ne devrait idéalement
 jamais avoir à toucher.
@@ -44,6 +44,11 @@ une séquence d'emails qui parle du bon produit au bon interlocuteur.
 **Eveil est l'alternative open source à lemlist.** C'est la catégorie : séquenceur d'outreach
 multicanal avec personnalisation IA, délivrabilité et inbox unifiée. Pas un fournisseur de données,
 pas un CRM, pas une plateforme de marketing automation.
+
+L'ancre de catégorie ne bouge pas avec ADR-034. Les agents inbound de l'Epic 13 arrivent **après** que
+la parité lemlist soit tenue, et ils sont branchés sur le profil cible plutôt que sur un calendrier
+éditorial. On entre dans le marché par « lemlist auto-hébergé », pas par « CMO IA » — cette
+catégorie-là est déjà occupée et se gagne à coups de budget contenu.
 
 Les deux formulations ne se contredisent pas, elles jouent des rôles différents. « Alternative open
 source à lemlist » est **l'ancre de catégorie** : c'est ce qui rend le produit trouvable, comparable,
@@ -1134,6 +1139,52 @@ la récolte d'annuaires sera en place, pas avant.
 **Pas de scraper Facebook.** Bloqué, contraire aux CGU, fragile. Les sociétés qui n'ont qu'une page
 Facebook se rattrapent par OSM (`contact:facebook`) et par les annuaires.
 
+### ADR-034 — La moitié inbound : construite, mais après v0 et pilotée par le profil cible
+
+**Le constat.** Okara (« AI CMO », v2 sortie le 17/08/2026) fait exactement la même entrée qu'Eveil —
+on colle une URL, l'app crawle le site et en dérive un jeu de documents — puis part dans l'autre
+direction : dix agents de canal (Reddit, SEO, articles, GEO, X, LinkedIn, Hacker News, influenceurs,
+UGC, coding) qui rédigent depuis ces documents et publient après validation. 129 $/mois, 100 000
+comptes annoncés. La démonstration est faite : la moitié inbound est un produit à elle seule.
+
+**La décision : Eveil la construit.** « L'app me trouve des clients » n'a jamais voulu dire « par
+email ». Un post Reddit qui amène un client passe le critère d'arbitrage de §1 aussi bien qu'une
+séquence. L'exclure de la vision était une rationalisation ; ce qui tient vraiment, c'est l'ordre et
+la forme.
+
+**Règle 1 — l'ordre n'est pas négociable.** v0 d'abord, en entier : séquences, envoi, inbox. L'inbound
+est la moitié **bon marché** du problème : un LLM rédige, un humain publie. Aucune délivrabilité,
+aucune vérification d'adresse, aucun IMAP, aucune conséquence si la sortie est médiocre — c'est
+précisément pourquoi le concurrent a pu ajouter trois agents en une release. La moitié chère est déjà
+en grande partie construite ici (crawler, graphe de découverte, scoring, vérification d'emails) et son
+aboutissement ne l'est pas. Ajouter des agents de canal avant l'envoi produirait un Okara en moins bon
+qui, en plus, n'envoie pas d'email — en abandonnant le seul terrain sans concurrent : l'outbound
+auto-hébergé.
+
+**Règle 2 — piloté par le profil cible, pas par une stratégie de contenu.** C'est la seule chose que
+personne d'autre ne peut construire. Un agent Reddit qui poste depuis un `content-strategy.md` est une
+commodité que dix outils vendent déjà. Un agent Reddit qui va chercher où **les gens des sociétés déjà
+qualifiées** parlent est une source de découverte au sens d'ADR-033 : la sortie n'est pas seulement un
+brouillon, c'est aussi des sociétés et des contacts qui entrent en base. Même raisonnement pour les
+influenceurs : on score déjà des sociétés contre un profil cible, on score des créateurs pareil.
+Conséquence d'implémentation : **tout agent inbound lit `TargetProfile` avant la knowledge base**.
+
+**Règle 3 — même contrat que le reste de l'app.** Ancrage obligatoire sur une preuve du crawl ou de la
+knowledge base (ADR-032) ; autonomie à trois crans par agent (ADR-009) — brouillon seul, brouillon
+publié après validation, publication automatique ; provider, modèle et timeout configurables par agent
+(ADR-026) ; agents en jobs de queue, pas en daemons (ADR-004).
+
+**Conséquence sur la boussole** (§1) : « je donne l'URL, l'app me trouve des clients — directement, via
+ceux qui les touchent déjà, ou en les faisant venir ».
+
+**Ce que cet ADR ne rend pas légitime**, et qui reste dehors (§8) : les scores Lighthouse et l'audit SEO
+complet, le Design Guide, la vidéo UGC, l'agent qui pousse des pull requests sur le repo de
+l'utilisateur. Ce sont des surfaces de vente, pas des clients trouvés.
+
+**Note de modèle économique.** Le concurrent facture 129 $/mois parce que générer du contenu tous les
+jours lui coûte des tokens. En self-hosted, la clé est celle de l'utilisateur (ADR-019) : le coût
+marginal est le sien et il est faible. L'inbound quotidien colle mieux à notre modèle qu'au leur.
+
 ---
 
 ## 4. Architecture
@@ -1153,12 +1204,13 @@ User ──< Organization (entité facturable en cloud)
 Tout ce qui appartient à un projet porte `project_id` et passe par un global scope.
 **Une fuite de données entre projets est le pire bug possible de cette app.**
 
-### Les deux agents
+### Les trois agents
 
 | Agent | Entrée | Sortie |
 |---|---|---|
 | **Website** | URL du projet, repo GitHub optionnel | Knowledge base (ce que fait le produit, pour qui, positionnement) + pistes d'amélioration du site |
 | **Sales** | Knowledge base + profil cible | Sociétés qualifiées, contacts vérifiés, séquences d'outreach, réponses traitées |
+| **Inbound** `v2` | profil cible + knowledge base | Opportunités de canal ancrées (Reddit, article, X/Bluesky, LinkedIn), publiées selon le cran d'autonomie — et les sociétés croisées au passage, qui repartent dans le pipeline de découverte (ADR-034) |
 
 L'agent Website n'est **pas** un outil d'audit SEO. Ce dont l'agent Sales a besoin, c'est la knowledge
 base ; les suggestions d'amélioration tombent gratuitement du même appel LLM. Ne pas construire un
@@ -1338,6 +1390,13 @@ fournir de liste de leads.
 Organizations, rôles, invitations, accès par projet, multi-projet réel, dashboard global, facturation
 Stripe, compteurs de consommation, OAuth Gmail/Microsoft, A/B testing, ramp-up.
 
+### v2 — la moitié inbound
+
+Agents de canal pilotés par le profil cible : Reddit, articles SEO, X/Bluesky, LinkedIn, plus les
+fonctionnalités manquantes relevées face aux concurrents. Une file unique d'opportunités, un cran
+d'autonomie par agent, publication via les comptes connectés de l'utilisateur (ADR-034). Ne démarre
+pas avant que le critère de sortie de v0 soit atteint.
+
 ### Plus tard
 
 LinkedIn (container dédié), API publique, serveur MCP, webhooks CRM, drivers providers de leads
@@ -1376,6 +1435,7 @@ est une story pas faite.
 | 9 — Organizations & permissions | ⬜ tables faites, rien au-dessus |
 | 10 — Facturation | ⬜ |
 | 11 — LinkedIn / 12 — Intégrations | ⬜ hors v0 et v1 |
+| 13 — Agents inbound | ⬜ `v2`, bloqué tant que les epics 6 à 8 ne sont pas finies (ADR-034) |
 
 **Ce qui existe vraiment** : le schéma complet, les modèles, cinq agents, le crawler, la vérification
 d'emails, et quatre commandes — `eveil:analyze`, `eveil:derive-targets`, `eveil:discover-companies`,
@@ -1650,16 +1710,27 @@ automatiquement.
 **5.3** ✅ En tant qu'utilisateur, je veux que chaque société soit scorée et justifiée.
 - Score de fit + phrase de justification exploitable comme accroche
 - Filtrage par score, rejet manuel possible
-- **État** : `/app/companies` (« Leads » dans la nav) liste les sociétés, meilleur fit en tête,
-  chacune avec une ligne par profil : nom du profil, score, et la phrase qui le justifie. Filtres par
-  profil et par score minimum, bascule « voir les rejetées », pagination par 25. Le tri prend le
+- **État** : `/app/companies` (« Leads » dans la nav) est un **tableau** : une colonne par fait —
+  société, domaine, secteur, taille, lieu, fit, la phrase qui justifie le score, nombre de contacts,
+  date de découverte. Chaque colonne se trie depuis son en-tête ; tout ce qui restreint la liste vit
+  dans **une barre de filtres au-dessus** — recherche libre, une case par colonne texte (repliée,
+  avec le compte des filtres actifs et un bouton pour tout effacer), et les filtres qui ne sont pas
+  des colonnes. Filtres par profil et par score
+  minimum, bascule « voir les rejetées », pagination par 25. Tri et filtres sont faits par la base et
+  jamais dans le navigateur : la liste est paginée, donc trier côté client ne trierait que les
+  vingt-cinq lignes à l'écran. Les colonnes triables sont une liste blanche sur le modèle
+  (`Company::SORTS`) — le nom arrive dans la query string et `orderBy` l'interpole. Le tri prend le
   **meilleur** score et jamais une moyenne — une société qui colle à un profil sur trois est une
   bonne société. `companies.rejected_at` porte le rejet : il est sur la société et non sur
   l'évaluation (un concurrent n'est pas à contacter sous aucun profil), et la ligne reste, sinon le
   run suivant retrouve la société et la repropose
 
 **5.4** ✅ En tant qu'utilisateur, je veux des contacts avec des emails utilisables.
-- **État** : onglet « Contacts » sous Leads. La recherche se déclenche depuis la liste des sociétés —
+- **État** : onglet « Contacts » sous Leads, en tableau lui aussi : nom, rôle, adresse, verdict de
+  vérification, provenance, société, date. Tri depuis chaque en-tête ; barre de filtres au-dessus avec la
+  recherche libre (y compris le nom de la société via la relation), les listes déroulantes verdict
+  et provenance, et une case par colonne texte (nom, rôle, adresse, société). La
+  recherche de contacts se déclenche depuis la liste des sociétés —
   une société, ou toutes celles que personne n'a encore regardées (`App\Jobs\FindCompanyContacts`,
   queue `ai`). L'état vit sur la société (`contacts_status` : `queued|done|failed` +
   `contacts_searched_at`), donc la ligne dit « en cours », « personne trouvé » ou « site illisible »
@@ -1842,14 +1913,60 @@ automatiquement.
 **12.2** ⬜ Serveur MCP pour piloter l'outil depuis un agent IA externe.
 **12.3** ⬜ Webhooks pour brancher un CRM.
 
+### Epic 13 — Agents inbound `v2` — *la deuxième moitié*
+
+> Ne commence pas avant que v0 tourne de bout en bout (ADR-034). Chaque agent lit le **profil cible**
+> avant la knowledge base : ce qui distingue ces agents d'un générateur de contenu, c'est qu'ils
+> cherchent là où les sociétés déjà qualifiées se trouvent.
+
+**13.1** ⬜ En tant qu'utilisateur, je veux une file unique des opportunités trouvées par mes agents, pour valider sans aller canal par canal.
+- Une ligne par agent, avec le nombre d'éléments en attente
+- Le brouillon s'ouvre dans la file ; valider, éditer ou rejeter sans changer d'écran
+- Un rejet ne revient jamais — même règle d'état que les recommandations (ADR-032)
+- **Les documents lus par l'agent sont affichés à côté du brouillon** : sans ça, « contexte partagé »
+  n'est qu'une affirmation d'architecture
+
+**13.2** ⬜ En tant qu'utilisateur, je veux régler l'autonomie agent par agent, pour publier tout seul là où j'ai confiance.
+- Trois crans (ADR-009) : brouillon seul, publication après validation, publication automatique
+- Réglage par agent **et** par projet, jamais global
+
+**13.3** ⬜ En tant qu'utilisateur, je veux que l'agent Reddit me remonte les fils où mes cibles parlent, avec une réponse rédigée.
+- Les sous-reddits sont **dérivés du profil cible**, pas saisis à la main
+- Chaque opportunité cite le fil, sa date et pourquoi il correspond au profil ; sans lien vérifiable, pas d'opportunité
+- Les sociétés et personnes croisées dans le fil repartent en découverte (ADR-033)
+
+**13.4** ⬜ En tant qu'utilisateur, je veux des articles rédigés sur les sujets qui manquent à mon site.
+- Sujet ancré : une preuve du crawl ou de la comparaison concurrents, jamais « fais du contenu »
+- Rédigé dans la langue de la société (ADR-021)
+- Brouillon éditable avant publication ; l'export markdown suffit en v2, les CMS viennent après
+
+**13.5** ⬜ En tant qu'utilisateur, je veux des posts X / Bluesky rédigés dans ma voix et publiés à mon rythme.
+- Comptes connectés par l'utilisateur, credentials chiffrés comme le reste (ADR-012)
+- Bluesky d'abord si l'API X est payante ou instable : même agent, deux drivers
+
+**13.6** ⬜ En tant qu'utilisateur, je veux des posts LinkedIn rédigés et publiés sur ma page.
+- Publication par l'API officielle uniquement — rien à voir avec l'Epic 11, qui automatise un compte personnel pour de la prospection et reste `plus tard` (ADR-008)
+
+**13.7** ⬜ En tant qu'utilisateur, je veux qu'on me signale les fonctionnalités qui manquent à mon produit face aux concurrents.
+- Ancrée sur ce que le crawl a vu chez les concurrents cités dans la knowledge base
+- Même cycle d'état que les recommandations d'acquisition : `proposed` → `done` ou `archived` (4.5)
+- Ce n'est pas une roadmap et ça n'en devient pas une : pas d'assignation, pas de date, pas de backlog
+
 ---
 
 ## 8. Hors scope explicite
 
-À ne pas construire, même si la tentation est là :
+À ne pas construire, même si la tentation est là.
+
+> **Amendement (ADR-034)** : le contenu et les canaux inbound ne sont plus hors scope, ils sont
+> reportés — Epic 13, après v0. Ce qui suit reste valable, avec les précisions ajoutées aux deux
+> dernières lignes de cette liste.
+
 
 - **Outil d'audit SEO complet.** L'agent Website produit une knowledge base ; les suggestions sont un
-  sous-produit gratuit du même appel LLM.
+  sous-produit gratuit du même appel LLM. Restent dehors même après ADR-034 : les scores Lighthouse,
+  le Design Guide, la vidéo UGC, l'agent qui pousse des pull requests sur le repo de l'utilisateur.
+  Ce sont des surfaces de vente, pas des clients trouvés.
 - **Base de contacts propriétaire.** On cherche en live, on ne constitue pas de base à revendre.
   À dire clairement dans le produit : lemlist et Apollo embarquent une base de plusieurs centaines de
   millions de contacts, Eveil non et n'en aura jamais. Ce n'est pas un manque à combler, c'est un
@@ -1864,7 +1981,9 @@ automatiquement.
   l'agent le met à jour depuis la conversation. Dès qu'il faut ranger, assigner ou dater des tâches à
   la main, on a franchi la ligne.
 - **Document de stratégie.** Une recommandation sans preuve vérifiable et sans exécution derrière est
-  un conseil générique. Eveil trouve et contacte ; il ne rédige pas de plans.
+  un conseil générique. Eveil trouve, contacte et publie ; il ne rédige pas de plans. Les agents de
+  l'Epic 13 sont autorisés **parce qu'ils publient** : le jour où l'un d'eux ne produit plus qu'un
+  document à lire, il retombe dans cette ligne.
 
 ---
 

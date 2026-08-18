@@ -46,6 +46,17 @@ class Company extends Model
     use BelongsToProject, HasFactory;
 
     /**
+     * The columns the list may be sorted on. A whitelist because the column
+     * name comes from a query string, and `orderBy` interpolates it.
+     */
+    public const SORTS = [
+        'name', 'domain', 'industry', 'size', 'location', 'fit_score', 'contacts_count', 'discovered_at',
+    ];
+
+    /** Text columns the list may be filtered on, one filter box per column. */
+    public const FILTERS = ['name', 'domain', 'industry', 'size', 'location'];
+
+    /**
      * @return HasMany<Lead, $this>
      */
     public function leads(): HasMany
@@ -72,6 +83,57 @@ class Company extends Model
     protected function withBestFit(Builder $query): void
     {
         $query->withMax('evaluations as fit_score', 'fit_score');
+    }
+
+    /**
+     * One box that looks everywhere a person would think to type: the name they
+     * remember, the domain they half-remember, the town.
+     *
+     * @param  Builder<Company>  $query
+     */
+    #[Scope]
+    protected function matching(Builder $query, ?string $term): void
+    {
+        if ($term === null || $term === '') {
+            return;
+        }
+
+        $query->where(function (Builder $query) use ($term): void {
+            foreach (self::FILTERS as $column) {
+                $query->orWhere($column, 'ilike', '%'.$term.'%');
+            }
+        });
+    }
+
+    /**
+     * @param  Builder<Company>  $query
+     * @param  array<string, string|null>  $filters  column => what was typed in its box
+     */
+    #[Scope]
+    protected function whereColumns(Builder $query, array $filters): void
+    {
+        foreach (array_intersect_key($filters, array_flip(self::FILTERS)) as $column => $value) {
+            if ($value !== null && $value !== '') {
+                $query->where($column, 'ilike', '%'.$value.'%');
+            }
+        }
+    }
+
+    /**
+     * Best fit first by default: a company that suits one profile out of three
+     * is a good company, not an average one.
+     *
+     * @param  Builder<Company>  $query
+     */
+    #[Scope]
+    protected function sorted(Builder $query, ?string $column, ?string $direction): void
+    {
+        $direction = $direction === 'asc' ? 'asc' : 'desc';
+
+        $query->orderBy(in_array($column, self::SORTS, true) ? $column : 'fit_score', $direction)
+            // Ties would otherwise come back in whatever order the planner
+            // felt like, which makes page 2 overlap page 1.
+            ->orderByDesc('id');
     }
 
     /**

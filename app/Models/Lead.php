@@ -8,6 +8,8 @@ use App\Enums\LeadStatus;
 use App\Models\Concerns\BelongsToProject;
 use Database\Factories\LeadFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -53,6 +55,17 @@ class Lead extends Model
     use BelongsToProject, HasFactory;
 
     /**
+     * What the contacts list may be sorted on. A whitelist because the value
+     * arrives in a query string and `orderBy` interpolates it.
+     */
+    public const SORTS = [
+        'name', 'title', 'email', 'email_status', 'email_source', 'company', 'discovered_at',
+    ];
+
+    /** Text columns with a filter box of their own. */
+    public const FILTERS = ['name', 'title', 'email', 'company'];
+
+    /**
      * @return BelongsTo<Company, $this>
      */
     public function company(): BelongsTo
@@ -74,6 +87,75 @@ class Lead extends Model
     public function messages(): HasMany
     {
         return $this->hasMany(Message::class);
+    }
+
+    /**
+     * One box over everything a person would type to find somebody: their name,
+     * their job title, their address, the company they work for.
+     *
+     * @param  Builder<Lead>  $query
+     */
+    #[Scope]
+    protected function matching(Builder $query, ?string $term): void
+    {
+        if ($term === null || $term === '') {
+            return;
+        }
+
+        $query->where(fn (Builder $query) => $query
+            ->whereAny(['first_name', 'last_name', 'email', 'title'], 'ilike', '%'.$term.'%')
+            ->orWhereHas('company', fn (Builder $company) => $company->where('name', 'ilike', '%'.$term.'%')));
+    }
+
+    /**
+     * The person's name spans two columns and their company lives on another
+     * table, so neither can be a plain `where` — which is exactly why the
+     * allowed filters are named here rather than taken from the request.
+     *
+     * @param  Builder<Lead>  $query
+     * @param  array<string, string|null>  $filters  column => what was typed in its box
+     */
+    #[Scope]
+    protected function whereColumns(Builder $query, array $filters): void
+    {
+        foreach (array_intersect_key($filters, array_flip(self::FILTERS)) as $column => $value) {
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            $like = '%'.$value.'%';
+
+            match ($column) {
+                'name' => $query->whereAny(['first_name', 'last_name'], 'ilike', $like),
+                'company' => $query->whereHas('company', fn (Builder $company) => $company->where('name', 'ilike', $like)),
+                default => $query->where($column, 'ilike', $like),
+            };
+        }
+    }
+
+    /**
+     * Sendable first by default: an address the server accepted is worth more
+     * than one nobody could check, and both beat one that will never be sent to.
+     *
+     * @param  Builder<Lead>  $query
+     */
+    #[Scope]
+    protected function sorted(Builder $query, ?string $column, ?string $direction): void
+    {
+        $direction = $direction === 'asc' ? 'asc' : 'desc';
+
+        match (in_array($column, self::SORTS, true) ? $column : null) {
+            'name' => $query->orderBy('last_name', $direction)->orderBy('first_name', $direction),
+            // A subquery rather than a join: joining would pull the company's
+            // columns into the row and shadow `leads.name` on the next `select`.
+            'company' => $query->orderBy(Company::select('name')->whereColumn('companies.id', 'leads.company_id'), $direction),
+            null => $query->orderByRaw("case email_status when 'valid' then 0 when 'unknown' then 1 when 'risky' then 2 when 'invalid' then 4 else 3 end"),
+            default => $query->orderBy($column, $direction),
+        };
+
+        // Ties would otherwise come back in whatever order the planner felt
+        // like, which makes page 2 overlap page 1.
+        $query->orderByDesc('id');
     }
 
     /**

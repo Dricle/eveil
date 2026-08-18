@@ -14,18 +14,32 @@ use Inertia\Response;
  * Nothing is hidden behind a "verified" label: an address guessed from a
  * pattern says so, because the person sending is the one whose domain takes the
  * complaints.
+ *
+ * Sorting and filtering are the database's job — the list is paginated, so a
+ * column sorted in the browser would only sort the page you can see.
  */
 class ContactController extends Controller
 {
     public function index(Request $request): Response
     {
-        $status = $request->string('email_status')->toString();
+        $status = $request->string('email_status')->value();
+        $source = $request->string('email_source')->value();
+        $search = $request->string('search')->trim()->value();
+
+        /** @var array<string, string|null> $columns */
+        $columns = $request->collect('filter')
+            ->only(Lead::FILTERS)
+            ->map(fn ($value): ?string => is_string($value) ? trim($value) : null)
+            ->all();
 
         $contacts = Lead::query()
             ->with('company')
             ->whereNull('erased_at')
+            ->matching($search)
+            ->whereColumns($columns)
             ->when($request->integer('company'), fn ($query, int $id) => $query->where('company_id', $id))
             ->when($status !== '', fn ($query) => $query->where('email_status', $status))
+            ->when($source !== '', fn ($query) => $query->where('email_source', $source))
             // An address that will never be sent to is not a contact — it is
             // kept for the record and shown only when asked for. An address
             // nobody has checked yet is a different thing and stays on the
@@ -33,8 +47,7 @@ class ContactController extends Controller
             ->when($status === '', fn ($query) => $query->where(
                 fn ($inner) => $inner->whereNull('email_status')->orWhere('email_status', '!=', EmailStatus::Invalid),
             ))
-            ->orderByRaw("case email_status when 'valid' then 0 when 'unknown' then 1 when 'risky' then 2 else 3 end")
-            ->orderByDesc('id')
+            ->sorted($request->string('sort')->value(), $request->string('direction')->value())
             ->paginate(25)
             ->withQueryString();
 
@@ -45,7 +58,12 @@ class ContactController extends Controller
             'import' => $request->session()->get('import'),
             'filters' => [
                 'email_status' => $status ?: null,
+                'email_source' => $source ?: null,
                 'company' => $request->integer('company') ?: null,
+                'search' => $search ?: null,
+                'filter' => array_filter($columns, fn (?string $value): bool => $value !== null && $value !== ''),
+                'sort' => $request->string('sort')->value() ?: null,
+                'direction' => $request->string('direction')->value() ?: null,
             ],
             'counts' => Lead::query()
                 ->whereNull('erased_at')

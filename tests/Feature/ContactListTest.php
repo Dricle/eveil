@@ -158,3 +158,41 @@ it('counts the contacts found on each company', function () {
             ->where('companies.data.0.contacts_count', 1)
             ->where('unsearched', 1));
 });
+
+it('searches people by name, role, address or company', function () {
+    [$user, $project] = contacter();
+
+    $company = Company::factory()->create(['project_id' => $project->id, 'name' => 'Atelier Dubois']);
+
+    Lead::factory()->create(['project_id' => $project->id, 'company_id' => $company->id, 'first_name' => 'Sofia', 'last_name' => 'Renard', 'email' => 'sofia@dubois.be']);
+    Lead::factory()->create(['project_id' => $project->id, 'first_name' => 'Tom', 'last_name' => 'Peeters', 'email' => 'tom@verlinden.nl']);
+
+    $this->actingAs($user)->get(route('contacts.index', ['search' => 'dubois']))
+        ->assertInertia(fn ($page) => $page
+            ->has('contacts.data', 1)
+            ->where('contacts.data.0.name', 'Sofia Renard'));
+});
+
+it('filters on the company column through the relation', function () {
+    [$user, $project] = contacter();
+
+    $company = Company::factory()->create(['project_id' => $project->id, 'name' => 'Atelier Dubois']);
+
+    Lead::factory()->create(['project_id' => $project->id, 'company_id' => $company->id, 'first_name' => 'Sofia']);
+    Lead::factory()->create(['project_id' => $project->id, 'first_name' => 'Tom']);
+
+    // The company lives on another table, which is why the allowed filters are
+    // named on the model rather than taken from the request.
+    $this->actingAs($user)->get(route('contacts.index', ['filter' => ['company' => 'atelier']]))
+        ->assertInertia(fn ($page) => $page->has('contacts.data', 1));
+});
+
+it('sorts people by name across the two columns it lives in', function () {
+    [$user, $project] = contacter();
+
+    Lead::factory()->create(['project_id' => $project->id, 'first_name' => 'Sofia', 'last_name' => 'Renard']);
+    Lead::factory()->create(['project_id' => $project->id, 'first_name' => 'Tom', 'last_name' => 'Aerts']);
+
+    $this->actingAs($user)->get(route('contacts.index', ['sort' => 'name', 'direction' => 'asc']))
+        ->assertInertia(fn ($page) => $page->where('contacts.data.0.name', 'Tom Aerts'));
+});

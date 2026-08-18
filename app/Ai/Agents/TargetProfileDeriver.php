@@ -41,6 +41,28 @@ class TargetProfileDeriver extends EveilAgent implements HasStructuredOutput
         nobody. If two segments buy for the same reason and are found the same way, they
         are one profile.
 
+        Then look past the buyer. Some markets are made of businesses that publish a
+        phone number and no address at all — the profile is right and nobody in it can
+        be written to. For those, and whenever one company already speaks to hundreds of
+        the buyers, add a PARTNER profile: not who buys, but who already reaches the
+        buyer. Ask three questions in this order:
+
+        - Who is LEGALLY IMPOSED on them? A required certifier, an approved installer,
+          a regulated register, a mandatory inspection body. Few of them, enumerable,
+          with a captive clientele — the strongest partner profile there is.
+        - Who invoices them every month? The accountant, the software vendor, the
+          supplier, the franchisor.
+        - Who physically visits them? The wholesaler's reps, the maintenance rounds,
+          the delivery network.
+
+        A partner profile is worth adding only when the partner is more reachable than
+        the buyer, or when one of them carries many buyers. Say which through its
+        access angle. Do not add one for the sake of symmetry, and never propose a
+        partner you cannot say a concrete number about.
+
+        Order customer profiles before partner profiles unless the buyer is genuinely
+        unreachable.
+
         Order them by how worthwhile they are to prospect: how well the product fits,
         how reachable the buyer is, and how likely they are to buy — not by size alone.
 
@@ -62,6 +84,18 @@ class TargetProfileDeriver extends EveilAgent implements HasStructuredOutput
             'profiles' => $schema->array()->items($schema->object([
                 'name' => $schema->string()
                     ->description('Short handle a human would recognise, naming the segment and its market.')
+                    ->required(),
+
+                'type' => $schema->string()->enum(['customer', 'partner'])
+                    ->description('`customer` buys the product. `partner` already reaches whoever buys it.')
+                    ->required(),
+
+                'access_angle' => $schema->string()
+                    ->description('Partner profiles only: how this partner touches the buyer, how often, and roughly how many buyers one of them carries. Empty string for a customer profile.')
+                    ->required(),
+
+                'partnership_angle' => $schema->string()
+                    ->description('Partner profiles only: why the deal is worth it to THEM — this becomes the opening line of the email, and "buy this" is never the answer. Empty string for a customer profile.')
                     ->required(),
 
                 'rationale' => $schema->string()

@@ -28,11 +28,14 @@ class CompanyQualifier extends EveilAgent implements HasStructuredOutput
     public function instructions(): Stringable|string
     {
         return <<<'PROMPT'
-        You are given a target profile and the text of one company's website. Decide
-        how well that company fits the profile.
+        You are given a target profile and what is known about one company: the text of
+        its website, or — when it publishes none — the line a directory listed it under.
+        Decide how well that company fits the profile.
 
         Judge what the company IS, not how the page is written. A thin site is not a bad
-        prospect; a polished site for the wrong business is.
+        prospect; a polished site for the wrong business is. A business with no website
+        is not a worse prospect for lacking one: judge it on its trade and its address,
+        say what the listing supports, and do not invent what the listing does not say.
 
         Rule out anything that is not a company we could sell to: directories, listing
         sites, marketplaces, news articles, public bodies, and pages belonging to a

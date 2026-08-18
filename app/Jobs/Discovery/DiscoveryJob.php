@@ -7,12 +7,13 @@ use App\Enums\DiscoveryRunStatus;
 use App\Enums\DiscoveryTaskKind;
 use App\Enums\DiscoveryTaskStatus;
 use App\Models\AgentRun;
-use App\Models\Company;
 use App\Models\DiscoveryRun;
 use App\Models\DiscoveryTask;
 use App\Services\Discovery\Candidate;
+use App\Services\Discovery\Qualifier;
 use App\Support\CurrentProject;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Queue\Queueable;
 use Throwable;
 
@@ -140,9 +141,11 @@ abstract class DiscoveryJob implements ShouldQueue
             $payload = $candidate->toArray();
             $domain = $payload['domain'];
 
-            // No domain, no dedupe key and nowhere to fetch: routine on a
-            // directory listing, and counted rather than silently dropped.
-            if ($domain === null) {
+            // No site of its own, which is ordinary on a directory listing.
+            // Worth qualifying only when the listing also published an address:
+            // with nothing to fetch and nothing to send, reading it is a model
+            // call spent on a row that can never be contacted.
+            if ($domain === null && ($payload['facts']['email'] ?? null) === null) {
                 continue;
             }
 
@@ -150,11 +153,20 @@ abstract class DiscoveryJob implements ShouldQueue
             // of this run. Both checks happen before the budget is touched: a
             // company we have costs neither a page fetch nor a model call, and
             // is not a candidate this run found either.
-            if (Company::query()->where('domain', $domain)->exists()) {
+            if (Qualifier::existing($task->project_id, $candidate) !== null) {
                 continue;
             }
 
-            if ($run->tasks()->where('kind', DiscoveryTaskKind::Qualify)->where('payload->domain', $domain)->exists()) {
+            $queuedAlready = $run->tasks()
+                ->where('kind', DiscoveryTaskKind::Qualify)
+                ->when(
+                    $domain !== null,
+                    fn (Builder $query) => $query->where('payload->domain', $domain),
+                    fn (Builder $query) => $query->whereNull('payload->domain')->where('payload->name', $payload['name']),
+                )
+                ->exists();
+
+            if ($queuedAlready) {
                 continue;
             }
 

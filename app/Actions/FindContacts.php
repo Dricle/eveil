@@ -45,6 +45,10 @@ class FindContacts
      */
     public function handle(Company $company, bool $guessGeneric = false): Collection
     {
+        if ($company->domain === null) {
+            return $this->fromListing($company);
+        }
+
         $pages = $this->contactPages($company);
 
         if ($pages->isEmpty()) {
@@ -57,6 +61,28 @@ class FindContacts
         $this->rememberPhone($company, $extracted->structured);
 
         return $this->persist($company, $extracted->structured, $guessGeneric);
+    }
+
+    /**
+     * A business with no site of its own has one address and it came with the
+     * listing: nothing to crawl, nobody to name, and no model call to pay for.
+     * Half of this segment is unreachable by email at all, so the one address a
+     * directory published is the whole of what there is.
+     *
+     * @return Collection<int, Lead>
+     */
+    private function fromListing(Company $company): Collection
+    {
+        $email = $company->facts['email'] ?? null;
+
+        if (! is_string($email) || $email === '' || $this->erased($company, $email)) {
+            return new Collection;
+        }
+
+        return new Collection([$this->store($company, [
+            'email' => $email,
+            'email_source' => EmailSource::Scraped,
+        ])]);
     }
 
     /**
@@ -289,7 +315,7 @@ class FindContacts
                 'email_verified_at' => now(),
                 'language' => $company->language,
                 'source' => $company->source,
-                'source_url' => $company->website,
+                'source_url' => $company->website ?? $company->source_url,
                 'discovered_at' => now(),
             ]),
         );

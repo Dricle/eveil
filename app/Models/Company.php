@@ -20,7 +20,7 @@ use Illuminate\Support\Carbon;
  *
  * @property int $id
  * @property int $project_id
- * @property string $domain
+ * @property string|null $domain null for a business that publishes no site of its own
  * @property string $name
  * @property string|null $website
  * @property string|null $industry

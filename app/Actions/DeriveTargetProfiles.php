@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\Ai\Agents\TargetProfileDeriver;
 use App\Enums\TargetProfileSource;
+use App\Enums\TargetProfileType;
 use App\Models\AgentRun;
 use App\Models\Project;
 use App\Models\TargetProfile;
@@ -81,7 +82,12 @@ class DeriveTargetProfiles
         return TargetProfile::create([
             'project_id' => $project->id,
             'name' => $name,
-            'criteria' => collect($profile)->except('name')->all(),
+            'type' => TargetProfileType::tryFrom((string) ($profile['type'] ?? '')) ?? TargetProfileType::Customer,
+
+            // The angles stay in `criteria` with everything else the search
+            // reads: they describe the segment, and only the kind of profile it
+            // is has to be queryable on the row itself.
+            'criteria' => collect($profile)->except(['name', 'type'])->all(),
             'source' => TargetProfileSource::Agent,
             'is_active' => true,
         ]);

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, router } from '@inertiajs/vue3'
+import { ref } from 'vue'
 import TargetHeader from '@/components/TargetHeader.vue'
 import TargetsLayout from '@/layouts/TargetsLayout.vue'
 import discoveryRuns from '@/routes/discovery-runs'
@@ -27,6 +28,15 @@ const TYPES = [
     { label: 'Customer — they buy it', value: 'customer' },
     { label: 'Partner — they already reach the buyer', value: 'partner' }
 ]
+
+// A partner is written to about what the deal does for THEM, so the two angles
+// only exist on that kind of profile — and they are what the email opens on.
+const ANGLES = [
+    { name: 'access_angle', label: 'How they reach the buyer', help: 'How this partner touches the customer, how often, and how many customers one of them carries.' },
+    { name: 'partnership_angle', label: 'What is in it for them', help: 'Why the deal is worth their while. This is the opening line of the email — "buy this" never is.' }
+] as const
+
+const type = ref(props.profile?.type ?? 'customer')
 
 // The list fields go over the wire one item per line; the server splits them.
 function lines (field: typeof LISTS[number]['name']): string {
@@ -68,9 +78,26 @@ function lines (field: typeof LISTS[number]['name']): string {
                     :error="errors.type"
                 >
                     <USelect
+                        v-model="type"
                         name="type"
                         :items="TYPES"
-                        :default-value="profile?.type ?? 'customer'"
+                        class="w-full"
+                    />
+                </UFormField>
+
+                <UFormField
+                    v-for="field in (type === 'partner' ? ANGLES : [])"
+                    :key="field.name"
+                    :label="field.label"
+                    :name="field.name"
+                    :help="field.help"
+                    :error="errors[field.name]"
+                >
+                    <UTextarea
+                        :name="field.name"
+                        :default-value="profile?.criteria?.[field.name]"
+                        :rows="2"
+                        autoresize
                         class="w-full"
                     />
                 </UFormField>

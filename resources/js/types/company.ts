@@ -7,7 +7,7 @@ export type CompanyEvaluation = {
 export type Company = {
     id: number
     name: string
-    domain: string
+    domain: string | null
     website: string | null
     industry: string | null
     size: string | null
@@ -50,5 +50,5 @@ export type Contact = {
     source_url: string | null
     status: string
     discovered_at: string
-    company: { id: number, name: string, domain: string, location: string | null } | null
+    company: { id: number, name: string, domain: string | null, location: string | null } | null
 }

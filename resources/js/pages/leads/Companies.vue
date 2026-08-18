@@ -251,6 +251,12 @@ function searchLabel (company: Company) {
                         target="_blank"
                         rel="noopener"
                     >{{ row.original.domain }}</ULink>
+                    <!-- Not missing data: this business publishes no site, and
+                         a directory is where it published an address instead. -->
+                    <span
+                        v-else-if="!row.original.domain"
+                        class="text-dimmed"
+                    >No site</span>
                     <span v-else>{{ row.original.domain }}</span>
                 </template>
 

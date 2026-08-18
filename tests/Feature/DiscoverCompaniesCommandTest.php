@@ -533,3 +533,73 @@ it('waits out a busy Overpass instead of reporting an empty area', function (int
     expect(Company::sole()->domain)->toBe('friterie-centre.be')
         ->and(DiscoveryRun::sole()->stats['source_failures'])->toBe([]);
 })->with([429, 504]);
+
+it('keeps a business with no site of its own when the listing published an address', function () {
+    // The segment nobody else is calling. A search engine can never surface
+    // these — they have nothing to rank — so the directory line is both how
+    // they are found and the only place they publish an address.
+    activeTargetProfile();
+
+    DiscoveryPlanner::fake([plan(web: [['query' => 'friterie namur', 'language' => 'fr', 'why' => 'Local.']])]);
+    ResultTriage::fake([['hosts' => [['host' => 'annuaire.test', 'kind' => 'index', 'reason' => 'Lists businesses.']]]]);
+    CompanyQualifier::fake([verdict(75), verdict(20)]);
+
+    Http::fake([
+        '*/search*' => Http::response(['results' => [
+            ['url' => 'https://annuaire.test/friteries/namur', 'title' => 'Friteries à Namur', 'content' => 'Annuaire'],
+        ]]),
+        '*/robots.txt' => Http::response('', 404),
+        'https://annuaire.test/friteries/namur' => Http::response(
+            '<html lang="fr"><body><script type="application/ld+json">'
+            .json_encode([
+                ['@type' => 'Restaurant', 'name' => 'Chez Marcel', 'email' => 'marcel@chez-marcel.test', 'telephone' => '+3281223344'],
+                // Phone only: nothing to write to, so it is counted and left alone
+                // rather than paid for with a model call.
+                ['@type' => 'Restaurant', 'name' => 'Friterie Sans Mail', 'telephone' => '+3281556677'],
+            ])
+            .'</script></body></html>'
+        ),
+        'https://annuaire.test/' => Http::response(page('Annuaire des commerces.')),
+    ]);
+
+    $this->artisan('eveil:discover-companies')->assertSuccessful();
+
+    $marcel = Company::query()->firstWhere('name', 'Chez Marcel');
+
+    expect(Company::query()->pluck('name')->contains('Friterie Sans Mail'))->toBeFalse()
+        ->and(Company::query()->whereNull('domain')->count())->toBe(1)
+        ->and($marcel->domain)->toBeNull()
+        ->and($marcel->website)->toBeNull()
+        ->and($marcel->facts['email'])->toBe('marcel@chez-marcel.test');
+});
+
+it('does not discover the same site-less business twice', function () {
+    // With no domain the name is the whole dedupe key, and a second run reads
+    // the very same listing page.
+    activeTargetProfile();
+
+    DiscoveryPlanner::fake([
+        plan(web: [['query' => 'friterie namur', 'language' => 'fr', 'why' => 'Local.']]),
+        plan(web: [['query' => 'friterie namur', 'language' => 'fr', 'why' => 'Local.']]),
+    ]);
+    ResultTriage::fake([['hosts' => [['host' => 'annuaire.test', 'kind' => 'index', 'reason' => 'Lists businesses.']]]]);
+    CompanyQualifier::fake([verdict(75), verdict(20)]);
+
+    Http::fake([
+        '*/search*' => Http::response(['results' => [
+            ['url' => 'https://annuaire.test/friteries/namur', 'title' => 'Friteries à Namur', 'content' => 'Annuaire'],
+        ]]),
+        '*/robots.txt' => Http::response('', 404),
+        'https://annuaire.test/friteries/namur' => Http::response(
+            '<html lang="fr"><body><script type="application/ld+json">'
+            .json_encode(['@type' => 'Restaurant', 'name' => 'Chez Marcel', 'email' => 'marcel@chez-marcel.test'])
+            .'</script></body></html>'
+        ),
+        'https://annuaire.test/' => Http::response(page('Annuaire des commerces.')),
+    ]);
+
+    $this->artisan('eveil:discover-companies')->assertSuccessful();
+    $this->artisan('eveil:discover-companies')->assertSuccessful();
+
+    expect(Company::query()->whereNull('domain')->count())->toBe(1);
+});

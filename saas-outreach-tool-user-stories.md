@@ -1428,7 +1428,7 @@ est une story pas faite.
 | 2 — Projets | 🟡 cloisonnement fait et testé, CRUD fait, sélecteur de projet fait ; manque le dashboard multi-projet (`v1`) |
 | 3 — Analyse & knowledge base | 🟡 analyse déclenchée à l'enregistrement, progression du crawl et pages en échec affichées, knowledge base visible et éditable ; manque le lien vers un repo (`v1`) |
 | 4 — Agent Website | ⬜ table `recommendations` pas encore créée |
-| 5 — Découverte de leads | 🟡 graphe de jobs (`discovery_tasks`) avec son écran — lancer, suivre, rejouer, arrêter ; profils cibles éditables ; sociétés scorées, filtrables, rejetables ; contacts listés avec leur verdict de vérification, recherche déclenchable par société ou en masse ; import CSV avec son rapport ligne à ligne. Manquent la fiche contact (5.8) et le rendu JS (5.9, reporté) |
+| 5 — Découverte de leads | 🟡 graphe de jobs (`discovery_tasks`) avec son écran — lancer, suivre, rejouer, arrêter ; profils cibles éditables ; sociétés scorées, filtrables, rejetables ; contacts listés avec leur verdict de vérification, recherche déclenchable par société ou en masse ; import CSV avec son rapport ligne à ligne ; profils partenaires dérivés par l'agent avec leurs deux angles ; sociétés sans site qualifiées sur la ligne d'annuaire et jointes à l'adresse qu'elle publie. Manquent la fiche contact (5.8) et le rendu JS (5.9, reporté) |
 | 6 — Séquences | ⬜ |
 | 7 — Envoi | ⬜ |
 | 8 — Réponses & inbox | ⬜ |
@@ -1649,8 +1649,12 @@ automatiquement.
 
 **5.1 bis** 🟡 En tant qu'utilisateur, je veux aussi des profils de **partenaires**, pas seulement de clients (ADR-031).
 - `target_profiles.type` : `customer` ou `partner` — colonne créée, choisie à l'écran, et par défaut
-  `customer`. Reste à faire : l'agent n'en dérive aucun de lui-même, `access_angle` et
-  `partnership_angle` ne sont pas demandés, et la séquence d'envoi ne les distingue pas encore
+  `customer`. L'agent en dérive de lui-même : le prompt lui fait chercher qui est **légalement
+  imposé** au client d'abord, puis qui le facture chaque mois, puis qui lui rend visite, et n'en
+  propose un que si le partenaire est plus joignable que le client ou s'il en porte beaucoup.
+  `access_angle` et `partnership_angle` sont produits par l'agent et éditables sur la fiche profil,
+  où ils n'apparaissent que pour un profil partenaire. **Reste** : la séquence d'envoi ne les
+  distingue pas encore — elle arrive avec l'Epic 6, qui n'existe pas
 - Un profil partenaire répond à : qui visite mon client, qui le facture chaque mois, qui lui est
   **légalement imposé** — ce dernier signal en premier, sa clientèle est captive
 - Il porte `access_angle` (par quoi il touche le client) et `partnership_angle` (pourquoi c'est
@@ -1671,7 +1675,7 @@ automatiquement.
   parce que plusieurs workers dépensent la même enveloppe en même temps. `eveil:discover-companies`
   suit le run au lieu de l'exécuter. Manque l'écran (5.2 ter) et `ReflectAndExpand`
 
-**5.2 bis** 🟡 En tant qu'utilisateur, je veux trouver aussi les sociétés que les moteurs ne classent pas (ADR-033).
+**5.2 bis** ✅ En tant qu'utilisateur, je veux trouver aussi les sociétés que les moteurs ne classent pas (ADR-033).
 - Les résultats pointant vers un **annuaire** sont récoltés, plus jetés : une page de liste vaut des
   dizaines de sociétés, et c'est le seul endroit où une société sans site publie un email
 - Récolte en PHP : `sitemap.xml`, JSON-LD, sélecteurs, extracteur LLM en dernier recours
@@ -1688,10 +1692,15 @@ automatiquement.
 - Un annuaire est **aussi une société** : un hôte `index` est à la fois récolté ET retenu comme
   candidat. Un fondateur dont la cible est « les plateformes de lancement » veut Product Hunt et
   BetaList comme leads, pas seulement comme sources
-- **État** : fait et testé — `ListingHarvester` (JSON-LD, repli LLM, pagination, budget),
+- **État** : ✅ fait et testé — `ListingHarvester` (JSON-LD, repli LLM, pagination, budget),
   `HostRegistry` + agent `ResultTriage`, table `known_hosts` amorcée, branchement dans
-  `eveil:discover-companies`. Reste : les sociétés sans site sont comptées mais pas exploitables
-  (`companies.domain` est NOT NULL), et l'écran superadmin du registre
+  `eveil:discover-companies`, écran superadmin du registre sous `/app/app-settings/hosts` (filtre,
+  correction, verrou, déverrouillage). **Les sociétés sans site sont exploitables** :
+  `companies.domain` est nullable, l'unicité passe en index partiels — le domaine quand il existe,
+  le nom minuscule sinon — et une société sans site est qualifiée sur la ligne que l'annuaire a
+  publiée, sans fetch et sans budget de page. Elle n'est retenue que si cette ligne porte une
+  adresse email : sans site et sans adresse, il n'y a rien à lire ni rien à envoyer. Cette adresse
+  devient directement le lead, sans appel de modèle
 
 **5.2 ter** ✅ En tant qu'utilisateur, je veux voir et reprendre la main sur ce que fait la découverte (ADR-033).
 - La découverte est un graphe de jobs : chaque étape a sa ligne, son état, son coût, son erreur

@@ -128,3 +128,47 @@ it('keeps CampaignLeadStatus::live() in step with the partial index', function (
             ->toBe($status->isLive(), "status {$status->value} disagrees with the index");
     }
 });
+
+function makeCompany(int $projectId, ?string $domain, string $name): int
+{
+    return DB::table('companies')->insertGetId([
+        'project_id' => $projectId,
+        'domain' => $domain,
+        'name' => $name,
+        'source' => 'directory',
+        'discovered_at' => now(),
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+}
+
+it('still dedupes companies by domain once the column may be null', function () {
+    // Postgres treats every NULL as distinct, so a plain unique index stops
+    // deduping the moment the column becomes nullable — the partial one does
+    // the work the whole no-duplicate-lead promise rests on.
+    $project = makeProject();
+    makeCompany($project, 'friterie.be', 'Friterie du Centre');
+
+    expect(fn () => makeCompany($project, 'friterie.be', 'Friterie du Centre'))
+        ->toThrow(QueryException::class);
+});
+
+it('dedupes a site-less company on its name, whatever the directory capitalised', function () {
+    // With no domain the name is the only key every source supplies, so it has
+    // to hold on its own — a re-run reads the very same listing page.
+    $project = makeProject();
+    makeCompany($project, null, 'Chez Marcel');
+
+    expect(fn () => makeCompany($project, null, 'chez marcel'))->toThrow(QueryException::class);
+});
+
+it('lets another project find the same site-less company', function () {
+    // The row is project-scoped like everything else: two projects finding the
+    // same business is two companies, not a duplicate.
+    $project = makeProject();
+    $other = makeProject();
+
+    makeCompany($project, null, 'Chez Marcel');
+
+    expect(makeCompany($other, null, 'Chez Marcel'))->toBeInt();
+});

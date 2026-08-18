@@ -321,3 +321,21 @@ it('claims the queued run instead of opening a second one', function () {
         ->and($run->refresh()->status)->toBe(AgentRunStatus::Succeeded)
         ->and(TargetProfile::query()->withoutGlobalScopes()->sole()->name)->toBe('Regional wholesalers');
 });
+
+it('keeps the two angles a partner profile is written to on', function () {
+    $user = targeter();
+    $project = Project::factory()->for($user->organizations()->sole())->create();
+
+    $profile = TargetProfile::factory()->create(['project_id' => $project->id]);
+
+    $this->actingAs($user)
+        ->put(route('targets.update', $profile), profileForm([
+            'type' => 'partner',
+            'access_angle' => 'Invoices every one of them monthly.',
+            'partnership_angle' => 'Their clients stop calling them about the same problem.',
+        ]))
+        ->assertRedirect(route('targets.show', $profile));
+
+    expect($profile->refresh()->criteria['partnership_angle'])
+        ->toBe('Their clients stop calling them about the same problem.');
+});

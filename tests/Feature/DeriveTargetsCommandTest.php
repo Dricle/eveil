@@ -2,6 +2,7 @@
 
 use App\Ai\Agents\TargetProfileDeriver;
 use App\Enums\TargetProfileSource;
+use App\Enums\TargetProfileType;
 use App\Models\AgentRun;
 use App\Models\Project;
 use App\Models\TargetProfile;
@@ -137,4 +138,33 @@ it('says so when no project matches', function () {
     $this->artisan('eveil:derive-targets', ['project' => 'nope'])
         ->expectsOutputToContain('No project matches')
         ->assertFailed();
+});
+
+it('derives partner profiles alongside customers, with the angles the email will open on', function () {
+    // A market of businesses that publish a phone and no address is a right
+    // profile nobody can be written to. Whoever already visits or invoices them
+    // is reachable, and one of them carries hundreds of the buyers.
+    projectWithKnowledgeBase();
+
+    TargetProfileDeriver::fake([['profiles' => [
+        profile('Friteries wallonnes'),
+        [
+            ...profile('Grossistes en surgelés'),
+            'type' => 'partner',
+            'access_angle' => 'Their reps deliver to 3,000 friteries every week.',
+            'partnership_angle' => 'A revenue share on every restaurant that signs up.',
+        ],
+    ]]]);
+
+    $this->artisan('eveil:derive-targets')->assertSuccessful();
+
+    $customer = TargetProfile::query()->firstWhere('name', 'Friteries wallonnes');
+    $partner = TargetProfile::query()->firstWhere('name', 'Grossistes en surgelés');
+
+    expect($customer->type)->toBe(TargetProfileType::Customer)
+        ->and($partner->type)->toBe(TargetProfileType::Partner)
+        // The kind is queryable on the row; the angles are criteria like the rest.
+        ->and($partner->criteria)->not->toHaveKey('type')
+        ->and($partner->criteria['access_angle'])->toBe('Their reps deliver to 3,000 friteries every week.')
+        ->and($partner->criteria['partnership_angle'])->toBe('A revenue share on every restaurant that signs up.');
 });

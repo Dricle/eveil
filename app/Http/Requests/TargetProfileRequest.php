@@ -37,6 +37,8 @@ class TargetProfileRequest extends FormRequest
             'type' => ['required', Rule::enum(TargetProfileType::class)],
             'is_active' => ['boolean'],
             'rationale' => ['nullable', 'string', 'max:2000'],
+            'access_angle' => ['nullable', 'string', 'max:2000'],
+            'partnership_angle' => ['nullable', 'string', 'max:2000'],
             'company_size' => ['nullable', 'string', 'max:255'],
             'estimated_market_size' => ['nullable', 'string', 'max:500'],
         ];

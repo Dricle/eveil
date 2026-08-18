@@ -369,3 +369,25 @@ it('does not guess a generic address unless asked', function () {
 
     expect(Lead::count())->toBe(0);
 });
+
+it('takes the address a directory published when the business has no site', function () {
+    // Nothing to crawl and nobody to name: the listing line is the whole of
+    // what exists, and half this segment is unreachable by email at all — so
+    // the one address the directory printed is not a fallback, it is the lead.
+    $company = Company::factory()->create([
+        'domain' => null,
+        'website' => null,
+        'language' => 'fr',
+        'source_url' => 'https://annuaire.test/friteries/namur',
+        'facts' => ['email' => 'marcel@chez-marcel.test', 'phone' => '+3281223344'],
+    ]);
+
+    $this->artisan('eveil:find-contacts')->assertSuccessful();
+
+    $lead = Lead::sole();
+
+    expect($lead->email)->toBe('marcel@chez-marcel.test')
+        ->and($lead->company_id)->toBe($company->id)
+        ->and($lead->email_source)->toBe(EmailSource::Scraped)
+        ->and($lead->source_url)->toBe('https://annuaire.test/friteries/namur');
+});

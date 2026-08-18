@@ -53,7 +53,7 @@ class FindContactsCommand extends Command
                 $leads = $currentProject->run($project, fn () => $find->handle($company, (bool) $this->option('guess-generic')));
             } catch (Throwable $e) {
                 // One unreadable site must not cost the run everything before it.
-                $this->components->twoColumnDetail("<fg=yellow>{$company->domain}</>", 'skipped: '.$e->getMessage());
+                $this->components->twoColumnDetail('<fg=yellow>'.($company->domain ?? $company->name).'</>', 'skipped: '.$e->getMessage());
 
                 continue;
             }

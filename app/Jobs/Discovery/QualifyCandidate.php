@@ -28,14 +28,16 @@ class QualifyCandidate extends DiscoveryJob
         }
 
         if ($qualifier->alreadyKnown($targetProfile, $candidate)) {
-            $this->skip("{$candidate->domain()}: already found for this project");
+            $this->skip(($candidate->domain() ?? $candidate->name).': already found for this project');
         }
 
         if ($run->qualified_count >= $run->limit('max_qualified')) {
             $this->skip("not read — this run already kept the {$run->limit('max_qualified')} companies it was asked for");
         }
 
-        if (! $run->claim('max_pages')) {
+        // A business with no site is judged on the directory line alone, so it
+        // costs no fetch and must not spend the page budget of one.
+        if ($candidate->website !== null && ! $run->claim('max_pages')) {
             $this->skip("not read — this run has fetched the {$run->limit('max_pages')} pages it may fetch");
         }
 
@@ -44,7 +46,7 @@ class QualifyCandidate extends DiscoveryJob
         } catch (Throwable $e) {
             // Named, because a bare provider message says nothing about which
             // of two hundred candidates went wrong.
-            throw new RuntimeException("{$candidate->website}: {$e->getMessage()}", previous: $e);
+            throw new RuntimeException(($candidate->website ?? $candidate->name).": {$e->getMessage()}", previous: $e);
         }
 
         if ($prospect) {

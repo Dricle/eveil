@@ -18,9 +18,9 @@ readonly class Candidate
         /**
          * Null when the source found a business that publishes no site of its
          * own — routine on a directory listing, impossible from a web search.
-         * The pipeline cannot qualify these yet: `companies.domain` is the
-         * dedupe key and it is NOT NULL, so they are counted and reported
-         * rather than silently dropped.
+         * Those are kept when the listing published an address to write to:
+         * with no site and no address there is nothing to qualify and nothing
+         * to send, so the run counts them instead of paying to read them.
          */
         public ?string $website,
         public string $source,

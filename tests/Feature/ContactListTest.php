@@ -250,3 +250,43 @@ it('carries a person\'s verdict up to their company, except an unsubscribe', fun
         ->and($company->refresh()->status)->toBe(OutreachStatus::Won)
         ->and($colleague->refresh()->status)->toBe(OutreachStatus::New);
 });
+
+it('shows one person\'s whole history on their own sheet', function () {
+    [$user, $project] = contacter();
+
+    $company = Company::factory()->create(['project_id' => $project->id, 'name' => 'Friterie du Centre']);
+    $lead = Lead::factory()->create([
+        'project_id' => $project->id,
+        'company_id' => $company->id,
+        'first_name' => 'Marcel',
+        'last_name' => 'Dupont',
+        'email' => 'marcel@friterie.test',
+        'email_source' => EmailSource::Scraped,
+        'email_status' => EmailStatus::Valid,
+    ]);
+
+    $this->actingAs($user)->get(route('contacts.show', $lead))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('leads/Contact')
+            ->where('contact.name', 'Marcel Dupont')
+            ->where('contact.email', 'marcel@friterie.test')
+            // The company is referenced, never copied onto the person.
+            ->where('contact.company_detail.name', 'Friterie du Centre')
+            ->has('contact.campaigns', 0)
+            ->has('contact.messages', 0));
+});
+
+it('refuses the sheet for another project\'s contact, and for an erased one', function () {
+    [$user, $project] = contacter();
+
+    $theirs = Lead::factory()->create();
+    $erased = Lead::factory()->create(['project_id' => $project->id, 'erased_at' => now()]);
+
+    $this->actingAs($user)->get(route('contacts.show', $theirs))->assertNotFound();
+
+    // The row survives erasure so the next discovery run cannot re-find her,
+    // but there is nothing left to show and a page of empty fields would invite
+    // somebody to fill them back in.
+    $this->actingAs($user)->get(route('contacts.show', $erased))->assertNotFound();
+});

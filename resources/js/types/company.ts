@@ -56,3 +56,40 @@ export type Contact = {
     discovered_at: string
     company: { id: number, name: string, domain: string | null, location: string | null } | null
 }
+
+/** One person's whole history: the drill-down behind a row in the contacts list. */
+export type ContactSheet = Contact & {
+    email_verified_at: string | null
+    last_contacted_at: string | null
+    won_at: string | null
+    source: string
+    company_detail: {
+        id: number
+        name: string
+        domain: string | null
+        website: string | null
+        industry: string | null
+        size: string | null
+        location: string | null
+        status: OutreachStatus
+        evaluations: { profile: string | null, fit_score: number, fit_reason: string }[]
+    } | null
+    campaigns: {
+        id: number
+        campaign: string
+        status: string
+        pause_reason: string | null
+        step: number
+        next_action_at: string | null
+        mailbox: string | null
+    }[]
+    messages: {
+        id: number
+        direction: 'outbound' | 'inbound'
+        subject: string
+        body: string
+        status: string | null
+        classification: keyof typeof import('./inbox').CLASSIFICATIONS | null
+        at: string | null
+    }[]
+}

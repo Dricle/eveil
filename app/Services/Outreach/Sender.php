@@ -46,10 +46,16 @@ class Sender
     ): string {
         $messageId = $this->messageId($account);
 
+        // In development every mail can be pointed at one address instead of the
+        // lead's. The sender, the SMTP conversation and the thread are untouched,
+        // so what is being tested is the real path — only the recipient moves.
+        $redirect = $this->redirect();
+        $recipient = $redirect ?? (string) $lead->email;
+
         $mail = (new Email)
             ->from(new Address($account->from_email, $account->from_name))
-            ->to((string) $lead->email)
-            ->subject($subject)
+            ->to($recipient)
+            ->subject($this->subjectFor($lead, $subject))
             // Plain text only. A multipart mail with an HTML half is how every
             // bulk sender writes, and none of the personalisation above needs it.
             ->text($this->withSignature($body, $account));
@@ -71,6 +77,30 @@ class Sender
         }
 
         return $messageId;
+    }
+
+    /**
+     * The subject as it leaves. Prefixed with the intended recipient only when a
+     * mail is being diverted — every redirected mail lands in one inbox, so the
+     * subject is the only place that can say who it was meant for.
+     *
+     * Applied on the way out and never to what is stored: the conversation, the
+     * inbox and the reply the user writes all read the clean subject.
+     */
+    private function subjectFor(Lead $lead, string $subject): string
+    {
+        return $this->redirect() === null ? $subject : '[to: '.$lead->email.'] '.$subject;
+    }
+
+    /**
+     * The address every outreach mail is sent to instead of the lead, when one
+     * is configured. Null in any normal instance.
+     */
+    private function redirect(): ?string
+    {
+        $address = config('eveil.outreach.redirect_to');
+
+        return is_string($address) && $address !== '' ? $address : null;
     }
 
     private function transport(EmailAccount $account): EsmtpTransport

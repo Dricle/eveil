@@ -528,3 +528,71 @@ it('refuses to grant a mailbox to a project another organization owns', function
 
     expect(EmailAccount::query()->where('from_email', 'clement@abcreche.test')->exists())->toBeFalse();
 });
+
+it('shows where the people in one sequence have got to', function () {
+    [$user, $project] = sender();
+
+    contactable($project);
+    contactable($project, 'second@friterie.test');
+    $campaign = sequence($project);
+
+    app(EnrolCampaign::class)->handle($campaign);
+    CampaignLead::query()->limit(1)->update(['status' => CampaignLeadStatus::Stopped, 'pause_reason' => 'bounced']);
+
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->get(route('campaigns.show', $campaign))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('pipeline.pending', 1)
+            ->where('pipeline.stopped', 1));
+});
+
+it('sends every mail to one address when a test redirect is configured', function () {
+    [, $project] = sender();
+
+    // What a developer sets to try the real loop against their own mailbox.
+    config(['eveil.outreach.redirect_to' => 'mydnic@gmail.test']);
+
+    $fake = fakeSender();
+    $lead = contactable($project, 'marcel@friterie.test');
+    $campaign = sequence($project);
+
+    app(EnrolCampaign::class)->handle($campaign);
+    app(SendNextStep::class)->handle(CampaignLead::query()->firstOrFail());
+
+    // The Sender is faked here, so the redirect is asserted where it is decided
+    // rather than at the socket.
+    expect($fake->sent)->toHaveCount(1);
+
+    $message = Message::query()->sole();
+
+    // What is STORED stays about the lead: the conversation, the inbox and the
+    // suppression list all key off them, not off whoever the mail was diverted
+    // to. Only the envelope moves.
+    expect($message->lead_id)->toBe($lead->id)
+        ->and($message->subject)->toBe('vos commandes')
+        ->and($lead->refresh()->status)->toBe(OutreachStatus::Contacted);
+});
+
+it('puts the intended recipient in the subject of a redirected mail, and leaves an ordinary one alone', function () {
+    sender();
+
+    $lead = contactable(Project::query()->firstOrFail(), 'marcel@friterie.test');
+
+    // The real Sender's own decision rather than a copy of it here: this lives in
+    // the transport layer, so faking the Sender would assert nothing at all.
+    $subjectFor = function (?string $redirect) use ($lead): string {
+        config(['eveil.outreach.redirect_to' => $redirect]);
+
+        $sender = new Sender;
+
+        return (new ReflectionMethod($sender, 'subjectFor'))->invoke($sender, $lead, 'vos commandes');
+    };
+
+    expect($subjectFor('mydnic@gmail.test'))->toBe('[to: marcel@friterie.test] vos commandes')
+        ->and($subjectFor(null))->toBe('vos commandes')
+        // An empty string is not an address, and a half-filled env line must not
+        // silently divert anything.
+        ->and($subjectFor(''))->toBe('vos commandes');
+});

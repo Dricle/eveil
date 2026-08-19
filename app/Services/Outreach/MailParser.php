@@ -133,6 +133,57 @@ class MailParser
     }
 
     /**
+     * The delivery failure inside a bounce notification, or null when the mail
+     * is not one.
+     *
+     * Read from the `message/delivery-status` part rather than from the prose:
+     * every provider words "this address does not exist" differently, and all of
+     * them put `Status: 5.1.1` in the same place. `Action: failed` plus a status
+     * starting `5.` is a permanent failure; `4.` is temporary and must not
+     * suppress anybody.
+     */
+    public static function deliveryStatus(string $raw): ?BounceReport
+    {
+        $message = self::stripFetchEnvelope($raw);
+        $headers = self::headers($raw);
+
+        $isReport = str_contains(mb_strtolower($headers['content-type'] ?? ''), 'report-type=delivery-status')
+            || str_contains($message, 'Content-Type: message/delivery-status');
+
+        if (! $isReport) {
+            return null;
+        }
+
+        preg_match('/^Status:\s*([245]\.\d+\.\d+)/mi', $message, $status);
+        preg_match('/^Action:\s*(\w+)/mi', $message, $action);
+        preg_match('/^Final-Recipient:\s*[^;]+;\s*(\S+)/mi', $message, $recipient);
+        preg_match('/^Diagnostic-Code:\s*(.+)$/mi', $message, $diagnostic);
+
+        // Our own Message-ID, carried in the returned copy of the original
+        // headers. It is the only reliable way back to the mail that failed:
+        // the recipient alone cannot say WHICH send bounced.
+        preg_match_all('/^Message-ID:\s*<([^>]+)>/mi', $message, $ids);
+
+        $address = mb_strtolower(mb_trim($recipient[1] ?? '', '<> '));
+
+        if ($address === '') {
+            return null;
+        }
+
+        // The last one, because the report's own Message-ID comes first and the
+        // quoted original follows it.
+        $original = $ids[1] === [] ? null : end($ids[1]);
+
+        return new BounceReport(
+            recipient: $address,
+            originalMessageId: $original,
+            isHard: str_starts_with($status[1] ?? '', '5')
+                || mb_strtolower($action[1] ?? '') === 'failed' && ! str_starts_with($status[1] ?? '5', '4'),
+            diagnostic: mb_trim($diagnostic[1] ?? ($status[1] ?? 'delivery failed')),
+        );
+    }
+
+    /**
      * IMAP wraps the message in `* n FETCH (BODY[] {size}` and closes with a
      * line of its own; neither is part of the mail.
      */

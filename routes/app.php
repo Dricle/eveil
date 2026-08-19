@@ -140,6 +140,13 @@ Route::middleware(['auth', 'project.set'])->group(function (): void {
             ->name('contacts.status');
 
         /*
+         * One person's whole history — where the address came from, which
+         * sequences they are in, every mail either way. Registered after the
+         * literal segments above so `contacts/import` is never read as an id.
+         */
+        Route::get('contacts/{contact}', [ContactController::class, 'show'])->name('contacts.show');
+
+        /*
          * What gets written to them. The agent writes the sequence from the
          * product and the segment; the editor is where it gets corrected, and
          * composing one by hand is the escape hatch rather than the front door.

@@ -5,17 +5,21 @@ namespace App\Actions;
 use App\Enums\CampaignLeadStatus;
 use App\Enums\EmailAccountStatus;
 use App\Enums\MessageDirection;
+use App\Enums\MessageStatus;
 use App\Enums\OutreachStatus;
 use App\Enums\ReplyClassification;
 use App\Jobs\HandleReply;
 use App\Models\EmailAccount;
 use App\Models\Message;
+use App\Services\Outreach\BounceReport;
 use App\Services\Outreach\ImapClient;
 use App\Services\Outreach\ImapFailure;
 use App\Services\Outreach\InboundMail;
 use App\Services\Outreach\OptOutPhrases;
 use App\Services\Outreach\ReplyOutcomes;
+use App\Services\Outreach\SuppressionList;
 use App\Support\CurrentProject;
+use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Reading one mailbox and turning what answers our own mails into rows.
@@ -44,6 +48,7 @@ class FetchReplies
         private ImapClient $imap,
         private OptOutPhrases $optOut,
         private ReplyOutcomes $outcomes,
+        private SuppressionList $suppressions,
         private CurrentProject $currentProject,
     ) {}
 
@@ -86,6 +91,13 @@ class FetchReplies
 
     private function record(EmailAccount $account, InboundMail $mail): bool
     {
+        // A delivery failure arrives hours after the send it is about and is not
+        // an answer to anything. Handled before attribution because it names its
+        // own original mail and has no reply to attribute.
+        if ($mail->bounce !== null) {
+            return $this->recordBounce($account, $mail->bounce);
+        }
+
         if ($mail->inReplyTo === null) {
             return false;
         }
@@ -147,6 +159,59 @@ class FetchReplies
         }
 
         HandleReply::dispatch($reply);
+
+        return true;
+    }
+
+    /**
+     * A bounce that came back by mail rather than during the SMTP conversation.
+     *
+     * Same treatment as an immediate 5xx: a hard failure suppresses the address
+     * against THIS mailbox and stops the sequence, because retrying a known-dead
+     * address is what costs a domain its reputation. A soft failure — a full
+     * mailbox, a server having a bad afternoon — decides nothing and waits a day.
+     */
+    private function recordBounce(EmailAccount $account, BounceReport $bounce): bool
+    {
+        $sent = Message::query()
+            ->where('email_account_id', $account->id)
+            ->where('direction', MessageDirection::Outbound)
+            ->when(
+                $bounce->originalMessageId !== null,
+                fn (Builder $query) => $query->where('message_id', $bounce->originalMessageId),
+                // No usable original id, so fall back to the most recent mail
+                // sent to that address from this mailbox.
+                fn (Builder $query) => $query->whereRelation(
+                    'lead',
+                    fn (Builder $lead) => $lead->whereRaw('lower(email) = ?', [$bounce->recipient]),
+                )->latest('sent_at'),
+            )
+            ->with(['lead', 'campaignLead'])
+            ->first();
+
+        if ($sent === null) {
+            return false;
+        }
+
+        if (! $bounce->isHard) {
+            $sent->campaignLead?->update(['next_action_at' => now()->addDay()]);
+
+            return false;
+        }
+
+        $sent->update(['status' => MessageStatus::Bounced]);
+
+        $this->currentProject->run($sent->lead->project, function () use ($sent, $account, $bounce): void {
+            $this->suppressions->recordBounce($sent->lead, $account, $bounce->diagnostic);
+
+            $sent->lead->update(['status' => OutreachStatus::Suppressed]);
+
+            $sent->campaignLead?->update([
+                'status' => CampaignLeadStatus::Stopped,
+                'pause_reason' => 'bounced',
+                'next_action_at' => null,
+            ]);
+        });
 
         return true;
     }

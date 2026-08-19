@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\EmailStatus;
 use App\Http\Resources\ContactResource;
+use App\Http\Resources\ContactSheetResource;
 use App\Models\Lead;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -70,6 +71,33 @@ class ContactController extends Controller
                 ->selectRaw('email_status, count(*) as total')
                 ->groupBy('email_status')
                 ->pluck('total', 'email_status'),
+        ]);
+    }
+
+    /**
+     * One person, everything known about them. A drill-down rather than a sixth
+     * nav entry: this is where you land from the list, from the inbox, or from a
+     * campaign, and never somewhere you go on purpose.
+     *
+     * An erased lead answers 404. The row survives erasure by design — it is
+     * what stops the next discovery run finding her again — but there is nothing
+     * left on it to show, and a page of empty fields would invite somebody to
+     * fill them back in.
+     */
+    public function show(int $contact): Response
+    {
+        $lead = Lead::query()
+            ->whereNull('erased_at')
+            ->with([
+                'company.evaluations.targetProfile',
+                'campaignLeads.campaign',
+                'campaignLeads.emailAccount',
+                'messages' => fn ($messages) => $messages->orderBy('id'),
+            ])
+            ->findOrFail($contact);
+
+        return Inertia::render('leads/Contact', [
+            'contact' => ContactSheetResource::make($lead),
         ]);
     }
 }

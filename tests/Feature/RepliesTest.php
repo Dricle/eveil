@@ -95,6 +95,7 @@ function inbound(string $body, array $overrides = []): InboundMail
         subject: $overrides['subject'] ?? 'Re: vos commandes',
         body: $body,
         isAutoReply: $overrides['isAutoReply'] ?? false,
+        bounce: $overrides['bounce'] ?? null,
     );
 }
 
@@ -514,4 +515,90 @@ it('reports the positive reply rate and the funnel, never a raw rate', function 
             ->where('stats.positive', 0)
             ->where('stats.positive_rate', 0)
             ->where('pipeline.stopped', 1));
+});
+
+/**
+ * What a mail server sends back hours later when an address does not exist.
+ */
+function bounceMail(string $status = '5.1.1', string $diagnostic = 'smtp;550 5.1.1 user unknown'): string
+{
+    return "* 20 FETCH (BODY[] {700}\r\n"
+        ."From: MAILER-DAEMON@friterie.test\r\n"
+        ."To: clement@abcreche.test\r\n"
+        ."Subject: Undelivered Mail Returned to Sender\r\n"
+        ."Message-ID: <dsn-1@friterie.test>\r\n"
+        ."Content-Type: multipart/report; report-type=delivery-status; boundary=\"b1\"\r\n"
+        ."\r\n"
+        ."--b1\r\n"
+        ."Content-Type: text/plain\r\n"
+        ."\r\n"
+        ."This is the mail system at host friterie.test.\r\n"
+        ."--b1\r\n"
+        ."Content-Type: message/delivery-status\r\n"
+        ."\r\n"
+        ."Final-Recipient: rfc822; marcel@friterie.test\r\n"
+        ."Action: failed\r\n"
+        ."Status: {$status}\r\n"
+        ."Diagnostic-Code: {$diagnostic}\r\n"
+        ."--b1\r\n"
+        ."Content-Type: message/rfc822\r\n"
+        ."\r\n"
+        ."Message-ID: <ours-1@abcreche.test>\r\n"
+        ."Subject: vos commandes\r\n"
+        ."--b1--\r\n"
+        .")\r\n";
+}
+
+it('reads a bounce that comes back by mail, and suppresses the dead address', function () {
+    Queue::fake();
+
+    [$mailbox, $membership, $sent] = awaitingReply();
+
+    $report = MailParser::deliveryStatus(bounceMail());
+
+    expect($report)->not->toBeNull()
+        ->and($report->recipient)->toBe('marcel@friterie.test')
+        // The original id is what says WHICH send failed; the recipient alone
+        // cannot.
+        ->and($report->originalMessageId)->toBe('ours-1@abcreche.test')
+        ->and($report->isHard)->toBeTrue();
+
+    fakeImap([inbound('', ['uid' => 20, 'messageId' => 'dsn-1@friterie.test', 'inReplyTo' => null, 'bounce' => $report])]);
+
+    app(FetchReplies::class)->handle($mailbox);
+
+    expect($sent->refresh()->status)->toBe(MessageStatus::Bounced)
+        ->and(Suppression::query()->where('layer', SuppressionLayer::Bounce)->count())->toBe(1)
+        ->and($membership->lead->refresh()->status)->toBe(OutreachStatus::Suppressed)
+        ->and($membership->refresh()->status)->toBe(CampaignLeadStatus::Stopped)
+        ->and($membership->pause_reason)->toBe('bounced')
+        // Not a reply: nothing is paused pending a decision and no agent runs.
+        ->and(Message::query()->where('direction', MessageDirection::Inbound)->count())->toBe(0);
+
+    Queue::assertNothingPushed();
+});
+
+it('waits a day on a soft bounce instead of throwing the lead away', function () {
+    Queue::fake();
+
+    [$mailbox, $membership, $sent] = awaitingReply();
+
+    $report = MailParser::deliveryStatus(bounceMail('4.2.2', 'smtp;452 4.2.2 mailbox full'));
+
+    expect($report->isHard)->toBeFalse();
+
+    fakeImap([inbound('', ['uid' => 21, 'messageId' => 'dsn-2@friterie.test', 'inReplyTo' => null, 'bounce' => $report])]);
+
+    app(FetchReplies::class)->handle($mailbox);
+
+    // A full mailbox is somebody's holiday backlog, not a dead address.
+    expect(Suppression::query()->count())->toBe(0)
+        ->and($membership->lead->refresh()->status)->not->toBe(OutreachStatus::Suppressed)
+        ->and($sent->refresh()->status)->toBe(MessageStatus::Sent)
+        ->and($membership->refresh()->next_action_at->isFuture())->toBeTrue();
+});
+
+it('is not fooled into treating an ordinary reply as a bounce', function () {
+    expect(MailParser::deliveryStatus("* 1 FETCH (BODY[] {90}\r\nFrom: marcel@friterie.test\r\nSubject: Re: vos commandes\r\n\r\nNon merci.\r\n)\r\n"))
+        ->toBeNull();
 });

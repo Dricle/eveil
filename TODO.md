@@ -24,7 +24,7 @@ fournir de liste de leads. Tant que ce n'est pas vrai, Eveil est un crawler avec
 - [x] **6.2** Accroche personnalisée par lead, prévisualisée sur trois vrais leads
 - [x] **6.3** Composer, éditer et réordonner les étapes à la main
 
-### Epic 7 — Envoi `sortant fait, entrant absent`
+### Epic 7 — Envoi ✅
 
 - [x] **7.1** Connecter un ou plusieurs comptes email SMTP/IMAP (ADR-005, ADR-027) — écran
       `/app/settings/mailboxes`, scope organization, projets autorisés cochés sur le pivot, test de
@@ -35,21 +35,21 @@ fournir de liste de leads. Tant que ce n'est pas vrai, Eveil est un crawler avec
 - [x] **7.2** Limite d'envoi quotidienne par compte — `eveil:send-due` toutes les 5 min, au plus un
       mail par boîte et par tick, fenêtre horaire et délai minimum entre deux envois, quota compté
       sur l'adresse tous projets confondus
-- [ ] **7.6** Conformité de tout envoi — opt-out « STOP », suppression list 3 couches (ADR-013,
+- [x] **7.6** Conformité de tout envoi — opt-out « STOP », suppression list 3 couches (ADR-013,
       ADR-029) — 🟡 texte brut sans lien ni en-tête révélateur, `Message-ID` sur le domaine de
       l'expéditeur, trois couches relues **à chaque envoi**, bounce dur 5xx suppressif, échec d'auth
       qui met la boîte en erreur, coupe-circuit au-delà de 5 % de bounces. L'entrant est fait avec
       l'Epic 8 : l'agent lit la réponse et agit par tools, et un filet déterministe supprime sur une
-      formulation d'opt-out sans ambiguïté même si l'agent n'a pas tourné. **Reste** les DSN
-      asynchrones : seul le refus immédiat au moment de l'envoi est vu, un bounce qui revient par mail
-      une heure plus tard n'est pas encore lu
+      formulation d'opt-out sans ambiguïté même si l'agent n'a pas tourné. Les DSN asynchrones sont
+      lus aussi : `Status: 5.x` supprime l'adresse et arrête le lead, `4.x` ne décide rien et attend
+      un jour
 - [x] Brancher le blocage des `invalid` à l'envoi (fin de **5.5**, l'écran est fait) — `isSendable()`
       et `Lead::contactable()` sont relus à l'inscription dans la séquence et avant chaque envoi
-- [ ] Activation d'une campagne → inscription des leads : fait (`EnrolCampaign`, boîte épinglée pour
-      toute la séquence), mais sans écran pour suivre où en est chaque lead — c'est **8.4**
+- [x] Activation d'une campagne → inscription des leads (`EnrolCampaign`, boîte épinglée pour toute
+      la séquence), avec le funnel de la campagne sur son écran et celui du projet sur le dashboard
 - ~~7.5 warm-up~~ — hors scope assumé (ADR-023)
 
-### Epic 8 — Réponses & inbox `fait, sauf les DSN`
+### Epic 8 — Réponses & inbox ✅
 
 - [x] **8.1** Pause auto de la campagne sur réponse — attribution par `Message-ID` / `In-Reply-To`,
       la séquence se met en pause **avant** que quoi que ce soit décide, puis l'agent `reply-handler`
@@ -70,19 +70,32 @@ fournir de liste de leads. Tant que ce n'est pas vrai, Eveil est un crawler avec
       brut, qui compte les « non merci » et les absences du bureau comme des gains), réponses en
       attente d'une personne, leads et sociétés encore en jeu, campagnes actives, funnel, activité
       récente des agents, et tokens — jamais d'euros
-- [ ] Lire les DSN asynchrones (bounce qui revient par mail) — aujourd'hui seul le refus 5xx au
-      moment de l'envoi est vu
+- [x] Lire les DSN asynchrones — `multipart/report` parsé depuis la partie `message/delivery-status`
+      et pas depuis la prose (chaque provider la formule autrement, tous mettent `Status: 5.1.1` au
+      même endroit) ; le `Message-ID` d'origine rendu dans le rapport dit **quel** envoi a échoué
 
 ### Trous à combler dans ce qui existe déjà
 
-- [ ] **1.1** `docker compose up -d` + `.env.example` — **rien n'est déployable aujourd'hui**
-- [ ] **1.2** Mot de passe initial par variable d'env (le reste de l'auth est fait) — arrive avec 1.1
+- [x] **1.1** Déployable : `deploy/` porte son `Dockerfile` (FrankenPHP — un process sert l'HTTP et
+      exécute PHP, donc une instance = un conteneur au lieu de deux plus une conf nginx), son
+      `compose.yaml` (app, horizon, scheduler, postgres, redis, searxng) et son `.env.example`
+      commenté. Séparé du `compose.yaml` racine, qui est Sail : livrer une stack de dev comme produit
+      serait le contraire du but. `docker compose -f deploy/compose.yaml up -d`
+- [x] **1.2** Mot de passe initial par variable d'env — `eveil:install`, lancé par l'entrypoint à
+      chaque boot, idempotent : une fois qu'un compte existe il ne fait rien, donc un redémarrage ne
+      remet jamais un mot de passe à zéro. Sans `ADMIN_EMAIL`/`ADMIN_PASSWORD` c'est l'écran de setup
+      qui demande — pas de mot de passe par défaut, une instance joignable avec un mot de passe connu
+      est pire qu'une instance où personne ne peut encore entrer
 - [x] **5.1 bis** Profils partenaires dérivés par l'agent, avec `access_angle` / `partnership_angle`,
       et la séquence écrite pour un profil partenaire diffère (Epic 6)
 - [x] **5.2 bis** Sociétés sans site : `domain` nullable, qualifiées sur la ligne d'annuaire,
       l'adresse publiée devient le lead
 - [x] **5.2 bis** Écran superadmin du registre d'hôtes — existait déjà (`/app/app-settings/hosts`)
-- [ ] **5.8** Fiche contact centralisée
+- [x] **5.8** Fiche contact centralisée — `/app/contacts/{id}` : provenance de l'adresse et son
+      verdict de vérification, la société en objet référencé avec ses raisons de fit, les séquences
+      où la personne est avec sa boîte épinglée et sa prochaine action, et tous les mails dans les
+      deux sens. Un lead effacé rend 404 : la ligne survit pour que la découverte ne le retrouve
+      jamais, mais il n'y a plus rien à montrer
 
 ---
 

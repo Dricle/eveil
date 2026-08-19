@@ -133,3 +133,12 @@ Detaching a mailbox from a project mid-sequence is also undecided. Pause the aff
 Send failures are sorted by what the caller must do, via `SendFailure::kind`: `recipient` (5xx on the address) → suppress and stop that lead; `auth` → put the MAILBOX in error, never punish the address; `transient` (4xx) → retry in an hour, decide nothing. Getting these confused either burns a domain or throws away good leads.
 
 `Sender` builds a Symfony transport per mailbox and never uses the `Mail` facade — each mail goes through the mailbox the sequence pinned, not the configured mailer. Plain text only, and the `Message-ID` is anchored on the SENDER's domain.
+
+## OUTREACH_REDIRECT_TO diverts the recipient, nothing else
+Setting `OUTREACH_REDIRECT_TO` (config `eveil.outreach.redirect_to`) makes `Sender` send every outreach mail to that one address instead of the lead's. Everything else stays real: the mailbox connected in the app is still the sender, the mail still goes over its own SMTP, and the reply still arrives in that mailbox over its own IMAP. That is what makes it the only way to exercise the whole loop without writing to a stranger.
+
+Two invariants to keep: the diversion happens at the ENVELOPE only — what is stored on `messages` (subject, `lead_id`) stays about the lead, because the inbox, the thread and the suppression list all key off them — and the subject gets a `[to: lead@domain]` prefix on the way out, since every diverted mail lands in one inbox.
+
+Attribution is unaffected: a reply is matched on our own `Message-ID`, never on the from-address, so an answer arriving from the developer's own address still attaches to the lead.
+
+Do not add a production guard that silently disables it; the risk runs the other way (an instance quietly reaching nobody), which is why the mailbox screen shows a warning banner whenever it is set.

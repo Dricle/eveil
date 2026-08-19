@@ -1428,14 +1428,14 @@ est une story pas faite.
 
 | Epic | Avancement |
 |---|---|
-| 1 — Setup & configuration | 🟡 auth complète (Fortify : login, reset, 2FA), écran de setup, et section « App settings » réservée au superadmin — clé provider, mapping par agent, limites, registre d'hôtes. Manque le compose de déploiement et le `.env.example` (1.1) |
+| 1 — Setup & configuration | ✅ auth complète (Fortify : login, reset, 2FA), écran de setup, section « App settings » réservée au superadmin — clé provider, mapping par agent, limites, registre d'hôtes — et `deploy/` : image FrankenPHP, compose app + horizon + scheduler + postgres + redis + searxng, `.env.example` commenté, superadmin créé depuis l'env par un `eveil:install` idempotent |
 | 2 — Projets | 🟡 cloisonnement fait et testé, CRUD fait, sélecteur de projet fait, instructions d'écriture par projet suivies par les agents qui écrivent ; manque le dashboard multi-projet (`v1`) |
 | 3 — Analyse & knowledge base | 🟡 analyse déclenchée à l'enregistrement, progression du crawl et pages en échec affichées, knowledge base visible et éditable ; manque le lien vers un repo (`v1`) |
 | 4 — Agent Website | ⬜ table `recommendations` pas encore créée |
-| 5 — Découverte de leads | 🟡 graphe de jobs (`discovery_tasks`) avec son écran — lancer, suivre, rejouer, arrêter ; profils cibles éditables ; sociétés scorées, filtrables, et portant le verdict de l'utilisateur, recopié dans les deux sens entre une société et ses contacts (`client`, `won`, `lost`, `rejected`, `suppressed` sortent de l'outreach) ; contacts listés avec leur verdict de vérification et le même statut, recherche déclenchable par société ou en masse ; import CSV avec son rapport ligne à ligne ; profils partenaires dérivés par l'agent avec leurs deux angles ; sociétés sans site qualifiées sur la ligne d'annuaire et jointes à l'adresse qu'elle publie. Manquent la fiche contact (5.8) et le rendu JS (5.9, reporté) |
+| 5 — Découverte de leads | 🟡 graphe de jobs (`discovery_tasks`) avec son écran — lancer, suivre, rejouer, arrêter ; profils cibles éditables ; sociétés scorées, filtrables, et portant le verdict de l'utilisateur, recopié dans les deux sens entre une société et ses contacts (`client`, `won`, `lost`, `rejected`, `suppressed` sortent de l'outreach) ; contacts listés avec leur verdict de vérification et le même statut, recherche déclenchable par société ou en masse ; import CSV avec son rapport ligne à ligne ; profils partenaires dérivés par l'agent avec leurs deux angles ; sociétés sans site qualifiées sur la ligne d'annuaire et jointes à l'adresse qu'elle publie. Manque le rendu JS (5.9, reporté en `v1`) |
 | 6 — Séquences | 🟡 génération IA, personnalisation par lead avec prévisualisation, éditeur d'étapes complet ; manquent l'A/B (6.4) et les variables conditionnelles (6.5), tous deux `v1` |
-| 7 — Envoi | 🟡 boîtes SMTP/IMAP connectables avec un test qui nomme la cause de l'échec, plafond quotidien par adresse tous projets confondus, envoi étalé sur la journée par un tick de cinq minutes, séquence qui avance seule, trois couches de suppression relues à chaque envoi, bounce dur suppressif et coupe-circuit sur le taux de bounce ; manquent le ramp-up configurable (7.3, `v1`), la rotation sur plusieurs boîtes (7.4, `v1`) et tout ce qui vient de l'entrant — STOP, DSN — qui appartient à l'Epic 8 |
-| 8 — Réponses & inbox | 🟡 IMAP lu à la main, réponses attribuées par en-tête, séquence mise en pause avant toute décision, agent `reply-handler` qui agit par outils, filet d'opt-out déterministe, inbox unifiée triée par ce qui demande une personne, réponse à la main depuis la boîte d'origine, funnel et dashboard avec le taux de réponse positive ; manque la lecture des DSN asynchrones (seul le refus 5xx immédiat est vu) |
+| 7 — Envoi | ✅ boîtes SMTP/IMAP connectables avec un test qui nomme la cause de l'échec, plafond quotidien par adresse tous projets confondus, envoi étalé sur la journée par un tick de cinq minutes, séquence qui avance seule, trois couches de suppression relues à chaque envoi, bounce dur suppressif et coupe-circuit sur le taux de bounce ; restent le ramp-up configurable (7.3, `v1`), la rotation sur plusieurs boîtes (7.4, `v1`) et tout ce qui vient de l'entrant — STOP, DSN — qui appartient à l'Epic 8 |
+| 8 — Réponses & inbox | ✅ IMAP lu à la main, réponses attribuées par en-tête, séquence mise en pause avant toute décision, agent `reply-handler` qui agit par outils, filet d'opt-out déterministe, inbox unifiée triée par ce qui demande une personne, réponse à la main depuis la boîte d'origine, funnel et dashboard avec le taux de réponse positive, DSN asynchrones lus (5.x supprime, 4.x attend un jour) |
 | 9 — Organizations & permissions | ⬜ tables faites, rien au-dessus |
 | 10 — Facturation | ⬜ |
 | 11 — LinkedIn / 12 — Intégrations | ⬜ hors v0 et v1 |
@@ -1460,22 +1460,41 @@ séquence, aucun envoi.
 
 ### Epic 1 — Setup & configuration `v0`
 
-**1.1** ⬜ En tant que superadmin, je veux déployer l'app via `docker compose up -d` avec un `.env`
+**1.1** ✅ En tant que superadmin, je veux déployer l'app via `docker compose up -d` avec un `.env`
 minimal, pour être opérationnel en quelques minutes.
 - Le compose démarre app, queue worker, scheduler, base, SearXNG
 - `.env.example` documente le minimum vital : URL, `APP_KEY`, mot de passe admin initial
 - Aucune clé API tierce n'est requise pour un premier run de découverte
-- Premier accès à l'URL → écran de setup, pas une erreur 500 — **fait** (voir 1.2) ; le reste de la
-  story, le compose de déploiement et le `.env.example`, reste à faire
+- Premier accès à l'URL → écran de setup, pas une erreur 500
+- **État** : tout est dans `deploy/` — `Dockerfile`, `compose.yaml`, `.env.example` commenté ligne par
+  ligne. Lancement : `docker compose -f deploy/compose.yaml up -d` (le `-f` parce que le
+  `compose.yaml` racine est Sail : livrer une stack de dev comme produit serait le contraire du but).
+  **FrankenPHP** plutôt que php-fpm derrière nginx : un seul process sert l'HTTP et exécute PHP, donc
+  une instance est un conteneur au lieu de deux plus une conf que personne ne veut maintenir, et Caddy
+  gère TLS tout seul. Un seul build sert les trois services (app, `horizon`, `schedule:work`) ;
+  l'étape de build a Node **et** PHP dans le même stage parce que `yarn build` appelle
+  `wayfinder:generate`. L'entrypoint migre avant que quoi que ce soit serve ou consomme une file, les
+  workers attendent que la migration soit passée, et `eveil:install` peut échouer sans empêcher le
+  boot — un `ADMIN_PASSWORD` refusé est une coquille dans un fichier d'env, pas une raison de rendre
+  l'instance injoignable. Vérifié en vrai : stack montée, migrations passées, superadmin créé depuis
+  l'env, `/` qui redirige vers `/app`, login à 200, Horizon démarré. Deux bugs trouvés à cette
+  occasion : le volume Postgres doit être monté sur `/var/lib/postgresql` et non `/data` depuis la 18,
+  et l'échec de l'install faisait redémarrer l'app en boucle
 
-**1.2** 🟡 En tant que superadmin, je veux me connecter avec le mot de passe défini au setup.
+**1.2** ✅ En tant que superadmin, je veux me connecter avec le mot de passe défini au setup.
 - Le mot de passe initial vient de l'env ou du premier écran de setup
 - Changeable depuis les settings
 - **État** : Fortify installé ; écran de setup (`/app/setup`, superadmin + organization owner),
   login, logout, inscription, mot de passe oublié + réinitialisation par email, confirmation de mot
   de passe faits et testés. Section compte sous `/app/account` avec sa sidebar : profil, mot de
   passe, 2FA TOTP (activation, QR, codes de secours, désactivation) et suppression de compte.
-  Manque le mot de passe initial par l'env, qui arrive avec le compose de déploiement (1.1)
+  Le mot de passe initial vient de `ADMIN_EMAIL` / `ADMIN_PASSWORD` via `eveil:install`, lancé par
+  l'entrypoint à **chaque** boot et idempotent : une fois qu'un compte existe la commande ne fait
+  rien, donc un redémarrage ne remet jamais un mot de passe à zéro et ne crée pas un second
+  superadmin. Aucun mot de passe par défaut, volontairement — une instance joignable depuis Internet
+  avec un mot de passe connu est pire qu'une instance où personne ne peut encore entrer, donc sans ces
+  variables c'est l'écran de setup qui demande. Les règles sont celles de `Password::defaults()`, plus
+  strictes en production : un `ADMIN_PASSWORD` refusé est signalé et le boot continue
 
 **1.3** ✅ En tant que superadmin, je veux choisir mon provider IA et saisir ma clé depuis les settings.
 - Clé chiffrée avec `CREDENTIALS_KEY` (ADR-012), jamais loggée, jamais renvoyée en clair au frontend
@@ -1846,9 +1865,16 @@ automatiquement.
 - Cloudflare Browser Rendering, ScrapingBee ou Zyte se branchent au même endroit pour qui préfère payer
   plutôt qu'exploiter Chromium. Optionnel, avec clé, jamais supposé
 
-**5.8** ⬜ En tant qu'utilisateur, je veux une fiche contact centralisée.
+**5.8** ✅ En tant qu'utilisateur, je veux une fiche contact centralisée.
 - Historique d'outreach, statut de vérification, activité par campagne, provenance
 - Société en objet séparé et dédupliqué, jamais recopiée sur chaque contact
+- **État** : `/app/contacts/{id}`, une descente depuis la liste et jamais une sixième entrée de nav.
+  Porte la provenance de l'adresse (où elle a été vue, quand, comment) et son verdict de vérification,
+  la société **référencée** avec ses raisons de fit par profil — deux contacts d'une même firme ne
+  doivent pas être en désaccord sur ce qu'est cette firme —, les séquences où la personne est avec sa
+  boîte épinglée et sa prochaine action, et tous les mails dans les deux sens avec ce que l'agent a
+  décidé de chacun. Un lead effacé rend 404 : la ligne survit pour que la découverte ne le retrouve
+  jamais, mais il n'y a plus rien à montrer et une page de champs vides inviterait à les remplir
 
 ### Epic 6 — Séquences & personnalisation `v0`
 

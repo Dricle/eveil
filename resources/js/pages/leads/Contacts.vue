@@ -274,9 +274,10 @@ function sourceLabel (contact: Contact) {
                 </template>
 
                 <template #name-cell="{ row }">
-                    <p class="font-medium">
-                        {{ row.original.name ?? '—' }}
-                    </p>
+                    <ULink
+                        :href="contactRoutes.show.url(row.original.id)"
+                        class="font-medium"
+                    >{{ row.original.name ?? row.original.email ?? '—' }}</ULink>
                     <ULink
                         v-if="row.original.linkedin_url"
                         :href="row.original.linkedin_url"

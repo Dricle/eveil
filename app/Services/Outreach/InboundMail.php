@@ -19,5 +19,7 @@ class InboundMail
         public readonly string $subject,
         public readonly string $body,
         public readonly bool $isAutoReply,
+        /** Set when the mail is a delivery failure rather than an answer. */
+        public readonly ?BounceReport $bounce = null,
     ) {}
 }

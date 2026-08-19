@@ -78,6 +78,13 @@ class CampaignController extends Controller
 
         return Inertia::render('campaigns/Show', [
             'campaign' => CampaignResource::make($campaign),
+            // Where the people in THIS sequence have got to. The dashboard shows
+            // the project's whole funnel; this is the one campaign's, which is
+            // what somebody looking at a sequence wants to know.
+            'pipeline' => $campaign->campaignLeads()
+                ->selectRaw('status, count(*) as total')
+                ->groupBy('status')
+                ->pluck('total', 'status'),
             'sample' => Inertia::optional(fn () => $this->currentProject->run(
                 $campaign->project,
                 fn () => $preview->handle($campaign, $request->integer('preview_step')),

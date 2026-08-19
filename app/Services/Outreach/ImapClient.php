@@ -142,6 +142,9 @@ class ImapClient
             subject: $headers['subject'] ?? '(no subject)',
             body: MailParser::body($raw),
             isAutoReply: MailParser::looksAutomatic($headers),
+            // A bounce is not an answer, and treating one as a reply would pause
+            // a sequence because a mail server said an address does not exist.
+            bounce: MailParser::deliveryStatus($raw),
         );
     }
 

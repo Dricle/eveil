@@ -60,4 +60,53 @@ return [
         'probe_from' => env('EVEIL_PROBE_FROM', 'verify@eveil.local'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | First account
+    |--------------------------------------------------------------------------
+    |
+    | Read once, by `eveil:install`, so a container can come up already
+    | logged-into-able. Deployment only, which is why it belongs here rather
+    | than in the settings table: it describes the environment, not a product
+    | decision, and after the first boot it is never read again.
+    |
+    | No defaults on the email or the password. An instance on the internet with
+    | a known admin password is worse than one nobody can log into — without
+    | them the setup screen asks instead.
+    |
+    */
+
+    'admin' => [
+        'name' => env('ADMIN_NAME'),
+        'email' => env('ADMIN_EMAIL'),
+        'password' => env('ADMIN_PASSWORD'),
+        'organization' => env('ADMIN_ORGANIZATION'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Development: send everything to one address instead of to the lead
+    |--------------------------------------------------------------------------
+    |
+    | Set `OUTREACH_REDIRECT_TO` to your own address and every outreach mail goes
+    | there instead of to the lead. Nothing else changes: the mailbox connected in
+    | the app is still the real sender, the mail still leaves over its real SMTP,
+    | and the reply you write still arrives in that mailbox over its real IMAP —
+    | which is what makes this the only way to exercise the whole loop without
+    | writing to a stranger.
+    |
+    | Attribution survives it because a reply is matched on our own `Message-ID`
+    | and never on the from-address: the answer arrives from YOUR address while
+    | the conversation stays attached to the lead.
+    |
+    | Deployment only, hence config and not the settings table — an operator
+    | would never tune this, and a screen offering to would be a screen offering
+    | to silently stop writing to anybody.
+    |
+    */
+
+    'outreach' => [
+        'redirect_to' => env('OUTREACH_REDIRECT_TO'),
+    ],
+
 ];

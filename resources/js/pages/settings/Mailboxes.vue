@@ -11,6 +11,7 @@ import { PROVIDER_PRESETS } from '@/types/mailbox'
 defineProps<{
     mailboxes: Mailbox[]
     projects: Project[]
+    redirectTo: string | null
 }>()
 
 const page = usePage()
@@ -128,6 +129,17 @@ function note () {
                 belongs to your organization; each project you tick below may
                 send through it.
             </p>
+
+            <!-- Impossible to miss on purpose: every mail going to one address
+                 looks like outreach working until you check the recipient. -->
+            <UAlert
+                v-if="redirectTo"
+                color="warning"
+                variant="subtle"
+                icon="i-lucide-flask-conical"
+                title="Test mode: every outreach mail goes to one address"
+                :description="`OUTREACH_REDIRECT_TO is set to ${redirectTo}, so nothing reaches a prospect. The sender, the SMTP connection and the thread are real — only the recipient is replaced, and the intended one is in the subject. Replies you write still come back to the mailbox below.`"
+            />
 
             <UAlert
                 v-if="page.props.status"

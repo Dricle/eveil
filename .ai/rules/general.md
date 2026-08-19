@@ -104,12 +104,18 @@ Two deadlines remain, non-blocking for development but not to be discovered the 
 
 When a new open question appears, add it to the §9 register with an identifier, and promote it to an ADR in §3 once settled.
 
-## Story status lives in the spec, and it is your job to update it
-Decided scope outruns built code, so status is tracked on the stories themselves. Every story in §7 of `saas-outreach-tool-user-stories.md` carries a marker — `✅` done and tested, `🟡` backend/CLI only with no UI, `⬜` not started — plus a per-epic rollup at the top of the section.
+## `TODO.md` is the working tracker — read it first, update it always
+Decided scope outruns built code, so status is tracked, and `TODO.md` at the repo root is where it is tracked. It is the list in EXECUTION ORDER, one line per story, and it is the file to open when the question is "what is left" — not the 2000-line spec. Read it before planning anything.
 
-**Update the marker in the same commit as the code.** An unmarked or stale story is worse than none: the whole point is that §7 answers "what is left" without reading the codebase. When a story moves to `🟡`, say on the story itself what is missing. When the schema for a story does not exist yet, say so — several ADRs (031 partner target profiles, 032 recommendations, 033 directories) are decided in the spec but have no migration, and that gap is invisible from the ADR text alone.
+**Update it in the same commit as the code, every time.** A checkbox left unticked after the work shipped is worse than no list: the next session re-reads an epic marked `rien de fait` and either rebuilds it or distrusts the whole file. Same for the epic heading beside it.
 
-Do not invent a second tracker. No TODO.md, no issues file, no task list in another document — they drift apart within a week and then nobody trusts either.
+- `[x]` only when the story is genuinely done and tested. A story with the backend done and no screen stays `[ ]` with a `🟡` and one line naming what is missing — half-ticked is how a list starts lying.
+- Add a line for work that turns out to be needed and is not on the list yet. Removing lines is for scope that got dropped, and say so rather than deleting silently.
+- The out-of-scope block at the bottom is load-bearing: never tick anything in it, never build it.
+
+`saas-outreach-tool-user-stories.md` §7 keeps the DETAIL behind each line — the marker, the per-epic rollup, and the paragraph on how it was actually built and what was deliberately left out. Keep it in step in the same commit, because that paragraph is where the reasoning for a `🟡` lives and a one-line checkbox cannot carry it. When the schema for a story does not exist yet, say so there — several ADRs (031 partner target profiles, 032 recommendations, 033 directories) are decided in the spec but have no migration, and that gap is invisible from the ADR text alone.
+
+Do not add a THIRD list — no issues file, no task list in a new document. Two files, one of them a one-line-per-story checklist, is the ceiling. They drift apart within a week and then nobody trusts any of them.
 
 ## Code comments never cite the spec, and examples stay domain-agnostic
 Two rules for anything under `app/`, `config/`, `database/` or `tests/`.

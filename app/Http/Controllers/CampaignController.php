@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\EnrolCampaign;
 use App\Actions\PreviewSequence;
 use App\Ai\Agents\SequenceWriter;
 use App\Enums\AgentRunStatus;
+use App\Enums\CampaignStatus;
 use App\Http\Requests\CampaignRequest;
 use App\Http\Resources\CampaignResource;
 use App\Http\Resources\TargetProfileResource;
@@ -83,9 +85,21 @@ class CampaignController extends Controller
         ]);
     }
 
-    public function update(CampaignRequest $request, int $campaign): RedirectResponse
+    public function update(CampaignRequest $request, EnrolCampaign $enrol, int $campaign): RedirectResponse
     {
-        Campaign::query()->findOrFail($campaign)->update($request->validated());
+        $campaign = Campaign::query()->findOrFail($campaign);
+
+        // Read before the write: activating is what puts people into the
+        // sequence, and until then a campaign is only a document. Enrolling on
+        // every save would re-add everybody suppressed or won since.
+        $activating = $campaign->status !== CampaignStatus::Active
+            && $request->enum('status', CampaignStatus::class) === CampaignStatus::Active;
+
+        $campaign->update($request->validated());
+
+        if ($activating) {
+            $enrol->handle($campaign);
+        }
 
         return back();
     }

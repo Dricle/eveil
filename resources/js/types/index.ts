@@ -1,4 +1,5 @@
 export * from './auth'
 export * from './company'
 export * from './discovery'
+export * from './mailbox'
 export * from './project'

@@ -1,7 +1,13 @@
 # Eveil — reste à faire
 
-> Vue checklist de `saas-outreach-tool-user-stories.md`. La source de vérité reste le spec :
-> une case cochée ici sans marqueur `✅` là-bas ne compte pas.
+> **La liste de travail.** C'est ici qu'on regarde ce qui reste, et ici qu'on coche — dans le même
+> commit que le code. `saas-outreach-tool-user-stories.md` garde le détail derrière chaque ligne :
+> le marqueur, le rollup par epic, et le paragraphe qui dit comment c'est construit et ce qui a été
+> volontairement laissé de côté. Les deux restent en phase.
+>
+> `[x]` seulement quand c'est fait et testé. Backend fait sans écran → `[ ]` avec un `🟡` et une
+> ligne qui nomme ce qui manque : à moitié cochée, une liste commence à mentir.
+>
 > Ordre = ordre d'exécution. Rien de la section v1 ne démarre avant que v0 sorte.
 
 ---
@@ -18,17 +24,40 @@ fournir de liste de leads. Tant que ce n'est pas vrai, Eveil est un crawler avec
 - [x] **6.2** Accroche personnalisée par lead, prévisualisée sur trois vrais leads
 - [x] **6.3** Composer, éditer et réordonner les étapes à la main
 
-### Epic 7 — Envoi `rien de fait`
+### Epic 7 — Envoi `sortant fait, entrant absent`
 
-- [ ] **7.1** Connecter un ou plusieurs comptes email SMTP/IMAP (ADR-005, ADR-027)
-- [ ] **7.2** Limite d'envoi quotidienne par compte
-- [ ] **7.6** Conformité de tout envoi — opt-out « STOP », suppression list 3 couches (ADR-013, ADR-029)
-- [ ] Brancher le blocage des `invalid` à l'envoi (fin de **5.5**, l'écran est fait)
+- [x] **7.1** Connecter un ou plusieurs comptes email SMTP/IMAP (ADR-005, ADR-027) — écran
+      `/app/settings/mailboxes`, scope organization, projets autorisés cochés sur le pivot, test de
+      connexion SMTP **et** IMAP qui nomme la cause (app passwords Google, SMTP AUTH M365, port
+      bloqué, TLS inversé), six fournisseurs préremplis avec leur note. Les pages de documentation
+      par fournisseur sont **abandonnées** : la note dans le formulaire dit la même chose là où on en
+      a besoin, et six pages à maintenir se périment plus vite que les fournisseurs ne changent
+- [x] **7.2** Limite d'envoi quotidienne par compte — `eveil:send-due` toutes les 5 min, au plus un
+      mail par boîte et par tick, fenêtre horaire et délai minimum entre deux envois, quota compté
+      sur l'adresse tous projets confondus
+- [ ] **7.6** Conformité de tout envoi — opt-out « STOP », suppression list 3 couches (ADR-013,
+      ADR-029) — 🟡 texte brut sans lien ni en-tête révélateur, `Message-ID` sur le domaine de
+      l'expéditeur, trois couches relues **à chaque envoi**, bounce dur 5xx suppressif, échec d'auth
+      qui met la boîte en erreur, coupe-circuit au-delà de 5 % de bounces. **Reste** l'entrant, qui
+      demande la lecture IMAP de l'Epic 8 : la réponse reçue est **donnée à un agent** qui décide avec
+      ses outils (suppression, pas intéressé, à reprendre par un humain, relance à N mois, mauvais
+      interlocuteur, ignorer un auto-reply) — pas un `str_contains('STOP')`, qui rate « merci de ne
+      plus m'écrire » et tout ce qui n'est pas en anglais. Plus les DSN asynchrones. D'ici là le seul
+      canal d'opt-out réel n'est branché qu'à moitié
+- [x] Brancher le blocage des `invalid` à l'envoi (fin de **5.5**, l'écran est fait) — `isSendable()`
+      et `Lead::contactable()` sont relus à l'inscription dans la séquence et avant chaque envoi
+- [ ] Activation d'une campagne → inscription des leads : fait (`EnrolCampaign`, boîte épinglée pour
+      toute la séquence), mais sans écran pour suivre où en est chaque lead — c'est **8.4**
 - ~~7.5 warm-up~~ — hors scope assumé (ADR-023)
 
 ### Epic 8 — Réponses & inbox `rien de fait`
 
-- [ ] **8.1** Pause auto de la campagne sur réponse
+- [ ] **8.1** Pause auto de la campagne sur réponse — la séquence se met en pause **avant** que quoi
+      que ce soit décide (rien ne part pendant qu'on réfléchit), puis un agent lit le mail et agit par
+      **tools** : `suppress_lead`, `mark_not_interested`, `mark_needs_human`, `reschedule_followup`,
+      `ask_for_right_contact`, `ignore`. L'outil choisi écrit `messages.classification`, donc la
+      métrique nord (réponses positives) sort du même appel. Ajouter le cas `needs_human` à
+      `ReplyClassification` (six cas aujourd'hui, aucun pour « un humain doit répondre »)
 - [ ] **8.2** Inbox unifiée sur tous les comptes
 - [ ] **8.3** Répondre depuis l'app
 - [ ] **8.4** État de chaque lead dans le pipeline

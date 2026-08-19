@@ -57,9 +57,15 @@ Generated content follows for free: personalisation is already one LLM call per 
 Hand-written template + a lead in another language → translate the template at send time with the variables preserved, cache the result per (template, language) pair, and show the translated version in preview. The user must never discover after the fact what went out under their name.
 
 ## North metric: positive replies, plus a manual won flag
-ADR-022. The app only ever sees replies, never a signed contract. RAW reply rate is a bad metric — it counts "no thanks" and out-of-office alongside real interest. The headline metric is the POSITIVE reply rate, from AI classification (`reply.classify`, 1 credit).
+ADR-022. The app only ever sees replies, never a signed contract. RAW reply rate is a bad metric — it counts "no thanks" and out-of-office alongside real interest. The headline metric is the POSITIVE reply rate, and it comes out of the agent that handles the reply (`reply.handle`, 1 credit — to be re-measured, an agent with tools costs more than a classifier).
 
-Classification routes, it doesn't just count — this is the real payoff:
+**An incoming reply is handed to an AGENT with tools, never keyword-matched.** `str_contains('STOP')` misses "merci de ne plus m'écrire", "désinscrivez-moi", everything not in English, and the polite sentence that means no — and ADR-029 makes this the only opt-out channel there is, so missing one costs a complaint. The agent gets the mail plus its context (lead, company and its fit reason, campaign, the step that was sent) and calls one tool: `suppress_lead`, `mark_not_interested`, `mark_needs_human`, `reschedule_followup`, `ask_for_right_contact`, `ignore`. The tool it calls is what writes `messages.classification`, so the metric falls out of the same call — do not add a separate classify pass.
+
+Two invariants around it:
+- **Pause first, decide after.** The sequence is paused deterministically the moment a reply is attributed, BEFORE the agent runs. The agent can fail, the provider can be down, the quota can be spent — and the next follow-up must not go out to somebody who just answered.
+- **Keep a deterministic opt-out net.** An unambiguous opt-out phrase suppresses even when the agent never ran. Not to replace the agent: so that compliance does not depend on a network call. One suppression too many costs a lead; one too few costs a complaint.
+
+The tools route, they don't just count — this is the real payoff:
 - interested → pause campaign, surface at top of inbox
 - not_now → reschedule a follow-up in N months
 - wrong_person → agent asks for the right contact
@@ -117,3 +123,13 @@ Consequence still to design: when several projects share a mailbox, something mu
 
 Detaching a mailbox from a project mid-sequence is also undecided. Pause the affected `campaign_leads` rather than switch sender — switching mid-thread breaks reply threading, which is what `in_reply_to` exists to preserve.
 
+## Sending: one mail per mailbox per tick, checks re-read at send time
+`eveil:send-due` (scheduled every 5 min) → `App\Actions\DispatchDueSends` queues AT MOST ONE `SendCampaignStep` per mailbox per tick, on the `sending` queue (one process). The tick IS the spread — do not loop it into a batch, and do not raise the sending supervisor's process count.
+
+`EmailAccount::remainingToday()` subtracts today's outbound messages for that `email_account_id` across EVERY project: the quota belongs to the address because one quota is what the receiving server counts. Never divide it per project or per campaign.
+
+`SendNextStep` re-runs every pre-send check (`isSendable()`, `status->isExcluded()`, `SuppressionList::suppresses()`) even though `EnrolCampaign` already ran them. That repetition is load-bearing: a STOP, a bounce, or the user marking the company a client all land between enrolment and the third follow-up.
+
+Send failures are sorted by what the caller must do, via `SendFailure::kind`: `recipient` (5xx on the address) → suppress and stop that lead; `auth` → put the MAILBOX in error, never punish the address; `transient` (4xx) → retry in an hour, decide nothing. Getting these confused either burns a domain or throws away good leads.
+
+`Sender` builds a Symfony transport per mailbox and never uses the `Mail` facade — each mail goes through the mailbox the sequence pinned, not the configured mailer. Plain text only, and the `Message-ID` is anchored on the SENDER's domain.

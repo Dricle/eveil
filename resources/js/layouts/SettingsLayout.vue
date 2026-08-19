@@ -4,6 +4,7 @@ import type { NavigationMenuItem } from '@nuxt/ui'
 import { computed } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import knowledgeBase from '@/routes/settings/knowledge-base'
+import mailboxes from '@/routes/settings/mailboxes'
 import project from '@/routes/settings/project'
 
 defineProps<{
@@ -19,7 +20,10 @@ const items = computed<NavigationMenuItem[]>(() =>
             label: 'Project knowledge',
             icon: 'i-lucide-book-open',
             to: knowledgeBase.edit.url()
-        }
+        },
+        // Organization scope rather than project: one address is often used by
+        // two products and never by a third.
+        { label: 'Mailboxes', icon: 'i-lucide-mail', to: mailboxes.index.url() }
     ].map(item => ({ ...item, active: page.url.startsWith(item.to) }))
 )
 </script>

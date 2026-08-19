@@ -22,6 +22,8 @@ use App\Http\Controllers\DiscoveryRunCancellationController;
 use App\Http\Controllers\DiscoveryRunController;
 use App\Http\Controllers\DiscoveryTaskReplayController;
 use App\Http\Controllers\LeadImportController;
+use App\Http\Controllers\MailboxController;
+use App\Http\Controllers\MailboxTestController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectKnowledgeBaseController;
 use App\Http\Controllers\TargetProfileController;
@@ -64,6 +66,19 @@ Route::middleware(['auth', 'project.set'])->group(function (): void {
             Route::get('project', [ProjectController::class, 'edit'])->name('project.edit');
             Route::put('project', [ProjectController::class, 'update'])->name('project.update');
             Route::delete('project', [ProjectController::class, 'destroy'])->name('project.destroy');
+
+            /*
+             * Mailboxes belong to the ORGANIZATION, so these sit outside
+             * anything project-scoped: one address is often used by two
+             * products and never by a third, and which projects may send
+             * through it is a grant on the pivot.
+             */
+            Route::get('mailboxes', [MailboxController::class, 'index'])->name('mailboxes.index');
+            Route::post('mailboxes', [MailboxController::class, 'store'])->name('mailboxes.store');
+            Route::put('mailboxes/{mailbox}', [MailboxController::class, 'update'])->name('mailboxes.update');
+            Route::delete('mailboxes/{mailbox}', [MailboxController::class, 'destroy'])->name('mailboxes.destroy');
+            Route::post('mailboxes/{mailbox}/test', [MailboxTestController::class, 'store'])
+                ->name('mailboxes.test');
 
             Route::get('knowledge-base', [ProjectKnowledgeBaseController::class, 'edit'])
                 ->name('knowledge-base.edit');

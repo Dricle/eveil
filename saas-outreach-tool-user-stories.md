@@ -500,7 +500,7 @@ Opus 5 pour la planification, Haiku 4.5 pour extraction et qualification).
 | `contact.extract` | par société retenue | 8 | 0,008 $ |
 | `sequence.generate` | par campagne | 100 | 0,10 $ |
 | `lead.personalize` | par lead | 3 | 0,003 $ |
-| `reply.classify` | par réponse | 1 | 0,001 $ |
+| `reply.handle` | par réponse | 1 | 0,001 $ — agent avec outils, à remesurer |
 | `recommendations.generate` | par analyse | 120 | 0,12 $ — estimé |
 | `chat.message` | par message | 15 | 0,015 $ — estimé |
 | Vérification email, envoi SMTP, lecture IMAP | — | **0** | 0 $ |
@@ -620,10 +620,13 @@ découvre jamais après coup ce qui est parti en son nom.
 L'app ne voit que des réponses, jamais un contrat signé. Le taux de réponse **brut** est un mauvais
 indicateur : il compte les « non merci » et les absences du bureau à égalité avec les vrais intérêts.
 
-**Métrique principale : le taux de réponse positive**, issu de la classification IA
-(`reply.classify`, 1 crédit).
+**Métrique principale : le taux de réponse positive**, issue de l'agent qui traite la réponse
+(`reply.handle`, 1 crédit — à remesurer, un agent avec outils coûte plus qu'un classifieur).
 
-**La classification ne sert pas qu'à compter, elle route** — et c'est le vrai gain :
+**Ce n'est pas un classifieur qui rend un label, c'est un agent qui agit.** Le tableau ci-dessous
+décrit ce que ses outils font ; la catégorie est ce que l'outil appelé écrit dans
+`messages.classification`, pas une étape séparée. Un label rendu à du code qui route ensuite ferait
+deux passes sur le même mail et ne saurait pas demander le bon contact (story 8.1) :
 
 | Catégorie | Action automatique |
 |---|---|
@@ -633,6 +636,7 @@ indicateur : il compte les « non merci » et les absences du bureau à égalit�
 | Pas intéressé | Sortie propre de la campagne |
 | Désinscription | Suppression list, immédiat |
 | Auto-reply | **Ignoré** — ne met pas la campagne en pause |
+| *(quelle que soit la catégorie)* | La séquence est déjà en pause : elle l'est **avant** l'appel, pas à cause de son résultat |
 
 Sans cette classification, la pause automatique sur réponse (story 8.1) ne peut pas fonctionner
 correctement. Elle n'est donc pas un ajout de reporting : elle est déjà nécessaire au cœur du produit.
@@ -1430,7 +1434,7 @@ est une story pas faite.
 | 4 — Agent Website | ⬜ table `recommendations` pas encore créée |
 | 5 — Découverte de leads | 🟡 graphe de jobs (`discovery_tasks`) avec son écran — lancer, suivre, rejouer, arrêter ; profils cibles éditables ; sociétés scorées, filtrables, et portant le verdict de l'utilisateur, recopié dans les deux sens entre une société et ses contacts (`client`, `won`, `lost`, `rejected`, `suppressed` sortent de l'outreach) ; contacts listés avec leur verdict de vérification et le même statut, recherche déclenchable par société ou en masse ; import CSV avec son rapport ligne à ligne ; profils partenaires dérivés par l'agent avec leurs deux angles ; sociétés sans site qualifiées sur la ligne d'annuaire et jointes à l'adresse qu'elle publie. Manquent la fiche contact (5.8) et le rendu JS (5.9, reporté) |
 | 6 — Séquences | 🟡 génération IA, personnalisation par lead avec prévisualisation, éditeur d'étapes complet ; manquent l'A/B (6.4) et les variables conditionnelles (6.5), tous deux `v1` |
-| 7 — Envoi | ⬜ |
+| 7 — Envoi | 🟡 boîtes SMTP/IMAP connectables avec un test qui nomme la cause de l'échec, plafond quotidien par adresse tous projets confondus, envoi étalé sur la journée par un tick de cinq minutes, séquence qui avance seule, trois couches de suppression relues à chaque envoi, bounce dur suppressif et coupe-circuit sur le taux de bounce ; manquent le ramp-up configurable (7.3, `v1`), la rotation sur plusieurs boîtes (7.4, `v1`) et tout ce qui vient de l'entrant — STOP, DSN — qui appartient à l'Epic 8 |
 | 8 — Réponses & inbox | ⬜ |
 | 9 — Organizations & permissions | ⬜ tables faites, rien au-dessus |
 | 10 — Facturation | ⬜ |
@@ -1887,17 +1891,38 @@ automatiquement.
 
 ### Epic 7 — Envoi `v0`
 
-**7.1** ⬜ En tant qu'utilisateur, je veux connecter un ou plusieurs comptes email SMTP/IMAP.
+**7.1** ✅ En tant qu'utilisateur, je veux connecter un ou plusieurs comptes email SMTP/IMAP.
 - Identifiants chiffrés avec `CREDENTIALS_KEY` (ADR-012) ; test de connexion à l'enregistrement
 - Partagés entre projets ou dédiés à un projet, au choix
 - **Pas d'OAuth** (ADR-027) — SMTP/IMAP classique uniquement
 - **Le test de connexion nomme la cause exacte de l'échec** : app passwords désactivés par
   l'administrateur Workspace, SMTP AUTH coupé sur le tenant M365, port bloqué, TLS refusé…
-- Une page de documentation par fournisseur courant (OVH, Infomaniak, Gandi, Zoho, Gmail, M365)
+- ~~Une page de documentation par fournisseur courant~~ — **abandonné.** La note du preset dit la
+  même chose au moment où on en a besoin ; six pages à maintenir se périment plus vite que les
+  fournisseurs ne changent leurs hôtes
+- **État** : `/app/settings/mailboxes` — section réglages, **scope organization** et pas projet : une
+  adresse sert souvent deux produits et jamais un troisième, donc les projets autorisés sont cochés
+  et posés sur le pivot. Un projet sans boîte attachée ne peut rien envoyer, ce qui est l'échec sûr.
+  Mots de passe chiffrés par `CREDENTIALS_KEY` et jamais renvoyés à l'écran : un champ laissé vide
+  en édition veut dire « garde celui-là », sinon chaque renommage casserait l'envoi.
+  `MailboxTester` teste SMTP (transport Symfony) **et** IMAP (un `LOGIN` à la main sur socket, lire
+  une boîte pour de vrai appartient à l'Epic 8) et traduit l'échec en une phrase qui nomme la cause —
+  app passwords Google, SMTP AUTH coupé sur le tenant M365, port bloqué, TLS/STARTTLS inversés, hôte
+  qui ne résout pas — et garde les mots du serveur quand elle ne reconnaît rien : inventer une phrase
+  serait moins utile que la vérité brute. Les hôtes et ports des six fournisseurs sont préremplis par
+  un menu, avec la note qui décide de la réussite du setup.
 
-**7.2** ⬜ En tant qu'utilisateur, je veux une limite d'envoi quotidienne par compte.
+**7.2** ✅ En tant qu'utilisateur, je veux une limite d'envoi quotidienne par compte.
 - Le surplus est reporté au lendemain, la campagne ne s'arrête pas
 - Envois répartis dans la journée, pas en rafale
+- **État** : `eveil:send-due` toutes les cinq minutes (`App\Actions\DispatchDueSends`) met en file
+  **au plus un mail par boîte et par tick**, sur la queue `sending` limitée à un process. Le tick EST
+  la répartition ; rien ne sort en dehors de la fenêtre (8h–18h par défaut, réglable) ni avant le
+  délai minimum entre deux mails d'une même adresse. `remainingToday()` soustrait les envois du jour
+  **tous projets confondus** : le quota appartient à l'adresse parce que c'est ce que compte le
+  serveur en face — compter par campagne fait envoyer 90 à une boîte calibrée pour 30. Rien n'est
+  perdu quand l'allocation est épuisée : la ligne reste due et repart le lendemain. Le ramp-up (7.3)
+  est déjà dans `allowanceForToday()` ; il lui manque sa courbe configurable et son écran
 
 **7.3** ⬜ `v1` En tant qu'utilisateur, je veux un ramp-up progressif sur un nouveau compte.
 - Courbe de montée configurable, appliquée automatiquement
@@ -1911,11 +1936,25 @@ automatiquement.
 **7.5** ~~Warm-up des boîtes~~ — **hors scope, décision assumée (ADR-023)**.
 - Remplacé par une page de documentation expliquant pourquoi, et un point d'intégration tiers
 
-**7.6** ⬜ En tant qu'utilisateur, je veux que tout envoi soit conforme.
+**7.6** 🟡 En tant qu'utilisateur, je veux que tout envoi soit conforme.
 - Phrase d'opt-out générée dans le corps ; « STOP » détecté → suppression immédiate (ADR-029)
 - Aucun lien, aucune image, aucun en-tête révélant un outil — indiscernable d'un envoi manuel
 - Suppression list vérifiée avant chaque envoi
 - Hard bounce → suppression automatique
+- **État** : `App\Services\Outreach\Sender` envoie du **texte brut** via la boîte de l'utilisateur,
+  avec pour seuls en-têtes ceux qu'un client mail ajouterait, plus notre `Message-ID` — ancré sur le
+  domaine de **l'expéditeur**, jamais le nôtre, un Message-ID d'un domaine tiers étant l'un des
+  aveux d'automatisation les moins chers à détecter. Pas de HTML, pas d'images, pas de
+  `List-Unsubscribe`, pas de `X-Mailer`, pas de footer : la seule signature possible est celle que
+  l'utilisateur a configurée. Les trois couches de suppression sont relues **à chaque envoi** et pas
+  seulement à l'inscription dans la séquence (`SuppressionList`) — un STOP arrive justement entre les
+  deux, et une liste vérifiée « avant la campagne » n'est pas une liste. Un refus 5xx sur le
+  destinataire supprime l'adresse (couche `bounce`, scope boîte) et arrête ce lead ; un refus
+  d'authentification passe la **boîte** en erreur au lieu de punir l'adresse ; un 4xx ne décide rien
+  et repasse dans une heure. Coupe-circuit : au-delà de 5 % de bounces sur les cent derniers envois,
+  la boîte se met en pause toute seule, quel que soit le niveau d'autonomie du projet.
+  **Manque** : la détection du « STOP » entrant et les DSN asynchrones, qui arrivent avec l'Epic 8 —
+  tant que l'IMAP n'est pas lu, seul le refus immédiat au moment de l'envoi est vu
 
 ### Epic 8 — Réponses & inbox `v0`
 
@@ -1923,6 +1962,27 @@ automatiquement.
 - Attribution par `Message-ID` / `In-Reply-To`
 - Auto-reply détecté → **pas** de pause
 - Pause visible avec son motif
+- **La réponse est donnée à un agent, qui décide avec ses outils** — pas un mot-clé cherché dans le
+  corps. Un `str_contains('STOP')` rate « merci de ne plus m'écrire », « désinscrivez-moi », tout ce
+  qui n'est pas en anglais, et la phrase polie qui veut dire non ; et ADR-029 fait de ce canal le
+  SEUL opt-out qui existe, donc le rater coûte une plainte. L'agent reçoit le mail, le lead, la
+  société avec sa raison de fit, la campagne et l'étape envoyée, et appelle un outil :
+  `suppress_lead` (opt-out, quelle que soit la formulation), `mark_not_interested` (sortie propre),
+  `mark_needs_human` (remonte en haut de l'inbox avec ce qu'il a compris), `reschedule_followup`
+  (« pas maintenant » → relance à N mois), `ask_for_right_contact` (mauvais interlocuteur),
+  `ignore` (absence du bureau — ne met **pas** en pause). L'outil appelé écrit
+  `messages.classification`, donc la métrique nord sort du même appel et il n'y a pas deux passes
+- **Ordre imposé : on met en pause AVANT de décider.** L'agent peut échouer, le provider peut être
+  en panne, le quota peut être épuisé — et pendant ce temps la relance suivante ne doit pas partir à
+  quelqu'un qui vient de répondre. La pause est déterministe, la décision est l'agent
+- **Filet déterministe conservé** : une formulation d'opt-out sans ambiguïté supprime même si l'agent
+  n'a pas tourné. Pas pour remplacer l'agent, pour que la conformité ne dépende pas d'un appel
+  réseau. Une suppression de trop coûte un lead, une de moins coûte une plainte
+- **À trancher en construisant** : `ReplyClassification` a six cas et pas de `needs_human`. Il en
+  faut un — une question précise ou une réponse ambiguë demande un humain sans être un « intéressé » —
+  et la vraie décision est de savoir si `needs_human` compte dans la métrique nord. Compter tout ce
+  qui n'est pas un refus comme positif est exactement le gonflage qu'ADR-022 refuse, donc par défaut
+  il ne compte pas, et il remonte quand même en haut de l'inbox
 
 **8.2** ⬜ En tant qu'utilisateur, je veux une inbox unifiée sur tous mes comptes email.
 - Seuls les contacts ayant réellement répondu apparaissent

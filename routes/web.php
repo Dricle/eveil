@@ -9,7 +9,12 @@ use Illuminate\Support\Facades\Route;
  */
 Route::get('/', function () {
     if (config('eveil.edition') !== 'cloud') {
-        return redirect('/app');
+        // A RELATIVE Location, resolved by the browser against the address it
+        // actually used. An absolute one is built from what the server believes
+        // about itself, which behind a proxy or on a published non-standard port
+        // is how somebody typing `host:8099` gets sent to `host` and finds
+        // nothing answering.
+        return response('', 302, ['Location' => '/app']);
     }
 
     return view('marketing.home');

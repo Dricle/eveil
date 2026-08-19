@@ -15,6 +15,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -68,6 +69,25 @@ class AppServiceProvider extends ServiceProvider
     protected function configureDefaults(): void
     {
         Date::use(CarbonImmutable::class);
+
+        /*
+         * Every link the app generates comes from `APP_URL` once that is an
+         * https address.
+         *
+         * The shipped image serves plain HTTP behind a reverse proxy, and
+         * without this a password-reset mail carries an `http://` link to a site
+         * that only answers on https — the first place anybody notices is after
+         * they have clicked it.
+         *
+         * Deliberately NOT done by trusting `X-Forwarded-*`: a client that can
+         * reach the app directly would then choose the host a reset link points
+         * at, which is an account takeover rather than a cosmetic bug. The
+         * configured address is the one thing an attacker cannot set.
+         */
+        if (str_starts_with((string) config('app.url'), 'https://')) {
+            URL::forceScheme('https');
+            URL::forceRootUrl((string) config('app.url'));
+        }
 
         // Resources feed Inertia props, not a JSON API. The `data` envelope
         // buys nothing here and would put `projects.data` in every page that

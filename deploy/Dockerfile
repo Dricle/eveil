@@ -1,35 +1,47 @@
-# The shipped image: app, workers and scheduler all run from this one build.
+# The shipped image: nginx, PHP-FPM, the queue workers and the scheduler, all in
+# one container run by supervisord.
 #
-# FrankenPHP rather than php-fpm behind nginx: one process serves HTTP and runs
-# PHP, so a self-hosted instance is one container instead of two plus a config
-# file nobody wants to maintain. Caddy also handles TLS on its own, which is the
-# other half of "up in a few minutes".
-FROM dunglas/frankenphp:1-php8.5-alpine AS base
+# One container rather than four services from one image: a self-hosted instance
+# is one machine, and this way `docker compose up -d` brings up something that
+# works without anybody reading a process diagram. Supervisor restarts each
+# process on its own, so a worker dying does not take the site with it.
+FROM php:8.5-fpm
 
-RUN install-php-extensions \
-    pdo_pgsql \
-    redis \
-    intl \
-    zip \
-    gd \
-    bcmath \
-    pcntl \
-    opcache
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    nginx \
+    supervisor \
+    curl \
+    unzip \
+    libpq-dev \
+    libzip-dev \
+    libpng-dev \
+    libonig-dev \
+    libicu-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+# `pdo`, `mbstring` and `opcache` are already built into this image — asking for
+# them here fails the build with "cannot stat 'modules/*'", because a static
+# extension produces no module to copy.
+RUN docker-php-ext-install pdo_pgsql pgsql bcmath pcntl gd zip intl
 
-# --- Build stage: PHP and Node in one place, deliberately.
-#
-# `yarn build` shells out to `php artisan wayfinder:generate`, so an assets stage
-# without PHP cannot build the front end. Installing Node here is less trouble
-# than splitting the build and hand-maintaining the generated route modules.
-FROM base AS build
+# Redis for the queue, the cache, the crawl rate limiter and the per-mailbox
+# locks — all four, so this one is not optional.
+RUN pecl install redis && docker-php-ext-enable redis
 
-RUN apk add --no-cache nodejs npm && npm install -g corepack && corepack enable
+# Node only to build the front end. `yarn build` shells out to
+# `php artisan wayfinder:generate`, so the assets cannot be built in a stage
+# without PHP — it is built here and thrown away below.
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && npm install -g corepack \
+    && corepack enable \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Dependencies first, so a code change does not re-resolve them.
+WORKDIR /var/www
+
+# Dependencies before the code, so editing a file does not re-resolve them.
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-interaction
 
@@ -41,22 +53,17 @@ COPY . .
 
 RUN composer dump-autoload --optimize --classmap-authoritative \
     && yarn build \
-    && rm -rf node_modules .yarn
+    && rm -rf node_modules .yarn/cache
 
-# --- Runtime: the built app, and nothing that built it.
-FROM base AS runtime
-
-COPY --from=build /app /app
-
-# Caddy needs to write the compiled views and the framework caches; everything
-# else stays read-only as far as the app is concerned.
-RUN chown -R www-data:www-data storage bootstrap/cache \
-    && chmod -R ug+w storage bootstrap/cache
-
+COPY deploy/nginx.conf /etc/nginx/sites-available/default
+COPY deploy/supervisord.conf /etc/supervisor/conf.d/eveil.conf
 COPY deploy/entrypoint.sh /usr/local/bin/entrypoint
-RUN chmod +x /usr/local/bin/entrypoint
+
+RUN chmod +x /usr/local/bin/entrypoint \
+    && chown -R www-data:www-data storage bootstrap/cache
+
+EXPOSE 80
 
 ENTRYPOINT ["entrypoint"]
 
-# Overridden by the worker and scheduler services, which run the same image.
-CMD ["frankenphp", "php-server", "--listen", ":80", "--root", "public/"]
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]

@@ -1428,7 +1428,7 @@ est une story pas faite.
 
 | Epic | Avancement |
 |---|---|
-| 1 — Setup & configuration | ✅ auth complète (Fortify : login, reset, 2FA), écran de setup, section « App settings » réservée au superadmin — clé provider, mapping par agent, limites, registre d'hôtes — et `deploy/` : image FrankenPHP, compose app + horizon + scheduler + postgres + redis + searxng, `.env.example` commenté, superadmin créé depuis l'env par un `eveil:install` idempotent |
+| 1 — Setup & configuration | ✅ auth complète (Fortify : login, reset, 2FA), écran de setup, section « App settings » réservée au superadmin — clé provider, mapping par agent, limites, registre d'hôtes — et le déploiement : image `php:8.5-fpm` + nginx + supervisord (nginx, FPM, Horizon, scheduler) dans un conteneur, `compose.deploy.yaml` à la racine avec postgres, redis et searxng, `.env.example` commenté, superadmin créé depuis l'env par un `eveil:install` idempotent |
 | 2 — Projets | 🟡 cloisonnement fait et testé, CRUD fait, sélecteur de projet fait, instructions d'écriture par projet suivies par les agents qui écrivent ; manque le dashboard multi-projet (`v1`) |
 | 3 — Analyse & knowledge base | 🟡 analyse déclenchée à l'enregistrement, progression du crawl et pages en échec affichées, knowledge base visible et éditable ; manque le lien vers un repo (`v1`) |
 | 4 — Agent Website | ⬜ table `recommendations` pas encore créée |
@@ -1467,19 +1467,31 @@ minimal, pour être opérationnel en quelques minutes.
 - Aucune clé API tierce n'est requise pour un premier run de découverte
 - Premier accès à l'URL → écran de setup, pas une erreur 500
 - **État** : tout est dans `deploy/` — `Dockerfile`, `compose.yaml`, `.env.example` commenté ligne par
-  ligne. Lancement : `docker compose -f deploy/compose.yaml up -d` (le `-f` parce que le
+  ligne. Lancement : `docker compose -f compose.deploy.yaml up -d` (le `-f` parce que le
   `compose.yaml` racine est Sail : livrer une stack de dev comme produit serait le contraire du but).
-  **FrankenPHP** plutôt que php-fpm derrière nginx : un seul process sert l'HTTP et exécute PHP, donc
-  une instance est un conteneur au lieu de deux plus une conf que personne ne veut maintenir, et Caddy
-  gère TLS tout seul. Un seul build sert les trois services (app, `horizon`, `schedule:work`) ;
-  l'étape de build a Node **et** PHP dans le même stage parce que `yarn build` appelle
-  `wayfinder:generate`. L'entrypoint migre avant que quoi que ce soit serve ou consomme une file, les
-  workers attendent que la migration soit passée, et `eveil:install` peut échouer sans empêcher le
-  boot — un `ADMIN_PASSWORD` refusé est une coquille dans un fichier d'env, pas une raison de rendre
-  l'instance injoignable. Vérifié en vrai : stack montée, migrations passées, superadmin créé depuis
-  l'env, `/` qui redirige vers `/app`, login à 200, Horizon démarré. Deux bugs trouvés à cette
-  occasion : le volume Postgres doit être monté sur `/var/lib/postgresql` et non `/data` depuis la 18,
-  et l'échec de l'install faisait redémarrer l'app en boucle
+  `php:8.5-fpm` + nginx + supervisord dans **un** conteneur (nginx, FPM, Horizon, `schedule:work`),
+  parce que c'est le pattern déjà éprouvé sur beryl et que celui qui débuggera à 3h du matin le connaît
+  déjà. FrankenPHP avait été essayé d'abord : ce qu'il apportait — TLS automatique — est du poids mort
+  derrière le reverse proxy que la plupart des auto-hébergeurs font déjà tourner, et son bind sur 443
+  entre en collision avec lui. Supervisor redémarre chaque process séparément, donc un worker qui meurt
+  ne fait pas tomber le site. TLS est laissé au proxy de devant, ce qui rend `TRUSTED_PROXIES`
+  obligatoire : sans lui l'app fabrique des liens `http://` derrière un proxy `https`, et le premier
+  endroit où ça se voit est un mail de reset déjà cliqué. Node est dans le même stage de build que PHP
+  parce que `yarn build` appelle `wayfinder:generate`. L'entrypoint migre avant que quoi que ce soit
+  serve. Les deux clés de chiffrement sont générées au premier boot dans le volume storage et relues
+  ensuite, clé par clé, ce qui est posé dans `.env` gagnant : personne ne copie-colle une clé à
+  l'installation, et `CREDENTIALS_KEY` ne bouge pas d'un redémarrage à l'autre — elle chiffre tous les
+  mots de passe de boîtes, donc une clé régénérée ne préviendrait pas, elle les rendrait illisibles
+  pour de bon. Vérifié dans les trois cas : rien de posé (générée, conservée à travers un
+  `--force-recreate`), un seul des deux posé, et une clé posée qui doit primer. `eveil:install` peut
+  échouer sans empêcher le boot — un `ADMIN_PASSWORD` refusé est une
+  coquille dans un fichier d'env, pas une raison de rendre l'instance injoignable.
+  **Vérifié en installant depuis un clone neuf**, README à la lettre. Cinq bugs trouvés comme ça :
+  le volume Postgres doit être monté sur `/var/lib/postgresql` depuis la 18 ; l'échec de l'install
+  faisait redémarrer l'app en boucle ; la boucle d'attente de l'entrypoint bloquait aussi les
+  commandes one-off ; `docker-php-ext-install pdo mbstring opcache` casse le build parce que ces trois
+  extensions sont déjà statiques dans l'image ; et un compose rangé sous `deploy/` ne lit jamais le
+  `.env` de la racine, Compose prenant son répertoire de projet là où vit le fichier
 
 **1.2** ✅ En tant que superadmin, je veux me connecter avec le mot de passe défini au setup.
 - Le mot de passe initial vient de l'env ou du premier écran de setup

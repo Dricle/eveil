@@ -32,7 +32,7 @@ fournir de liste de leads. Tant que ce n'est pas vrai, Eveil est un crawler avec
       bloqué, TLS inversé), six fournisseurs préremplis avec leur note. Les pages de documentation
       par fournisseur sont **abandonnées** : la note dans le formulaire dit la même chose là où on en
       a besoin, et six pages à maintenir se périment plus vite que les fournisseurs ne changent
-- [x] **7.2** Limite d'envoi quotidienne par compte — `eveil:send-due` toutes les 5 min, au plus un
+- [x] **7.2** Limite d'envoi quotidienne par compte — `eveilcla:send-due` toutes les 5 min, au plus un
       mail par boîte et par tick, fenêtre horaire et délai minimum entre deux envois, quota compté
       sur l'adresse tous projets confondus
 - [x] **7.6** Conformité de tout envoi — opt-out « STOP », suppression list 3 couches (ADR-013,
@@ -76,11 +76,16 @@ fournir de liste de leads. Tant que ce n'est pas vrai, Eveil est un crawler avec
 
 ### Trous à combler dans ce qui existe déjà
 
-- [x] **1.1** Déployable : `deploy/` porte son `Dockerfile` (FrankenPHP — un process sert l'HTTP et
-      exécute PHP, donc une instance = un conteneur au lieu de deux plus une conf nginx), son
-      `compose.yaml` (app, horizon, scheduler, postgres, redis, searxng) et son `.env.example`
-      commenté. Séparé du `compose.yaml` racine, qui est Sail : livrer une stack de dev comme produit
-      serait le contraire du but. `docker compose -f deploy/compose.yaml up -d`
+- [x] **1.1** Déployable : `deploy/` porte son `Dockerfile` (`php:8.5-fpm` + nginx + supervisord dans un
+      seul conteneur, le pattern déjà éprouvé sur beryl), sa conf nginx, son supervisord et son
+      `.env.example` commenté ; `compose.deploy.yaml` est à la racine (Compose prend son répertoire
+      de projet là où vit le fichier, donc un compose sous `deploy/` ne lirait jamais le `.env` que
+      les instructions viennent de faire écrire). Les deux clés de chiffrement sont **générées au
+      premier boot** dans le volume storage et relues ensuite : personne ne copie-colle une clé, et
+      surtout `CREDENTIALS_KEY` ne bouge pas d'un redémarrage à l'autre — elle chiffre tous les mots
+      de passe de boîtes, une clé régénérée les rendrait définitivement illisibles. Ce qui est posé
+      dans `.env` gagne, clé par clé. Séparé du `compose.yaml` racine, qui est Sail : livrer une stack de dev comme produit
+      serait le contraire du but. `docker compose -f compose.deploy.yaml up -d`
 - [x] **1.2** Mot de passe initial par variable d'env — `eveil:install`, lancé par l'entrypoint à
       chaque boot, idempotent : une fois qu'un compte existe il ne fait rien, donc un redémarrage ne
       remet jamais un mot de passe à zéro. Sans `ADMIN_EMAIL`/`ADMIN_PASSWORD` c'est l'écran de setup

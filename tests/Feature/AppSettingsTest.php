@@ -134,10 +134,10 @@ it('shows what each agent has already spent', function () {
 
     $this->actingAs(superAdmin())->get(route('app-settings.agents.index'))
         ->assertInertia(fn ($page) => $page
-            ->where('agents.9.slug', 'website-analyst')
-            ->where('agents.9.calls', 2)
-            ->where('agents.9.tokens_in', 200)
-            ->where('agents.9.tokens_out', 100));
+            ->where('agents.10.slug', 'website-analyst')
+            ->where('agents.10.calls', 2)
+            ->where('agents.10.tokens_in', 200)
+            ->where('agents.10.tokens_out', 100));
 });
 
 it('marks the agents a weak model would break rather than merely blunt', function () {
@@ -147,8 +147,8 @@ it('marks the agents a weak model would break rather than merely blunt', functio
             // returns wrong ones that look like results.
             ->where('agents.0.slug', 'company-qualifier')
             ->where('agents.0.strict', true)
-            ->where('agents.9.slug', 'website-analyst')
-            ->where('agents.9.strict', false));
+            ->where('agents.10.slug', 'website-analyst')
+            ->where('agents.10.strict', false));
 });
 
 it('suggests the models a provider names for itself, without fixing the choice', function () {

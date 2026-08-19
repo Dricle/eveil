@@ -44,7 +44,113 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+use App\Enums\CampaignStatus;
+use App\Enums\CampaignStepType;
+use App\Enums\EmailStatus;
+use App\Enums\OutreachStatus;
+use App\Models\Campaign;
+use App\Models\EmailAccount;
+use App\Models\Lead;
+use App\Models\Organization;
+use App\Models\Project;
+use App\Models\User;
+use App\Services\Outreach\Sender;
+use App\Services\Outreach\SendFailure;
+use App\Support\CurrentProject;
+
+/**
+ * @return array{0: User, 1: Project, 2: EmailAccount}
+ */
+function sender(): array
 {
-    // ..
+    $user = User::factory()->create();
+    $organization = Organization::factory()->create();
+    $organization->users()->attach($user, ['role' => 'owner']);
+
+    $project = Project::factory()->for($organization)->create();
+
+    $mailbox = EmailAccount::factory()->for($organization)->create(['daily_limit' => 30]);
+    $mailbox->projects()->attach($project);
+
+    app(CurrentProject::class)->set($project);
+
+    return [$user, $project, $mailbox];
+}
+
+function sequence(Project $project, int $waitHours = 72): Campaign
+{
+    $campaign = Campaign::factory()->create([
+        'project_id' => $project->id,
+        'status' => CampaignStatus::Draft,
+    ]);
+
+    $first = $campaign->steps()->create([
+        'position' => 1,
+        'type' => CampaignStepType::Email,
+        'config' => ['intent' => 'Open on their ordering.'],
+    ]);
+
+    $first->variants()->create(['subject' => 'vos commandes', 'body' => "Bonjour,\n\nRépondez STOP si ce n'est pas pertinent."]);
+
+    $campaign->steps()->create([
+        'position' => 2,
+        'type' => CampaignStepType::Wait,
+        'delay_hours' => $waitHours,
+        'config' => ['intent' => 'Let it breathe.'],
+    ]);
+
+    $second = $campaign->steps()->create([
+        'position' => 3,
+        'type' => CampaignStepType::Email,
+        'config' => ['intent' => 'One follow-up.'],
+    ]);
+
+    $second->variants()->create(['subject' => 'petite relance', 'body' => 'Je reviens une dernière fois.']);
+
+    return $campaign->refresh();
+}
+
+function contactable(Project $project, string $email = 'marcel@friterie.test'): Lead
+{
+    return Lead::factory()->create([
+        'project_id' => $project->id,
+        'email' => $email,
+        'email_status' => EmailStatus::Valid,
+        'status' => OutreachStatus::New,
+    ]);
+}
+
+/**
+ * A sender that records what it was asked to send instead of opening a socket.
+ * Sending for real in a test is the one thing that must never happen here.
+ */
+function fakeSender(): object
+{
+    $fake = new class extends Sender
+    {
+        /** @var array<int, array{subject: string, body: string, in_reply_to: string|null, to: string}> */
+        public array $sent = [];
+
+        public ?string $failWith = null;
+
+        public function send(EmailAccount $account, Lead $lead, string $subject, string $body, ?string $inReplyTo = null): string
+        {
+            if ($this->failWith !== null) {
+                throw SendFailure::fromTransportError($this->failWith);
+            }
+
+            $this->sent[] = [
+                'to' => (string) $lead->email,
+                'subject' => $subject,
+                'body' => $body,
+                'in_reply_to' => $inReplyTo,
+            ];
+
+            return '<'.count($this->sent).'@friterie.test>';
+        }
+    };
+
+    app()->instance(Sender::class, $fake);
+
+    return $fake;
 }

@@ -51,6 +51,7 @@ use Illuminate\Support\Carbon;
  * @property EmailAccountStatus $status
  * @property string|null $last_error
  * @property Carbon|null $last_checked_at
+ * @property int|null $last_inbound_uid
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -58,7 +59,7 @@ use Illuminate\Support\Carbon;
     'organization_id', 'name', 'from_name', 'from_email',
     'smtp_host', 'smtp_port', 'smtp_username', 'smtp_password', 'smtp_encryption',
     'imap_host', 'imap_port', 'imap_username', 'imap_password', 'imap_encryption',
-    'signature', 'daily_limit', 'ramp_up_started_at', 'status', 'last_error', 'last_checked_at',
+    'signature', 'daily_limit', 'ramp_up_started_at', 'status', 'last_error', 'last_checked_at', 'last_inbound_uid',
 ])]
 #[Hidden(['smtp_password', 'imap_password'])]
 class EmailAccount extends Model

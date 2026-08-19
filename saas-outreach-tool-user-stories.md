@@ -1435,7 +1435,7 @@ est une story pas faite.
 | 5 — Découverte de leads | 🟡 graphe de jobs (`discovery_tasks`) avec son écran — lancer, suivre, rejouer, arrêter ; profils cibles éditables ; sociétés scorées, filtrables, et portant le verdict de l'utilisateur, recopié dans les deux sens entre une société et ses contacts (`client`, `won`, `lost`, `rejected`, `suppressed` sortent de l'outreach) ; contacts listés avec leur verdict de vérification et le même statut, recherche déclenchable par société ou en masse ; import CSV avec son rapport ligne à ligne ; profils partenaires dérivés par l'agent avec leurs deux angles ; sociétés sans site qualifiées sur la ligne d'annuaire et jointes à l'adresse qu'elle publie. Manquent la fiche contact (5.8) et le rendu JS (5.9, reporté) |
 | 6 — Séquences | 🟡 génération IA, personnalisation par lead avec prévisualisation, éditeur d'étapes complet ; manquent l'A/B (6.4) et les variables conditionnelles (6.5), tous deux `v1` |
 | 7 — Envoi | 🟡 boîtes SMTP/IMAP connectables avec un test qui nomme la cause de l'échec, plafond quotidien par adresse tous projets confondus, envoi étalé sur la journée par un tick de cinq minutes, séquence qui avance seule, trois couches de suppression relues à chaque envoi, bounce dur suppressif et coupe-circuit sur le taux de bounce ; manquent le ramp-up configurable (7.3, `v1`), la rotation sur plusieurs boîtes (7.4, `v1`) et tout ce qui vient de l'entrant — STOP, DSN — qui appartient à l'Epic 8 |
-| 8 — Réponses & inbox | ⬜ |
+| 8 — Réponses & inbox | 🟡 IMAP lu à la main, réponses attribuées par en-tête, séquence mise en pause avant toute décision, agent `reply-handler` qui agit par outils, filet d'opt-out déterministe, inbox unifiée triée par ce qui demande une personne, réponse à la main depuis la boîte d'origine, funnel et dashboard avec le taux de réponse positive ; manque la lecture des DSN asynchrones (seul le refus 5xx immédiat est vu) |
 | 9 — Organizations & permissions | ⬜ tables faites, rien au-dessus |
 | 10 — Facturation | ⬜ |
 | 11 — LinkedIn / 12 — Intégrations | ⬜ hors v0 et v1 |
@@ -1958,7 +1958,7 @@ automatiquement.
 
 ### Epic 8 — Réponses & inbox `v0`
 
-**8.1** ⬜ En tant qu'utilisateur, je veux que la campagne se mette en pause sur un lead qui répond.
+**8.1** ✅ En tant qu'utilisateur, je veux que la campagne se mette en pause sur un lead qui répond.
 - Attribution par `Message-ID` / `In-Reply-To`
 - Auto-reply détecté → **pas** de pause
 - Pause visible avec son motif
@@ -1978,24 +1978,47 @@ automatiquement.
 - **Filet déterministe conservé** : une formulation d'opt-out sans ambiguïté supprime même si l'agent
   n'a pas tourné. Pas pour remplacer l'agent, pour que la conformité ne dépende pas d'un appel
   réseau. Une suppression de trop coûte un lead, une de moins coûte une plainte
-- **À trancher en construisant** : `ReplyClassification` a six cas et pas de `needs_human`. Il en
-  faut un — une question précise ou une réponse ambiguë demande un humain sans être un « intéressé » —
-  et la vraie décision est de savoir si `needs_human` compte dans la métrique nord. Compter tout ce
-  qui n'est pas un refus comme positif est exactement le gonflage qu'ADR-022 refuse, donc par défaut
-  il ne compte pas, et il remonte quand même en haut de l'inbox
+- `needs_human` ajouté à `ReplyClassification` et **il ne compte pas** comme réponse positive :
+  compter tout ce qui n'est pas un refus serait le gonflage qu'ADR-022 refuse. Il remonte quand même
+  en haut de l'inbox
+- **État** : IMAP lu à la main (`ImapClient` — quatre commandes, `BODY.PEEK` pour ne jamais marquer
+  comme lu le courrier de l'utilisateur ; aucune dépendance ajoutée et pas d'`ext-imap`, dépréciée).
+  `MailParser` décode le quoted-printable et les en-têtes encodés, et coupe notre propre mail cité en
+  dessous — sinon le prompt double et l'agent répond à la mauvaise moitié. Attribution par en-tête et
+  **jamais par adresse** : deux personnes d'une société répondent du même domaine. Un auto-reply
+  reconnu aux en-têtes ne met jamais en pause et ne coûte pas d'appel de modèle. `eveil:fetch-replies`
+  toutes les cinq minutes sur la queue `imap`, une boîte à la fois (`ShouldBeUnique`), curseur `UID`
+  avancé mail par mail. Une boîte illisible passe en `error` avec la cause, dans les mêmes champs que
+  la moitié envoi — une boîte cassée est un problème et pas deux
 
-**8.2** ⬜ En tant qu'utilisateur, je veux une inbox unifiée sur tous mes comptes email.
+**8.2** ✅ En tant qu'utilisateur, je veux une inbox unifiée sur tous mes comptes email.
 - Seuls les contacts ayant réellement répondu apparaissent
 - Filtrable par projet et par campagne
+- **État** : `/app/inbox`, cinquième entrée de la nav — celle que le pipeline attendait. Seules les
+  vraies conversations : un lead écrit qui n'a rien dit est une séquence en cours, pas une ligne
+  d'inbox, et c'est ce qui rend l'écran utile plutôt qu'une liste de cinq cents lignes dont quatre
+  comptent. `campaign_leads` ne porte pas de `project_id`, donc le cloisonnement passe par
+  `whereHas('campaign')` et le global scope de `Campaign` — sans ça une inbox montrerait les réponses
+  d'un autre projet. Trié par ce qui demande une personne, pas par date
 
-**8.3** ⬜ En tant qu'utilisateur, je veux répondre depuis l'app.
+**8.3** ✅ En tant qu'utilisateur, je veux répondre depuis l'app.
 - Réponse envoyée depuis le compte email d'origine, thread préservé
+- **État** : par la boîte que la séquence a épinglée, jamais une autre — le destinataire répond à une
+  conversation avec une personne à une adresse. Sujet préfixé une seule fois (« Re: Re: Re: » est ce
+  à quoi ressemble une machine). Répondre à la main **arrête** la séquence : quelqu'un à qui une
+  personne écrit ne doit pas recevoir en plus la relance déjà en file derrière lui
 
-**8.4** ⬜ En tant qu'utilisateur, je veux voir l'état de chaque lead dans le pipeline.
+**8.4** ✅ En tant qu'utilisateur, je veux voir l'état de chaque lead dans le pipeline.
 - Vue funnel par étape, comptages par statut : en cours, terminé, répondu, échoué, supprimé
+- **État** : funnel par statut de `campaign_leads` sur le dashboard, dans l'ordre où le travail va
 
-**8.5** ⬜ En tant qu'utilisateur, je veux un dashboard projet avec les stats clés.
+**8.5** ✅ En tant qu'utilisateur, je veux un dashboard projet avec les stats clés.
 - Campagnes actives, contacts, taux de réponse, activité récente, consommation IA
+- **État** : le taux de réponse **positive** en tête et jamais le brut — un taux brut compte les
+  « non merci » et les absences du bureau à égalité avec les vrais intérêts, et un dashboard qui
+  flatte est pire que pas de dashboard. Plus : réponses en attente d'une personne (lien vers l'inbox),
+  leads et sociétés encore en jeu, campagnes actives, funnel, huit derniers runs d'agent, et les
+  **tokens** — jamais d'euros, aucun provider ne publie un prix
 
 ### Epic 9 — Organizations & permissions `v1` — **cœur, pas cloud**
 

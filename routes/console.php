@@ -17,3 +17,8 @@ Schedule::command('horizon:snapshot')->everyFiveMinutes();
 // the way a person's does — and nothing goes out outside the sending window,
 // which the action itself enforces rather than the schedule.
 Schedule::command('eveil:send-due')->everyFiveMinutes();
+
+// Replies are the only opt-out channel and the only metric there is, so the
+// inbox is read on a rhythm of its own — a mailbox that stopped sending still
+// receives the answers to what already went out.
+Schedule::command('eveil:fetch-replies')->everyFiveMinutes();

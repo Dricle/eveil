@@ -40,3 +40,12 @@ DTOs live beside the services that produce them — `Candidate`, `ParsedPage` an
 Import and export classes live where the package puts them — `app/Imports/`, `app/Exports/`, generated with `php artisan make:import` / `make:export`, never modelled as an action. `App\Imports\LeadsImport` is the pattern: `OnEachRow` + `WithHeadingRow` + `SkipsEmptyRows`, the project passed to the constructor, and a `report()` the caller reads after `Excel::import()`. `ToModel` is shorter and cannot express this — rejected, duplicate and imported are three outcomes and only one of them is a model. The package normalises the heading row (`First Name` → `first_name`) and strips Excel's BOM, so the class only decides what a row means; `Row::getIndex()` is the line number the report shows, and it matches what the person sees in their spreadsheet.
 
 Imported rows are deliberately unverified (`email_status` null, `email_source = imported`): an MX lookup and SMTP probe per row would be minutes of spinner. Anything reading leads for sending must treat a null status as "not checked yet", and the Contacts list has to ask for the null case explicitly — `email_status != 'invalid'` is NULL for those rows and silently hides them.
+
+## Inbound replies: pause first, decide after
+`FetchReplies` runs in a fixed order and the order is the design: record the reply → pause the sequence deterministically (unless the HEADERS say a machine sent it) → suppress on an unambiguous opt-out phrase → only then queue `HandleReply` for the agent. Steps 2 and 3 must never depend on a provider being up or a model reading a sentence correctly.
+
+Because the pause is deterministic, `ReplyOutcomes::ignore()` is what RESUMES the sequence — otherwise a fortnight's out-of-office ends it. Any new outcome must decide explicitly whether it resumes.
+
+Attribution is by `Message-ID` / `In-Reply-To` only, never by from-address: two people at one company reply from the same domain, and a forwarded mail answered by a colleague would attach to the wrong lead.
+
+Dedupe inbound mail with `firstOrCreate` + `wasRecentlyCreated`, never by catching the unique-violation: Postgres aborts the whole transaction on a failed insert, so every later query in that transaction fails too (this is why the same pattern in `EnrolCampaign` is guarded by a `whereDoesntHave` rather than relying on the catch).

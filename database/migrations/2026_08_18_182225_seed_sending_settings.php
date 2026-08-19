@@ -18,6 +18,10 @@ return new class extends Migration
 {
     /** @var array<string, mixed> */
     private const DEFAULTS = [
+        // One call per reply, and reading a short mail is not a writing task —
+        // but it decides an opt-out, so not the smallest model either.
+        'agents.reply-handler' => ['provider' => 'anthropic', 'model' => 'claude-haiku-4-5', 'timeout' => 60],
+
         'sending' => [
             // Local hours, inclusive start and exclusive end. Nothing leaves
             // outside them: a 04:00 send from somebody's own mailbox reads as

@@ -17,10 +17,13 @@ use App\Http\Controllers\CompanyStatusController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ContactSearchController;
 use App\Http\Controllers\ContactStatusController;
+use App\Http\Controllers\ConversationReplyController;
 use App\Http\Controllers\CurrentProjectController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DiscoveryRunCancellationController;
 use App\Http\Controllers\DiscoveryRunController;
 use App\Http\Controllers\DiscoveryTaskReplayController;
+use App\Http\Controllers\InboxController;
 use App\Http\Controllers\LeadImportController;
 use App\Http\Controllers\MailboxController;
 use App\Http\Controllers\MailboxTestController;
@@ -54,7 +57,7 @@ Route::middleware(['auth', 'project.set'])->group(function (): void {
     Route::post('projects', [ProjectController::class, 'store'])->name('projects.store');
 
     Route::middleware('project.require')->group(function (): void {
-        Route::inertia('/', 'Dashboard')->name('dashboard');
+        Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
         /*
          * The current project comes from the session, so none of these carry it
@@ -150,6 +153,16 @@ Route::middleware(['auth', 'project.set'])->group(function (): void {
             ->shallow(false);
         Route::resource('campaigns', CampaignController::class)
             ->only(['index', 'store', 'show', 'update', 'destroy']);
+
+        /*
+         * Who answered. Only real conversations reach this screen: a lead that
+         * was written to and said nothing is a sequence still running, not an
+         * inbox entry. Answering by hand stops the sequence — somebody being
+         * written to by a person must not also get the queued follow-up.
+         */
+        Route::get('inbox', [InboxController::class, 'index'])->name('inbox');
+        Route::post('inbox/{conversation}/reply', [ConversationReplyController::class, 'store'])
+            ->name('inbox.reply');
 
         /*
          * A list somebody already had. A button on Leads, never a section of

@@ -138,6 +138,7 @@ it('lists every agent it finds in the code, not a hand-kept list', function () {
         'discovery-planner',
         'listing-extractor',
         'message-personalizer',
+        'reply-handler',
         'result-triage',
         'sequence-writer',
         'target-profile-deriver',

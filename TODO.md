@@ -38,30 +38,40 @@ fournir de liste de leads. Tant que ce n'est pas vrai, Eveil est un crawler avec
 - [ ] **7.6** Conformité de tout envoi — opt-out « STOP », suppression list 3 couches (ADR-013,
       ADR-029) — 🟡 texte brut sans lien ni en-tête révélateur, `Message-ID` sur le domaine de
       l'expéditeur, trois couches relues **à chaque envoi**, bounce dur 5xx suppressif, échec d'auth
-      qui met la boîte en erreur, coupe-circuit au-delà de 5 % de bounces. **Reste** l'entrant, qui
-      demande la lecture IMAP de l'Epic 8 : la réponse reçue est **donnée à un agent** qui décide avec
-      ses outils (suppression, pas intéressé, à reprendre par un humain, relance à N mois, mauvais
-      interlocuteur, ignorer un auto-reply) — pas un `str_contains('STOP')`, qui rate « merci de ne
-      plus m'écrire » et tout ce qui n'est pas en anglais. Plus les DSN asynchrones. D'ici là le seul
-      canal d'opt-out réel n'est branché qu'à moitié
+      qui met la boîte en erreur, coupe-circuit au-delà de 5 % de bounces. L'entrant est fait avec
+      l'Epic 8 : l'agent lit la réponse et agit par tools, et un filet déterministe supprime sur une
+      formulation d'opt-out sans ambiguïté même si l'agent n'a pas tourné. **Reste** les DSN
+      asynchrones : seul le refus immédiat au moment de l'envoi est vu, un bounce qui revient par mail
+      une heure plus tard n'est pas encore lu
 - [x] Brancher le blocage des `invalid` à l'envoi (fin de **5.5**, l'écran est fait) — `isSendable()`
       et `Lead::contactable()` sont relus à l'inscription dans la séquence et avant chaque envoi
 - [ ] Activation d'une campagne → inscription des leads : fait (`EnrolCampaign`, boîte épinglée pour
       toute la séquence), mais sans écran pour suivre où en est chaque lead — c'est **8.4**
 - ~~7.5 warm-up~~ — hors scope assumé (ADR-023)
 
-### Epic 8 — Réponses & inbox `rien de fait`
+### Epic 8 — Réponses & inbox `fait, sauf les DSN`
 
-- [ ] **8.1** Pause auto de la campagne sur réponse — la séquence se met en pause **avant** que quoi
-      que ce soit décide (rien ne part pendant qu'on réfléchit), puis un agent lit le mail et agit par
-      **tools** : `suppress_lead`, `mark_not_interested`, `mark_needs_human`, `reschedule_followup`,
-      `ask_for_right_contact`, `ignore`. L'outil choisi écrit `messages.classification`, donc la
-      métrique nord (réponses positives) sort du même appel. Ajouter le cas `needs_human` à
-      `ReplyClassification` (six cas aujourd'hui, aucun pour « un humain doit répondre »)
-- [ ] **8.2** Inbox unifiée sur tous les comptes
-- [ ] **8.3** Répondre depuis l'app
-- [ ] **8.4** État de chaque lead dans le pipeline
-- [ ] **8.5** Dashboard projet avec les stats clés (métrique nord : réponses positives, ADR-022)
+- [x] **8.1** Pause auto de la campagne sur réponse — attribution par `Message-ID` / `In-Reply-To`,
+      la séquence se met en pause **avant** que quoi que ce soit décide, puis l'agent `reply-handler`
+      agit par tools : `SuppressLead`, `MarkNotInterested`, `MarkNeedsHuman`, `RescheduleFollowUp`,
+      `AskForRightContact`, `IgnoreReply`. L'outil appelé écrit `messages.classification`, donc la
+      métrique nord sort du même appel. Un auto-reply reconnu aux en-têtes ne met jamais en pause et
+      ne coûte pas d'appel ; reconnu par l'agent, il **relance** la séquence. `needs_human` ajouté à
+      `ReplyClassification`, et il ne compte pas comme réponse positive
+- [x] **8.2** Inbox unifiée sur tous les comptes — `/app/inbox`, cinquième entrée de la nav. Seules
+      les vraies conversations y arrivent : un lead écrit qui n'a rien dit est une séquence en cours,
+      pas une ligne d'inbox. Trié par ce qui demande une personne, filtrable par campagne
+- [x] **8.3** Répondre depuis l'app — depuis la boîte que la séquence a épinglée, dans le même
+      thread, sujet préfixé une seule fois. Répondre à la main **arrête** la séquence : quelqu'un à
+      qui une personne écrit ne doit pas recevoir en plus la relance automatique
+- [x] **8.4** État de chaque lead dans le pipeline — funnel par statut sur le dashboard
+      (`pending`, `running`, `paused`, `completed`, `stopped`, `failed`)
+- [x] **8.5** Dashboard projet avec les stats clés — taux de réponse **positive** en tête (jamais le
+      brut, qui compte les « non merci » et les absences du bureau comme des gains), réponses en
+      attente d'une personne, leads et sociétés encore en jeu, campagnes actives, funnel, activité
+      récente des agents, et tokens — jamais d'euros
+- [ ] Lire les DSN asynchrones (bounce qui revient par mail) — aujourd'hui seul le refus 5xx au
+      moment de l'envoi est vu
 
 ### Trous à combler dans ce qui existe déjà
 

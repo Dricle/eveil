@@ -19,7 +19,7 @@ use Inertia\Response;
  * where the mailbox belongs: one address is often used by two products and
  * never by a third. A project reaches one only through the pivot, so a project
  * created tomorrow starts unable to send until somebody attaches an address on
- * purpose — the safe failure, and the reason this is not a nullable column.
+ * purpose: the safe failure, and the reason this is not a nullable column.
  */
 class MailboxController extends Controller
 {

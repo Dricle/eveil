@@ -17,16 +17,16 @@ use Illuminate\Support\Str;
  *
  * Four steps, all inside a single budgeted run:
  *   1. an agent plans where to look and says so before anything executes
- *   2. the planned probes are put to the sources — map data and web search
+ *   2. the planned probes are put to the sources: map data and web search
  *   3. each candidate's own site is fetched and scored against the profile
  *   4. survivors are stored as companies, with a fit score and a usable reason
  *
  * No purchased database anywhere: every company here was found, fetched and
- * read. Contacts are a separate step — see `eveil:find-contacts`.
+ * read. Contacts are a separate step: see `eveil:find-contacts`.
  */
 class DiscoverCompaniesCommand extends Command
 {
-    protected $signature = 'eveil:discover-companies {profile? : Profile id or name — defaults to the only one}
+    protected $signature = 'eveil:discover-companies {profile? : Profile id or name. Defaults to the only one}
                                                      {--companies= : Cap on candidates gathered}
                                                      {--qualified= : Cap on companies kept}
                                                      {--pages= : Cap on pages fetched}';
@@ -35,7 +35,7 @@ class DiscoverCompaniesCommand extends Command
 
     /**
      * How long to watch a run before handing it back to the queue. A run that
-     * takes longer is not stuck — the nodes carry on without anyone watching.
+     * takes longer is not stuck: the nodes carry on without anyone watching.
      */
     private const WAIT_SECONDS = 900;
 
@@ -70,7 +70,7 @@ class DiscoverCompaniesCommand extends Command
     /**
      * The run is a graph of queued nodes now, so the command watches instead of
      * doing the work itself. It comes back immediately when the queue is
-     * synchronous — the graph has already run inside the dispatch by then.
+     * synchronous: the graph has already run inside the dispatch by then.
      */
     private function await(DiscoveryRun $run): DiscoveryRun
     {
@@ -95,7 +95,7 @@ class DiscoverCompaniesCommand extends Command
         }
 
         if (! $run->status->isTerminal()) {
-            $this->components->warn('Still running. Nothing was lost — the run continues on the queue.');
+            $this->components->warn('Still running. Nothing was lost: the run continues on the queue.');
         }
 
         return $run;
@@ -126,7 +126,7 @@ class DiscoverCompaniesCommand extends Command
 
             $this->components->error($targetProfiles->isEmpty()
                 ? 'No target profile yet. Run eveil:derive-targets first.'
-                : 'Several profiles exist — name one by id or name.');
+                : 'Several profiles exist. Name one by id or name.');
 
             return null;
         }
@@ -196,7 +196,7 @@ class DiscoverCompaniesCommand extends Command
         // "Your market is 40 companies" is a result, not a failure.
         $message = match ($run->diagnosis) {
             DiscoveryDiagnosis::WrongSource => 'No candidate at all. The sources were wrong for this profile, not the profile itself.',
-            DiscoveryDiagnosis::BadTargetProfile => 'Candidates were found but none fit. The profile is probably wrong — widening it would only produce off-target leads.',
+            DiscoveryDiagnosis::BadTargetProfile => 'Candidates were found but none fit. The profile is probably wrong: widening it would only produce off-target leads.',
             DiscoveryDiagnosis::TooNarrow => 'Fewer companies than asked for. Either the profile is narrow, or this is the whole market.',
             default => null,
         };

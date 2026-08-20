@@ -198,8 +198,8 @@ return [
 
     /*
      * One supervisor per rhythm rather than one pool over every queue. The
-     * queues here differ in what limits them — a provider's rate limit, a
-     * remote host's patience, a mailbox's daily cap — and a shared pool would
+     * queues here differ in what limits them: a provider's rate limit, a
+     * remote host's patience, a mailbox's daily cap, and a shared pool would
      * let the noisiest of them starve the rest.
      *
      * `timeout` must stay below `retry_after` on the redis queue connection,
@@ -304,7 +304,7 @@ return [
     ],
 
     /*
-     * Only the keys named here override the defaults above — the rest of each
+     * Only the keys named here override the defaults above: the rest of each
      * supervisor block is inherited, not replaced.
      */
     'environments' => [

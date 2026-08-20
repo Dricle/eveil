@@ -21,7 +21,7 @@ use Stringable;
  * Not a classifier returning a label. A label would need a second pass to act
  * on, would not know that "speak to my colleague" ends this person's sequence
  * but not the company's, and would give the same weight to "no thanks" as to
- * "please stop writing to me" — which are one lead and one complaint
+ * "please stop writing to me", which are one lead and one complaint
  * respectively.
  *
  * It never writes a reply. The whole promise is that these mails read as one
@@ -47,7 +47,7 @@ class ReplyHandler extends EveilAgent implements HasTools
         Read what the person actually means, not the words they used. A reply is
         rarely a clean category: "thanks but we're sorted for now, maybe next
         year" is a postponement, "please take me off this" is an opt-out, and
-        "who is this?" needs a human. Answer in their language internally — the
+        "who is this?" needs a human. Answer in their language internally: the
         mail is written in theirs, not yours.
 
         The one asymmetry that matters: writing again to somebody who asked you

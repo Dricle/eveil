@@ -38,7 +38,7 @@ class DiscoveryTaskResource extends JsonResource
     }
 
     /**
-     * What this node is about, in the words of whoever queued it — the query,
+     * What this node is about, in the words of whoever queued it. The query,
      * the directory, the company. Without it a run is forty identical rows.
      */
     private function subject(): string

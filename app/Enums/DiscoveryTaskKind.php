@@ -17,7 +17,7 @@ enum DiscoveryTaskKind: string
     /** One model call: where to look, and why, said before anything executes. */
     case Plan = 'plan';
 
-    /** One probe put to one source — a map query or a web search. No model. */
+    /** One probe put to one source: a map query or a web search. No model. */
     case Probe = 'probe';
 
     /** One directory page read for the businesses on it. Model only as a last resort. */
@@ -27,7 +27,7 @@ enum DiscoveryTaskKind: string
     case Qualify = 'qualify';
 
     /**
-     * What runs this node — which is also what a replay dispatches, since the
+     * What runs this node: which is also what a replay dispatches, since the
      * row already carries everything the job needs to start again.
      *
      * @return class-string<DiscoveryJob>

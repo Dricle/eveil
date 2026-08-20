@@ -13,8 +13,8 @@ use Illuminate\Support\Carbon;
  * Three layers, three scopes: opt-out is scoped to the project,
  * bounces to the email account, and the toxic layer is instance-wide.
  *
- * The toxic layer must never be fed by a client's prospect behaviour — only
- * public lists and our own detection — otherwise testing an address would
+ * The toxic layer must never be fed by a client's prospect behaviour: only
+ * public lists and our own detection. Otherwise testing an address would
  * reveal who is prospecting whom.
  *
  * @property int $id

@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * "Not this one" — the user's own verdict, which outranks any score.
+ * "Not this one": the user's own verdict, which outranks any score.
  *
  * On the company and not on the evaluation, because rejecting is a decision
  * about the business rather than about how well it matched one profile: a

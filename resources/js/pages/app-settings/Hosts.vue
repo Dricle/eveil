@@ -35,9 +35,9 @@ watch([kind, search], () => router.get(hostRoutes.index.url(), {
 }, { preserveState: true, replace: true, only: ['hosts', 'filters'] }))
 
 const KIND_LABELS: Record<string, string> = {
-    index: 'Lists businesses — harvest it',
-    entity: 'One organisation — a possible lead',
-    social: 'Social platform — never a lead',
+    index: 'Lists businesses, harvest it',
+    entity: 'One organisation, a possible lead',
+    social: 'Social platform, never a lead',
     other: 'Neither: search, reference, forum, docs'
 }
 
@@ -59,7 +59,7 @@ function correct (host: Host, kind: string) {
             <p class="text-sm text-muted">
                 What this install has worked out about hosts on the open web,
                 shared by every project. A wrong verdict is cached with exactly
-                the same confidence as a right one — a real prospect filed as
+                the same confidence as a right one. A real prospect filed as
                 "neither" is invisible everywhere at once. Correcting one locks
                 it, and a locked verdict is never rewritten by a model.
             </p>
@@ -108,7 +108,7 @@ function correct (host: Host, kind: string) {
 
                         <p class="truncate text-sm text-muted">
                             {{ KIND_LABELS[host.kind] ?? host.kind }}
-                            <span v-if="host.reason"> — {{ host.reason }}</span>
+                            <span v-if="host.reason">: {{ host.reason }}</span>
                         </p>
                     </div>
 

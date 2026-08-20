@@ -126,7 +126,7 @@ it('still builds a portrait when part of the site will not open', function () {
 
     $this->artisan('eveil:analyze', ['url' => 'https://acme.test'])->assertSuccessful();
 
-    // A lost page costs a slice of the site, never the run — and the status
+    // A lost page costs a slice of the site, never the run, and the status
     // says the portrait was written from part of it.
     expect(Project::sole()->knowledge_base['what_it_does'])->toBe('Sells widgets to small factories.')
         ->and(ProjectAnalysis::sole()->status)->toBe(AnalysisStatus::Partial)

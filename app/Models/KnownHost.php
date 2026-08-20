@@ -17,7 +17,7 @@ use Illuminate\Support\Carbon;
  *
  * Shared instance-wide on purpose, and not scoped to an organization or a
  * project: "this host lists businesses" is a fact about the open web, not
- * client data — the same reasoning that makes the page cache safe to share.
+ * client data. The same reasoning that makes the page cache safe to share.
  * One project paying to work a host out means every other project has it free.
  *
  * @property int $id

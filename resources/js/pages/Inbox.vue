@@ -51,7 +51,7 @@ function when (value: string | null) {
                     </h2>
                     <p class="text-sm text-muted">
                         Everyone who answered, across every mailbox. An agent read
-                        each reply and did something about it — what it decided is
+                        each reply and did something about it. What it decided is
                         on the row. Nothing was answered on your behalf.
                     </p>
                 </div>
@@ -68,7 +68,7 @@ function when (value: string | null) {
                 v-if="!conversations.data.length"
                 class="rounded-lg p-6 text-sm text-muted ring ring-default"
             >
-                Nobody has replied yet. Only real answers land here — a lead that
+                Nobody has replied yet. Only real answers land here: a lead that
                 was written to and said nothing is a sequence still running, not
                 an inbox entry.
             </p>

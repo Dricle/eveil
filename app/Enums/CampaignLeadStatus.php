@@ -16,7 +16,7 @@ enum CampaignLeadStatus: string
      * surfaced by two target profiles is recorded as an overlap, never contacted twice.
      *
      * This list MUST match the `campaign_leads_one_active_per_lead` partial
-     * index verbatim — the database enforces it, this is only the readable
+     * index verbatim: the database enforces it, this is only the readable
      * copy, and `SchemaConstraintsTest` fails if the two drift apart.
      *
      * @return array<int, self>

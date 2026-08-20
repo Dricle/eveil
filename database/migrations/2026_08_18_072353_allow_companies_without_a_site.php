@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Schema;
  * A business with no site of its own is still a business, and on a directory
  * listing it is the common case rather than the exception. `domain` was the
  * dedupe key and NOT NULL, so those rows could only ever be counted and
- * reported — the one segment nobody else is calling was the one we dropped.
+ * reported: the one segment nobody else is calling was the one we dropped.
  */
 return new class extends Migration
 {

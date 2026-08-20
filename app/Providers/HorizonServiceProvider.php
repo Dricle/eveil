@@ -9,7 +9,7 @@ use Laravel\Horizon\HorizonApplicationServiceProvider;
 class HorizonServiceProvider extends HorizonApplicationServiceProvider
 {
     /**
-     * The dashboard exposes every job payload on the instance — lead names,
+     * The dashboard exposes every job payload on the instance: lead names,
      * addresses, message bodies. It is instance scope, so it goes to the
      * person who runs the instance and to nobody granted access through an
      * organization.

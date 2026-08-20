@@ -15,9 +15,9 @@ use Illuminate\Console\Command;
 class HarvestCommand extends Command
 {
     protected $signature = 'eveil:harvest {url : A directory listing page}
-                                          {project? : Project id, URL or name — only needed for the LLM fallback}
+                                          {project? : Project id, URL or name. Only needed for the LLM fallback}
                                           {--pages= : Listing pages to follow, defaults to the configured budget}
-                                          {--free : Never call the model — JSON-LD or nothing}';
+                                          {--free : Never call the model. JSON-LD or nothing}';
 
     protected $description = 'Harvest the businesses listed on a directory page';
 
@@ -41,7 +41,7 @@ class HarvestCommand extends Command
         if ($harvest->candidates->isEmpty()) {
             $this->components->warn(
                 'Nothing harvested'.($harvest->stoppedBecause === null ? '.' : ": {$harvest->stoppedBecause}.")
-                .($this->option('free') ? ' No JSON-LD on the page — retry without --free to use the model.' : '')
+                .($this->option('free') ? ' No JSON-LD on the page: retry without --free to use the model.' : '')
             );
 
             return self::SUCCESS;
@@ -51,7 +51,7 @@ class HarvestCommand extends Command
             ['name', 'website', 'email', 'phone', 'address'],
             $harvest->candidates->map(fn (Candidate $candidate): array => [
                 mb_substr($candidate->name, 0, 34),
-                $candidate->website ?? '<fg=gray>—</>',
+                $candidate->website ?? '<fg=gray>: </>',
                 $candidate->facts['email'] ?? '',
                 $candidate->facts['phone'] ?? '',
                 mb_substr((string) ($candidate->facts['address'] ?? ''), 0, 30),
@@ -66,7 +66,7 @@ class HarvestCommand extends Command
         // are the companies a search engine never surfaces.
         $this->components->twoColumnDetail(
             'without a website',
-            "<fg=yellow>{$harvest->withoutWebsite()}</> — not yet qualifiable, companies.domain is NOT NULL",
+            "<fg=yellow>{$harvest->withoutWebsite()}</>: not yet qualifiable, companies.domain is NOT NULL",
         );
 
         if ($harvest->stoppedBecause !== null) {
@@ -89,7 +89,7 @@ class HarvestCommand extends Command
 
             $this->components->error($projects->isEmpty()
                 ? 'No project yet. Run eveil:analyze <url> first, or pass --free to skip the model.'
-                : 'Several projects exist — name one by id, URL or name.');
+                : 'Several projects exist. Name one by id, URL or name.');
 
             return null;
         }

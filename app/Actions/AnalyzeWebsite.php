@@ -15,13 +15,13 @@ use Throwable;
 
 /**
  * Crawl a project's site, then turn it into the knowledge base both agents work
- * from — derived once, never re-entered per agent.
+ * from: derived once, never re-entered per agent.
  */
 class AnalyzeWebsite
 {
     /**
      * Characters of page text handed to the model. Roughly 15k tokens, which is
-     * ~$0.08 of Opus input — the bounded-budget rule applied to the
+     * ~$0.08 of Opus input: the bounded-budget rule applied to the
      * one place where a big site could otherwise run the bill up unnoticed.
      */
     private const MAX_CHARS = 60_000;
@@ -74,7 +74,7 @@ class AnalyzeWebsite
         }
 
         $analysis->update([
-            // A crawl that lost pages still produces a knowledge base — the
+            // A crawl that lost pages still produces a knowledge base. The
             // status says the portrait was built from part of the site, and
             // `failures` says which part is missing.
             'status' => $failures === [] ? AnalysisStatus::Succeeded : AnalysisStatus::Partial,
@@ -88,7 +88,7 @@ class AnalyzeWebsite
     }
 
     /**
-     * What the crawl has read so far, and how far it may go — the two numbers a
+     * What the crawl has read so far, and how far it may go. The two numbers a
      * progress line is made of.
      *
      * @param  Collection<int, ParsedPage>  $pages

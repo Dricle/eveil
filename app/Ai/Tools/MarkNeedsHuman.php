@@ -26,7 +26,7 @@ class MarkNeedsHuman implements Tool
         the message is ambiguous enough that guessing would be worse than
         waiting.
 
-        Set `interested` to true only when they are plainly positive — that is
+        Set `interested` to true only when they are plainly positive: that is
         the number the user judges the whole product on, so an ambiguous
         "possibly, tell me more" is `interested: false` and still lands at the
         top of their inbox.

@@ -14,15 +14,15 @@ use Throwable;
 /**
  * Decides what each host in a batch of search results IS, and remembers it.
  *
- * A hand-written blocklist of aggregators cannot be completed — Pages d'Or,
- * Product Hunt, BetaList, Clutch, every trade directory in every country — and
+ * A hand-written blocklist of aggregators cannot be completed: Pages d'Or,
+ * Product Hunt, BetaList, Clutch, every trade directory in every country, and
  * it was deleting the very results worth the most, since a directory page is
  * hundreds of businesses rather than one. So the model judges, once per host
  * ever, and `known_hosts` keeps the answer for every future run of every
  * project on the instance.
  *
  * Two layers: the registry, then the model for whatever it does not know. The
- * certainties — search engines, encyclopaedias, the social platforms — used to
+ * certainties: search engines, encyclopaedias, the social platforms. Used to
  * be a third layer, a const in this class, until it became obvious that a
  * hardcoded list shadowing a table IS the table, minus the ability to edit it.
  * They are locked rows now, seeded by `KnownHostSeeder`, and a superadmin can
@@ -100,7 +100,7 @@ class HostRegistry
      * judged once per language subdomain.
      *
      * Stops at two labels, which is wrong for `co.uk`-style suffixes but only
-     * matters if somebody creates a row for one — and the alternative is a
+     * matters if somebody creates a row for one, and the alternative is a
      * public-suffix dependency for a case that has not come up.
      *
      * One query for the whole batch. The old floor answered without touching
@@ -194,7 +194,7 @@ class HostRegistry
             );
         }
 
-        // A host the model skipped is left unrecorded on purpose — better to
+        // A host the model skipped is left unrecorded on purpose: better to
         // ask again next time than to cache a guess we did not make.
         return $verdicts + array_fill_keys(array_keys($hosts), HostKind::Entity);
     }
@@ -213,7 +213,7 @@ class HostRegistry
         foreach ($hosts as $host => $count) {
             $sample = $urls->first(fn (string $url): bool => Url::host($url) === $host) ?? $host;
 
-            $lines[] = "{$host} — {$count} of {$urls->count()} results — e.g. {$sample}";
+            $lines[] = "{$host}: {$count} of {$urls->count()} results. E.g. {$sample}";
         }
 
         return "Search results by host:\n\n".implode("\n", $lines);

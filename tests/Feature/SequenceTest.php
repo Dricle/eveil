@@ -2,8 +2,12 @@
 
 use App\Actions\PersonalizeMessage;
 use App\Actions\WriteSequence;
+use App\Ai\Agents\CompanyQualifier;
+use App\Ai\Agents\ContactExtractor;
 use App\Ai\Agents\MessagePersonalizer;
 use App\Ai\Agents\SequenceWriter;
+use App\Ai\Agents\TargetProfileDeriver;
+use App\Ai\Agents\WebsiteAnalyst;
 use App\Enums\AgentRunStatus;
 use App\Enums\CampaignStatus;
 use App\Enums\CampaignStepType;
@@ -44,7 +48,7 @@ function sequencer(): array
 function writtenSequence(): array
 {
     return [
-        'name' => 'Friteries wallonnes — premier contact',
+        'name' => 'Friteries wallonnes. Premier contact',
         'steps' => [
             [
                 'type' => 'email',
@@ -95,7 +99,7 @@ it('writes a whole sequence from the product and the segment', function () {
 
     $campaign = Campaign::sole();
 
-    expect($campaign->name)->toBe('Friteries wallonnes — premier contact')
+    expect($campaign->name)->toBe('Friteries wallonnes. Premier contact')
         // A draft: writing a sequence never starts sending one.
         ->and($campaign->status)->toBe(CampaignStatus::Draft)
         ->and($campaign->target_profile_id)->toBe($profile->id)
@@ -330,7 +334,7 @@ it('answers 404 for a campaign belonging to another project', function () {
 
 it('sends the props the pages actually read', function () {
     // A resource collection arrives as a plain array and a single resource
-    // unwrapped — only a PAGINATED resource carries a `data` envelope. Reading
+    // unwrapped. Only a PAGINATED resource carries a `data` envelope. Reading
     // `campaigns.data` instead compiles, renders, and dies in the browser with
     // "Cannot read properties of undefined", which no server-side test sees
     // unless it asserts the shape.
@@ -411,6 +415,26 @@ it('never previews a lead the user has taken out of outreach', function () {
         ->assertJsonPath('props.sample.messages.0.lead', 'marcel@neuve.test');
 });
 
+it('starts every project with the house style already in the box', function () {
+    [, $project] = sequencer();
+
+    // Dash punctuation is one of the cheapest tells that a machine wrote a
+    // sentence, and everything sent from here is supposed to read as though a
+    // person typed it. It sits in the box the user can see and edit.
+    expect($project->prompt_instructions)->toBe(Project::DEFAULT_INSTRUCTIONS)
+        ->and((string) (new SequenceWriter($project))->instructions())->toContain('Never use dash punctuation')
+        // And in everything else whose output is read as prose: the portrait,
+        // the segment rationales, and the fit reason that becomes the opening
+        // line of the first mail.
+        ->and((string) (new WebsiteAnalyst($project))->instructions())->toContain('Never use dash punctuation')
+        ->and((string) (new TargetProfileDeriver($project))->instructions())->toContain('Never use dash punctuation')
+        ->and((string) (new CompanyQualifier($project))->instructions())->toContain('Never use dash punctuation')
+        // Not in the ones that only return fields: nobody reads those as prose,
+        // and a strict-structure agent breaks rather than blurs as the prompt
+        // grows.
+        ->and((string) (new ContactExtractor($project))->instructions())->not->toContain('Never use dash punctuation');
+});
+
 it("appends the project's own writing instructions to the agents that write", function () {
     [, $project] = sequencer();
 
@@ -419,6 +443,7 @@ it("appends the project's own writing instructions to the agents that write", fu
         ->and((string) (new MessagePersonalizer($project))->instructions())
         ->not->toContain('Never use emoji');
 
+    // Replacing the default rather than adding to it: the box is the user's.
     $project->update(['prompt_instructions' => 'Write in French. Never use emoji.']);
 
     expect((string) (new SequenceWriter($project))->instructions())

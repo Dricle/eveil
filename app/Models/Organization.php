@@ -14,7 +14,7 @@ use Illuminate\Support\Carbon;
 
 /**
  * The billable entity in cloud. Self-hosted still gets one, created
- * implicitly at setup — one code path, never two.
+ * implicitly at setup: one code path, never two.
  *
  * @property int $id
  * @property string $name

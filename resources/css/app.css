@@ -9,3 +9,34 @@
         Geist, ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
         'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+/*
+ * A magnifier sweeping over the same patch of ground, for the screens that are
+ * waiting on a search. A spinner says "busy", this says "looking", which is what
+ * discovery actually is, and the difference is worth two keyframes.
+ *
+ * Stops moving for anybody who asked their system not to animate things.
+ */
+@keyframes sweep {
+    0% {
+        transform: translateX(-25%) rotate(-12deg);
+    }
+
+    50% {
+        transform: translateX(25%) rotate(12deg) scale(1.08);
+    }
+
+    100% {
+        transform: translateX(-25%) rotate(-12deg);
+    }
+}
+
+.animate-sweep {
+    animation: sweep 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .animate-sweep {
+        animation: none;
+    }
+}

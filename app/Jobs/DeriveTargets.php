@@ -27,7 +27,7 @@ class DeriveTargets implements ShouldQueue
     /**
      * `$replace` is the user's answer to "and the profiles I already have":
      * true throws away what the agent wrote last time, false adds to it. Either
-     * way a profile the user wrote or corrected survives — the agent only ever
+     * way a profile the user wrote or corrected survives: the agent only ever
      * discards its own work.
      */
     public function __construct(public Project $project, public AgentRun $run, public bool $replace = false)
@@ -46,7 +46,7 @@ class DeriveTargets implements ShouldQueue
     /**
      * A provider that throws is already recorded by the metering middleware.
      * This covers what it cannot see: the job failing before or after the call
-     * — a knowledge base that is not there, a worker that gave up retrying —
+     *. A knowledge base that is not there, a worker that gave up retrying:
      * which would otherwise leave the row on `pending` for good.
      */
     public function failed(Throwable $e): void

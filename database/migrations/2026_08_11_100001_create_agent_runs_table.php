@@ -7,11 +7,11 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Every agent invocation writes a row here. This table is simultaneously the
  * debug log, the analysis history and the usage meter, and it exists in BOTH
- * editions — only the credit ledger is cloud-only.
+ * editions: only the credit ledger is cloud-only.
  *
  * Tokens, not money. `laravel/ai` reports usage and no provider reports a
  * price, so any cost figure here would be our own multiplication against a list
- * price that drifts — wrong quietly, and wrong in a column that looks
+ * price that drifts: wrong quietly, and wrong in a column that looks
  * authoritative. Self-hosted users pay their provider directly and want tokens;
  * cloud users are billed in credits, which the operator calibrates from these
  * token counts against a real invoice.

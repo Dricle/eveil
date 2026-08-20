@@ -10,7 +10,7 @@ use Illuminate\Console\Command;
  * than run as a daemon: the pacing IS the schedule, and there is nothing to
  * keep alive between ticks.
  *
- * Also the SSH half of sending — on a self-hosted box this is how an operator
+ * Also the SSH half of sending: on a self-hosted box this is how an operator
  * sees what the scheduler is doing without a dashboard.
  */
 class SendDueCommand extends Command

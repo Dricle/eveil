@@ -36,7 +36,7 @@ class User extends Authenticatable
 
     /**
      * Instance scope, distinct from the organization role and from project
-     * access. Whoever ran the docker compose — never granted through
+     * access. Whoever ran the docker compose: never granted through
      * an organization.
      *
      * @return BelongsToMany<Organization, $this>

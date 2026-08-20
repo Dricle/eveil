@@ -8,7 +8,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * One step of a sequence as the editor shows it. The mail itself lives on the
- * first variant — A/B is a later story, and until then a step has exactly one.
+ * first variant: A/B is a later story, and until then a step has exactly one.
  *
  * @mixin CampaignStep
  */

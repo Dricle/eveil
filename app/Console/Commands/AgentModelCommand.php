@@ -12,7 +12,7 @@ use Illuminate\Console\Command;
  *
  * This is an instance-scope setting, never visible to an organization admin or
  * member. A settings screen will front the same values; this command stays
- * regardless — it is how you change a model over SSH on a self-hosted box, and
+ * regardless: it is how you change a model over SSH on a self-hosted box, and
  * how you script it.
  */
 class AgentModelCommand extends Command
@@ -72,7 +72,7 @@ class AgentModelCommand extends Command
 
         // The credit grid is calibrated on a specific model mix, so
         // in cloud this and `credit_prices` are one operation, never two.
-        $this->components->warn('In cloud, adjust credit_prices in the same move — the grid is calibrated on the model mix.');
+        $this->components->warn('In cloud, adjust credit_prices in the same move: the grid is calibrated on the model mix.');
 
         return self::SUCCESS;
     }

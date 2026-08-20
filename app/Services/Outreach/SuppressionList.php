@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Three layers with three different scopes, all three read before every single
- * send. Nothing here is a preference — a mail to a suppressed address is the
+ * send. Nothing here is a preference: a mail to a suppressed address is the
  * failure this whole subsystem exists to prevent.
  *
  *   opt_out → the PROJECT (or the organization, once escalated). Deliberately
@@ -41,7 +41,7 @@ class SuppressionList
             ->where(fn (Builder $query) => $query->where('email', $email)->orWhere('domain', $domain))
             ->where(fn (Builder $query) => $query
                 // Opt-out: this project, or escalated to the organization it
-                // belongs to — a second STOP anywhere in the org lands there.
+                // belongs to. A second STOP anywhere in the org lands there.
                 ->where(fn (Builder $optOut) => $optOut
                     ->where('layer', SuppressionLayer::OptOut)
                     ->where(fn (Builder $scope) => $scope

@@ -8,13 +8,13 @@ use Symfony\Component\Mailer\Transport\Smtp\Stream\SocketStream;
 use Throwable;
 
 /**
- * Whether a mailbox actually works, and when it does not, WHY — in the words of
+ * Whether a mailbox actually works, and when it does not, WHY: in the words of
  * the thing the user has to go and change.
  *
  * This is the whole reason the story exists. "Authentication failed" is where a
  * signup ends: the user has no idea whether they typed the password wrong, or
  * whether their Workspace admin turned app passwords off org-wide, or whether
- * their M365 tenant has SMTP AUTH disabled — three problems with three
+ * their M365 tenant has SMTP AUTH disabled. Three problems with three
  * different fixes, one of which is not fixable by them at all. Naming the cause
  * turns an abandonment into a thirty-second fix.
  *
@@ -130,7 +130,7 @@ class MailboxTester
         return match (true) {
             str_contains($lower, 'application-specific password'),
             str_contains($lower, 'app password'),
-            str_contains($lower, 'accounts.google.com/signin/continue') => 'Google refused the password. A Workspace or Gmail account needs an app password (2-step verification must be on first), not the account password — and a Workspace admin can disable app passwords for the whole organization, in which case only they can turn them back on.',
+            str_contains($lower, 'accounts.google.com/signin/continue') => 'Google refused the password. A Workspace or Gmail account needs an app password (2-step verification must be on first), not the account password, and a Workspace admin can disable app passwords for the whole organization, in which case only they can turn them back on.',
 
             str_contains($lower, 'smtp auth is disabled'),
             str_contains($lower, 'smtpclientauthentication'),
@@ -141,20 +141,20 @@ class MailboxTester
             str_contains($lower, 'authentication failed'),
             str_contains($lower, 'username and password not accepted'),
             str_contains($lower, '535'), str_contains($lower, '534'),
-            str_contains($lower, 'no ') && str_contains($lower, 'login') => 'The server rejected this username and password. Check both — and note that the mailbox login is often the full address, not the part before the @. If the provider has two-factor authentication on, it needs an app-specific password.',
+            str_contains($lower, 'no ') && str_contains($lower, 'login') => 'The server rejected this username and password. Check both, and note that the mailbox login is often the full address, not the part before the @. If the provider has two-factor authentication on, it needs an app-specific password.',
 
             str_contains($lower, 'connection refused'),
             str_contains($lower, 'connection timed out'),
             str_contains($lower, 'timed out'),
             str_contains($lower, 'network is unreachable'),
-            str_contains($lower, 'could not establish') => "Nothing answered on {$host}:{$port}. Either the port is wrong, or it is blocked between this server and the provider — a firewall or a hosting provider that closes outbound mail ports does this.",
+            str_contains($lower, 'could not establish') => "Nothing answered on {$host}:{$port}. Either the port is wrong, or it is blocked between this server and the provider: a firewall or a hosting provider that closes outbound mail ports does this.",
 
             str_contains($lower, 'ssl'), str_contains($lower, 'tls'),
             str_contains($lower, 'certificate') => "The encrypted handshake with {$host}:{$port} failed. Ports usually pair with one mode: 465 and 993 are implicit TLS, 587 and 143 are STARTTLS. Try the other one.",
 
             str_contains($lower, 'name or service not known'),
             str_contains($lower, 'getaddrinfo'),
-            str_contains($lower, 'host name') => "The host name {$host} does not resolve. Check it against your provider's documentation — it is rarely your own domain.",
+            str_contains($lower, 'host name') => "The host name {$host} does not resolve. Check it against your provider's documentation: it is rarely your own domain.",
 
             // Everything unrecognised keeps the server's own text: a sentence
             // we invented would be less useful than the truth, however raw.

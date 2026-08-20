@@ -11,7 +11,7 @@ use Stringable;
 
 /**
  * Wrong person, right company. The sequence stops for them and the user is shown
- * who they named — writing to a third party on a stranger's word is how a
+ * who they named: writing to a third party on a stranger's word is how a
  * mailbox earns a complaint, so nothing is sent automatically.
  */
 class AskForRightContact implements Tool

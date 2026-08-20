@@ -10,7 +10,7 @@ use Throwable;
 /**
  * Pulls the current disposable-address blocklist.
  *
- * The bundled copy is a snapshot and goes stale — new throwaway services appear
+ * The bundled copy is a snapshot and goes stale: new throwaway services appear
  * weekly, and each one we do not know is an address we mark valid and send to.
  */
 class RefreshDisposableCommand extends Command

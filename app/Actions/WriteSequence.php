@@ -16,7 +16,7 @@ use RuntimeException;
 
 /**
  * Product portrait and target segment in, a draft sequence out. The user never
- * starts from an empty template — they start from something to correct, which
+ * starts from an empty template: they start from something to correct, which
  * is the only version of "generate a campaign" that saves anyone time.
  *
  * The campaign lands as a draft and nothing sends until someone activates it.
@@ -27,14 +27,14 @@ class WriteSequence
     {
         if ($project->knowledge_base === null) {
             throw new RuntimeException(
-                "{$project->name} has no knowledge base yet. Run eveil:analyze first — a sequence is "
+                "{$project->name} has no knowledge base yet. Run eveil:analyze first. A sequence is "
                 .'written from the product, not from its URL.'
             );
         }
 
         $agent = new SequenceWriter($project);
 
-        // The caller already opened a run row when it queued this — report into
+        // The caller already opened a run row when it queued this: report into
         // it instead of leaving a `pending` row behind next to a second one.
         if ($run !== null) {
             $agent->recordInto($run);

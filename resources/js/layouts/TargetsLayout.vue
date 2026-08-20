@@ -30,7 +30,7 @@ const items = computed<NavigationMenuItem[]>(() => profiles.value.map(profile =>
 const confirmingReplace = ref(false)
 
 // Adding is the default because it is the safe half. Replacing throws away
-// profiles that are on screen right now, so it asks first — and even then it
+// profiles that are on screen right now, so it asks first, and even then it
 // only removes what the agent wrote: anything the user touched is theirs.
 const deriveOptions = computed<DropdownMenuItem[][]>(() => [[
     {
@@ -128,7 +128,7 @@ const derivedCount = computed(() => profiles.value.filter(profile => profile.sou
                 <p class="mt-2 text-sm text-muted">
                     The scores and reasons those profiles gave to companies go
                     with them. The companies themselves stay, and so do their
-                    searches — a search without its profile still shows what it
+                    searches. A search without its profile still shows what it
                     did.
                 </p>
             </template>

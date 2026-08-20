@@ -27,7 +27,7 @@ use Illuminate\Support\Facades\Queue;
 
 /**
  * Personalisation is a model call, and the point of these tests is the sending
- * around it — so it answers immediately with what it was handed.
+ * around it, so it answers immediately with what it was handed.
  */
 beforeEach(function () {
     $this->mock(PersonalizeMessage::class)
@@ -123,7 +123,7 @@ it('waits the step it was told to wait, then follows up in the same thread', fun
 
     $send->handle($membership);
 
-    // The wait step is not sent, it is waited — and the delay is the step's own.
+    // The wait step is not sent, it is waited, and the delay is the step's own.
     $send->handle($membership->refresh());
 
     expect($fake->sent)->toHaveCount(1)
@@ -239,7 +239,7 @@ it('stops at the daily allowance, counted across every project sharing the mailb
     $mailbox->update(['daily_limit' => 2]);
 
     // A second project on the same address. The quota belongs to the mailbox,
-    // because one quota is what the receiving server counts — count per
+    // because one quota is what the receiving server counts: count per
     // campaign and an address rated for two sends four.
     $other = Project::factory()->for($mailbox->organization)->create();
     $mailbox->projects()->attach($other);
@@ -406,7 +406,7 @@ it('keeps the stored password when an edit leaves the field blank', function () 
         ->assertRedirect();
 
     // The screen never receives the password, so a blank field means "the one
-    // you already have" — treating it as an empty value would break sending on
+    // you already have": treating it as an empty value would break sending on
     // every unrelated edit.
     expect($mailbox->refresh()->name)->toBe('Renamed')
         ->and($mailbox->smtp_password)->toBe('secret');

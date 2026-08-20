@@ -8,7 +8,7 @@ use Illuminate\Validation\Rule;
 
 /**
  * A campaign as the user names it. Status is here too because activating one is
- * the same edit — there is nothing else to decide at that moment.
+ * the same edit: there is nothing else to decide at that moment.
  */
 class CampaignRequest extends FormRequest
 {

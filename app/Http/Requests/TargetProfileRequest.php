@@ -53,7 +53,7 @@ class TargetProfileRequest extends FormRequest
 
     /**
      * The searchable part of the profile, ready to be merged over what is
-     * already stored — `confidence` is the model's report on its own run and
+     * already stored, `confidence` is the model's report on its own run and
      * the person correcting a sector list is not restating it.
      *
      * @return array<string, mixed>

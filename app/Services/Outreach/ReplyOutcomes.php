@@ -14,8 +14,8 @@ use App\Models\Suppression;
  * What can actually happen to a reply, as six operations the agent's tools call.
  *
  * The tools stay thin wrappers around these on purpose: everything here is
- * testable without a model, and the compliance-critical paths — suppression,
- * and an auto-reply resuming rather than pausing — must be provable without
+ * testable without a model, and the compliance-critical paths. Suppression,
+ * and an auto-reply resuming rather than pausing: must be provable without
  * asking a provider to please answer the same way twice.
  *
  * Each one records the verdict on the reply itself (`messages.classification`),
@@ -66,7 +66,7 @@ class ReplyOutcomes
 
     /**
      * Somebody has to write back themselves. Interest, a question, an answer
-     * nobody can act on automatically — it stays paused and goes to the top of
+     * nobody can act on automatically: it stays paused and goes to the top of
      * the inbox rather than getting an automated reply it did not ask for.
      */
     public function needsHuman(Message $reply, bool $interested = false): void
@@ -104,7 +104,7 @@ class ReplyOutcomes
 
     /**
      * Wrong person. Their colleague may be the right one, but working out who is
-     * a human's call in v0 — writing to somebody a stranger named is how a
+     * a human's call in v0: writing to somebody a stranger named is how a
      * mailbox earns a complaint.
      */
     public function wrongPerson(Message $reply): void
@@ -132,7 +132,7 @@ class ReplyOutcomes
     /**
      * A second opt-out from the same address anywhere in the organization means
      * the person is telling several of its projects the same thing. It stops
-     * being about one project at that point — there is no unsubscribe page to
+     * being about one project at that point: there is no unsubscribe page to
      * click, so we widen the scope ourselves before they complain.
      */
     private function escalateAcrossOrganization(int $organizationId, string $email, string $reason): void

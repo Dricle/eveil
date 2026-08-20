@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Lead discovery — the product's edge.
+ * Lead discovery: the product's edge.
  *
  * Companies and leads are scoped to their project; only `crawled_pages` is
  * shared instance-wide, and it holds nothing but public web content. Fit score
@@ -21,7 +21,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Shared raw page cache. Public content only — never anything
+        // Shared raw page cache. Public content only: never anything
         // behind a login. Keyed on the normalised URL's hash because URLs
         // exceed the index size limit.
         Schema::create('crawled_pages', function (Blueprint $table) {
@@ -50,11 +50,11 @@ return new class extends Migration
          * Not called `directories`, though that is the interesting row type:
          * the table also remembers that a host is a social platform or noise,
          * and the whole point is to never ask the model the same question
-         * twice — a negative answer is worth caching exactly as much as a
+         * twice. A negative answer is worth caching exactly as much as a
          * positive one.
          *
-         * Enumerating aggregators by hand is hopeless — Pages d'Or, Product
-         * Hunt, BetaList, Clutch, every trade directory in every country — so
+         * Enumerating aggregators by hand is hopeless: Pages d'Or, Product
+         * Hunt, BetaList, Clutch, every trade directory in every country, so
          * the list is learned rather than written.
          */
         /**
@@ -102,20 +102,20 @@ return new class extends Migration
             $table->id();
             $table->string('host')->unique();
 
-            // index|entity|social|noise — what the host IS.
+            // index|entity|social|noise. What the host IS.
             $table->string('kind');
             $table->text('reason')->nullable();
 
             // Learned by trying, and only meaningful for an index:
             // jsonld|llm|blocked|js_only. `blocked` is the one that saves real
-            // money — a host behind bot protection must never be paid for twice.
+            // money: a host behind bot protection must never be paid for twice.
             $table->string('harvest_status')->nullable();
 
             $table->unsignedInteger('pages_harvested')->default(0);
             $table->unsignedInteger('businesses_found')->default(0);
             $table->timestamp('last_harvested_at')->nullable();
 
-            // A verdict a human set. Never overwritten by a model — the
+            // A verdict a human set. Never overwritten by a model: the
             // superadmin screen is the escape hatch for a row the model got
             // wrong, and a wrong row is invisible-forever for every project.
             $table->boolean('is_locked')->default(false);
@@ -146,8 +146,8 @@ return new class extends Migration
             // Shape: array<int, array{axis: string, from: mixed, to: mixed, at: string}> widening log
             $table->jsonb('relaxations')->nullable();
 
-            // Set when the target profile is diagnosed as wrong rather than too narrow —
-            // that case escalates to the user and must never be widened.
+            // Set when the target profile is diagnosed as wrong rather than too narrow.
+            // That case escalates to the user and must never be widened.
             $table->string('diagnosis')->nullable(); // too_narrow|wrong_source|bad_target_profile|no_contacts
 
             $table->timestamp('started_at')->nullable();
@@ -170,7 +170,7 @@ return new class extends Migration
             $table->string('location')->nullable();
 
             // Detected during the qualification crawl. Per company,
-            // never per project — Belgium runs FR, NL and EN in one city.
+            // never per project: Belgium runs FR, NL and EN in one city.
             $table->string('language', 5)->nullable();
 
             // Shape: array<string, mixed> target profile-independent firmographics
@@ -225,7 +225,7 @@ return new class extends Migration
             $table->string('language', 5)->nullable();
 
             // Provenance: audit and internal display only. Never injected into
-            // the mail — no generated legal text, no hosted notice.
+            // the mail: no generated legal text, no hosted notice.
             $table->string('source');
             $table->text('source_url')->nullable();
             $table->timestamp('discovered_at');
@@ -236,7 +236,7 @@ return new class extends Migration
             // if never contacted.
             $table->timestamp('last_contacted_at')->nullable();
 
-            // Manual "signed" flag — unlocks cost per customer.
+            // Manual "signed" flag: unlocks cost per customer.
             $table->timestamp('won_at')->nullable();
 
             // Set when the person asked to be forgotten. Every identifying
@@ -255,7 +255,7 @@ return new class extends Migration
         // Dedupe on the HASH, not the address: an erased lead keeps its hash
         // and loses its email, and it still has to block a re-discovery. Many
         // leads with no email at all are valid (LinkedIn-only rows), hence the
-        // partial index — Laravel's Blueprint has none, so this is raw, and it
+        // partial index: Laravel's Blueprint has none, so this is raw, and it
         // is one of the reasons PostgreSQL is mandatory in tests too.
         DB::statement('CREATE UNIQUE INDEX leads_project_id_email_hash_unique ON leads (project_id, email_hash) WHERE email_hash IS NOT NULL');
     }

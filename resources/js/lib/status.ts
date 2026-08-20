@@ -1,7 +1,7 @@
 /**
  * One vocabulary for a company and for a person, in the order the work actually
  * goes: found, queued, written to, answered, and then the five ways it ends.
- * Everything from `won` down takes the row out of outreach — the labels say so,
+ * Everything from `won` down takes the row out of outreach. The labels say so,
  * because a dropdown that silently stops mails going out is a dropdown nobody
  * trusts.
  *

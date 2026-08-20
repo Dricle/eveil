@@ -7,14 +7,14 @@ use Illuminate\Support\Facades\DB;
  * The shipped defaults for every operator-tunable setting.
  *
  * A migration rather than a seeder on purpose: seeders are optional and a
- * forgotten one leaves the app with no values at all — zero pages crawled, a
- * zero-millisecond politeness delay — which fails silently and looks like a
+ * forgotten one leaves the app with no values at all. Zero pages crawled, a
+ * zero-millisecond politeness delay: which fails silently and looks like a
  * different bug entirely. Migrations always run.
  *
  * These used to live in `config/eveil.php` with the database layered on top as
  * an override. One source is better than two: what is here is the product's
  * behaviour, changeable by a superadmin without a deploy. What stays in config
- * is deployment — service URLs, HTTP timeouts, the user agent.
+ * is deployment: service URLs, HTTP timeouts, the user agent.
  */
 return new class extends Migration
 {
@@ -51,7 +51,7 @@ return new class extends Migration
         'contacts.max_pages' => 4,
 
         // Port 25 is blocked on most hosting, so the probe usually times out
-        // into `unknown` — hence the short timeout, and the ability to turn it
+        // into `unknown`: hence the short timeout, and the ability to turn it
         // off where it is pointless.
         'verification.probe' => true,
         'verification.timeout' => 5,

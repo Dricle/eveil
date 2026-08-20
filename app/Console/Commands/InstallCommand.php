@@ -14,7 +14,7 @@ use Illuminate\Validation\Rules\Password;
  *
  * Idempotent by design: this runs on every boot from the entrypoint, and a
  * restart must never reset somebody's password or create a second super admin.
- * Once a user exists it does nothing at all — the setup screen and this command
+ * Once a user exists it does nothing at all: the setup screen and this command
  * are two doors into the same room, and whoever got there first wins.
  *
  * Deliberately not a fallback to a default password. An instance reachable on

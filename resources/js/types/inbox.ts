@@ -6,7 +6,7 @@ import type { OutreachStatus } from '@/lib/status'
  */
 export const CLASSIFICATIONS = {
     interested: { label: 'Interested', color: 'success' as const, help: 'Plainly positive. This is the number the product is judged on.' },
-    needs_human: { label: 'Needs you', color: 'primary' as const, help: 'A question or an ambiguous answer — it needs words only you can write.' },
+    needs_human: { label: 'Needs you', color: 'primary' as const, help: 'A question or an ambiguous answer. It needs words only you can write.' },
     wrong_person: { label: 'Wrong person', color: 'warning' as const, help: 'They pointed at somebody else. Nothing was sent to whoever they named.' },
     not_now: { label: 'Later', color: 'neutral' as const, help: 'Postponed. The sequence comes back on its own.' },
     not_interested: { label: 'Not interested', color: 'neutral' as const, help: 'A clean no. The sequence stopped.' },

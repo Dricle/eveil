@@ -26,7 +26,7 @@ export type Mailbox = {
     remaining_today: number
     sent_today: number
     ramping_up: boolean
-    /** The projects granted this mailbox — ids, because it is a checkbox list. */
+    /** The projects granted this mailbox, as ids, because it is a checkbox list. */
     projects: number[]
 }
 
@@ -85,7 +85,7 @@ export const PROVIDER_PRESETS = [
         imap_host: 'imap.gmail.com',
         imap_port: 993,
         imap_encryption: 'tls',
-        note: 'Needs an app password — turn on 2-step verification first, then generate one. Your account password will not work, and a Workspace admin can block app passwords for the whole organization.'
+        note: 'Needs an app password, not the account password: turn on 2-step verification first, then generate one. A Workspace admin can block app passwords for the whole organization.'
     },
     {
         label: 'Microsoft 365',

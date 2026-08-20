@@ -3,6 +3,8 @@
 namespace App\Jobs\Discovery;
 
 use App\Ai\Agents\CompanyQualifier;
+use App\Enums\ContactSearchStatus;
+use App\Jobs\FindCompanyContacts;
 use App\Models\DiscoveryRun;
 use App\Models\DiscoveryTask;
 use App\Services\Discovery\Candidate;
@@ -32,13 +34,13 @@ class QualifyCandidate extends DiscoveryJob
         }
 
         if ($run->qualified_count >= $run->limit('max_qualified')) {
-            $this->skip("not read — this run already kept the {$run->limit('max_qualified')} companies it was asked for");
+            $this->skip("not read. This run already kept the {$run->limit('max_qualified')} companies it was asked for");
         }
 
         // A business with no site is judged on the directory line alone, so it
         // costs no fetch and must not spend the page budget of one.
         if ($candidate->website !== null && ! $run->claim('max_pages')) {
-            $this->skip("not read — this run has fetched the {$run->limit('max_pages')} pages it may fetch");
+            $this->skip("not read: this run has fetched the {$run->limit('max_pages')} pages it may fetch");
         }
 
         try {
@@ -49,10 +51,23 @@ class QualifyCandidate extends DiscoveryJob
             throw new RuntimeException(($candidate->website ?? $candidate->name).": {$e->getMessage()}", previous: $e);
         }
 
-        if ($prospect) {
+        if ($prospect !== null) {
             $run->claim('max_qualified');
+
+            // Straight on to the people, without waiting to be asked. A
+            // qualified company with no address is worth nothing, and clicking
+            // once per company is work the app should be doing: forty
+            // companies is forty clicks nobody will make.
+            //
+            // Guarded by the column so a re-run of this node cannot queue the
+            // same company twice.
+            if ($prospect->contacts_status === null) {
+                $prospect->update(['contacts_status' => ContactSearchStatus::Queued]);
+
+                FindCompanyContacts::dispatch($prospect);
+            }
         }
 
-        return ['prospect' => $prospect];
+        return ['prospect' => $prospect !== null];
     }
 }

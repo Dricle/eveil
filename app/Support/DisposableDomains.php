@@ -14,14 +14,14 @@ use Illuminate\Support\Facades\DB;
  * answer: a throwaway domain has working MX and passes every other check we
  * make, so a miss means we mark the address valid and send to it.
  *
- * Not learnable either — you would have to send to a throwaway to find out —
+ * Not learnable either: you would have to send to a throwaway to find out,
  * and not guessable. It is a maintained public dataset, so it is treated as
  * one: bundled at `database/data/disposable-email-domains.txt` so a fresh
  * install needs no network, refreshed by `eveil:refresh-disposable`.
  *
  * Stored in `suppressions` on the `toxic` layer rather than a table of its own.
  * That layer already means "instance-wide, fed only by public lists and our own
- * detection, never by a client's prospect behaviour" — which is exactly this.
+ * detection, never by a client's prospect behaviour": which is exactly this.
  */
 class DisposableDomains
 {
@@ -42,7 +42,7 @@ class DisposableDomains
 
     /**
      * Replaces the whole set in one transaction, so a refresh that dies halfway
-     * cannot leave the instance with a partial blocklist — which would silently
+     * cannot leave the instance with a partial blocklist. Which would silently
      * start accepting throwaway addresses it used to reject.
      *
      * @param  iterable<int, string>  $domains

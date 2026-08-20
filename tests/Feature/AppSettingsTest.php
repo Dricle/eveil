@@ -13,7 +13,7 @@ use Illuminate\Support\Collection;
 
 /**
  * Instance scope: what the person who ran the install decides, and nobody else.
- * Distinct from the organization role and from project access — the whole point
+ * Distinct from the organization role and from project access: the whole point
  * of keeping the three apart is that no organization can ever grant this.
  */
 function superAdmin(): User
@@ -206,7 +206,7 @@ it('locks a host verdict a human corrected', function () {
 
     $host->refresh();
 
-    // Locked outranks anything a model later concludes — otherwise the next
+    // Locked outranks anything a model later concludes. Otherwise the next
     // triage rewrites the correction and the screen was theatre.
     expect($host->kind)->toBe(HostKind::Index)
         ->and($host->is_locked)->toBeTrue()

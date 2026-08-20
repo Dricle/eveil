@@ -9,6 +9,7 @@ use App\Models\AgentRun;
 use App\Models\Campaign;
 use App\Models\CampaignLead;
 use App\Models\Company;
+use App\Models\DiscoveryRun;
 use App\Models\Lead;
 use App\Models\Message;
 use Inertia\Inertia;
@@ -24,7 +25,7 @@ use Inertia\Response;
  * and a status is a summary.
  *
  * Token counts, never money: no provider reports a price, so a figure in euros
- * would be our own arithmetic against a number that drifts — wrong quietly, in
+ * would be our own arithmetic against a number that drifts. Wrong quietly, in
  * a column that looks authoritative.
  */
 class DashboardController extends Controller
@@ -39,6 +40,10 @@ class DashboardController extends Controller
             ->count();
 
         return Inertia::render('Dashboard', [
+            // Somebody who wandered off mid-setup needs the way back: until a
+            // search has run there is nothing on this page but zeroes, and a
+            // dashboard of zeroes reads as a product that does not work.
+            'onboarding' => DiscoveryRun::query()->doesntExist(),
             'stats' => [
                 'companies' => Company::query()->contactable()->count(),
                 'contacts' => Lead::query()->contactable()->count(),

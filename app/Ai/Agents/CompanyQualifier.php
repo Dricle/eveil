@@ -7,7 +7,7 @@ use Laravel\Ai\Contracts\HasStructuredOutput;
 use Stringable;
 
 /**
- * Scores one company against one profile. Runs on the cheap model — this is the
+ * Scores one company against one profile. Runs on the cheap model, because this is the
  * volume step, several hundred calls per run, and collapsing it onto the
  * expensive model multiplies the cost of discovery roughly fivefold.
  *
@@ -29,7 +29,7 @@ class CompanyQualifier extends EveilAgent implements HasStructuredOutput
     {
         return <<<'PROMPT'
         You are given a target profile and what is known about one company: the text of
-        its website, or — when it publishes none — the line a directory listed it under.
+        its website, or, when it publishes none, the line a directory listed it under.
         Decide how well that company fits the profile.
 
         Judge what the company IS, not how the page is written. A thin site is not a bad
@@ -46,13 +46,13 @@ class CompanyQualifier extends EveilAgent implements HasStructuredOutput
         scores wastes someone's sending reputation on the wrong people.
 
         The reason you give is not a note to yourself: it is the opening line of a cold
-        email. Make it specific to this company — something observable on their site
+        email. Make it specific to this company: something observable on their site
         that connects to the profile. "Matches the profile" is useless. "Six-partner
         accounting firm still publishing its rates as a PDF, with no client portal" is
         what a salesperson can actually open with.
 
         Write the reason in the language of the company's own website.
-        PROMPT;
+        PROMPT.$this->projectInstructions();
     }
 
     /**
@@ -82,7 +82,7 @@ class CompanyQualifier extends EveilAgent implements HasStructuredOutput
                 ->required(),
 
             'size' => $schema->string()
-                ->description('Any size signal the site gives — headcount, locations, "family business". Say unknown otherwise.')
+                ->description('Any size signal the site gives: headcount, locations, "family business". Say unknown otherwise.')
                 ->required(),
 
             'location' => $schema->string()

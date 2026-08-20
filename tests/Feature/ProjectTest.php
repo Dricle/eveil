@@ -49,7 +49,10 @@ it('creates a project, starts its analysis and selects it', function () {
 
     $this->actingAs(member())
         ->post(route('projects.store'), ['name' => 'Acme', 'url' => 'acme.test'])
-        ->assertRedirect(route('dashboard'))
+        // Into the guided run rather than the dashboard: the site is being read
+        // at this moment, and watching that happen is the whole first
+        // impression.
+        ->assertRedirect(route('onboarding'))
         ->assertSessionHasNoErrors();
 
     $project = Project::sole();

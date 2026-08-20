@@ -12,7 +12,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 class ProjectResource extends JsonResource
 {
     /**
-     * The knowledge base itself is never sent — the page only needs to know
+     * The knowledge base itself is never sent: the page only needs to know
      * whether the analysis has landed, and the summary runs to kilobytes.
      *
      * @return array<string, mixed>

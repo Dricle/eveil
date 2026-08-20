@@ -10,7 +10,7 @@ const props = defineProps<{
 }>()
 
 // Two pages about one profile: what we are looking for, and what came of
-// looking. They stay inside the content area — the bar at the top of the app
+// looking. They stay inside the content area, because the bar at the top of the app
 // belongs to the app, not to whichever section is open.
 const items = computed<NavigationMenuItem[]>(() => props.profile === null
     ? []

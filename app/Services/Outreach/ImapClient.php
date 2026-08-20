@@ -8,8 +8,8 @@ use Throwable;
 /**
  * Reading a mailbox, spoken by hand.
  *
- * No dependency and no `ext-imap`: what is needed here is four commands —
- * LOGIN, SELECT, UID SEARCH, UID FETCH — and a library would be a dependency
+ * No dependency and no `ext-imap`: what is needed here is four commands.
+ * LOGIN, SELECT, UID SEARCH, UID FETCH, and a library would be a dependency
  * plus a deprecated extension for the sake of code that fits on two screens.
  * The connection test already speaks IMAP the same way, so this is the same
  * conversation continued rather than a second approach.
@@ -40,8 +40,8 @@ class ImapClient
             $this->command($socket, 'a1', 'LOGIN "'.$account->imap_username.'" "'.$account->imap_password.'"');
             $this->command($socket, 'a2', 'SELECT INBOX');
 
-            // `UID SEARCH UID n:*` always returns at least one UID — the last
-            // one — even when nothing is above it, so the result is filtered
+            // `UID SEARCH UID n:*` always returns at least one UID. The last
+            // one: even when nothing is above it, so the result is filtered
             // rather than trusted.
             $from = ($lastUid ?? 0) + 1;
             $found = $this->searchUids($socket, $from);

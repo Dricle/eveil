@@ -20,7 +20,7 @@ use DOMXPath;
  * business names on one side and two hundred URLs on the other, with nothing
  * pairing them. `[Acme Plumbing](/company/acme-plumbing-4412)` keeps them
  * together. Same reason `mailto:` and `tel:` survive here while `Url::resolve`
- * drops them — they are not links to follow, they are the contact details, and
+ * drops them. They are not links to follow, they are the contact details, and
  * an address that only ever appears in an href used to be invisible.
  */
 class HtmlText
@@ -30,7 +30,7 @@ class HtmlText
 
     /**
      * `nav`, `header` and `footer` are deliberately NOT skipped. They are the
-     * obvious candidates — until you notice pagination lives in `nav`, so
+     * obvious candidates, until you notice pagination lives in `nav`, so
      * dropping it deletes "next page" and a listing harvest stops at page one.
      * The extra tokens are a rounding error against that.
      */
@@ -65,7 +65,7 @@ class HtmlText
 
     /**
      * The parsed document, for the callers that need the markup itself rather
-     * than its prose — `JsonLd` reads `script` tags, which `parse()` strips.
+     * than its prose, `JsonLd` reads `script` tags, which `parse()` strips.
      * Public so the encoding fix below lives in exactly one place.
      */
     public function document(string $html): ?DOMDocument
@@ -76,8 +76,8 @@ class HtmlText
     /**
      * The next page of a paginated listing, or null at the end of it.
      *
-     * Three signals, most reliable first. Anything cleverer — inferring
-     * `?page=N+1`, following the highest numbered link — invents URLs that
+     * Three signals, most reliable first. Anything cleverer: inferring
+     * `?page=N+1`, following the highest numbered link. Invents URLs that
      * either 404 or loop, and a harvest that loops burns the page budget on
      * one directory.
      */
@@ -127,7 +127,7 @@ class HtmlText
         $document = new DOMDocument;
 
         // Without the encoding hint, DOMDocument assumes ISO-8859-1 and mangles
-        // every accented character — which is most of our target market.
+        // every accented character. Which is most of our target market.
         $loaded = @$document->loadHTML(
             '<?xml encoding="UTF-8">'.$html,
             LIBXML_NOERROR | LIBXML_NOWARNING,
@@ -249,7 +249,7 @@ class HtmlText
     }
 
     /**
-     * Collapses the whitespace HTML sources are full of — a sizeable share of
+     * Collapses the whitespace HTML sources are full of. A sizeable share of
      * the tokens, carrying nothing.
      */
     private function tidy(string $markdown): string
@@ -279,7 +279,7 @@ class HtmlText
     }
 
     /**
-     * Crawlable links only — `Url::resolve` drops `mailto:`, `tel:` and
+     * Crawlable links only, `Url::resolve` drops `mailto:`, `tel:` and
      * fragments, which is right here and wrong in the markdown.
      *
      * @return array<int, string>
@@ -312,7 +312,7 @@ class HtmlText
 
     /**
      * `DOMXPath::query()` returns false on a malformed expression. Ours are
-     * literals, so that cannot happen — but the type says it can.
+     * literals, so that cannot happen, but the type says it can.
      *
      * @return DOMNodeList<DOMNode>
      */

@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Http;
 use Throwable;
 
 /**
- * robots.txt is respected, per the crawl constraints in the spec — both because
+ * robots.txt is respected, per the crawl constraints in the spec: both because
  * it is the honest thing to do and because getting our IP ranges blacklisted
  * would end lead discovery.
  *

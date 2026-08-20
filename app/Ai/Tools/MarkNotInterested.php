@@ -11,7 +11,7 @@ use Stringable;
 
 /**
  * A no that is only a no. The sequence ends and nobody is asked to do anything
- * about it — the difference from an opt-out is that they refused an offer rather
+ * about it: the difference from an opt-out is that they refused an offer rather
  * than refusing contact.
  */
 class MarkNotInterested implements Tool
@@ -24,9 +24,9 @@ class MarkNotInterested implements Tool
         Use this when the person declines but does not ask you to stop writing:
         "we already have a supplier", "not for us", "no thanks".
 
-        Do not use it when they ask to be removed from a list — that is
+        Do not use it when they ask to be removed from a list: that is
         suppress_lead. Do not use it when they are asking a question or showing
-        any interest at all — that is mark_needs_human.
+        any interest at all: that is mark_needs_human.
         TEXT;
     }
 

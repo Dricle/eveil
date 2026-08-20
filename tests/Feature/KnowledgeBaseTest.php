@@ -147,7 +147,7 @@ it('keeps a correction through a later analysis', function () {
         'knowledge_base_edited_by_user' => true,
     ]);
 
-    // The action decides this, not the controller — a re-analysis reaching the
+    // The action decides this, not the controller. A re-analysis reaching the
     // project by any other route must not overwrite a correction either.
     $method = new ReflectionMethod(AnalyzeWebsite::class, 'applyToProject');
     $method->invoke(app(AnalyzeWebsite::class), $project, ['what_it_does' => 'Rewritten by the model.'], collect());

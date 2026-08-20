@@ -100,7 +100,7 @@ it('follows pagination and dedupes across pages', function () {
             .'<nav><a href="?page=2">Page suivante</a></nav>'
         )),
         'https://annuaire.test/friteries?page=2' => Http::response(listingPage(
-            // Marcel again — listed in two categories — plus one new.
+            // Marcel again. Listed in two categories, plus one new.
             jsonLd([friterie('Chez Marcel'), friterie('Fritkot du Coin')])
         )),
         '*/robots.txt' => Http::response('', 404),

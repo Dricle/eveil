@@ -10,7 +10,7 @@ use Throwable;
  * The model ids a provider names for itself: its default, its cheapest and its
  * smartest text model.
  *
- * That is the whole catalogue `laravel/ai` publishes — there is no enum of
+ * That is the whole catalogue `laravel/ai` publishes: there is no enum of
  * model ids, and there could not be one that stayed right for a week. So these
  * are SUGGESTIONS on the settings screen, not the allowed set: the field stays
  * free text, or the model released this morning would be unreachable until a

@@ -12,7 +12,7 @@ use Illuminate\Support\Collection;
  * the directories worth reading.
  *
  * A result is either a company or a LIST of companies, and telling them apart
- * used to be a hand-written blocklist of aggregator domains — which could never
+ * used to be a hand-written blocklist of aggregator domains: which could never
  * be complete, and which threw away the most valuable results of all. A
  * directory's page for one trade in one town is not a company, it is hundreds,
  * and for a business with no site of its own it is the only place an address is
@@ -54,7 +54,7 @@ class Triage
                 continue;
             }
 
-            // Social and `other` are dropped — `other` because we read hosts
+            // Social and `other` are dropped, `other` because we read hosts
             // and not pages, so a forum thread that names ten businesses goes
             // with them. A limit worth revisiting, not a claim that the page
             // was worthless.

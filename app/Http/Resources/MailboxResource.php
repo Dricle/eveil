@@ -8,7 +8,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * A mailbox as the settings screen shows it. The passwords are absent and stay
- * absent — write-only from the UI's point of view, whatever the form does.
+ * absent: write-only from the UI's point of view, whatever the form does.
  *
  * `sent_today` and `remaining_today` are counted across every project, because
  * that is the only figure that means anything: the quota belongs to the address.

@@ -33,7 +33,7 @@ watch(deriving, busy => busy ? poll.start() : poll.stop())
 
                 <p class="text-sm text-muted">
                     A target profile says who to look for, and the agent works it
-                    out from your product — you should not have to fill in a
+                    out from your product. You should not have to fill in a
                     targeting form.
                 </p>
 

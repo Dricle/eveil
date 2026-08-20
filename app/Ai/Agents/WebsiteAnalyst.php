@@ -8,7 +8,7 @@ use Stringable;
 
 /**
  * Reads a product's own website and writes the portrait the Sales agent sells
- * from — a salesperson has to know the product.
+ * from, because a salesperson has to know the product.
  *
  * This is the product knowledge base, not an SEO audit: we are
  * deliberately not building a site-audit product on the side.
@@ -24,7 +24,7 @@ class WebsiteAnalyst extends EveilAgent implements HasStructuredOutput
 
         You are given the text of several pages from one company's website. Work only
         from that text. Where the pages do not say something, say so plainly rather than
-        inventing it — a confident guess that turns out wrong costs the salesperson their
+        inventing it. A confident guess that turns out wrong costs the salesperson their
         credibility on the first reply.
 
         Write every field in the language the website itself uses.
@@ -32,7 +32,7 @@ class WebsiteAnalyst extends EveilAgent implements HasStructuredOutput
         Be concrete. "A platform that helps teams collaborate" is useless; name what the
         product actually does, for whom, and what it replaces. Prefer the words the
         company uses about itself over your own paraphrase.
-        PROMPT;
+        PROMPT.$this->projectInstructions();
     }
 
     /**
@@ -68,7 +68,7 @@ class WebsiteAnalyst extends EveilAgent implements HasStructuredOutput
 
             'competitors' => $schema->array()
                 ->items($schema->string())
-                ->description('Competitors the site names. Empty when it names none — do not guess.')
+                ->description('Competitors the site names. Empty when it names none, and do not guess.')
                 ->required(),
 
             'proof_points' => $schema->array()

@@ -11,7 +11,7 @@ use Illuminate\Http\Request;
 /**
  * Trying the mailbox for real, and saying what went wrong in the words of the
  * thing that has to change. A generic "authentication failed" is where a signup
- * ends — the user cannot tell a wrong password from an admin policy that
+ * ends: the user cannot tell a wrong password from an admin policy that
  * forbids app passwords, and only one of those is theirs to fix.
  *
  * A working test also clears an error state: a mailbox paused because its

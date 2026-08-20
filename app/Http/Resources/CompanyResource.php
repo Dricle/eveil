@@ -9,7 +9,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * A company as the list shows it: the facts, plus what each profile made of it.
- * The score is never flattened onto the company — the same business scores 90
+ * The score is never flattened onto the company: the same business scores 90
  * for one profile and 20 for another, and the reason is the opening line of the
  * email either way.
  *

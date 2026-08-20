@@ -3,7 +3,7 @@
 use Illuminate\Support\Facades\Route;
 
 /*
- * Public site. Plain Blade, no Inertia — the application itself lives under
+ * Public site. Plain Blade, no Inertia: the application itself lives under
  * the `/app` prefix in routes/app.php. A self-hosted instance has no product
  * to present, so it skips straight to the application.
  */

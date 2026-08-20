@@ -25,7 +25,7 @@ class PageFetcher
 
     /**
      * @param  string|null  $reason  why nothing came back, in words a user can
-     *                               act on. Only written when the fetch fails —
+     *                               act on. Only written when the fetch fails:
      *                               every caller that does not care simply
      *                               omits it.
      */
@@ -105,7 +105,7 @@ class PageFetcher
 
     /**
      * PostgreSQL text columns reject NUL bytes and invalid UTF-8 outright, and
-     * real pages contain both — a mis-encoded Belgian restaurant site killed a
+     * real pages contain both. A mis-encoded Belgian restaurant site killed a
      * whole discovery run on the first live attempt.
      */
     private function storable(string $body): string

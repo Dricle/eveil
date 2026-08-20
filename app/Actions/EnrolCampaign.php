@@ -21,7 +21,7 @@ use Illuminate\Database\QueryException;
  * threading is concerned, and the reply we are waiting for would arrive in a
  * mailbox nobody is reading for it.
  *
- * Nothing is enrolled that must not be written to — an existing client, a
+ * Nothing is enrolled that must not be written to: an existing client, a
  * bounce, an opt-out, an address nobody could verify. Checking here is not a
  * substitute for checking at send time (a STOP can arrive in between, which is
  * exactly the case that matters) but it keeps a campaign from claiming to be

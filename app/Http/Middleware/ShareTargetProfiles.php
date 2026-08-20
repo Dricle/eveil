@@ -15,7 +15,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * The profiles are the navigation of the Targets section, so every page under
- * it needs the same list and the same "a derivation is running" flag — the
+ * it needs the same list and the same "a derivation is running" flag: the
  * screen you are on has no bearing on either.
  *
  * Shared as closures: they only cost a query on the requests that actually

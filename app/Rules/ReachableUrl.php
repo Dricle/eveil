@@ -9,7 +9,7 @@ use Illuminate\Contracts\Validation\ValidationRule;
 /**
  * An address nothing can be read at is an analysis that fails minutes later, in
  * a queue, where nobody is looking. Fetching once at save time moves that
- * failure back into the form — and the page lands in the crawl cache, so the
+ * failure back into the form, and the page lands in the crawl cache, so the
  * analysis that follows does not pay for it a second time.
  */
 class ReachableUrl implements ValidationRule

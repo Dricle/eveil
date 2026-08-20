@@ -132,7 +132,7 @@ it('searches the web when the profile has no premises', function () {
 
 it('sorts search results by what each host is, and harvests the lists', function () {
     // This used to assert that directories were thrown away. They are the most
-    // valuable result there is — one listing page is hundreds of businesses,
+    // valuable result there is: one listing page is hundreds of businesses,
     // and for a business with no site of its own it is the only place an
     // address is published. Encyclopaedias and social platforms still go.
     $this->seed(KnownHostSeeder::class);
@@ -307,7 +307,7 @@ it('scopes a map probe to its country', function () {
 
     $this->artisan('eveil:discover-companies')->assertSuccessful();
 
-    // A probe on "Charleroi" alone also returns Charleroi, Pennsylvania — the
+    // A probe on "Charleroi" alone also returns Charleroi, Pennsylvania. The
     // first live run brought back a Subway there.
     Http::assertSent(function ($request) {
         return ! str_contains($request->url(), 'interpreter')
@@ -393,7 +393,7 @@ it('stores a page that Postgres would otherwise reject', function () {
 it('harvests a directory and keeps the directory itself as a candidate', function () {
     // A directory is also a company. Someone's target profile is "launch
     // platforms" or "review sites", and treating index and entity as exclusive
-    // would make that buyer unserviceable — the host would be scraped for its
+    // would make that buyer unserviceable: the host would be scraped for its
     // listings and never considered as a lead.
     activeTargetProfile();
 
@@ -536,7 +536,7 @@ it('waits out a busy Overpass instead of reporting an empty area', function (int
 
 it('keeps a business with no site of its own when the listing published an address', function () {
     // The segment nobody else is calling. A search engine can never surface
-    // these — they have nothing to rank — so the directory line is both how
+    // these: they have nothing to rank, so the directory line is both how
     // they are found and the only place they publish an address.
     activeTargetProfile();
 

@@ -10,7 +10,7 @@ namespace App\Services\Discovery;
  * Everything produced here is a guess, so it is stored as `inferred` and never
  * sent to until verification has had a look.
  *
- * There is no list of shapes. There was — eight of them, matched one by one —
+ * There is no list of shapes. There was: eight of them, matched one by one,
  * and it silently failed on `first-last`, `last-first`, `f_last`, `firstl` and
  * every other combination nobody had written down. A missing shape is not a
  * quiet miss either: `detect()` returns null, the site's real convention is

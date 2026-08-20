@@ -14,7 +14,7 @@ use Laravel\Ai\Responses\StructuredAgentResponse;
 
 /**
  * One candidate's own site, read and scored against the profile. This is where
- * a name found somewhere becomes a company worth writing to — or does not.
+ * a name found somewhere becomes a company worth writing to, or does not.
  */
 class Qualifier
 {
@@ -23,29 +23,36 @@ class Qualifier
     /**
      * Whether the candidate turned out to be a prospect and was stored.
      */
+    /**
+     * The company that was kept, or null when the candidate is not a prospect.
+     *
+     * Returns the row rather than a boolean so the caller can act on it: a
+     * company nobody has looked for contacts at is worth nothing, and clicking
+     * that per company is work the app should be doing.
+     */
     public function qualify(
         TargetProfile $targetProfile,
         DiscoveryRun $run,
         Candidate $candidate,
         ?AgentRun $agentRun = null,
-    ): bool {
+    ): ?Company {
         $parsed = null;
 
         // A business with no site of its own is judged on what the directory
-        // published about it. Thinner evidence, and the score reflects that —
+        // published about it. Thinner evidence, and the score reflects that,
         // but a chip shop with an address and no website is still a prospect,
         // and it is the one nobody else is calling.
         if ($candidate->website !== null) {
             $page = $this->fetcher->fetch($candidate->website);
 
             if ($page === null) {
-                return false;
+                return null;
             }
 
             $parsed = $this->html->parse((string) $page->content, $candidate->website);
 
             if ($parsed->isEmpty()) {
-                return false;
+                return null;
             }
         }
 
@@ -63,12 +70,10 @@ class Qualifier
         );
 
         if (! ($verdict['is_a_prospect'] ?? false)) {
-            return false;
+            return null;
         }
 
-        $this->store($targetProfile, $run, $candidate, $parsed, $verdict->structured);
-
-        return true;
+        return $this->store($targetProfile, $run, $candidate, $parsed, $verdict->structured);
     }
 
     /**
@@ -83,7 +88,7 @@ class Qualifier
     /**
      * The row this candidate would land on. The domain is the key wherever
      * there is one; with no site the name is all every source agrees on, so
-     * two same-named businesses in different towns are treated as one — losing
+     * two same-named businesses in different towns are treated as one: losing
      * a prospect costs less than writing to the same person twice.
      */
     public static function existing(int $projectId, Candidate $candidate): ?Company
@@ -116,7 +121,7 @@ class Qualifier
     /**
      * @param  array<string, mixed>  $verdict
      */
-    private function store(TargetProfile $targetProfile, DiscoveryRun $run, Candidate $candidate, ?ParsedPage $page, array $verdict): void
+    private function store(TargetProfile $targetProfile, DiscoveryRun $run, Candidate $candidate, ?ParsedPage $page, array $verdict): Company
     {
         $company = self::existing($targetProfile->project_id, $candidate)
             ?? new Company(['project_id' => $targetProfile->project_id, 'domain' => $candidate->domain()]);
@@ -150,5 +155,7 @@ class Qualifier
                 'fit_reason' => (string) ($verdict['fit_reason'] ?? ''),
             ],
         );
+
+        return $company;
     }
 }

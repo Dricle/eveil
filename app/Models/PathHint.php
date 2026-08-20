@@ -13,7 +13,7 @@ use Illuminate\Support\Carbon;
  * A path fragment worth following, learned rather than enumerated.
  *
  * Shared instance-wide: which words a site puts in the URL of its contact page
- * is a fact about the web, not about any customer — the same reasoning that
+ * is a fact about the web, not about any customer. The same reasoning that
  * makes `known_hosts` and the page cache safe to share.
  *
  * @property int $id
@@ -40,7 +40,7 @@ class PathHint extends Model
     /**
      * How often the pages this fragment chose actually carried what we wanted.
      *
-     * Null until there is enough evidence to say — judging a fragment on one
+     * Null until there is enough evidence to say: judging a fragment on one
      * or two attempts would delete a good one that happened to start badly.
      */
     public function precision(): ?float

@@ -8,7 +8,7 @@ use Stringable;
 
 /**
  * Turns the product portrait into the target profiles the search runs on
- * — the "zero configuration targeting" the whole product rests on.
+ * This is the "zero configuration targeting" the whole product rests on.
  *
  * As many profiles as the product actually serves: flattening two markets into
  * one average profile targets nobody. But a segment nobody can be found for is
@@ -42,14 +42,14 @@ class TargetProfileDeriver extends EveilAgent implements HasStructuredOutput
         are one profile.
 
         Then look past the buyer. Some markets are made of businesses that publish a
-        phone number and no address at all — the profile is right and nobody in it can
+        phone number and no address at all. The profile is right and nobody in it can
         be written to. For those, and whenever one company already speaks to hundreds of
         the buyers, add a PARTNER profile: not who buys, but who already reaches the
         buyer. Ask three questions in this order:
 
         - Who is LEGALLY IMPOSED on them? A required certifier, an approved installer,
           a regulated register, a mandatory inspection body. Few of them, enumerable,
-          with a captive clientele — the strongest partner profile there is.
+          with a captive clientele, which is the strongest partner profile there is.
         - Who invoices them every month? The accountant, the software vendor, the
           supplier, the franchisor.
         - Who physically visits them? The wholesaler's reps, the maintenance rounds,
@@ -64,7 +64,7 @@ class TargetProfileDeriver extends EveilAgent implements HasStructuredOutput
         unreachable.
 
         Order them by how worthwhile they are to prospect: how well the product fits,
-        how reachable the buyer is, and how likely they are to buy — not by size alone.
+        how reachable the buyer is, and how likely they are to buy, not by size alone.
 
         Ground every profile in the portrait. Where the portrait names customers,
         sectors, geographies or competitors, use them. Do not invent a market the
@@ -72,7 +72,7 @@ class TargetProfileDeriver extends EveilAgent implements HasStructuredOutput
 
         Write the profiles in the language of the product's own market, not in English,
         unless the market is English-speaking.
-        PROMPT;
+        PROMPT.$this->projectInstructions();
     }
 
     /**
@@ -95,7 +95,7 @@ class TargetProfileDeriver extends EveilAgent implements HasStructuredOutput
                     ->required(),
 
                 'partnership_angle' => $schema->string()
-                    ->description('Partner profiles only: why the deal is worth it to THEM — this becomes the opening line of the email, and "buy this" is never the answer. Empty string for a customer profile.')
+                    ->description('Partner profiles only: why the deal is worth it to THEM. This becomes the opening line of the email, and "buy this" is never the answer. Empty string for a customer profile.')
                     ->required(),
 
                 'rationale' => $schema->string()
@@ -107,7 +107,7 @@ class TargetProfileDeriver extends EveilAgent implements HasStructuredOutput
                     ->required(),
 
                 'company_size' => $schema->string()
-                    ->description('Headcount, number of locations or revenue band — whichever is observable from outside.')
+                    ->description('Headcount, number of locations or revenue band, whichever is observable from outside.')
                     ->required(),
 
                 'geography' => $schema->array()->items($schema->string())

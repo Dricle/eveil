@@ -14,7 +14,7 @@ use Illuminate\Support\Carbon;
 
 /**
  * Every agent invocation lands here: debug log, analysis history and
- * billing meter in one table, in BOTH editions — only the credit ledger is
+ * billing meter in one table, in BOTH editions. Only the credit ledger is
  * cloud-only.
  *
  * Retention is split: payloads carry names and emails and are purged
@@ -45,7 +45,7 @@ class AgentRun extends Model
     /**
      * How long a run may sit unfinished before a screen stops calling it live.
      * Past it the worker is gone, the queue is not being drained, or the whole
-     * instance was redeployed mid-call — in every case nothing is coming back.
+     * instance was redeployed mid-call: in every case nothing is coming back.
      */
     private const STALE_AFTER_MINUTES = 15;
 
@@ -71,7 +71,7 @@ class AgentRun extends Model
     }
 
     /**
-     * Drops the payloads while keeping every metric — the shape the retention rule asks
+     * Drops the payloads while keeping every metric. The shape the retention rule asks
      * for, so purging leads never leaves personal data behind in the meter.
      */
     public function purgePayloads(): void

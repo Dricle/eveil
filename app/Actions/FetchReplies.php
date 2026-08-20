@@ -24,8 +24,8 @@ use Illuminate\Database\Eloquent\Builder;
 /**
  * Reading one mailbox and turning what answers our own mails into rows.
  *
- * Attribution is by header — our `Message-ID` on the way out against
- * `In-Reply-To` / `References` on the way back — never by address. Two people at
+ * Attribution is by header: our `Message-ID` on the way out against
+ * `In-Reply-To` / `References` on the way back. Never by address. Two people at
  * one company reply from the same domain, a lead forwards our mail to a
  * colleague who answers, and an address that appears in a thread is not evidence
  * of which mail it answers.
@@ -168,8 +168,8 @@ class FetchReplies
      *
      * Same treatment as an immediate 5xx: a hard failure suppresses the address
      * against THIS mailbox and stops the sequence, because retrying a known-dead
-     * address is what costs a domain its reputation. A soft failure — a full
-     * mailbox, a server having a bad afternoon — decides nothing and waits a day.
+     * address is what costs a domain its reputation. A soft failure: a full
+     * mailbox, a server having a bad afternoon. Decides nothing and waits a day.
      */
     private function recordBounce(EmailAccount $account, BounceReport $bounce): bool
     {

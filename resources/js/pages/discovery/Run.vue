@@ -35,7 +35,7 @@ const STATUS = {
 // emails, and the complaints land on their own domain.
 const DIAGNOSIS = {
     wrong_source: 'No candidate at all. The sources were wrong for this profile, not the profile itself.',
-    bad_target_profile: 'Candidates were found but none fit. The profile is probably wrong — widening it would only produce off-target leads.',
+    bad_target_profile: 'Candidates were found but none fit. The profile is probably wrong, and widening it would only produce off-target leads.',
     too_narrow: 'Fewer companies than asked for. Either the profile is narrow, or this is the whole market.',
     no_contacts: 'Companies were qualified but no contact could be reached on them.'
 }
@@ -65,7 +65,7 @@ function outcome (task: DiscoveryTask): string {
 
 <template>
     <TargetsLayout :current="run.profile_id">
-        <Head :title="`Search — ${run.profile ?? 'run'}`" />
+        <Head :title="`Search: ${run.profile ?? 'run'}`" />
 
         <div class="max-w-3xl space-y-4">
             <div class="flex items-start justify-between gap-4">
@@ -117,7 +117,7 @@ function outcome (task: DiscoveryTask): string {
                 variant="subtle"
                 icon="i-lucide-hand"
                 title="This search stopped at its own ceiling"
-                :description="`${skipped} step(s) were not run. One run is capped so a plan asking for eighty searches cannot spend eighty — nothing was lost, and any step can be replayed on its own.`"
+                :description="`${skipped} step(s) were not run. One run is capped so a plan asking for eighty searches cannot spend eighty. Nothing was lost, and any step can be replayed on its own.`"
             />
 
             <UCard v-if="run.plan">

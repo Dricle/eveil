@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Schema;
  *
  * `project_analyses` keeps the history so a re-run can be diffed against the
  * previous one. `target_profiles` holds as many profiles as the agent derives,
- * freely editable by the user — a product usually serves several
+ * freely editable by the user: a product usually serves several
  * markets, and flattening them into one average profile targets nobody.
  */
 return new class extends Migration
@@ -24,7 +24,7 @@ return new class extends Migration
          * front end and an API are two repositories describing one product, and
          * a single column could only ever hold half the answer.
          *
-         * Not `github_repositories` — the same product self-hosts on GitLab or
+         * Not `github_repositories`: the same product self-hosts on GitLab or
          * Gitea, and the provider is a property of the URL, not of the table.
          */
         Schema::create('code_repositories', function (Blueprint $table) {

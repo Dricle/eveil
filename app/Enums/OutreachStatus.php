@@ -6,7 +6,7 @@ namespace App\Enums;
  * Where a company or a person stands, in one vocabulary for both.
  *
  * Deliberately not two enums. A company and the people at it are the same
- * relationship seen from two ends — marking a company as an existing client
+ * relationship seen from two ends: marking a company as an existing client
  * says something about every address at it, and closing a deal with one person
  * closes it for the company. Two vocabularies would need a mapping between
  * them, and the mapping has holes in both directions: no `rejected` on a
@@ -32,7 +32,7 @@ enum OutreachStatus: string
     /**
      * The statuses that take a company or a person out of outreach. A client
      * already buys, a won deal is closed, a lost one said no, a rejected one
-     * was never wanted, and a suppressed one asked us to stop — cold-mailing
+     * was never wanted, and a suppressed one asked us to stop: cold-mailing
      * any of the five is the mistake this list prevents.
      *
      * @return array<int, self>

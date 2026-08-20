@@ -12,7 +12,7 @@ use Illuminate\Validation\Rule;
  * means "keep the one you have" rather than "clear it".
  *
  * `projects` is the grant. An empty list is legitimate and means the mailbox
- * exists but may not send for anything yet — the safe state for an address
+ * exists but may not send for anything yet: the safe state for an address
  * somebody is still setting up.
  */
 class MailboxRequest extends FormRequest

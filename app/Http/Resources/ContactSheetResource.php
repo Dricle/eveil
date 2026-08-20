@@ -12,7 +12,7 @@ use Illuminate\Http\Request;
  * Everything known about one person, in one place: how their address was found
  * and what it is worth, which sequences they are in, and every mail either way.
  *
- * The company travels as a reference rather than being copied onto the person —
+ * The company travels as a reference rather than being copied onto the person:
  * it is a deduplicated object of its own, and two contacts at one firm must not
  * disagree about what that firm is.
  *

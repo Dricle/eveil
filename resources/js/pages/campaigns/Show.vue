@@ -21,7 +21,7 @@ type Sample = {
     messages: { lead: string, company: string | null, subject: string, body: string }[]
 }
 
-// A single resource arrives unwrapped too — no `data` envelope on either.
+// A single resource arrives unwrapped too, with no `data` envelope on either.
 const props = defineProps<{
     campaign: {
         id: number
@@ -45,7 +45,7 @@ const STAGES = [
 ] as const
 
 const STATUSES = [
-    { label: 'Draft — nothing sends', value: 'draft' },
+    { label: 'Draft, nothing sends', value: 'draft' },
     { label: 'Active', value: 'active' },
     { label: 'Paused', value: 'paused' }
 ]
@@ -279,7 +279,7 @@ function preview (step: Step) {
                 <div class="space-y-3">
                     <p class="text-sm text-muted">
                         What actually goes out, written for leads you have already found.
-                        The opener comes from what the qualifier observed about them —
+                        The opener comes from what the qualifier observed about them,
                         nobody researches a prospect by hand here.
                     </p>
 

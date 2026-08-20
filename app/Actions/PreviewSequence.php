@@ -11,7 +11,7 @@ use Illuminate\Support\Collection;
 
 /**
  * What one step of a sequence actually looks like once it has been written for
- * a real lead — read before anything is activated, which is the only moment
+ * a real lead: read before anything is activated, which is the only moment
  * the user can still change their mind for free.
  *
  * A sample rather than the whole list: three mails is enough to see whether the
@@ -57,7 +57,7 @@ class PreviewSequence
     }
 
     /**
-     * The step asked for, or the first mail in the sequence — a preview of a
+     * The step asked for, or the first mail in the sequence: a preview of a
      * wait step is an empty screen.
      */
     private function step(Campaign $campaign, ?int $stepId): ?CampaignStep
@@ -72,7 +72,7 @@ class PreviewSequence
      * Real leads, never invented ones: a preview written against a made-up
      * company proves nothing about the mails that will actually go out.
      *
-     * `contactable()` is what keeps an existing client out of the sample — and
+     * `contactable()` is what keeps an existing client out of the sample, and
      * out of the sending, since this is the query that says who a step is
      * written for. Invalid addresses are left out because they are never sent
      * to; a null status means imported and unverified, which is not the same

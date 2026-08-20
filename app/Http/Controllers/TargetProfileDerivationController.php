@@ -12,7 +12,7 @@ use Illuminate\Http\Request;
 
 /**
  * Asking the agent to work the profiles out again from the product portrait.
- * Separate from the CRUD controller because it is a different resource — a
+ * Separate from the CRUD controller because it is a different resource: a
  * derivation, which the user starts and the queue performs.
  *
  * The run row is opened here, `pending`, before the job is queued: the metering
@@ -21,8 +21,8 @@ use Illuminate\Http\Request;
  * to report, and the screen would look like the button did nothing.
  *
  * `replace` is the caller's choice and defaults to NO. Re-deriving is the
- * ordinary reason to come here — the product has changed, the profiles should
- * change with it — but throwing away what is already on screen is destructive,
+ * ordinary reason to come here: the product has changed, the profiles should
+ * change with it, but throwing away what is already on screen is destructive,
  * so it has to be asked for rather than assumed. A profile the user wrote or
  * corrected survives either way; the agent only discards its own work.
  */

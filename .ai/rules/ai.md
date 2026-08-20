@@ -5,29 +5,29 @@ paths:
 
 # Ai
 
-## Agents are queued jobs, not daemons — and always metered
+## Agents are queued jobs, not daemons, and always metered
 An "agent" here = a prompt + a toolset + a queued job. Nothing long-running, no persistent process per project.
 
-Every agent invocation writes an `agent_runs` row: project_id, agent (the slug), status, input, output, tokens_in, tokens_out, duration, error. Non-negotiable and needed from day 1 — it is simultaneously the debug log, the analysis history (Epic 4), and the billing meter (Epic 12). Retrofitting it is painful.
+Every agent invocation writes an `agent_runs` row: project_id, agent (the slug), status, input, output, tokens_in, tokens_out, duration, error. Non-negotiable and needed from day 1: it is simultaneously the debug log, the analysis history (Epic 4), and the billing meter (Epic 12). Retrofitting it is painful.
 
 Every run carries a hard budget (max tokens, max pages fetched, max leads produced) and aborts when hit. An unbounded agent loop that fetches pages burns real money.
 
 ## Provider and model are configurable per agent, keyed on the agent slug
-ADR-026. The superadmin picks provider + model + timeout for EACH agent class from a settings screen. `laravel/ai` supplies the provider/model list; the agent list comes from the code — `AgentSettings::known()` globs `app/Ai/Agents/*.php`, so adding an agent adds a line on the screen with nothing to register.
+ADR-026. The superadmin picks provider + model + timeout for EACH agent class from a settings screen. `laravel/ai` supplies the provider/model list; the agent list comes from the code: `AgentSettings::known()` globs `app/Ai/Agents/*.php`, so adding an agent adds a line on the screen with nothing to register.
 
 The key is the kebab-case class basename (`EveilAgent::slug()`): `website-analyst`, `target-profile-deriver`, `discovery-planner`, `company-qualifier`, `contact-extractor`. There is no `AgentType` enum, and no coarser role taxonomy: grouping agents by role puts unrelated jobs on one line, so the meter cannot tell `project.analyze` from `targets.derive` while the credit grid bills them apart, and target profile derivation cannot run on Opus while search planning runs cheaper.
 
 Shipped defaults are written by the `seed_default_settings` migration, not by config (a fresh install must work without opening the screen): `website-analyst`, `target-profile-deriver`, `discovery-planner` = Opus 5 at 300s; `company-qualifier`, `contact-extractor` = Haiku 4.5 at 60s.
 
-`company-qualifier` and `contact-extractor` REQUIRE reliable structured output — mark them as such in the UI. A small local model wired to the extractor via Ollama produces BROKEN extractions, not merely worse ones. The generative agents degrade gracefully; those two do not.
+`company-qualifier` and `contact-extractor` REQUIRE reliable structured output: mark them as such in the UI. A small local model wired to the extractor via Ollama produces BROKEN extractions, not merely worse ones. The generative agents degrade gracefully; those two do not.
 
-This is an INSTANCE-scope setting (ADR-003), superadmin-only, like the provider key — no organization admin or member ever sees it. In cloud the only superadmin is the operator, so a customer can never change the mapping.
+This is an INSTANCE-scope setting (ADR-003), superadmin-only, like the provider key: no organization admin or member ever sees it. In cloud the only superadmin is the operator, so a customer can never change the mapping.
 
 Operational note, not a product guard: the credit grid (ADR-019) is calibrated on this exact model mix, and switching `company-qualifier` to Opus 5 multiplies the real cost of `company.qualify` by five. If the operator changes the mapping in cloud, they adjust `credit_prices` in the same move.
 
 Fallback: Horizon backoff and retry, NO automatic cross-provider failover. The workload is asynchronous so nobody is waiting on a screen, and failing over mid-run would score leads on two different scales invisibly. Switching provider stays a deliberate config change.
 
-## Use laravel/ai directly — there is no wrapper
+## Use laravel/ai directly: there is no wrapper
 Do not add one. `laravel/ai` already provides every hook a wrapper would reinvent, and treating a mature package as fragile because of its version number costs clarity for nothing.
 
 The three extension points that matter, none of them obvious from the docs:
@@ -35,53 +35,62 @@ The three extension points that matter, none of them obvious from the docs:
 - **`HasMiddleware`** wraps the call, so it can record a run, catch a throwing provider, and read the response. Metering rides on it rather than on the `AgentPrompted` event, because an event listener never sees the failure and would leave rows stuck on "running".
 - **`AgentPrompt` carries `readonly Agent $agent`**, which is how middleware reaches the project an agent was constructed for.
 
-Shape: one agent class per specialisation in `app/Ai/Agents/`, all extending `EveilAgent` (constructed with the `Project`; the class name IS the settings key, via `slug()`), implementing `HasStructuredOutput`. Call them plainly — `(new WebsiteAnalyst($project))->prompt($text)`. Supporting pieces: `AgentSettings` (database over config), `ModelPricing` (cost), `Middleware\RecordsAgentRun` (the `agent_runs` row).
+Shape: one agent class per specialisation in `app/Ai/Agents/`, all extending `EveilAgent` (constructed with the `Project`; the class name IS the settings key, via `slug()`), implementing `HasStructuredOutput`. Call them plainly: `(new WebsiteAnalyst($project))->prompt($text)`. Supporting pieces: `AgentSettings` (database over config), `ModelPricing` (cost), `Middleware\RecordsAgentRun` (the `agent_runs` row).
 
 - Use the package's own types: `provider()` returns a `Laravel\Ai\Enums\Lab` case (falling back to a plain string only for an OpenAI-compatible endpoint, which is referenced by config key). `model()` returns null when nothing is configured so `laravel/ai` resolves the provider's own default rather than us hardcoding one.
-- **Tokens, never money.** `agent_runs` stores token counts only — no `cost` column, no price table, do not add either. `laravel/ai` reports usage and no provider reports a price, so any monetary figure is our own arithmetic against a number that drifts — wrong quietly, in a column that looks authoritative. Self-hosted users pay their provider directly and want token counts; cloud users are billed in credits, which the operator calibrates from these counts against a real invoice. Dollar figures quoted below are measurements, not something the app computes.
+- **Tokens, never money.** `agent_runs` stores token counts only: no `cost` column, no price table, do not add either. `laravel/ai` reports usage and no provider reports a price, so any monetary figure is our own arithmetic against a number that drifts: wrong quietly, in a column that looks authoritative. Self-hosted users pay their provider directly and want token counts; cloud users are billed in credits, which the operator calibrates from these counts against a real invoice. Dollar figures quoted below are measurements, not something the app computes.
 - `tokens_in` sums prompt + cache-read + cache-write tokens, so the meter reflects what actually crossed the wire. `RecordsAgentRun` owns that sum.
-- Faking in tests costs nothing: `MyAgent::fake([...])` swaps the gateway, no HTTP leaves the process, and `phpunit.xml` holds a dummy `ANTHROPIC_API_KEY` so an escapee would 401 rather than bill. Pass a `StructuredTextResponse` with a real `Usage` and `Meta` when asserting on tokens — the plain-array form yields zero usage.
+- Faking in tests costs nothing: `MyAgent::fake([...])` swaps the gateway, no HTTP leaves the process, and `phpunit.xml` holds a dummy `ANTHROPIC_API_KEY` so an escapee would 401 rather than bill. Pass a `StructuredTextResponse` with a real `Usage` and `Meta` when asserting on tokens: the plain-array form yields zero usage.
 
 ## Two measured facts about timeouts and cost
 - **The 60s HTTP default is not enough for a thinking model.** A real `targets.derive` runs ~69s and dies on it. Timeouts are per agent in the `agents.<slug>` setting: 300s for the generative agents, 60s for the cheap read-and-extract ones, where a long timeout would only mean a stuck job holding a worker. `EveilAgent::timeout()` returns it, and `Promptable` picks it up.
-- **Output tokens are where Opus costs money**, at 25 $/MTok against 5 $ for input, and generative tasks produce more than they consume: target profile derivation returns ~4 833 output tokens for ~4 456 input. Measured runs land above the estimates for that single reason (`project.analyze` 0.15 → 0.192 $, `targets.derive` 0.06 → 0.143 $). When estimating a new action's credit cost, size the OUTPUT first — the remaining grid lines are still guesses and are probably low.
+- **Output tokens are where Opus costs money**, at 25 $/MTok against 5 $ for input, and generative tasks produce more than they consume: target profile derivation returns ~4 833 output tokens for ~4 456 input. Measured runs land above the estimates for that single reason (`project.analyze` 0.15 → 0.192 $, `targets.derive` 0.06 → 0.143 $). When estimating a new action's credit cost, size the OUTPUT first: the remaining grid lines are still guesses and are probably low.
 
 ## The mapping lives in the database, and nowhere else
-`App\Support\Settings` reads the `settings` table, cached forever and flushed on write; `App\Ai\AgentSettings` reads the stored row (falling back to one conservative default for an agent class added after the install migrated) and is what `EveilAgent::provider()/model()/timeout()` return. There is no config mirror to merge — switching a model is a settings change, never a deploy.
+`App\Support\Settings` reads the `settings` table, cached forever and flushed on write; `App\Ai\AgentSettings` reads the stored row (falling back to one conservative default for an agent class added after the install migrated) and is what `EveilAgent::provider()/model()/timeout()` return. There is no config mirror to merge: switching a model is a settings change, never a deploy.
 
 - A partial override merges: setting only `model` keeps the timeout, which is what stops a thinking model dying on the 60s HTTP default.
-- A stored value of the wrong shape is ignored rather than trusted — the settings screen writes it, so validate on read.
+- A stored value of the wrong shape is ignored rather than trusted: the settings screen writes it, so validate on read.
 - The cache is invalidated on write. Without that a change from the screen appears to do nothing until the next deploy.
 - `php artisan eveil:agent-model` is the command-line half: no argument lists every agent with its provider, model, timeout, whether it came from `default` or `database`, and what it has spent so far. The screen at `/app/app-settings/agents` does the same job; the command stays for SSH.
 
 ## Acquisition recommendations are stateful, not a report (ADR-032)
-The Website agent also proposes acquisition levers the product is missing — referral scheme, editorial content, a trade fair, an offer to sector schools. Three rules separate this from the generic playbook any LLM emits in thirty seconds:
+The Website agent also proposes acquisition levers the product is missing: referral scheme, editorial content, a trade fair, an offer to sector schools. Three rules separate this from the generic playbook any LLM emits in thirty seconds:
 
 - **Evidence or nothing.** Every recommendation cites what in the knowledge base or the crawl says it is missing. "Do content marketing" is not emitted; "your site has no blog while the three competitors you name publish weekly" is.
 - **Impact/effort ranking**, like the site suggestions of Epic 4.
 - **State, and it is honoured.** `proposed` → `done` or `archived`, and an archived recommendation NEVER comes back. Same rule as the hand-edited knowledge base and the erasure tombstone: once the user has decided, do not ask again.
 
-Identity is a stable `key`, never the wording — a re-analysis that rephrases the same idea must recognise it or the list fills with duplicates.
+Identity is a stable `key`, never the wording: a re-analysis that rephrases the same idea must recognise it or the list fills with duplicates.
 
-State is driven by conversation: the user says "done" or "not interested" and the agent updates it. Nobody grooms a backlog — that boundary is what keeps this out of task-manager territory, which §8 lists as out of scope. `laravel/ai` already persists conversations (`RemembersConversations`, with its own migration), so what remains to build is the tool the agent calls to change a state.
+State is driven by conversation: the user says "done" or "not interested" and the agent updates it. Nobody grooms a backlog: that boundary is what keeps this out of task-manager territory, which §8 lists as out of scope. `laravel/ai` already persists conversations (`RemembersConversations`, with its own migration), so what remains to build is the tool the agent calls to change a state.
 
 ## A queued agent opens its agent_runs row as pending, at dispatch
-`RecordsAgentRun` writes its row when the provider call starts, so between a user clicking and a worker picking the job up there is nothing to report — a screen cannot tell "queued" from "never happened". `AgentRunStatus::Pending` is that gap and exists for it.
+`RecordsAgentRun` writes its row when the provider call starts, so between a user clicking and a worker picking the job up there is nothing to report: a screen cannot tell "queued" from "never happened". `AgentRunStatus::Pending` is that gap and exists for it.
 
-Whoever queues the job creates the row (`status: Pending`, `agent: SomeAgent::slug()`) and passes it to the job; the action hands it to the agent with `recordInto($run)`, and the middleware CLAIMS it instead of opening a second one — one invocation stays one row, which is what the meter counts. The job's `failed()` marks the row failed so a crash before or after the call does not leave it pending for good.
+Whoever queues the job creates the row (`status: Pending`, `agent: SomeAgent::slug()`) and passes it to the job; the action hands it to the agent with `recordInto($run)`, and the middleware CLAIMS it instead of opening a second one. One invocation stays one row, which is what the meter counts. The job's `failed()` marks the row failed so a crash before or after the call does not leave it pending for good.
 
-Do not track job state in the cache: a deploy or a Redis flush wipes it, and queue state is not the job's to hold. `AgentRun::isInFlight()` also refuses to believe a run older than 15 minutes — with no worker draining the queue the row would otherwise spin a UI forever.
+Do not track job state in the cache: a deploy or a Redis flush wipes it, and queue state is not the job's to hold. `AgentRun::isInFlight()` also refuses to believe a run older than 15 minutes. With no worker draining the queue the row would otherwise spin a UI forever.
 
 ## Provider keys live in settings, pushed into config at provider() time
 The AI provider key is a user secret: it lives in `settings` as `ai.keys.<provider>`, encrypted with CREDENTIALS_KEY (`Settings::set(..., encrypted: true)` / `Settings::secret()`), and is managed from `/app/app-settings/provider`.
 
-`App\Ai\ProviderCredentials::apply()` pushes stored keys into `config('ai.providers.*.key')` and is called from `EveilAgent::provider()` — the last moment before `laravel/ai` builds a driver. Do NOT move it into a service provider's `boot()`: that would query the settings table on every request, including the ones that run before the table exists.
+`App\Ai\ProviderCredentials::apply()` pushes stored keys into `config('ai.providers.*.key')` and is called from `EveilAgent::provider()`. The last moment before `laravel/ai` builds a driver. Do NOT move it into a service provider's `boot()`: that would query the settings table on every request, including the ones that run before the table exists.
 
 The env still wins until somebody saves a key on the screen, so an instance configured entirely from environment variables keeps working after an upgrade.
 
-`EveilAgent::requiresStrictStructure()` (false by default, true on `CompanyQualifier` and `ContactExtractor`) is how the settings screen marks the agents a weak model BREAKS rather than merely blunts — read from the class, never from a hand-kept list.
+`EveilAgent::requiresStrictStructure()` (false by default, true on `CompanyQualifier` and `ContactExtractor`) is how the settings screen marks the agents a weak model BREAKS rather than merely blunts. Read from the class, never from a hand-kept list.
 
 ## Project writing instructions belong to the agents that write
-`projects.prompt_instructions` is the user's house style (tone, language, banned words), set in project settings. `EveilAgent::projectInstructions()` formats it; the agents that WRITE append it to their own `instructions()` last, stated as overriding the prompt above it — `SequenceWriter` and `MessagePersonalizer` today.
+`projects.prompt_instructions` is the user's house style (tone, language, banned words), set in project settings and pre-filled with `Project::DEFAULT_INSTRUCTIONS`. `EveilAgent::projectInstructions()` formats it, and every agent whose output the user READS AS PROSE appends it to its own `instructions()` last, stated as overriding the prompt above it: `SequenceWriter`, `MessagePersonalizer`, `WebsiteAnalyst`, `TargetProfileDeriver` and `CompanyQualifier` (its `fit_reason` is displayed in Leads and becomes the opening line of the first mail).
 
-Do not append it in `EveilAgent::instructions()` (there is none — each agent owns its prompt) and do not give it to the extractors/qualifiers: their output is fields nobody reads as prose, so "never use emoji" is prompt spent for nothing, and `requiresStrictStructure()` agents break rather than blur when the prompt grows.
+Do not append it in `EveilAgent::instructions()` (there is none, each agent owns its prompt), and do not give it to the agents that only return fields: `ContactExtractor`, `ListingExtractor`, `ContactPageFinder`, `DiscoveryPlanner` and `ResultTriage`. Nobody reads their output as prose, so a style rule there is prompt spent for nothing, and `requiresStrictStructure()` agents break rather than blur when the prompt grows.
+
+## Credit refusal happens in the metering middleware, nowhere else
+`RecordsAgentRun` asks `App\Ai\Contracts\SpendGuardInterface::refusal($project, $agent)` BEFORE calling the provider. Null means go ahead; a string is the reason, recorded on the `agent_runs` row (status `failed`, zero tokens) and thrown as `App\Ai\OutOfCredit`.
+
+That is the only correct place. One discovery run queues dozens of qualifications and, since a kept company auto-dispatches its contact search, dozens of extractions, all with no screen in between: a check at a button would stop nothing. Do not add credit checks to jobs, actions or controllers.
+
+Self-hosted binds `App\Ai\UnmeteredSpend`, which always allows: the operator's own provider key pays and their provider says when the money is gone. Refusing there would contradict the "core stays free with no artificial limits" promise. Cloud binds its own implementation over it from `app/Cloud/`, which is exactly the seam this interface exists for; the credit tables themselves are still deliberately absent (ADR-019).
+
+The row must be marked before throwing. Screens poll `agent_runs` to know whether work is still coming, so a run left `pending` spins a spinner for ever. `OutOfCredit` is a distinct class because it is not an outage: nothing is worth retrying, and a queue retrying it would burn attempts on a wallet that is still empty.

@@ -16,7 +16,7 @@ use Inertia\Response;
  *
  * A profile is a place rather than a row in a list: it has its own page and its
  * own searches, and the section's navigation is the profiles themselves. So
- * there is no index page — landing on the section lands on a profile.
+ * there is no index page: landing on the section lands on a profile.
  *
  * Ids are looked up here rather than type-hinted into the action: route model
  * binding resolves in the `web` group, before the middleware that sets the

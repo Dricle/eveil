@@ -10,8 +10,8 @@ use Illuminate\Http\RedirectResponse;
 /**
  * The user writing back, in their own words, from their own mailbox.
  *
- * A separate route from the inbox screen because it is a different resource — a
- * message being created — and because this is the one place in the product where
+ * A separate route from the inbox screen because it is a different resource: a
+ * message being created, and because this is the one place in the product where
  * a mail is composed by a person rather than an agent.
  */
 class ConversationReplyController extends Controller

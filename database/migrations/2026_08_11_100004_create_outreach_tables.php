@@ -23,7 +23,7 @@ return new class extends Migration
     {
         Schema::create('email_accounts', function (Blueprint $table) {
             $table->id();
-            // The ORGANIZATION owns the mailbox — credentials, limit, signature.
+            // The ORGANIZATION owns the mailbox. Credentials, limit, signature.
             // Which projects may send through it is granted separately, in
             // `email_account_project`.
             $table->foreignId('organization_id')->constrained()->cascadeOnDelete();
@@ -67,7 +67,7 @@ return new class extends Migration
          * a project would silently grant it the founder's personal address,
          * and that address carries a reputation nobody wants lent out by
          * default. A new project starts unable to send until someone attaches
-         * a mailbox on purpose — the safe failure.
+         * a mailbox on purpose: the safe failure.
          *
          * The daily limit stays on the mailbox and NOT here: a shared address
          * has one quota that every project draws on, because one quota is what
@@ -122,8 +122,8 @@ return new class extends Migration
          *
          * This replaced nine hardcoded provider names, which had no Proton,
          * Zoho, Fastmail, GMX, OVH, Infomaniak or any corporate Exchange. A
-         * miss there is not a wrong answer — the probe returns nothing and we
-         * answer `unknown` either way — it just costs the timeout each time.
+         * miss there is not a wrong answer: the probe returns nothing and we
+         * answer `unknown` either way. It just costs the timeout each time.
          */
         Schema::create('mail_hosts', function (Blueprint $table) {
             $table->id();
@@ -204,7 +204,7 @@ return new class extends Migration
         });
 
         // A lead surfaced by two target profiles is not contacted twice: at most
-        // one live campaign membership per lead. Partial unique index — the
+        // one live campaign membership per lead. Partial unique index: the
         // second target profile records the overlap without re-engaging.
         DB::statement("CREATE UNIQUE INDEX campaign_leads_one_active_per_lead ON campaign_leads (lead_id) WHERE status IN ('pending', 'running', 'paused')");
 

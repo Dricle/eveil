@@ -2,12 +2,14 @@
 
 namespace App\Http\Middleware;
 
+use App\Ai\ProviderCredentials;
 use App\Http\Resources\ProjectResource;
 use App\Models\Project;
 use App\Support\CurrentProject;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 use Inertia\Middleware;
+use Laravel\Ai\Enums\Lab;
 use Laravel\Fortify\Features;
 
 class HandleInertiaRequests extends Middleware
@@ -67,8 +69,58 @@ class HandleInertiaRequests extends Middleware
             // it and pages have nothing to link to.
             'registerUrl' => Features::enabled(Features::registration()) ? route('register') : null,
             // One flashed sentence, for actions whose result is not visible on
-            // the page they return to — a saved key, a provider that answered.
+            // the page they return to. A saved key, a provider that answered.
             'status' => fn (): ?string => $request->session()->get('status'),
+            // What is missing before this instance can do anything, on every
+            // screen rather than discovered when a run dies in the queue an hour
+            // later. A closure for the same reason as the project above: the
+            // route middleware that picks it has not run yet.
+            'setup' => fn (): array => $this->missingSetup($request),
         ];
+    }
+
+    /**
+     * The two things whose absence stops the product working, and neither of
+     * which announces itself: without a provider key every agent fails in the
+     * queue, and without a mailbox a campaign can be written and activated and
+     * still never send anything.
+     *
+     * The provider key is instance scope, so only the superadmin is told about
+     * it: nobody else can fix it, and a permanent banner about somebody else's
+     * job is noise.
+     *
+     * @return array{provider: bool, mailbox: bool}
+     */
+    private function missingSetup(Request $request): array
+    {
+        $user = $request->user();
+        $project = app(CurrentProject::class)->get();
+
+        if ($user === null) {
+            return ['provider' => false, 'mailbox' => false];
+        }
+
+        return [
+            'provider' => $user->is_super_admin === true && ! $this->hasProviderKey(),
+            'mailbox' => $project !== null && ! $project->emailAccounts()->exists(),
+        ];
+    }
+
+    /**
+     * Whether any provider can be called at all. One is enough: agents are
+     * mapped per provider, and an instance with a key for the provider it
+     * actually uses is set up.
+     */
+    private function hasProviderKey(): bool
+    {
+        $credentials = app(ProviderCredentials::class);
+
+        foreach (Lab::cases() as $lab) {
+            if ($credentials->isConfigured($lab->value)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

@@ -10,7 +10,7 @@ set -e
 # Generated on first boot rather than asked for, and kept in the storage volume
 # so they are the SAME on every boot after that. This is the part that has to be
 # right: `CREDENTIALS_KEY` is what every stored mailbox password is encrypted
-# with, so a key regenerated on restart would not log a warning — it would make
+# with, so a key regenerated on restart would not log a warning. It would make
 # every connected mailbox permanently unreadable.
 #
 # Anything already in the environment wins, so an operator who put the keys in
@@ -35,7 +35,7 @@ EOF
         echo "   $KEYS"
         echo
         echo ' Back that volume up together with the database. CREDENTIALS_KEY'
-        echo ' encrypts every mailbox password — losing it means reconnecting'
+        echo ' encrypts every mailbox password: losing it means reconnecting'
         echo ' every mailbox by hand, and a database dump without it is worthless.'
         echo '────────────────────────────────────────────────────────────────'
     fi

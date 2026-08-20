@@ -37,6 +37,28 @@ class Project extends Model
     use HasFactory;
 
     /**
+     * What a new project starts with in its writing instructions.
+     *
+     * Dash punctuation is one of the cheapest tells that a machine wrote a
+     * sentence, and everything this product sends is supposed to read as though
+     * a person typed it. It lives in the box the user can see and edit rather
+     * than buried in a prompt, because it is a style choice and not a law.
+     */
+    public const DEFAULT_INSTRUCTIONS = 'Never use dash punctuation: no em dash, no en dash, and no hyphen standing in for one. Use a comma, a colon, a full stop, or start a new sentence. Hyphens inside words are fine.';
+
+    /**
+     * On the model rather than as a column default, so a project that was just
+     * created carries it in memory too. A database default is invisible until
+     * the row is read back, and an agent built from the instance returned by
+     * `create()` would have been given nothing.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'prompt_instructions' => self::DEFAULT_INSTRUCTIONS,
+    ];
+
+    /**
      * The projects a user may see. Access follows the organization until
      * per-project grants get a screen of their own.
      *
@@ -73,7 +95,7 @@ class Project extends Model
     }
 
     /**
-     * The repositories behind the product — a front end and an API are two
+     * The repositories behind the product. A front end and an API are two
      * rows describing one project.
      *
      * @return HasMany<CodeRepository, $this>
@@ -92,7 +114,7 @@ class Project extends Model
     }
 
     /**
-     * The most recent run, which is what the project page reports on — a
+     * The most recent run, which is what the project page reports on. A
      * failed one is the only place the user learns the site could not be read.
      *
      * @return HasOne<ProjectAnalysis, $this>

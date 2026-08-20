@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Instance-scope settings: the AI provider key, the
  * per-agent provider/model mapping, retention windows and
- * the credentials canary all live here. Superadmin-only — no
+ * the credentials canary all live here. Superadmin-only: no
  * organization admin or member ever reads this table.
  */
 return new class extends Migration

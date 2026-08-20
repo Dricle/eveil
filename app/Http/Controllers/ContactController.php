@@ -6,6 +6,7 @@ use App\Enums\EmailStatus;
 use App\Http\Resources\ContactResource;
 use App\Http\Resources\ContactSheetResource;
 use App\Models\Lead;
+use App\Support\ProjectActivity;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -16,12 +17,12 @@ use Inertia\Response;
  * pattern says so, because the person sending is the one whose domain takes the
  * complaints.
  *
- * Sorting and filtering are the database's job — the list is paginated, so a
+ * Sorting and filtering are the database's job: the list is paginated, so a
  * column sorted in the browser would only sort the page you can see.
  */
 class ContactController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request, ProjectActivity $activity): Response
     {
         $status = $request->string('email_status')->value();
         $source = $request->string('email_source')->value();
@@ -41,7 +42,7 @@ class ContactController extends Controller
             ->when($request->integer('company'), fn ($query, int $id) => $query->where('company_id', $id))
             ->when($status !== '', fn ($query) => $query->where('email_status', $status))
             ->when($source !== '', fn ($query) => $query->where('email_source', $source))
-            // An address that will never be sent to is not a contact — it is
+            // An address that will never be sent to is not a contact. It is
             // kept for the record and shown only when asked for. An address
             // nobody has checked yet is a different thing and stays on the
             // list: an imported row has no verdict until something sends to it.
@@ -54,6 +55,8 @@ class ContactController extends Controller
 
         return Inertia::render('leads/Contacts', [
             'contacts' => ContactResource::collection($contacts),
+            // So a list that is still filling up does not read as an empty one.
+            'activity' => $activity->summary(),
             // Flashed by the importer, so it appears once on the list it just
             // changed and is gone on the next request.
             'import' => $request->session()->get('import'),
@@ -79,8 +82,8 @@ class ContactController extends Controller
      * nav entry: this is where you land from the list, from the inbox, or from a
      * campaign, and never somewhere you go on purpose.
      *
-     * An erased lead answers 404. The row survives erasure by design — it is
-     * what stops the next discovery run finding her again — but there is nothing
+     * An erased lead answers 404. The row survives erasure by design: it is
+     * what stops the next discovery run finding her again, but there is nothing
      * left on it to show, and a page of empty fields would invite somebody to
      * fill them back in.
      */

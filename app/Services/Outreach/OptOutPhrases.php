@@ -8,11 +8,11 @@ namespace App\Services\Outreach;
  * Replying is the only opt-out channel this product offers, so compliance must
  * not depend on a provider being up, a quota being unspent, or a model reading
  * a sentence correctly. When one of these appears, the address is suppressed
- * whatever the agent later decides — and the agent still runs, because "STOP,
+ * whatever the agent later decides, and the agent still runs, because "STOP,
  * and by the way send it to my colleague instead" needs both.
  *
- * Only unambiguous phrasing belongs here. Everything requiring judgement — "not
- * a priority this year", "we already have a supplier" — is the agent's job; a
+ * Only unambiguous phrasing belongs here. Everything requiring judgement: "not
+ * a priority this year", "we already have a supplier". Is the agent's job; a
  * keyword list that tries to be clever is how a warm lead gets suppressed.
  *
  * Multilingual because the mail was written in the prospect's language: this

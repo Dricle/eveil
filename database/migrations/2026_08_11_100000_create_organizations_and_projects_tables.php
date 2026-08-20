@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Tenancy skeleton — three separate permission scopes:
+ * Tenancy skeleton: three separate permission scopes:
  * instance (`users.is_super_admin`), organization (`organization_user.role`),
  * project (`project_user`, a plain access grant with no role of its own).
  *
@@ -53,7 +53,7 @@ return new class extends Migration
             $table->boolean('knowledge_base_edited_by_user')->default(false);
             $table->string('default_language', 5)->nullable();
 
-            // supervised|semi_auto|autonomous — default semi_auto.
+            // supervised|semi_auto|autonomous: default semi_auto.
             $table->string('autonomy_level')->default('semi_auto');
 
             $table->timestamps();

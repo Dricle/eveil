@@ -9,8 +9,8 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Creates a user together with the organization they own. Every user reaches
- * the app through here — setup on a fresh instance and public registration
- * alike — because a user without an organization can own nothing and would
+ * the app through here: setup on a fresh instance and public registration
+ * alike, because a user without an organization can own nothing and would
  * fail on the first project they try to create.
  */
 class CreateAccount

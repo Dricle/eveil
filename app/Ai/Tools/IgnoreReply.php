@@ -10,7 +10,7 @@ use Laravel\Ai\Tools\Request;
 use Stringable;
 
 /**
- * A machine answered, so the sequence RESUMES — it was paused the moment the
+ * A machine answered, so the sequence RESUMES: it was paused the moment the
  * mail was attributed, and a fortnight's holiday must not read as a reply.
  *
  * Most of these never reach the agent: the headers say so and are read first.
@@ -29,7 +29,7 @@ class IgnoreReply implements Tool
         newsletter that landed in the thread.
 
         The sequence resumes when you call this, so never use it for a short or
-        blunt human reply — a person writing "no." is not this tool.
+        blunt human reply: a person writing "no." is not this tool.
         TEXT;
     }
 

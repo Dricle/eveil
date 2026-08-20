@@ -26,14 +26,14 @@ class DeriveTargetProfiles
     {
         if ($project->knowledge_base === null) {
             throw new RuntimeException(
-                "{$project->name} has no knowledge base yet. Run eveil:analyze first — profiles are "
+                "{$project->name} has no knowledge base yet. Run eveil:analyze first. Profiles are "
                 .'derived from the product, not guessed from its URL.'
             );
         }
 
         $agent = new TargetProfileDeriver($project);
 
-        // The caller already opened a run row when it queued this — report into
+        // The caller already opened a run row when it queued this: report into
         // it instead of leaving a `pending` row behind next to a second one.
         if ($run !== null) {
             $agent->recordInto($run);
@@ -60,7 +60,7 @@ class DeriveTargetProfiles
 
     /**
      * Only what the agent produced is thrown away. A profile the user wrote or
-     * corrected survives every re-derivation — same rule as the knowledge base.
+     * corrected survives every re-derivation: same rule as the knowledge base.
      */
     private function discardPreviousAgentProfiles(Project $project): void
     {

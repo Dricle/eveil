@@ -15,7 +15,7 @@ use Throwable;
  *
  * The asymmetry is deliberate. `invalid` means "we proved this address does not
  * exist" and is the only status that blocks a send. Everything we merely could
- * not prove comes back `unknown` or `risky` and stays sendable — Gmail and
+ * not prove comes back `unknown` or `risky` and stays sendable: Gmail and
  * Microsoft refuse probes outright, and treating that as invalid would discard
  * most of the market.
  *
@@ -57,7 +57,7 @@ class EmailVerifier
 
         $hosts = $this->mx($domain);
 
-        // No MX means the domain receives no mail at all — the one thing we can
+        // No MX means the domain receives no mail at all. The one thing we can
         // actually disprove without touching a mail server.
         if ($hosts === null || $hosts === []) {
             return EmailStatus::Invalid;
@@ -112,7 +112,7 @@ class EmailVerifier
     /**
      * Whether talking to these servers is known to be a waste of the timeout.
      *
-     * Nine provider names used to be hardcoded here — no Proton, Zoho,
+     * Nine provider names used to be hardcoded here: no Proton, Zoho,
      * Fastmail, GMX, OVH, Infomaniak, nor any corporate Exchange. They are
      * learned now, which costs nothing: a server that will not answer announces
      * itself the first time we ask.
@@ -173,7 +173,7 @@ class EmailVerifier
      * Only a conversation teaches anything. `Unreachable` is discarded on
      * purpose: port 25 is blocked on most hosting, and counting that as a
      * refusal would have the first run on such a box mark every mail provider
-     * on earth as one — and then never probe again, anywhere.
+     * on earth as one, and then never probe again, anywhere.
      */
     private function remember(string $host, ProbeOutcome $outcome): void
     {
@@ -210,7 +210,7 @@ class EmailVerifier
     }
 
     /**
-     * Opens an SMTP conversation and stops at RCPT TO — nothing is ever sent.
+     * Opens an SMTP conversation and stops at RCPT TO. Nothing is ever sent.
      */
     private function probe(string $host, string $email): ProbeOutcome
     {
@@ -219,7 +219,7 @@ class EmailVerifier
 
         $socket = @fsockopen($host, 25, $errno, $errstr, $timeout);
 
-        // Never reached the server, so this says nothing about it — most
+        // Never reached the server, so this says nothing about it. Most
         // likely port 25 is blocked on our side.
         if ($socket === false) {
             return ProbeOutcome::Unreachable;

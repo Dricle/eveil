@@ -10,7 +10,7 @@ use Illuminate\Http\Request;
 
 /**
  * Going to look for the people at a company. One company when the user asks
- * about one, otherwise every kept company nobody has looked at yet — clicking
+ * about one, otherwise every kept company nobody has looked at yet: clicking
  * forty times is work the app should be doing.
  */
 class ContactSearchController extends Controller

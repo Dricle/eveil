@@ -11,8 +11,8 @@ enum AgentRunStatus: string
     case Aborted = 'aborted';
 
     /**
-     * Queued but not finished. `Pending` is the gap the queue owns — the job is
-     * waiting for a worker and no provider call has started — and a screen
+     * Queued but not finished. `Pending` is the gap the queue owns: the job is
+     * waiting for a worker and no provider call has started, and a screen
      * reporting work in progress has to count it, or a click looks like it did
      * nothing until a worker picks the job up.
      */

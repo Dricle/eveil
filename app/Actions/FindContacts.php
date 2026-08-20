@@ -152,7 +152,7 @@ class FindContacts
         }
 
         // A generic address is a weak lead, but at a one-person business it is
-        // often the only door — and no lead at all is worth less.
+        // often the only door, and no lead at all is worth less.
         if ($leads->isEmpty()) {
             foreach ($extracted['generic_emails'] ?? [] as $email) {
                 $lead = $this->storeGeneric($company, (string) $email);
@@ -239,7 +239,7 @@ class FindContacts
     }
 
     /**
-     * Last resort for a site that publishes only a phone number — which is the
+     * Last resort for a site that publishes only a phone number. Which is the
      * norm for small local businesses. Every candidate is verified before it is
      * kept: a guess that bounces costs the user's sending reputation, so only
      * an address the mail server accepts is stored, and never as `valid`.

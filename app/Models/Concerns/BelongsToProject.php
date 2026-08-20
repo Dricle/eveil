@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * so no call site has to remember.
  *
  * The scope applies only while a current project is set. HTTP requests must
- * always set one — that is where untrusted input reaches queries, and an
+ * always set one: that is where untrusted input reaches queries, and an
  * unscoped query there is the leak the ADR is about. Console commands, jobs and
  * seeders legitimately work across projects; they opt in with
  * `CurrentProject::run()`.

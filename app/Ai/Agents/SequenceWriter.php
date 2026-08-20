@@ -8,7 +8,7 @@ use Stringable;
 
 /**
  * The whole sequence, written from the product and the segment it is aimed at
- * — so that nobody has to start at an empty template and a blinking cursor.
+ * so that nobody has to start at an empty template and a blinking cursor.
  *
  * What it writes is a draft in every sense: the user reads it, rewrites what
  * they want, and only then activates. Personalisation per lead happens later,
@@ -34,7 +34,7 @@ class SequenceWriter extends EveilAgent implements HasStructuredOutput
         - HTML structure, styling, images, tables
         - a signature block: the mailbox adds the sender's own
 
-        Close the FIRST mail with a plain opt-out sentence in the body — along the lines
+        Close the FIRST mail with a plain opt-out sentence in the body, along the lines
         of "if this isn't relevant, just ignore this or reply STOP and I won't write
         again", in the language of the mail. That sentence is the only opt-out channel
         there is, so it is not optional. Do not repeat it in the follow-up.

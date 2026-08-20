@@ -10,7 +10,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Everything an operator may tune from a screen, and the whole of it — what is
+ * Everything an operator may tune from a screen, and the whole of it: what is
  * not on this page is deployment and stays in the env.
  *
  * These are the ceilings on the one loop that can run a bill up unnoticed: how

@@ -15,7 +15,7 @@ use Illuminate\Support\Carbon;
 /**
  * Reply attribution runs on headers: our Message-ID on the way out, matched
  * against In-Reply-To / References on the way back in. There is no `opened_at`
- * — nothing is tracked.
+ *: nothing is tracked.
  *
  * @property int $id
  * @property int $lead_id

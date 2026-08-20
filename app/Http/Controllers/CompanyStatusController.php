@@ -11,7 +11,7 @@ use Illuminate\Http\RedirectResponse;
 /**
  * Where a company stands, said by the user rather than inferred: already a
  * client, closed, lost, or "not this one". Five of the nine statuses take it out
- * of outreach, which is the whole point — a business somebody already sells to
+ * of outreach, which is the whole point: a business somebody already sells to
  * must never receive a cold pitch from the same product.
  *
  * The verdict travels down to every person at the company, because it is one

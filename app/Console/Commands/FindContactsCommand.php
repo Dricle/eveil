@@ -20,7 +20,7 @@ use Throwable;
  */
 class FindContactsCommand extends Command
 {
-    protected $signature = 'eveil:find-contacts {project? : Project id, URL or name — defaults to the only one}
+    protected $signature = 'eveil:find-contacts {project? : Project id, URL or name. Defaults to the only one}
                                                 {--limit=10 : How many companies to work through}
                                                 {--fresh : Include companies that already have leads}
                                                 {--guess-generic : Try info@ and the like when the site publishes no address}';
@@ -93,7 +93,7 @@ class FindContactsCommand extends Command
 
             $this->components->error($projects->isEmpty()
                 ? 'No project yet. Run eveil:analyze <url> first.'
-                : 'Several projects exist — name one by id, URL or name.');
+                : 'Several projects exist. Name one by id, URL or name.');
 
             return null;
         }
@@ -126,7 +126,7 @@ class FindContactsCommand extends Command
             $who = trim(($lead->first_name ?? '').' '.($lead->last_name ?? ''));
 
             $this->components->twoColumnDetail(
-                '   '.($who !== '' ? "{$who} — {$lead->email}" : $lead->email),
+                '   '.($who !== '' ? "{$who}: {$lead->email}" : $lead->email),
                 $this->badge($lead),
             );
         }

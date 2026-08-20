@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
  * transaction: `(campaign_id, position)` is unique, so renumbering row by row
  * collides with itself halfway through.
  *
- * Ids that do not belong to this campaign are simply not found — the relation
+ * Ids that do not belong to this campaign are simply not found: the relation
  * is the filter, so a foreign id reorders nothing rather than reordering
  * somebody else's sequence.
  */

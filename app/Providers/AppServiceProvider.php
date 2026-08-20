@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Ai\Contracts\SpendGuardInterface;
 use App\Ai\ProviderCredentials;
+use App\Ai\UnmeteredSpend;
 use App\Models\User;
 use App\Services\Discovery\PageFetcher;
 use App\Services\Discovery\RobotsPolicy;
@@ -41,6 +43,12 @@ class AppServiceProvider extends ServiceProvider
         // once per process rather than once per agent call.
         $this->app->singleton(ProviderCredentials::class);
 
+        // Self-hosted spends freely: the operator's own provider key pays, and
+        // their provider is what says when the money is gone. Cloud binds its
+        // own guard over this, which is why the metering middleware asks an
+        // interface rather than a wallet it would have to know about.
+        $this->app->bind(SpendGuardInterface::class, UnmeteredSpend::class);
+
         // Both hold per-process crawl state: the parsed robots.txt per host,
         // and the last-fetch timestamp the politeness delay is measured from.
         // Rebuilding them per crawl would re-fetch robots.txt and drop the
@@ -76,7 +84,7 @@ class AppServiceProvider extends ServiceProvider
          *
          * The shipped image serves plain HTTP behind a reverse proxy, and
          * without this a password-reset mail carries an `http://` link to a site
-         * that only answers on https — the first place anybody notices is after
+         * that only answers on https: the first place anybody notices is after
          * they have clicked it.
          *
          * Deliberately NOT done by trusting `X-Forwarded-*`: a client that can

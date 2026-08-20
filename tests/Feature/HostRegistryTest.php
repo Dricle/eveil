@@ -85,7 +85,7 @@ it('locks the certainties so no model ever overwrites one', function () {
     expect($facebook->is_locked)->toBeTrue()
         // Locked means authoritative forever: no expiry, no re-judging.
         ->and($facebook->isAuthoritative())->toBeTrue()
-        // The learned rows are NOT locked — a seeded guess is not a decision.
+        // The learned rows are NOT locked: a seeded guess is not a decision.
         ->and(KnownHost::query()->firstWhere('host', 'producthunt.com')->is_locked)->toBeFalse();
 });
 
@@ -129,7 +129,7 @@ it('re-judges a verdict that has gone stale', function () {
 
 it('never re-judges or overwrites a row a human locked', function () {
     // The superadmin screen is the escape hatch for a verdict the model got
-    // wrong — and a wrong verdict is invisible-forever for every project.
+    // wrong, and a wrong verdict is invisible-forever for every project.
     KnownHost::factory()->stale()->create([
         'host' => 'marcel.test',
         'kind' => HostKind::Entity,

@@ -87,7 +87,7 @@ const STATUS_COLORS: Record<string, 'neutral' | 'primary' | 'warning' | 'success
                 v-if="!profiles.length"
                 class="text-sm text-muted"
             >
-                No active target profile yet — a sequence is written for a segment, so
+                No active target profile yet. A sequence is written for a segment, so
                 start in Targets.
             </p>
 

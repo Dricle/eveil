@@ -4,7 +4,7 @@ namespace App\Enums;
 
 /**
  * What an incoming reply turned out to be. Written by the tool the reply agent
- * called, never by a second classifying pass — the decision and the record are
+ * called, never by a second classifying pass: the decision and the record are
  * the same act.
  *
  * This is a compliance mechanism before it is a metric: replying is the only
@@ -31,7 +31,7 @@ enum ReplyClassification: string
     }
 
     /**
-     * An out-of-office must never pause a campaign — otherwise a fortnight's
+     * An out-of-office must never pause a campaign. Otherwise a fortnight's
      * holiday reads as a reply.
      */
     public function shouldPauseCampaign(): bool
@@ -45,7 +45,7 @@ enum ReplyClassification: string
      *
      * `NeedsHuman` deliberately does NOT count. A precise question or an
      * ambiguous answer needs somebody to write back, and calling that a
-     * positive reply is exactly the inflation this metric exists to refuse —
+     * positive reply is exactly the inflation this metric exists to refuse:
      * it still sits at the top of the inbox, which is where it is useful.
      */
     public function isPositive(): bool

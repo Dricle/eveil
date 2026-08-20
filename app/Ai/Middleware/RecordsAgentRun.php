@@ -3,6 +3,8 @@
 namespace App\Ai\Middleware;
 
 use App\Ai\Agents\EveilAgent;
+use App\Ai\Contracts\SpendGuardInterface;
+use App\Ai\OutOfCredit;
 use App\Enums\AgentRunStatus;
 use App\Models\AgentRun;
 use Closure;
@@ -12,7 +14,7 @@ use Laravel\Ai\Responses\Data\Usage;
 use Throwable;
 
 /**
- * Every agent invocation lands in `agent_runs` — the debug log, the analysis
+ * Every agent invocation lands in `agent_runs`: the debug log, the analysis
  * history and the billing meter are the same table.
  *
  * Middleware rather than an `AgentPrompted` listener because it wraps the call:
@@ -21,6 +23,8 @@ use Throwable;
  */
 class RecordsAgentRun
 {
+    public function __construct(private SpendGuardInterface $guard) {}
+
     public function handle(AgentPrompt $prompt, Closure $next): mixed
     {
         $agent = $prompt->agent;
@@ -40,7 +44,7 @@ class RecordsAgentRun
 
         // A run queued from a screen already has its row, opened as `pending`
         // at dispatch so the page could report the work before a worker existed
-        // to do it. Claim it rather than opening a second one — one invocation
+        // to do it. Claim it rather than opening a second one: one invocation
         // is one row, and the meter is that count.
         $run = $agent->run;
 
@@ -48,6 +52,26 @@ class RecordsAgentRun
             $run = AgentRun::create($attributes);
         } else {
             $run->update($attributes);
+        }
+
+        // Asked here, and only here, because this is the one place every agent
+        // invocation passes through. A discovery run queues dozens of
+        // qualifications and dozens of contact extractions with no screen in
+        // between, so a check at the button would stop nothing.
+        //
+        // The row is marked before throwing rather than left alone: screens
+        // poll it to know whether work is still coming, and a `pending` row
+        // nobody ever finishes spins a spinner for ever.
+        $refusal = $this->guard->refusal($agent->project, $agent::slug());
+
+        if ($refusal !== null) {
+            $run->update([
+                'status' => AgentRunStatus::Failed,
+                'duration_ms' => 0,
+                'error' => $refusal,
+            ]);
+
+            throw new OutOfCredit($refusal);
         }
 
         $startedAt = microtime(true);

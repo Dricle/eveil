@@ -8,7 +8,7 @@ use Stringable;
 
 /**
  * One step of the sequence, rewritten for one company. This is the volume step
- * — one call per lead — so it runs on the cheap model, like qualification.
+ * (one call per lead), so it runs on the cheap model, like qualification.
  *
  * The opener is not decoration: it is the whole difference between a mail that
  * gets a reply and a mail that gets a spam report, and it is written from what
@@ -34,7 +34,7 @@ class MessagePersonalizer extends EveilAgent implements HasStructuredOutput
         the mail for them.
 
         The first line is the whole job. It must say something only someone who looked
-        at THIS company could write — what they do, how they do it, what is missing,
+        at THIS company could write: what they do, how they do it, what is missing,
         what they just changed. "I came across your website" says nothing and is worse
         than nothing. Ground it in the fit reason and the facts you are given, and never
         state anything they do not support: an invented detail about their business is
@@ -50,8 +50,8 @@ class MessagePersonalizer extends EveilAgent implements HasStructuredOutput
         It is the only opt-out channel there is.
 
         Nothing that reveals tooling: no links other than to the sender's own product,
-        no unsubscribe line, no footer, no signature — the mailbox adds the sender's
-        own — no merge tags left in braces or brackets, and no mention of a list, a
+        no unsubscribe line, no footer, no signature (the mailbox adds the sender's
+        own), no merge tags left in braces or brackets, and no mention of a list, a
         campaign or a database.
 
         Address a named person by their first name when you are given one, and open on

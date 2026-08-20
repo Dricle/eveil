@@ -8,7 +8,7 @@ and reads the replies.
 Self-hostable, AGPL-3.0, and the free edition has no artificial limits:
 unlimited mailboxes, unlimited leads, your data on your own machine.
 
-> **Status: v0.** The whole loop works end to end — site analysis, lead
+> **Status: v0.** The whole loop works end to end. Site analysis, lead
 > discovery, sequences, sending, replies. Not built yet: multi-user
 > organizations, billing, LinkedIn, a public API. `TODO.md` lists exactly what is
 > and is not done.
@@ -34,7 +34,7 @@ Fill in four values:
 | `SEARXNG_SECRET` | Any long random string. Only signs the bundled search engine's own requests. |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Optional. Set them and the first account is created on boot; leave them empty and the setup screen asks instead. |
 
-Leave `APP_KEY` and `CREDENTIALS_KEY` empty — they are generated on first boot.
+Leave `APP_KEY` and `CREDENTIALS_KEY` empty: they are generated on first boot.
 Fill them in only if you would rather manage them yourself; anything set there
 wins.
 
@@ -60,7 +60,7 @@ If the flag annoys you, put `COMPOSE_FILE=compose.deploy.yaml` in your `.env`.
 ### What runs
 
 Four containers. The app one holds nginx, PHP-FPM, the queue workers and the
-scheduler, under supervisord — each restarted on its own, so a worker dying does
+scheduler, under supervisord: each restarted on its own, so a worker dying does
 not take the site with it.
 
 | Container | Why it has to be there |
@@ -72,13 +72,13 @@ not take the site with it.
 
 ### TLS
 
-The image speaks plain HTTP on port 80 and expects a reverse proxy in front —
+The image speaks plain HTTP on port 80 and expects a reverse proxy in front: 
 Traefik, Caddy, nginx, whatever already holds your certificates.
 
 Which is why `APP_URL` matters more than it looks: once it is an `https://`
 address, every link the app generates is built from it. Get it wrong and
 password-reset mails point somewhere that does not answer. The app deliberately
-does not trust `X-Forwarded-*` headers instead — a client able to reach it
+does not trust `X-Forwarded-*` headers instead: a client able to reach it
 directly could then choose the host those links point at.
 
 ### Keys and backups
@@ -92,7 +92,7 @@ docker compose -f compose.deploy.yaml exec app cat storage/app/.keys.env
 
 `CREDENTIALS_KEY` encrypts mailbox passwords and your AI provider key. `APP_KEY`
 encrypts cookies and sessions. They are separate so either can be rotated
-without destroying the other — rotating `APP_KEY` after a leak is routine, and
+without destroying the other: rotating `APP_KEY` after a leak is routine, and
 sharing one key would take every connected mailbox with it.
 
 **Back the keys up with the database.** A dump without them is worthless, and
@@ -111,35 +111,45 @@ docker compose -f compose.deploy.yaml up -d --build
 
 ## First run
 
-Four things, in this order.
+Sign in and give it the address of your product. That is the whole setup: the
+rest is a guided run you watch and agree with:
 
-**1. An AI provider key** — Settings → App settings → Provider. This is the one
-paid thing: everything else here runs on your own machine, but the agents need a
-model. The key is stored encrypted and never shown back. The "test" button sends
-the smallest possible prompt and says exactly why a key was refused, which beats
-finding out from a job that dies an hour later.
+1. **It reads your site.** A minute or two, page count ticking up on screen.
+2. **It shows you what it understood**: what the product does, who it is for,
+   why anybody switches. Agree, or correct it first. Every mail is written from
+   this, so correcting it now is cheaper than correcting it in three hundred
+   mails.
+3. **Agreeing starts the segments**: who buys it, and the search terms that find
+   each one.
+4. **Agreeing to those starts the searching**, one search per segment you left
+   switched on. Companies appear in Leads with a fit score and the sentence that
+   justifies it.
 
-**2. A project** — a name and the URL of your product. The site is read
-immediately and turned into a portrait of what you sell: what it does, who it is
-for, how it is positioned. Correct anything the model got wrong; your edits
-survive every later analysis.
+Nothing is written to anybody during any of that. Sequences arrive as drafts and
+nothing sends until you activate a campaign.
 
-**3. A mailbox** — Settings → Mailboxes. Plain SMTP and IMAP, no OAuth. Presets
-for Infomaniak, OVH, Gandi, Zoho, Gmail and Microsoft 365, each with the one note
-that decides whether the setup works. Tick which projects may send through it — a
-project with no mailbox cannot send at all, which is the safe default.
+Under Settings, Project, there is a box for how the AI writes: tone, language,
+words never to use. It starts with one rule already in it, banning dash
+punctuation, because that is one of the cheapest tells that a machine wrote a
+sentence. Everything whose output you read as prose obeys it, from the product
+portrait to the opening line of a mail. Edit it or empty it as you like.
+
+Two things the app will nag you about at the top of every screen, because
+neither announces itself otherwise:
+
+- **No AI provider key** (shown to the instance's superadmin only, since nobody
+  else can fix it). Without one every agent fails in the queue. Settings → App
+  settings → Provider. The "test" button says exactly why a key was refused,
+  which beats finding out from a job that dies an hour later.
+- **No mailbox on this project.** Everything up to writing a sequence works, but
+  a campaign will activate and then sit there. Settings → Mailboxes: plain SMTP
+  and IMAP, no OAuth, with presets for Infomaniak, OVH, Gandi, Zoho, Gmail and
+  Microsoft 365.
 
 Gmail and Workspace need an **app password**, not the account password, and a
 Workspace admin can disable app passwords for the whole organization. Microsoft
 365 has SMTP AUTH off by default on most tenants. The connection test names both
 of those rather than saying "authentication failed".
-
-**4. Targets, then Leads, then Campaigns** — Targets derives who to go after from
-your product; each profile has its own searches. What comes back lands in Leads
-with a fit score and the sentence that justifies it. Campaigns writes the
-sequence.
-
-Nothing sends until you activate a campaign. Sequences arrive as drafts.
 
 ---
 
@@ -158,7 +168,7 @@ goes over its own SMTP, and the reply you write still arrives in it over its own
 IMAP. The intended recipient is put in the subject, since everything lands in one
 inbox.
 
-Replies still attribute correctly — a reply is matched on our own `Message-ID`
+Replies still attribute correctly: a reply is matched on our own `Message-ID`
 and never on the from-address, so your answer stays attached to the lead it was
 about. The Mailboxes screen shows a warning while this is on.
 
@@ -184,7 +194,7 @@ on 5442, Redis on 6382, Mailpit on 8035.
 installed with macOS binaries and mounted into a Linux container, so eslint and
 Vite fail inside Sail; and the host PHP must be 8.4+, because `yarn build` shells
 out to `php artisan wayfinder:generate`. For the same reason, never run
-`wayfinder:generate` inside the container — it emits route modules without the
+`wayfinder:generate` inside the container. It emits route modules without the
 `.form()` helper and the type check then fails in files you did not touch.
 
 ```bash

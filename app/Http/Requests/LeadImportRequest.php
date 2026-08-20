@@ -7,7 +7,7 @@ use Illuminate\Foundation\Http\FormRequest;
 /**
  * A file, and nothing else. Everything about the CONTENT is decided per row by
  * `App\Imports\LeadsImport`, which reports each rejection with its line number
- * — refusing the whole file because line 300 has no address would be the worst
+ *: refusing the whole file because line 300 has no address would be the worst
  * of both worlds.
  */
 class LeadImportRequest extends FormRequest

@@ -14,12 +14,12 @@ use RuntimeException;
 
 /**
  * Second half of "give a URL, get clients": the knowledge base becomes the
- * target profiles the search will run on. Still on the command line — the
+ * target profiles the search will run on. Still on the command line: the
  * pipeline is worth proving before an interface is built over it.
  */
 class DeriveTargetsCommand extends Command
 {
-    protected $signature = 'eveil:derive-targets {project? : Project id, URL or name — defaults to the only one}
+    protected $signature = 'eveil:derive-targets {project? : Project id, URL or name. Defaults to the only one}
                                              {--fresh : Replace the profiles previously derived by the agent}';
 
     protected $description = 'Derive the target profiles worth prospecting from a project knowledge base';
@@ -78,7 +78,7 @@ class DeriveTargetsCommand extends Command
 
             $this->components->error($projects->isEmpty()
                 ? 'No project yet. Run eveil:analyze <url> first.'
-                : 'Several projects exist — name one by id, URL or name.');
+                : 'Several projects exist. Name one by id, URL or name.');
 
             return null;
         }
@@ -121,8 +121,8 @@ class DeriveTargetsCommand extends Command
                 }
             }
 
-            $this->components->twoColumnDetail('   company_size', (string) ($criteria['company_size'] ?? '—'));
-            $this->components->twoColumnDetail('   market size', Str::limit((string) ($criteria['estimated_market_size'] ?? '—'), 90));
+            $this->components->twoColumnDetail('   company_size', (string) ($criteria['company_size'] ?? ': '));
+            $this->components->twoColumnDetail('   market size', Str::limit((string) ($criteria['estimated_market_size'] ?? ': '), 90));
 
             foreach ($criteria['search_queries'] ?? [] as $query) {
                 $this->line('     🔍 '.$query);

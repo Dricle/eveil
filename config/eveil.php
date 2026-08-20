@@ -10,8 +10,8 @@ return [
     | What is left here is what an env file sets and no screen should: where the
     | services live, how long to wait for them, and how we identify ourselves.
     |
-    | Everything that is a PRODUCT decision — which model each agent runs on,
-    | budgets, crawl limits, verification, retention — lives in the `settings`
+    | Everything that is a PRODUCT decision: which model each agent runs on,
+    | budgets, crawl limits, verification, retention. Lives in the `settings`
     | table, seeded by a migration and changeable by a superadmin without a
     | deploy. It used to be mirrored here as a fallback, which meant two places
     | to look and a merge to reason about on every read. Read those through
@@ -20,7 +20,7 @@ return [
     */
 
     /*
-     * self|cloud. Decides whether the marketing homepage is served at all —
+     * self|cloud. Decides whether the marketing homepage is served at all:
      * a self-hosted instance has nothing to sell, so `/` goes straight to
      * the application.
      */
@@ -55,7 +55,7 @@ return [
     ],
 
     'verification' => [
-        // The envelope sender of the SMTP probe. Infrastructure — it has to
+        // The envelope sender of the SMTP probe. Infrastructure: it has to
         // resolve on the machine doing the probing.
         'probe_from' => env('EVEIL_PROBE_FROM', 'verify@eveil.local'),
     ],
@@ -71,7 +71,7 @@ return [
     | decision, and after the first boot it is never read again.
     |
     | No defaults on the email or the password. An instance on the internet with
-    | a known admin password is worse than one nobody can log into — without
+    | a known admin password is worse than one nobody can log into: without
     | them the setup screen asks instead.
     |
     */
@@ -91,7 +91,7 @@ return [
     | Set `OUTREACH_REDIRECT_TO` to your own address and every outreach mail goes
     | there instead of to the lead. Nothing else changes: the mailbox connected in
     | the app is still the real sender, the mail still leaves over its real SMTP,
-    | and the reply you write still arrives in that mailbox over its real IMAP —
+    | and the reply you write still arrives in that mailbox over its real IMAP,
     | which is what makes this the only way to exercise the whole loop without
     | writing to a stranger.
     |
@@ -99,7 +99,7 @@ return [
     | and never on the from-address: the answer arrives from YOUR address while
     | the conversation stays attached to the lead.
     |
-    | Deployment only, hence config and not the settings table — an operator
+    | Deployment only, hence config and not the settings table: an operator
     | would never tune this, and a screen offering to would be a screen offering
     | to silently stop writing to anybody.
     |

@@ -48,7 +48,7 @@ const importing = ref(false)
         <UModal
             v-model:open="importing"
             title="Import contacts"
-            description="CSV or xlsx, one row per person. An email address or a LinkedIn URL is enough — rows carrying neither are reported back with their line number."
+            description="CSV or xlsx, one row per person. An email address or a LinkedIn URL is enough. Rows carrying neither are reported back with their line number."
         >
             <template #body>
                 <Form

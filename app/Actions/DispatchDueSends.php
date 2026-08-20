@@ -12,7 +12,7 @@ use App\Support\Settings;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Deciding what may go out right now — the daily cap and the spread, which are
+ * Deciding what may go out right now: the daily cap and the spread, which are
  * the two things standing between a working mailbox and a blocked one.
  *
  * Driven per MAILBOX and not per campaign, because that is the unit the
@@ -20,7 +20,7 @@ use Illuminate\Database\Eloquent\Builder;
  * allowance; count per campaign and an address rated for thirty sends ninety.
  *
  * Called on a schedule rather than looping: a tick that sends a couple and stops
- * IS the spread. Nothing here sends anything itself — each due row becomes one
+ * IS the spread. Nothing here sends anything itself: each due row becomes one
  * queued job, so a provider timeout costs one mail and not the batch.
  */
 class DispatchDueSends

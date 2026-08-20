@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Schema;
  * House style, in the user's own words: the tone to write in, the language to
  * write it in, the words never to use. It is a per-project instruction because
  * it describes how this product talks, and it is honoured by the agents that
- * WRITE — an extractor's output is a set of fields nobody reads as prose.
+ * WRITE: an extractor's output is a set of fields nobody reads as prose.
  */
 return new class extends Migration
 {

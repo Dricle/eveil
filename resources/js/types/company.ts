@@ -1,5 +1,14 @@
 import type { OutreachStatus } from '@/lib/status'
 
+/** What the app is doing for this project right now. */
+export type Activity = {
+    searching: boolean
+    runs: number
+    candidates: number
+    qualified: number
+    contact_searches: number
+}
+
 export type CompanyEvaluation = {
     profile: string | null
     fit_score: number
@@ -23,7 +32,7 @@ export type Company = {
     contacts_status: 'queued' | 'done' | 'failed' | null
     contacts_count: number
     discovered_at: string
-    /** The best any profile thought of it — what the list sorts on. */
+    /** The best any profile thought of it, which is what the list sorts on. */
     fit_score: number | null
     evaluations: CompanyEvaluation[]
 }
@@ -92,4 +101,13 @@ export type ContactSheet = Contact & {
         classification: keyof typeof import('./inbox').CLASSIFICATIONS | null
         at: string | null
     }[]
+}
+
+/** One company with everything found about it, and the people found at it. */
+export type CompanySheet = Company & {
+    facts: Record<string, unknown> | null
+    contacts_searched_at: string | null
+    /** True while a contact search is still reading this company's site. */
+    searching: boolean
+    contacts: Contact[]
 }

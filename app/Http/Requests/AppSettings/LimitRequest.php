@@ -6,7 +6,7 @@ use Illuminate\Foundation\Http\FormRequest;
 
 /**
  * Every bound has a floor as well as a ceiling. A zero here is not a "no limit"
- * — it is a run that does nothing, or a crawler with no politeness delay
+ *: it is a run that does nothing, or a crawler with no politeness delay
  * hammering somebody's site from an instance carrying our user agent.
  */
 class LimitRequest extends FormRequest

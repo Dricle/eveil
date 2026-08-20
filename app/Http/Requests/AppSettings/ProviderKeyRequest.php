@@ -8,7 +8,7 @@ use Laravel\Ai\Enums\Lab;
 
 /**
  * The provider name is constrained to what `laravel/ai` can build a driver for
- * — a typo would otherwise store a key nothing will ever read.
+ *: a typo would otherwise store a key nothing will ever read.
  */
 class ProviderKeyRequest extends FormRequest
 {

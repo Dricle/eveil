@@ -8,7 +8,7 @@ namespace App\Services\Outreach;
  * sent it.
  *
  * Deliberately partial. A full MIME parser is a package, and none of what makes
- * one big — nested multiparts, attachments, inline images — changes any decision
+ * one big: nested multiparts, attachments, inline images. Changes any decision
  * downstream: the agent reads prose, and a cold reply is prose. What matters is
  * that the text is intelligible and that quoted-printable does not leave
  * `=C3=A9` in the middle of a French sentence, because the agent would then be
@@ -67,7 +67,7 @@ class MailParser
 
     /**
      * Which of our mails this answers: `In-Reply-To`, or the last id in
-     * `References` when a client dropped it — reply-all and forward-then-reply
+     * `References` when a client dropped it. Reply-all and forward-then-reply
      * both do.
      *
      * @param  array<string, string>  $headers
@@ -196,7 +196,7 @@ class MailParser
 
     /**
      * The first `text/plain` part of a multipart body, falling back to the first
-     * part of any kind — an HTML-only reply still has to be readable.
+     * part of any kind: an HTML-only reply still has to be readable.
      */
     private static function firstTextPart(string $body, string $contentType): string
     {
@@ -237,7 +237,7 @@ class MailParser
     }
 
     /**
-     * Encoded words in a header — `=?UTF-8?Q?...?=` — which is how any subject
+     * Encoded words in a header: `=?UTF-8?Q?...?=`. Which is how any subject
      * with an accent in it arrives.
      */
     private static function decodeWords(string $value): string

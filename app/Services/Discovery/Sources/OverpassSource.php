@@ -13,7 +13,7 @@ use Throwable;
 
 /**
  * OpenStreetMap via Overpass: free, no key, and by far the best way
- * to enumerate local businesses — the long tail a purchased contact database
+ * to enumerate local businesses. The long tail a purchased contact database
  * simply does not carry.
  *
  * Only entries with a website survive: without a domain there is nothing to
@@ -26,7 +26,7 @@ class OverpassSource implements DiscoverySourceInterface
      * when every slot on the instance is taken, 504 when the gateway gives up
      * on a query still running. Both answer the next probe the same way, so a
      * run against a loaded instance loses its whole query budget to a source
-     * that is merely queueing — waiting out a round is the difference between
+     * that is merely queueing: waiting out a round is the difference between
      * an empty run and a full one.
      *
      * Nothing else is retried: a 400 is our own malformed QL and a 406 is the

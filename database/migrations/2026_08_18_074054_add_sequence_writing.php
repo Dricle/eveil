@@ -14,7 +14,7 @@ return new class extends Migration
     /**
      * The writer synthesises and is called once per campaign, so it runs on the
      * expensive model. Personalisation is called once per lead, which is the
-     * volume step — the same reasoning that keeps qualification on the cheap
+     * volume step: the same reasoning that keeps qualification on the cheap
      * one.
      *
      * @var array<string, array<string, mixed>>

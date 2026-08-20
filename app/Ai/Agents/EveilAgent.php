@@ -19,7 +19,7 @@ use Laravel\Ai\Promptable;
  *
  * `Promptable` looks for `provider()`, `model()` and `timeout()` on the agent
  * before falling back to its own attributes, which is exactly the hook the
- * database-backed mapping needs — a model change is a settings
+ * database-backed mapping needs: a model change is a settings
  * change, never a deploy.
  */
 abstract class EveilAgent implements Agent, HasMiddleware
@@ -28,7 +28,7 @@ abstract class EveilAgent implements Agent, HasMiddleware
 
     /**
      * The row this call reports into. Set when the run was created before the
-     * call — a job queued from a screen writes its `pending` row at dispatch,
+     * call. A job queued from a screen writes its `pending` row at dispatch,
      * so the page can say the work is coming while it is still in the queue.
      * Left null, the metering middleware opens a row of its own.
      */
@@ -38,7 +38,7 @@ abstract class EveilAgent implements Agent, HasMiddleware
 
     /**
      * Which line of the settings screen governs this agent, and what
-     * `agent_runs` records — one line per agent, not per vague category, so
+     * `agent_runs` records: one line per agent, not per vague category, so
      * the meter joins the credit grid, which bills per action.
      *
      * Static because the slug is a property of the class: whoever opens the
@@ -51,7 +51,7 @@ abstract class EveilAgent implements Agent, HasMiddleware
 
     /**
      * Whether a weaker model BREAKS this agent rather than merely making it
-     * worse. The generative agents degrade gracefully — a cheaper model writes
+     * worse. The generative agents degrade gracefully, since a cheaper model writes
      * a flatter summary, and the run still means something. The ones that read
      * a page and return fields do not: a small local model returns broken
      * extractions, which look like results and are not.
@@ -65,7 +65,7 @@ abstract class EveilAgent implements Agent, HasMiddleware
     }
 
     /**
-     * The project's own instructions for anything written in its name — tone,
+     * The project's own instructions for anything written in its name: tone,
      * language, words to avoid. Appended by the agents that WRITE, and by them
      * only: an extractor returns fields nobody reads as prose, and telling it
      * to avoid emoji is prompt it has to spend attention on for nothing.

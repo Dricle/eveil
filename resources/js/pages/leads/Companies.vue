@@ -3,16 +3,17 @@ import { Head, router, usePoll } from '@inertiajs/vue3'
 import type { TableColumn } from '@nuxt/ui'
 import { computed, ref, watch } from 'vue'
 import LeadsLayout from '@/layouts/LeadsLayout.vue'
+import SearchingBanner from '@/components/SearchingBanner.vue'
 import StatusSelect from '@/components/StatusSelect.vue'
 import { OUTREACH_STATUSES } from '@/lib/status'
 import { useTableQuery } from '@/lib/table'
 import companyRoutes from '@/routes/companies'
 import contactRoutes from '@/routes/contacts'
-import type { Company, Paginated } from '@/types'
+import type { Activity, Company, Paginated } from '@/types'
 
 // Written out rather than `defineProps<CompanyPage>()`: the compiler cannot
 // resolve a type alias imported through the `@/types` barrel, and it fails by
-// declaring no props at all — the page renders with everything undefined.
+// declaring no props at all, so the page renders with everything undefined.
 const props = defineProps<{
     companies: Paginated<Company>
     profiles: { id: number, name: string }[]
@@ -27,12 +28,15 @@ const props = defineProps<{
     }
     total: number
     unsearched: number
+    activity: Activity
 }>()
 
-const searching = computed(() => props.companies.data.some(company => company.contacts_status === 'queued'))
+// Anything in flight, not just a contact search: a discovery run fills this
+// list for minutes, and a page that sits still meanwhile reads as an empty
+// market rather than as one still being searched.
+const searching = computed(() => props.activity.searching)
 
-// Only while a contact search is out. Companies do not change on their own.
-const poll = usePoll(4000, { only: ['companies'] }, { autoStart: searching.value })
+const poll = usePoll(4000, { only: ['companies', 'activity', 'total', 'unsearched'] }, { autoStart: searching.value })
 
 watch(searching, busy => busy ? poll.start() : poll.stop())
 
@@ -68,7 +72,7 @@ const SCORE_OPTIONS = [
 // The key doubles as the sort key the server accepts and as the slot name, so
 // a column sorts, filters and renders under one name on both sides.
 // `width` is a min/max pair per column, because the qualifier writes a whole
-// sentence into fields a table would like to keep to a word — "size" comes back
+// sentence into fields a table would like to keep to a word. "Size" comes back
 // as "commune of medium size running several municipal nurseries". Without a
 // floor those columns squeeze to one word per line; without a ceiling they take
 // the room the fit reason needs, which is the one column here worth reading.
@@ -82,7 +86,8 @@ const COLUMNS = [
     { key: 'fit_score', label: 'Fit', sortable: true, filterable: false, width: '' },
     { key: 'reason', label: 'Why it fits', sortable: false, filterable: false, width: 'min-w-48' },
     { key: 'contacts_count', label: 'Contacts', sortable: true, filterable: false, width: '' },
-    { key: 'discovered_at', label: 'Found', sortable: true, filterable: false, width: '' }
+    { key: 'discovered_at', label: 'Found', sortable: true, filterable: false, width: '' },
+    { key: 'details', label: '', sortable: false, filterable: false, width: '' }
 ]
 
 const columns: TableColumn<Company>[] = COLUMNS.map(column => ({
@@ -119,10 +124,12 @@ function day (value: string) {
 
 // `row.original` reaches a slot untyped, so anything that indexes a lookup map
 // does it behind a typed parameter rather than in the template.
+// "Nobody" and "unreadable" are different findings about a company, and only
+// one of them is worth looking at again.
 function searchLabel (company: Company) {
-    const labels: Record<string, string> = { queued: 'Looking…', done: 'Nobody', failed: 'Unreadable' }
+    const labels: Record<string, string> = { done: 'Nobody', failed: 'Unreadable' }
 
-    return labels[company.contacts_status ?? ''] ?? 'Find'
+    return labels[company.contacts_status ?? ''] ?? 'Not yet'
 }
 </script>
 
@@ -131,6 +138,8 @@ function searchLabel (company: Company) {
         <Head title="Companies" />
 
         <div class="space-y-4">
+            <SearchingBanner :activity="activity" />
+
             <!-- One bar holds everything that narrows the list: the free
                  search, a box per column, and the filters that are not columns
                  at all. -->
@@ -240,9 +249,10 @@ function searchLabel (company: Company) {
                 </template>
 
                 <template #name-cell="{ row }">
-                    <p class="font-medium">
-                        {{ row.original.name }}
-                    </p>
+                    <ULink
+                        :href="companyRoutes.show.url(row.original.id)"
+                        class="font-medium"
+                    >{{ row.original.name }}</ULink>
                 </template>
 
                 <template
@@ -278,7 +288,7 @@ function searchLabel (company: Company) {
                     <UBadge
                         :color="scoreColor(row.original.fit_score)"
                         variant="subtle"
-                        :label="`${row.original.fit_score ?? '—'}`"
+                        :label="`${row.original.fit_score ?? 'n/a'}`"
                     />
                 </template>
 
@@ -297,27 +307,46 @@ function searchLabel (company: Company) {
                     </p>
                 </template>
 
+                <!-- No per-row button to go looking: the search is dispatched
+                     the moment a company is kept, because forty companies is
+                     forty clicks nobody makes. This says where that search got
+                     to. -->
                 <template #contacts_count-cell="{ row }">
                     <ULink
                         v-if="row.original.contacts_count"
                         :href="contactRoutes.index.url({ query: { company: row.original.id } })"
                     >{{ row.original.contacts_count }}</ULink>
 
-                    <UButton
-                        v-else-if="!row.original.excluded"
-                        color="neutral"
-                        variant="ghost"
-                        size="xs"
-                        :icon="row.original.contacts_status === 'queued' ? 'i-lucide-loader' : 'i-lucide-user-search'"
-                        :ui="{ leadingIcon: row.original.contacts_status === 'queued' ? 'animate-spin' : '' }"
-                        :label="searchLabel(row.original)"
-                        :disabled="row.original.contacts_status === 'queued'"
-                        @click="router.post(contactRoutes.search.url(), { company: row.original.id }, { preserveScroll: true })"
-                    />
+                    <span
+                        v-else-if="row.original.contacts_status === 'queued'"
+                        class="flex items-center gap-1 text-sm text-muted"
+                    >
+                        <UIcon
+                            name="i-lucide-search"
+                            class="animate-sweep size-4 text-primary"
+                        />
+                        Looking
+                    </span>
+
+                    <span
+                        v-else
+                        class="text-sm text-dimmed"
+                    >{{ searchLabel(row.original) }}</span>
                 </template>
 
                 <template #discovered_at-cell="{ row }">
                     <span class="text-sm text-muted">{{ day(row.original.discovered_at) }}</span>
+                </template>
+
+                <template #details-cell="{ row }">
+                    <UButton
+                        icon="i-lucide-arrow-right"
+                        color="neutral"
+                        variant="ghost"
+                        size="xs"
+                        label="Details"
+                        @click="router.get(companyRoutes.show.url(row.original.id))"
+                    />
                 </template>
 
                 <!-- A company somebody already sells to is the one row that

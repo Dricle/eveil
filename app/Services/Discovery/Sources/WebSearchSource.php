@@ -12,7 +12,7 @@ use Throwable;
 
 /**
  * Self-hosted SearXNG: free, no API key, same code in both editions.
- * The trade-off is that it is a meta-search engine — upstream engines rate-limit
+ * The trade-off is that it is a meta-search engine: upstream engines rate-limit
  * it, so a query returning nothing is normal and must never fail a run.
  *
  * Returns every result it is given and judges none of them. There used to be a

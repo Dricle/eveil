@@ -109,7 +109,7 @@ class DiscoveryRun extends Model
 
     /**
      * A run is finished when nothing is queued for it any more. Every node asks
-     * this on its way out, so whichever one happens to be last closes the run —
+     * this on its way out, so whichever one happens to be last closes the run:
      * no supervising job to keep alive, and nothing to poll.
      */
     public function finishIfIdle(): void
@@ -126,7 +126,7 @@ class DiscoveryRun extends Model
                 'candidates_found' => $this->candidates_found,
                 'companies_qualified' => $this->qualified_count,
                 // Without these, a dead source and an empty market look
-                // identical — and the diagnosis would be confidently wrong
+                // identical, and the diagnosis would be confidently wrong
                 // about which one happened.
                 'source_failures' => $this->failuresOf(DiscoveryTaskKind::Probe),
                 'candidate_failures' => [
@@ -139,7 +139,7 @@ class DiscoveryRun extends Model
     }
 
     /**
-     * Why a run came up short decides what should happen next — and one of the
+     * Why a run came up short decides what should happen next, and one of the
      * answers is "do not widen". Widening a wrong profile produces off-target
      * leads the user then emails, and the complaints land on their own domain.
      */

@@ -6,7 +6,7 @@ use League\Uri\Uri as LeagueUri;
 
 /**
  * URL normalisation, kept in one place because the crawl cache and the company
- * dedupe both key on it — two different normalisations would mean two cache
+ * dedupe both key on it: two different normalisations would mean two cache
  * entries for one page.
  *
  * Parsing and relative resolution are League\Uri's job, not ours. It ships with
@@ -16,7 +16,7 @@ use League\Uri\Uri as LeagueUri;
  * casing, default ports. A hand-rolled version of that was here and got
  * `?page=2` wrong, which is how pagination silently broke.
  *
- * What stays ours is CRAWLER POLICY — which URLs we are willing to follow and
+ * What stays ours is CRAWLER POLICY: which URLs we are willing to follow and
  * what shape we store them in. That is an application decision and does not
  * belong in a URI library.
  */
@@ -44,8 +44,8 @@ class Url
      * Drops the fragment, lowercases the host, and strips a trailing slash so
      * `https://Example.com/about/` and `https://example.com/about` are one URL.
      *
-     * Also where `mailto:`, `tel:`, `javascript:` and `data:` are refused —
-     * not as a hand-kept list of schemes, but because anything that is not
+     * Also where `mailto:`, `tel:`, `javascript:` and `data:` are refused.
+     * Not as a hand-kept list of schemes, but because anything that is not
      * http(s) is not a page we can fetch.
      */
     public static function normalize(string $url): ?string
@@ -95,7 +95,7 @@ class Url
 
     /**
      * The host without `www.`, which is a display prefix rather than a
-     * different site — and the key companies are deduped on.
+     * different site, and the key companies are deduped on.
      */
     public static function host(string $url): ?string
     {

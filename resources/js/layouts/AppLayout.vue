@@ -9,6 +9,7 @@ import { profile } from '@/routes/account'
 import { update as switchProject } from '@/routes/current-project'
 import appSettings from '@/routes/app-settings/provider'
 import { create } from '@/routes/projects'
+import mailboxes from '@/routes/settings/mailboxes'
 import projectSettings from '@/routes/settings/project'
 import targets from '@/routes/targets'
 
@@ -74,8 +75,8 @@ const projectMenu = computed<DropdownMenuItem[][]>(() => [
     ]
 ])
 
-// App settings are a scope of their own — whoever runs the install, never
-// somebody granted access through an organization — so the entry only exists
+// App settings are a scope of their own, whoever runs the install and never
+// somebody granted access through an organization, so the entry only exists
 // for them and hangs off the user menu rather than the project nav. "Settings"
 // in the sidebar is the current project's; this one is the whole app's.
 const userMenu = computed<DropdownMenuItem[][]>(() => [
@@ -158,6 +159,35 @@ const userMenu = computed<DropdownMenuItem[][]>(() => [
             </div>
 
             <div class="flex-1 overflow-y-auto">
+                <!-- Both of these stop the product working and neither announces
+                     itself: without a provider key every agent dies in the
+                     queue, and without a mailbox a campaign can be written and
+                     activated and still never send anything. -->
+                <div
+                    v-if="page.props.setup?.provider || page.props.setup?.mailbox"
+                    class="space-y-2 px-4 pt-4"
+                >
+                    <UAlert
+                        v-if="page.props.setup?.provider"
+                        color="warning"
+                        variant="subtle"
+                        icon="i-lucide-key-round"
+                        title="No AI provider key yet"
+                        description="Nothing the agents do can run without one: analysing a site, deriving segments, qualifying a company, writing a sequence. Jobs will queue and fail."
+                        :actions="[{ label: 'Add the key', to: appSettings.edit.url(), color: 'warning', variant: 'solid' }]"
+                    />
+
+                    <UAlert
+                        v-if="page.props.setup?.mailbox"
+                        color="warning"
+                        variant="subtle"
+                        icon="i-lucide-mail"
+                        title="No mailbox connected to this project"
+                        description="Everything up to writing a sequence works, but nothing can be sent: a campaign will activate and then sit there. Connect one, and tick this project."
+                        :actions="[{ label: 'Connect a mailbox', to: mailboxes.index.url(), color: 'warning', variant: 'solid' }]"
+                    />
+                </div>
+
                 <slot />
             </div>
         </div>

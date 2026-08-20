@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * The two partial unique indexes encode business rules that no application code
  * would otherwise enforce. They are also the reason PostgreSQL is mandatory in
- * tests — SQLite would not reproduce either of them.
+ * tests: SQLite would not reproduce either of them.
  */
 function makeProject(): int
 {
@@ -31,7 +31,7 @@ function makeProject(): int
 function makeLead(int $projectId, ?string $email): int
 {
     // Raw inserts on purpose: this file checks what the DATABASE refuses, not
-    // what the model prevents. So the hash is written by hand here — in the app
+    // what the model prevents. So the hash is written by hand here: in the app
     // the `email` mutator keeps it in step.
     return DB::table('leads')->insertGetId([
         'project_id' => $projectId,
@@ -144,7 +144,7 @@ function makeCompany(int $projectId, ?string $domain, string $name): int
 
 it('still dedupes companies by domain once the column may be null', function () {
     // Postgres treats every NULL as distinct, so a plain unique index stops
-    // deduping the moment the column becomes nullable — the partial one does
+    // deduping the moment the column becomes nullable. The partial one does
     // the work the whole no-duplicate-lead promise rests on.
     $project = makeProject();
     makeCompany($project, 'friterie.be', 'Friterie du Centre');
@@ -155,7 +155,7 @@ it('still dedupes companies by domain once the column may be null', function () 
 
 it('dedupes a site-less company on its name, whatever the directory capitalised', function () {
     // With no domain the name is the only key every source supplies, so it has
-    // to hold on its own — a re-run reads the very same listing page.
+    // to hold on its own. A re-run reads the very same listing page.
     $project = makeProject();
     makeCompany($project, null, 'Chez Marcel');
 

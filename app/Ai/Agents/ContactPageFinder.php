@@ -10,7 +10,7 @@ use Stringable;
  * Picks which of a site's links lead to its contact details.
  *
  * The escape hatch for `PathHint`, and it only runs when the learned fragments
- * match nothing on a site — a market whose word for "contact us" we have not
+ * match nothing on a site, in a market whose word for "contact us" we have not
  * met yet. Whatever it picks is turned back into hints, so the next site in
  * that language costs nothing.
  *
@@ -28,7 +28,7 @@ class ContactPageFinder extends EveilAgent implements HasStructuredOutput
         phone number would be published.
 
         Typically: contact, about, the team, legal notices, imprint, privacy. In whatever
-        language the site is written in — that is the entire reason you are being asked
+        language the site is written in. That is the entire reason you are being asked
         rather than a keyword list.
 
         Judge the LABEL as much as the path. A link reading "Nous rencontrer" pointing at

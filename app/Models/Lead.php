@@ -18,7 +18,7 @@ use Illuminate\Support\Carbon;
 
 /**
  * A person. `source` / `source_url` record provenance for audit and internal
- * display — never for injection into the mail: no generated legal text, no
+ * display: never for injection into the mail: no generated legal text, no
  * hosted notice.
  *
  * Erasure lives on this row rather than in a tombstone table, because the row
@@ -92,7 +92,7 @@ class Lead extends Model
     /**
      * The people outreach may still go to: not erased, not marked won, lost,
      * already a client or unsubscribed, and not working at a company the user
-     * took out of the running. A lead with no company passes — plenty arrive
+     * took out of the running. A lead with no company passes: plenty arrive
      * from an import with nothing but an address.
      *
      * Anything that ends in a mail being written goes through this scope. It
@@ -106,7 +106,7 @@ class Lead extends Model
         $query->whereNull('erased_at')
             ->whereNotIn('status', OutreachStatus::excluded())
             // A subquery rather than `orWhereHas`, so the company's own rule
-            // stays in one place — `Company::contactable()` — instead of being
+            // stays in one place, `Company::contactable()`. Instead of being
             // spelled out a second time here.
             ->where(fn (Builder $lead) => $lead
                 ->whereNull('company_id')
@@ -133,7 +133,7 @@ class Lead extends Model
 
     /**
      * The person's name spans two columns and their company lives on another
-     * table, so neither can be a plain `where` — which is exactly why the
+     * table, so neither can be a plain `where`. Which is exactly why the
      * allowed filters are named here rather than taken from the request.
      *
      * @param  Builder<Lead>  $query
@@ -183,7 +183,7 @@ class Lead extends Model
     }
 
     /**
-     * The hash follows the address automatically, so the two can never drift —
+     * The hash follows the address automatically, so the two can never drift,
      * and clearing the address deliberately leaves the hash behind, which is
      * what `erase()` relies on.
      */
@@ -205,7 +205,7 @@ class Lead extends Model
      * Honour a request to be forgotten, without losing the ability to honour it
      * again tomorrow.
      *
-     * Every identifying column goes, here and on every message we sent her —
+     * Every identifying column goes, here and on every message we sent her:
      * the body carries her name and address, so deleting the lead alone would
      * leave the copy behind. What survives is `email_hash`, a one-way digest
      * that cannot give the address back but can still answer "is this person
@@ -244,7 +244,7 @@ class Lead extends Model
     /**
      * An address we never verified, or verified as invalid, is never sent to.
      * `risky` (catch-all) and `unknown` (provider blocks the probe) are
-     * deliberately sendable — treating them as invalid would discard most of
+     * deliberately sendable: treating them as invalid would discard most of
      * Gmail and Outlook. An erased lead has no address at all, so it fails here
      * too.
      */

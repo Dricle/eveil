@@ -3,11 +3,13 @@
 use App\Actions\RunDiscovery;
 use App\Ai\Agents\CompanyQualifier;
 use App\Ai\Agents\DiscoveryPlanner;
+use App\Enums\ContactSearchStatus;
 use App\Enums\DiscoveryRunStatus;
 use App\Enums\DiscoveryTaskKind;
 use App\Enums\DiscoveryTaskStatus;
 use App\Jobs\Discovery\QualifyCandidate;
 use App\Jobs\Discovery\RunProbe;
+use App\Jobs\FindCompanyContacts;
 use App\Models\Company;
 use App\Models\DiscoveryRun;
 use App\Models\DiscoveryTask;
@@ -15,9 +17,17 @@ use App\Models\TargetProfile;
 use App\Support\CurrentProject;
 use App\Support\Settings;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Laravel\Ai\Prompts\AgentPrompt;
 
-beforeEach(fn () => app(Settings::class)->set('crawl.delay_ms', 0));
+beforeEach(function () {
+    app(Settings::class)->set('crawl.delay_ms', 0);
+
+    // Only this job: keeping a company now sends the app straight after the
+    // people at it, and the queue is synchronous here, so the whole contact
+    // search would otherwise run inside the qualification being tested.
+    Queue::fake([FindCompanyContacts::class]);
+});
 
 function discoveryProfile(): TargetProfile
 {
@@ -186,7 +196,7 @@ it('tells the planner how many probes the run may make', function () {
     discover($targetProfile, ['max_queries' => 7]);
 
     // Otherwise it plans twenty-two probes for a run that allows twelve, and the
-    // tail is skipped — which is waste, not caution.
+    // tail is skipped. Which is waste, not caution.
     DiscoveryPlanner::assertPrompted(fn (AgentPrompt $prompt): bool => str_contains((string) $prompt->prompt, 'at most 7 probes'));
 });
 
@@ -214,4 +224,42 @@ it('says which ceiling stopped a step, in the numbers the run was given', functi
 
     expect($skipped->result['failures'][0])->toContain('1 searches one run may make')
         ->and($run->refresh()->queries_used)->toBe(1);
+});
+
+it('goes looking for the people the moment a company is kept', function () {
+    $targetProfile = discoveryProfile();
+
+    DiscoveryPlanner::fake([overpassPlan()]);
+    CompanyQualifier::fake([qualifierVerdict()]);
+    mapReturning('https://friterie-centre.be');
+
+    discover($targetProfile);
+
+    $company = Company::sole();
+
+    // Forty companies is forty clicks nobody makes, so nobody is asked.
+    expect($company->contacts_status)->toBe(ContactSearchStatus::Queued);
+
+    Queue::assertPushed(FindCompanyContacts::class, 1);
+    Queue::assertPushed(fn (FindCompanyContacts $job): bool => $job->company->is($company));
+});
+
+it('never queues the same company for contacts twice', function () {
+    $targetProfile = discoveryProfile();
+
+    DiscoveryPlanner::fake([overpassPlan()]);
+    CompanyQualifier::fake([qualifierVerdict(), qualifierVerdict()]);
+    mapReturning('https://friterie-centre.be');
+
+    discover($targetProfile);
+
+    $task = DiscoveryTask::query()->where('kind', DiscoveryTaskKind::Qualify)->sole();
+    $run = DiscoveryRun::sole();
+    $run->update(['status' => DiscoveryRunStatus::Running, 'finished_at' => null]);
+
+    // Replaying the node re-qualifies the same company, and the column is what
+    // stops a second search being queued for it.
+    QualifyCandidate::dispatch($task);
+
+    Queue::assertPushed(FindCompanyContacts::class, 1);
 });

@@ -106,7 +106,7 @@ it('starts from nothing and teaches itself', function () {
 
 it('retires a fragment that keeps choosing pages and never delivering', function () {
     // The guard against `learn()` picking up something far too generic. No
-    // stop-list of banned words — that would be another hardcoded list — the
+    // stop-list of banned words: that would be another hardcoded list. The
     // ratio simply catches a fragment that cannot deliver.
     $generic = PathHint::factory()->create(['token' => 'informations']);
     $good = PathHint::factory()->create(['token' => 'contact']);

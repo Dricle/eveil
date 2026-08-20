@@ -3,10 +3,11 @@ import { Head, usePage } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
 import campaigns from '@/routes/campaigns'
 import companies from '@/routes/companies'
-import { inbox } from '@/routes'
+import { inbox, onboarding as onboardingRoute } from '@/routes'
 import type { DashboardStats, Pipeline } from '@/types'
 
 const props = defineProps<{
+    onboarding: boolean
     stats: DashboardStats
     pipeline: Pipeline
     recent: { id: number, agent: string, status: string, at: string | null }[]
@@ -42,6 +43,16 @@ function when (value: string | null) {
                 {{ page.props.currentProject?.name }}
             </h2>
 
+            <UAlert
+                v-if="onboarding"
+                color="primary"
+                variant="subtle"
+                icon="i-lucide-compass"
+                title="Finish setting up"
+                description="Your site has been read, or is being read. Agree with what it understood and the search starts. That is the whole setup."
+                :actions="[{ label: 'Continue', to: onboardingRoute.url(), color: 'primary', variant: 'solid' }]"
+            />
+
             <!-- The headline is the POSITIVE reply rate. A raw rate counts "no
                  thanks" and out-of-office as wins, and a dashboard that
                  flatters is worse than none. -->
@@ -51,7 +62,7 @@ function when (value: string | null) {
                         Positive replies
                     </p>
                     <p class="text-2xl font-medium">
-                        {{ stats.positive_rate === null ? '—' : `${stats.positive_rate}%` }}
+                        {{ stats.positive_rate === null ? 'n/a' : `${stats.positive_rate}%` }}
                     </p>
                     <p class="text-xs text-dimmed">
                         {{ stats.positive }} of {{ stats.replies }} replies, on {{ stats.sent }} sent

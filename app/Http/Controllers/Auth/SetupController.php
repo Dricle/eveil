@@ -14,7 +14,7 @@ use Inertia\Response;
 
 /**
  * First run of a self-hosted instance: creates the super admin and the
- * organization they own. Self-hosted gets an organization like cloud does —
+ * organization they own. Self-hosted gets an organization like cloud does:
  * one code path, never two.
  */
 class SetupController extends Controller

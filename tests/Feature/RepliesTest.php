@@ -31,7 +31,7 @@ use Illuminate\Support\Facades\Queue;
 use Laravel\Ai\Tools\Request as ToolRequest;
 
 /**
- * A mailbox with one mail already sent to one lead — the state every reply
+ * A mailbox with one mail already sent to one lead: the state every reply
  * arrives into.
  *
  * @return array{0: EmailAccount, 1: CampaignLead, 2: Message}
@@ -214,7 +214,7 @@ it('puts the mailbox in error when its inbox cannot be read', function () {
 });
 
 /**
- * The reply row a tool acts on, with its sequence already paused — which is the
+ * The reply row a tool acts on, with its sequence already paused. Which is the
  * state every tool is called in, because the pause happens before the agent.
  */
 function pausedReply(string $body = 'Merci, je regarde.'): Message
@@ -283,7 +283,7 @@ it('resumes the sequence when the agent recognises a machine', function () {
 
     (new IgnoreReply($reply))->handle(new ToolRequest(['kind' => 'out of office']));
 
-    // The pause is deterministic, so ignoring is what must undo it — otherwise
+    // The pause is deterministic, so ignoring is what must undo it. Otherwise
     // a fortnight's holiday would end the sequence.
     expect($reply->campaignLead->refresh()->status)->toBe(CampaignLeadStatus::Running)
         ->and($reply->campaignLead->paused_at)->toBeNull()
@@ -431,7 +431,7 @@ it('shows only conversations somebody actually answered, ordered by what needs a
         ->get(route('inbox'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            // Paginated, so the rows are under `data` — the envelope carries
+            // Paginated, so the rows are under `data`. The envelope carries
             // the meta the pager needs.
             ->has('conversations.data', 1)
             ->where('conversations.data.0.lead.email', 'marcel@friterie.test')
@@ -480,7 +480,7 @@ it('answers from the mailbox the sequence pinned, in the same thread, and stops 
 
     expect($fake->sent)->toHaveCount(1)
         ->and($fake->sent[0]['to'])->toBe('marcel@friterie.test')
-        // Threaded onto their reply, and prefixed once — "Re: Re: Re:" is what
+        // Threaded onto their reply, and prefixed once, "Re: Re: Re:" is what
         // a machine looks like.
         ->and($fake->sent[0]['in_reply_to'])->toBe('theirs-9@friterie.test')
         ->and($fake->sent[0]['subject'])->toBe('Re: vos commandes')

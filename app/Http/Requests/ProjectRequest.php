@@ -20,7 +20,7 @@ class ProjectRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'url' => ['required', 'string', 'url:http,https', 'max:255', new ReachableUrl],
-            // Only the edit screen sends this one — creating a project asks for
+            // Only the edit screen sends this one. Creating a project asks for
             // as little as possible, and house style is something you write
             // once you have read what the agent produces without it.
             'prompt_instructions' => ['nullable', 'string', 'max:2000'],

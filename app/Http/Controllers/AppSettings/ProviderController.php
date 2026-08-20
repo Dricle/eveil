@@ -14,7 +14,7 @@ use Laravel\Ai\Enums\Lab;
 /**
  * Which provider the instance calls, and with whose key.
  *
- * The key never travels back to the browser — the screen says whether one is
+ * The key never travels back to the browser: the screen says whether one is
  * stored and where it came from, and saving replaces it. Which provider each
  * agent runs on is decided next door, per agent: this page only answers "can we
  * call it at all".

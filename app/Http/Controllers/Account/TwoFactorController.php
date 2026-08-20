@@ -8,7 +8,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Two-factor enrolment is driven by Fortify's own routes — this only renders
+ * Two-factor enrolment is driven by Fortify's own routes: this only renders
  * the state they act on, so the QR code and the recovery codes never travel as
  * JSON the page has to assemble itself.
  */

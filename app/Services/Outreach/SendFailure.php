@@ -5,14 +5,14 @@ namespace App\Services\Outreach;
 use RuntimeException;
 
 /**
- * A send that did not happen, sorted by what the caller has to do about it —
+ * A send that did not happen, sorted by what the caller has to do about it:
  * which is a different thing in each case and must not be collapsed:
  *
- *   Recipient — the address is dead. Suppress it and move on; retrying is what
+ *   Recipient. The address is dead. Suppress it and move on; retrying is what
  *               ruins a sender's reputation.
- *   Auth      — the MAILBOX is broken, not the address. Pause it before it
+ *   Auth: the MAILBOX is broken, not the address. Pause it before it
  *               burns through a campaign failing on every lead.
- *   Transient — greylisting, a rate limit, a network blip. Try later, same
+ *   Transient: greylisting, a rate limit, a network blip. Try later, same
  *               address, no state changed.
  */
 class SendFailure extends RuntimeException

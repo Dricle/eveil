@@ -12,8 +12,8 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * A project is one product to promote. Two fields create one — a name and the
- * address of its site — and everything else about it is derived from there.
+ * A project is one product to promote. Two fields create one: a name and the
+ * address of its site, and everything else about it is derived from there.
  *
  * There is no index: the project list lives in the sidebar switcher, and the
  * project being edited is always the current one, from the session.
@@ -37,10 +37,13 @@ class ProjectController extends Controller
         AnalyzeProject::dispatch($project);
 
         // Land on what was just created rather than on whatever was selected
-        // before — creating a project is how you say you want to work on it.
+        // before. Creating a project is how you say you want to work on it.
         $request->session()->put('current_project_id', $project->id);
 
-        return to_route('dashboard');
+        // Straight into the guided run: the site is being read right now, and
+        // watching that happen is the whole first impression. A dashboard of
+        // zeroes at this moment reads as a product that does nothing.
+        return to_route('onboarding');
     }
 
     public function edit(): Response

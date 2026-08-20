@@ -19,18 +19,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libicu-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# `pdo`, `mbstring` and `opcache` are already built into this image — asking for
+# `pdo`, `mbstring` and `opcache` are already built into this image. Asking for
 # them here fails the build with "cannot stat 'modules/*'", because a static
 # extension produces no module to copy.
 RUN docker-php-ext-install pdo_pgsql pgsql bcmath pcntl gd zip intl
 
 # Redis for the queue, the cache, the crawl rate limiter and the per-mailbox
-# locks — all four, so this one is not optional.
+# locks: all four, so this one is not optional.
 RUN pecl install redis && docker-php-ext-enable redis
 
 # Node only to build the front end. `yarn build` shells out to
 # `php artisan wayfinder:generate`, so the assets cannot be built in a stage
-# without PHP — it is built here and thrown away below.
+# without PHP. It is built here and thrown away below.
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
     && npm install -g corepack \

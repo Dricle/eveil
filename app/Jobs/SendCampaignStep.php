@@ -31,7 +31,7 @@ class SendCampaignStep implements ShouldBeUnique, ShouldQueue
 
     /**
      * Two jobs for the same lead in the queue at once would send the same step
-     * twice — the second one having read the row before the first advanced it.
+     * twice: the second one having read the row before the first advanced it.
      */
     public function uniqueId(): string
     {

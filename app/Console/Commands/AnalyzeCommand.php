@@ -15,7 +15,7 @@ use Illuminate\Support\Str;
 
 /**
  * The product's first move, on the command line: give a URL, get the knowledge
- * base. No auth, no UI — this is the riskiest part of the stack (a pre-1.0 AI
+ * base. No auth, no UI: this is the riskiest part of the stack (a pre-1.0 AI
  * SDK, crawling, structured output) and it is worth proving before anything is
  * built on top of it.
  */
@@ -66,10 +66,10 @@ class AnalyzeCommand extends Command
         }
 
         // A crawl that lost pages still produced a portrait. Say which pages
-        // are missing and carry on — the run is not a failure, it is a partial
+        // are missing and carry on: the run is not a failure, it is a partial
         // read, and the difference matters to whoever reads the summary.
         foreach ($analysis->failures ?? [] as $failure) {
-            $this->components->warn("{$failure['url']} — {$failure['reason']}");
+            $this->components->warn("{$failure['url']}: {$failure['reason']}");
         }
 
         $this->render($analysis->summary ?? [], $analysis->raw['pages'] ?? []);

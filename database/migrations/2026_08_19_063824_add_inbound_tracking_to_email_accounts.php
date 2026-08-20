@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Schema;
  * How far into a mailbox we have already read.
  *
  * A UID rather than a timestamp: IMAP UIDs are monotonic per mailbox, so "give
- * me everything above this one" is exact and cheap. A date is neither — clocks
+ * me everything above this one" is exact and cheap. A date is neither: clocks
  * disagree between our server and the provider's, and a mail that arrives while
  * a fetch is running would be skipped for good.
  *

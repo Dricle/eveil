@@ -32,7 +32,7 @@ return new class extends Migration
             // instead of quadratic.
             $table->jsonb('payload')->nullable();
 
-            // Shape: array<string, mixed> counters this node produced — found, harvested, qualified
+            // Shape: array<string, mixed> counters this node produced. Found, harvested, qualified
             $table->jsonb('result')->nullable();
 
             // The model call this node made, when it made one. Most do not.

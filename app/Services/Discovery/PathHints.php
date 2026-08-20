@@ -13,7 +13,7 @@ use Throwable;
 
 /**
  * Which of a site's links are worth fetching, from fragments the app learned
- * itself. There is no list anywhere — not in a const, not in a seeder.
+ * itself. There is no list anywhere: not in a const, not in a seeder.
  *
  * The first version was a const covering four languages, which silently missed
  * `/contacto`, `/chi-siamo`, `/om-oss`, `/kontakty` and every market nobody had
@@ -23,9 +23,9 @@ use Throwable;
  * start costs a few tenths of a cent, once, for the whole instance.
  *
  * Full lifecycle, no human curation required:
- *   create  — the model picks links, `learn()` turns paths into fragments
- *   rank    — `matched`/`hits` float what works to the top
- *   retire  — a fragment that keeps choosing pages and never delivering is
+ *   create. The model picks links, `learn()` turns paths into fragments
+ *   rank: `matched`/`hits` float what works to the top
+ *   retire. A fragment that keeps choosing pages and never delivering is
  *             deleted by `review()`; it was spending a fetch every time
  *
  * `is_locked` is the human override, for the one row somebody wants kept or
@@ -74,7 +74,7 @@ class PathHints
     /**
      * Deletes the fragments that cost more than they return.
      *
-     * The guard against `learn()` picking up something far too generic — a
+     * The guard against `learn()` picking up something far too generic: a
      * model that answers `/informations` once writes a fragment that then
      * selects a page on half the sites on the instance, forever. Nothing here
      * needs a stop-list of banned words, which would be another hardcoded list:

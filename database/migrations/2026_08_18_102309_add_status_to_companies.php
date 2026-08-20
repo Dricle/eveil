@@ -8,8 +8,8 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Where a company stands with the user, in their own words rather than in a
  * score: a business they already sell to, one they closed, one they lost, one
- * they threw out. All four mean the same thing to the sender — do not write to
- * them — which is why this replaces `rejected_at` instead of sitting beside it.
+ * they threw out. All four mean the same thing to the sender: do not write to
+ * them. Which is why this replaces `rejected_at` instead of sitting beside it.
  *
  * Two ways to exclude a company would mean two queries to keep in step, and the
  * one somebody forgets is the one that mails an existing client a cold pitch.

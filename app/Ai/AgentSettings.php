@@ -11,21 +11,21 @@ use Laravel\Ai\Enums\Lab;
  *
  * Keyed on the agent slug, one line per agent. A coarser grouping was tried and
  * removed: three different jobs shared one "planner" line, so the meter could
- * not tell `project.analyze` from `target_profile.derive` — while the credit grid bills
- * them separately — and there was no way to put target profile derivation on the expensive
+ * not tell `project.analyze` from `target_profile.derive`, while the credit grid bills
+ * them separately, and there was no way to put target profile derivation on the expensive
  * model while search planning ran on a cheaper one.
  *
  * The database is the only source: defaults are written by a migration rather
  * than mirrored in a config file, so there is one place to look and no merge to
  * reason about. Agents read this through `provider()`, `model()` and
- * `timeout()` — the hooks `Promptable` consults before its own attributes.
+ * `timeout()`: the hooks `Promptable` consults before its own attributes.
  */
 class AgentSettings
 {
     /**
      * What an agent runs on before anyone has said otherwise.
      *
-     * Not a config fallback — the shipped values live in a migration. This
+     * Not a config fallback: the shipped values live in a migration. This
      * exists for one narrow case: an agent class added AFTER the install was
      * migrated has no row yet, and should run on the cheap model rather than
      * throw. `AgentSettings::known()` discovers agents from the filesystem, so
@@ -37,7 +37,7 @@ class AgentSettings
 
     /**
      * A `Lab` case whenever the provider is one the package knows, and a plain
-     * string otherwise — an OpenAI-compatible endpoint is referenced by its
+     * string otherwise: an OpenAI-compatible endpoint is referenced by its
      * config key, which no enum can cover.
      */
     public function provider(string $agent): Lab|string
@@ -52,7 +52,7 @@ class AgentSettings
     }
 
     /**
-     * The provider as a config key — `config('ai.providers.<name>')` and any
+     * The provider as a config key: `config('ai.providers.<name>')` and any
      * display want this, not the enum.
      */
     public function providerName(string $agent): string
@@ -123,7 +123,7 @@ class AgentSettings
      *
      * Note what this does NOT do: restore whatever the install originally
      * shipped with. Those values were written by a migration and the migration
-     * is not a lookup table — keeping a second copy of them in code to support
+     * is not a lookup table: keeping a second copy of them in code to support
      * this one command would recreate exactly the config-shadows-database
      * duplication that was just removed. Reset lands on the conservative
      * default, the command prints what it landed on, and an operator who wants
@@ -147,8 +147,8 @@ class AgentSettings
     }
 
     /**
-     * The same discovery, keyed by slug, for whoever needs the class itself —
-     * the screen asks each one whether a weak model would break it rather than
+     * The same discovery, keyed by slug, for whoever needs the class itself.
+     * The screen asks each one whether a weak model would break it rather than
      * merely make it worse.
      *
      * @return array<string, class-string<Agents\EveilAgent>>

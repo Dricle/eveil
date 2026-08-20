@@ -44,7 +44,7 @@ class ProjectAnalysis extends Model
     }
 
     /**
-     * Which repository this run read. Null for a website analysis — and the
+     * Which repository this run read. Null for a website analysis, and the
      * reason repositories are their own table: with several per project,
      * `type = repo` no longer says what was analysed.
      *

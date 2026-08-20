@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
- * Firmographic facts only — no fit score. The same company scores 90 for one
+ * Firmographic facts only: no fit score. The same company scores 90 for one
  * target profile and 20 for another, so the score lives on CompanyTargetEvaluation or two
  * target profiles would overwrite each other.
  *
@@ -75,7 +75,7 @@ class Company extends Model
 
     /**
      * The companies outreach may still go to. Five statuses take a company out
-     * — see `OutreachStatus::excluded()` — and every query that leads to a mail
+     *: see `OutreachStatus::excluded()`, and every query that leads to a mail
      * being written has to go through this one, or the first thing an existing
      * client receives is a cold pitch.
      *

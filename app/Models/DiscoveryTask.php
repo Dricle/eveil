@@ -18,7 +18,7 @@ use Illuminate\Support\Carbon;
 /**
  * One node of a discovery run: what it was asked to do, what it produced, what
  * it cost, and how it failed. The row is what the screen draws and what a
- * replay re-reads — the job carries no state of its own.
+ * replay re-reads: the job carries no state of its own.
  *
  * @property int $id
  * @property int $project_id
@@ -70,7 +70,7 @@ class DiscoveryTask extends Model
     }
 
     /**
-     * Queued or running — what "is this run still working?" comes down to.
+     * Queued or running. What "is this run still working?" comes down to.
      *
      * @param  Builder<DiscoveryTask>  $query
      */

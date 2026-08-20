@@ -85,7 +85,7 @@ function lines (field: typeof LISTS[number]['name']): string {
                             :key="failure.url"
                             class="truncate"
                         >
-                            <span class="text-dimmed">{{ failure.url }}</span> — {{ failure.reason }}
+                            <span class="text-dimmed">{{ failure.url }}</span>: {{ failure.reason }}
                         </li>
                     </ul>
                 </template>

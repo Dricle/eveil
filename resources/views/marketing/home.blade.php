@@ -4,7 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title>{{ config('app.name') }} — open-source outreach</title>
+        <title>{{ config('app.name') }}, open-source outreach</title>
         <meta name="description" content="Give a URL and what you sell. {{ config('app.name') }} finds the companies that need it and writes the outreach. Open source, self-hostable.">
 
         <link rel="icon" href="/favicon.ico" sizes="any">

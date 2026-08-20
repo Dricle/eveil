@@ -1,19 +1,23 @@
 <?php
 
 use App\Ai\Agents\WebsiteAnalyst;
+use App\Ai\Contracts\SpendGuardInterface;
+use App\Ai\OutOfCredit;
+use App\Ai\UnmeteredSpend;
 use App\Enums\AgentRunStatus;
 use App\Models\AgentRun;
 use App\Models\Project;
 use Laravel\Ai\Responses\Data\Meta;
 use Laravel\Ai\Responses\Data\Usage;
 use Laravel\Ai\Responses\StructuredTextResponse;
+use RuntimeException;
 
 /**
  * No agent call goes unmetered. Metering rides on agent middleware, so it
  * applies to every agent without a call site remembering.
  *
  * Tokens, never money: no provider reports a price, so a cost column would be
- * our own multiplication against a list price that drifts — wrong quietly, in a
+ * our own multiplication against a list price that drifts. Wrong quietly, in a
  * field that looks authoritative. Self-hosted users pay their provider and want
  * tokens; cloud users are billed in credits, which the operator calibrates from
  * these counts against a real invoice.
@@ -81,4 +85,40 @@ it('attaches the run to the project the agent acts for', function () {
     (new WebsiteAnalyst($project))->prompt('Analyse this.');
 
     expect(AgentRun::sole()->project_id)->toBe($project->id);
+});
+
+it('never calls the provider when the guard refuses, and says why on the row', function () {
+    // What cloud will bind: a wallet with nothing in it. Self-hosted binds the
+    // opposite and this whole path never fires.
+    app()->bind(SpendGuardInterface::class, fn (): SpendGuardInterface => new class implements SpendGuardInterface
+    {
+        public function refusal(Project $project, string $agent): ?string
+        {
+            return 'This project has no credits left. Top up to keep the searches running.';
+        }
+    });
+
+    // Blows up if it is ever reached, which is the proof that matters: the
+    // point of the guard is not spending, so being refused after the call would
+    // be worth nothing.
+    WebsiteAnalyst::fake(fn () => throw new RuntimeException('the provider was called'));
+
+    expect(fn () => analyst()->prompt('Read this site'))
+        ->toThrow(OutOfCredit::class);
+
+    $run = AgentRun::query()->sole();
+
+    // The row is marked rather than left pending: screens poll it to know
+    // whether work is still coming, and a row nobody finishes spins for ever.
+    expect($run->status)->toBe(AgentRunStatus::Failed)
+        ->and($run->error)->toContain('no credits left')
+        ->and($run->tokens_in)->toBe(0)
+        ->and($run->tokens_out)->toBe(0);
+});
+
+it('spends freely on a self-hosted instance', function () {
+    // The shipped binding. An app that refused to work on a machine somebody
+    // runs themselves would be lying about "no artificial limits".
+    expect(app(SpendGuardInterface::class))->toBeInstanceOf(UnmeteredSpend::class)
+        ->and(app(SpendGuardInterface::class)->refusal(Project::factory()->create(), 'website-analyst'))->toBeNull();
 });

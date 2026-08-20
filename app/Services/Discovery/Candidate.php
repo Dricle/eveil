@@ -17,7 +17,7 @@ readonly class Candidate
         public string $name,
         /**
          * Null when the source found a business that publishes no site of its
-         * own — routine on a directory listing, impossible from a web search.
+         * own: routine on a directory listing, impossible from a web search.
          * Those are kept when the listing published an address to write to:
          * with no site and no address there is nothing to qualify and nothing
          * to send, so the run counts them instead of paying to read them.

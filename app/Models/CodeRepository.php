@@ -40,7 +40,7 @@ class CodeRepository extends Model
     }
 
     /**
-     * The host, so the UI can label a row without storing a provider column —
+     * The host, so the UI can label a row without storing a provider column,
      * `github.com`, `gitlab.com`, or whatever a self-hoster runs.
      */
     public function provider(): ?string

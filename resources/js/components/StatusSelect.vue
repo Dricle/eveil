@@ -9,7 +9,7 @@ const props = defineProps<{
 }>()
 
 // The row is the form: saying where somebody stands is a click in the list, not
-// a screen of its own. Nothing is sent when the value did not change — a select
+// a screen of its own. Nothing is sent when the value did not change, since a select
 // emits on open-and-pick-the-same-thing too.
 function save (status?: OutreachStatus) {
     if (status !== undefined && status !== props.status) {

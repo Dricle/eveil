@@ -10,7 +10,7 @@ namespace App\Support;
 class Lines
 {
     /**
-     * Anything that is not a string is an empty list — a cleared textarea
+     * Anything that is not a string is an empty list: a cleared textarea
      * arrives as null, because `ConvertEmptyStringsToNull` runs long before a
      * form request sees it.
      *

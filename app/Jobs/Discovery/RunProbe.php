@@ -11,7 +11,7 @@ use App\Services\Discovery\Sources\WebSearchSource;
 use App\Services\Discovery\Triage;
 
 /**
- * One probe put to one source — a map query or a web search. No model call:
+ * One probe put to one source: a map query or a web search. No model call:
  * the plan already decided where to look, and this only goes and looks.
  *
  * What comes back is sorted rather than filtered: a result is either a company
@@ -27,7 +27,7 @@ class RunProbe extends DiscoveryJob
             // searches cannot quietly spend eighty on somebody's own API key.
             // The plan is kept whole on the row, so raising the cap and
             // replaying this node runs exactly the search it names.
-            $this->skip("not run — this search is past the {$run->limit('max_queries')} searches one run may make");
+            $this->skip("not run: this search is past the {$run->limit('max_queries')} searches one run may make");
         }
 
         $source = $this->source((string) $task->payload['source']);

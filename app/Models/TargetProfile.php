@@ -13,12 +13,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
- * Who to go after — the structured portrait the agent derives from the
+ * Who to go after: the structured portrait the agent derives from the
  * knowledge base, which then drives where it searches and how each company is
  * scored. As many as the agent judges necessary, freely editable.
  *
  * Called a target profile and not an ICP because a profile may describe a
- * PARTNER rather than a buyer — whoever already touches the customer, such as a
+ * PARTNER rather than a buyer: whoever already touches the customer, such as a
  * wholesaler or a sector accountant. "Ideal Customer Profile" is simply wrong
  * for those, and they are often the only reachable way into a market whose
  * businesses publish a phone number and nothing else.

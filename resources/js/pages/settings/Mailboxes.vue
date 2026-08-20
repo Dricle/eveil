@@ -138,7 +138,7 @@ function note () {
                 variant="subtle"
                 icon="i-lucide-flask-conical"
                 title="Test mode: every outreach mail goes to one address"
-                :description="`OUTREACH_REDIRECT_TO is set to ${redirectTo}, so nothing reaches a prospect. The sender, the SMTP connection and the thread are real — only the recipient is replaced, and the intended one is in the subject. Replies you write still come back to the mailbox below.`"
+                :description="`OUTREACH_REDIRECT_TO is set to ${redirectTo}, so nothing reaches a prospect. The sender, the SMTP connection and the thread are real. Only the recipient is replaced, and the intended one is in the subject. Replies you write still come back to the mailbox below.`"
             />
 
             <UAlert
@@ -235,7 +235,7 @@ function note () {
         <UModal
             v-model:open="creating"
             :title="editing ? 'Edit mailbox' : 'Connect a mailbox'"
-            description="SMTP for sending, IMAP for reading replies. No OAuth — a mailbox password, or an app password where the provider requires one."
+            description="SMTP for sending, IMAP for reading replies. No OAuth: a mailbox password, or an app password where the provider requires one."
             :ui="{ content: 'max-w-2xl' }"
         >
             <template #body>
@@ -477,7 +477,7 @@ function note () {
                     <UFormField
                         label="Projects allowed to send through it"
                         name="projects"
-                        help="A project with no mailbox cannot send at all — which is the safe default for one you have just created."
+                        help="A project with no mailbox cannot send at all, which is the safe default for one you have just created."
                     >
                         <div class="space-y-1">
                             <UCheckbox

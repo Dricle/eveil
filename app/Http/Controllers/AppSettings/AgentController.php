@@ -18,8 +18,8 @@ use Laravel\Ai\Enums\Lab;
  * take, and what it has cost so far.
  *
  * The list comes from the code, so adding an agent class adds a line here with
- * nothing to register. A fresh install works without opening this screen — the
- * defaults ship in a migration — and the command line does the same job over
+ * nothing to register. A fresh install works without opening this screen: the
+ * defaults ship in a migration, and the command line does the same job over
  * SSH.
  */
 class AgentController extends Controller
@@ -48,7 +48,7 @@ class AgentController extends Controller
                 ->values()
                 ->all(),
             'labs' => collect(Lab::cases())->map(fn (Lab $lab): string => $lab->value)->all(),
-            // What each provider names for itself — its default, cheapest and
+            // What each provider names for itself. Its default, cheapest and
             // smartest text model. Suggestions, never the allowed set: nobody
             // publishes a list of model ids, and a fixed one would block the
             // model released this morning.

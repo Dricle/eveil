@@ -7,8 +7,8 @@ use Illuminate\Support\Facades\DB;
  * What governs the pace of sending, as tunable values rather than constants.
  *
  * Cold outreach dies from bursts. The window and the gap are what turn a day's
- * allowance into mail that leaves the way a person's does — a few in the
- * morning, a few after lunch, none at three in the morning — and an operator on
+ * allowance into mail that leaves the way a person's does: a few in the
+ * morning, a few after lunch, none at three in the morning, and an operator on
  * a different continent needs to move the window without a deploy.
  *
  * The bounce ceiling is a circuit breaker, not a preference: past it, sending
@@ -18,7 +18,7 @@ return new class extends Migration
 {
     /** @var array<string, mixed> */
     private const DEFAULTS = [
-        // One call per reply, and reading a short mail is not a writing task —
+        // One call per reply, and reading a short mail is not a writing task,
         // but it decides an opt-out, so not the smallest model either.
         'agents.reply-handler' => ['provider' => 'anthropic', 'model' => 'claude-haiku-4-5', 'timeout' => 60],
 
@@ -34,7 +34,7 @@ return new class extends Migration
             'min_gap_minutes' => 6,
 
             // Rolling bounce rate over the last 100 sends of a mailbox. Past
-            // this it pauses itself — unhandled bounces cost a domain its
+            // this it pauses itself: unhandled bounces cost a domain its
             // reputation in weeks, and no reply is worth that.
             'max_bounce_rate' => 0.05,
         ],

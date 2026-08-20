@@ -8,7 +8,7 @@ defineProps<{
 }>()
 
 // Everything tunable from a screen, and the whole of it. What is not here is
-// deployment — service URLs, HTTP timeouts, the user agent — and stays in the
+// deployment: service URLs, HTTP timeouts, the user agent. That stays in the
 // environment file.
 const GROUPS: { title: string, hint: string, fields: { name: string, label: string }[] }[] = [
     {
@@ -38,7 +38,7 @@ const GROUPS: { title: string, hint: string, fields: { name: string, label: stri
     },
     {
         title: 'Sources',
-        hint: 'A directory page is worth dozens of companies, so it has its own budget — a bad "next" link then costs a few fetches instead of the run.',
+        hint: 'A directory page is worth dozens of companies, so it has its own budget, so a bad "next" link costs a few fetches instead of the run.',
         fields: [
             { name: 'searxng_per_query', label: 'Search results per query' },
             { name: 'overpass_per_probe', label: 'Map results per probe' },

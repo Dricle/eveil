@@ -7,7 +7,7 @@ use App\Support\Settings;
 use Laravel\Ai\Enums\Lab;
 
 /**
- * The mapping lives in the database and nowhere else — defaults are written by
+ * The mapping lives in the database and nowhere else: defaults are written by
  * a migration, not mirrored in a config file, so there is one place to look and
  * no merge to reason about on read.
  */

@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3'
+import { Head, router, usePoll } from '@inertiajs/vue3'
 import type { TableColumn } from '@nuxt/ui'
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import LeadsLayout from '@/layouts/LeadsLayout.vue'
+import SearchingBanner from '@/components/SearchingBanner.vue'
 import StatusSelect from '@/components/StatusSelect.vue'
 import { OUTREACH_STATUSES } from '@/lib/status'
+import { SOURCES, VERIFICATION } from '@/lib/contacts'
 import { useTableQuery } from '@/lib/table'
 import contactRoutes from '@/routes/contacts'
-import type { Contact, Paginated } from '@/types'
+import type { Activity, Contact, Paginated } from '@/types'
 
-// Inline, not a type alias: see the note in Companies.vue — an alias imported
+// Inline, not a type alias: see the note in Companies.vue. An alias imported
 // through the barrel silently declares no props at all.
 const props = defineProps<{
     contacts: Paginated<Contact>
@@ -23,6 +25,7 @@ const props = defineProps<{
         direction: string | null
     }
     counts: Record<string, number>
+    activity: Activity
     import?: {
         imported: number
         duplicates: number
@@ -37,6 +40,15 @@ const props = defineProps<{
 const status = ref(props.filters.email_status ?? 'all')
 const source = ref(props.filters.email_source ?? 'all')
 
+// Contacts arrive while a contact search reads company sites, so the list has
+// to refresh itself: somebody watching an empty page has no way to tell waiting
+// from finished.
+const searching = computed(() => props.activity.searching)
+
+const poll = usePoll(4000, { only: ['contacts', 'activity', 'counts'] }, { autoStart: searching.value })
+
+watch(searching, busy => busy ? poll.start() : poll.stop())
+
 const table = useTableQuery(
     contactRoutes.index.url(),
     props.filters,
@@ -49,23 +61,6 @@ const table = useTableQuery(
 )
 
 watch([status, source], () => table.reload())
-
-// What the verification actually established, said plainly. A guessed address
-// that nobody has confirmed is worth sending to — but the person sending is the
-// one whose domain takes the complaints, so it never poses as a checked one.
-const STATUS = {
-    valid: { color: 'success' as const, label: 'Verified', help: 'The server accepted the address.' },
-    unknown: { color: 'neutral' as const, label: 'Unverified', help: 'The provider blocks checks — Gmail and Outlook always do.' },
-    risky: { color: 'warning' as const, label: 'Catch-all', help: 'The domain accepts everything, so acceptance proves nothing.' },
-    invalid: { color: 'error' as const, label: 'Invalid', help: 'Rejected by the server. Never sent to.' }
-}
-
-const SOURCE = {
-    scraped: 'Published on the site',
-    inferred: 'Guessed from another address on the domain',
-    provided: 'Given by the user',
-    imported: 'Imported'
-}
 
 const STATUS_OPTIONS = [
     { label: 'Everything sendable', value: 'all' },
@@ -116,11 +111,11 @@ function day (value: string) {
 // `row.original` reaches a slot untyped, so the lookups happen behind a typed
 // parameter rather than in the template.
 function verdict (contact: Contact) {
-    return contact.email_status === null ? null : STATUS[contact.email_status]
+    return contact.email_status === null ? null : VERIFICATION[contact.email_status]
 }
 
 function sourceLabel (contact: Contact) {
-    return contact.email_source === null ? null : SOURCE[contact.email_source]
+    return contact.email_source === null ? null : SOURCES[contact.email_source]
 }
 </script>
 
@@ -129,6 +124,8 @@ function sourceLabel (contact: Contact) {
         <Head title="Contacts" />
 
         <div class="space-y-4">
+            <SearchingBanner :activity="activity" />
+
             <!-- "412 of 500 imported" with no list is a support ticket, so
                  every rejected row comes back with its line and its reason. -->
             <UAlert
@@ -149,7 +146,7 @@ function sourceLabel (contact: Contact) {
                             class="truncate"
                         >
                             <span class="text-dimmed">Line {{ row.line }}</span>
-                            <span v-if="row.value"> · {{ row.value }}</span> — {{ row.reason }}
+                            <span v-if="row.value"> · {{ row.value }}</span>: {{ row.reason }}
                         </li>
                     </ul>
 
@@ -215,7 +212,7 @@ function sourceLabel (contact: Contact) {
                         icon="i-lucide-filter"
                         color="neutral"
                         variant="subtle"
-                        label="One company — show all"
+                        label="One company, show all"
                         @click="router.get(contactRoutes.index.url())"
                     />
                 </div>
@@ -244,7 +241,7 @@ function sourceLabel (contact: Contact) {
                         v-for="(count, key) in counts"
                         :key="key"
                     >
-                        {{ count }} {{ STATUS[key as keyof typeof STATUS]?.label.toLowerCase() ?? key }}<span class="text-dimmed"> · </span>
+                        {{ count }} {{ VERIFICATION[key as keyof typeof VERIFICATION]?.label.toLowerCase() ?? key }}<span class="text-dimmed"> · </span>
                     </span>
                     <span class="text-dimmed">nothing here was bought.</span>
                 </p>
@@ -277,7 +274,7 @@ function sourceLabel (contact: Contact) {
                     <ULink
                         :href="contactRoutes.show.url(row.original.id)"
                         class="font-medium"
-                    >{{ row.original.name ?? row.original.email ?? '—' }}</ULink>
+                    >{{ row.original.name ?? row.original.email ?? 'No name' }}</ULink>
                     <ULink
                         v-if="row.original.linkedin_url"
                         :href="row.original.linkedin_url"
@@ -361,7 +358,7 @@ function sourceLabel (contact: Contact) {
 
                 <template #empty>
                     <p class="text-sm text-muted">
-                        Nobody yet. Find contacts from the Companies tab — half
+                        Nobody yet. Find contacts from the Companies tab. Half
                         of small local businesses publish a phone number and no
                         address at all, so an empty answer there is a finding,
                         not a failure.

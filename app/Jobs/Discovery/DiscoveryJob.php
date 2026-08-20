@@ -22,7 +22,7 @@ use Throwable;
  * before starting, write its own row, and never take the run down with it.
  *
  * Discovery fans out into queued jobs rather than one long agent tool loop
- * because a loop's cost grows quadratically with its depth — every step resends
+ * because a loop's cost grows quadratically with its depth: every step resends
  * the whole history. Flat nodes also replay one at a time, skip work already
  * done, and keep a crash at step 35 from losing the previous 34.
  */
@@ -84,7 +84,7 @@ abstract class DiscoveryJob implements ShouldQueue
     }
 
     /**
-     * The work itself. What it returns lands on the row as the node's result —
+     * The work itself. What it returns lands on the row as the node's result:
      * counters and reasons, never a page body.
      *
      * @return array<string, mixed>

@@ -10,7 +10,7 @@ use Stringable;
  * Pulls people and addresses out of a company's own pages.
  *
  * Runs on the cheap model: this is reading, not judgement, and it happens once
- * per company. Structured output is non-negotiable here — a model that cannot
+ * per company. Structured output is non-negotiable here, because a model that cannot
  * hold the schema produces broken extractions, not merely worse ones.
  */
 class ContactExtractor extends EveilAgent implements HasStructuredOutput
@@ -29,7 +29,7 @@ class ContactExtractor extends EveilAgent implements HasStructuredOutput
         Copy addresses exactly as they appear. Do not repair, complete or invent one: a
         guessed address that bounces damages the sender's reputation, and a wrong name
         in an opening line is worse than no name at all. If a page writes an address to
-        dodge scrapers — "jean (at) example dot be" — return it in normal form, because
+        dodge scrapers, as in "jean (at) example dot be", return it in normal form, because
         it was still published.
 
         Separate people from the front desk. A named human with a role is worth far more
@@ -39,7 +39,7 @@ class ContactExtractor extends EveilAgent implements HasStructuredOutput
         Owners, founders and managers matter most: in a small business they are the ones
         who decide. Note the role exactly as the page words it.
 
-        If the pages show a personal address, say what shape it follows — first.last,
+        If the pages show a personal address, say what shape it follows: first.last,
         firstinitiallast, first, and so on. That is what lets us reach the other people
         named on the site.
         PROMPT;
@@ -55,7 +55,7 @@ class ContactExtractor extends EveilAgent implements HasStructuredOutput
                 'first_name' => $schema->string()->description('Empty when only a surname is given.')->required(),
                 'last_name' => $schema->string()->description('Empty when unknown.')->required(),
                 'title' => $schema->string()->description('Role as the page words it.')->required(),
-                'email' => $schema->string()->description('Only if written on the page. Empty otherwise — never guess.')->required(),
+                'email' => $schema->string()->description('Only if written on the page. Empty otherwise, and never guess.')->required(),
             ]))->description('Named humans. Empty when the site names nobody.')->required(),
 
             'generic_emails' => $schema->array()->items($schema->string())

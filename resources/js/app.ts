@@ -5,7 +5,7 @@ import RootLayout from '@/layouts/RootLayout.vue'
 const appName = 'Eveil'
 
 createInertiaApp({
-    title: title => (title ? `${title} - ${appName}` : appName),
+    title: title => (title ? `${title} · ${appName}` : appName),
     progress: {
         color: '#4B5563'
     },

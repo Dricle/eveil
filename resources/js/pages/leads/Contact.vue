@@ -2,6 +2,7 @@
 import { Head, router } from '@inertiajs/vue3'
 import LeadsLayout from '@/layouts/LeadsLayout.vue'
 import StatusSelect from '@/components/StatusSelect.vue'
+import { SOURCES, VERIFICATION } from '@/lib/contacts'
 import { OUTREACH_STATUSES } from '@/lib/status'
 import companyRoutes from '@/routes/companies'
 import contactRoutes from '@/routes/contacts'
@@ -9,20 +10,6 @@ import type { ContactSheet } from '@/types'
 import { CLASSIFICATIONS } from '@/types/inbox'
 
 const props = defineProps<{ contact: ContactSheet }>()
-
-const VERIFICATION = {
-    valid: { color: 'success' as const, label: 'Verified', help: 'The server accepted the address.' },
-    unknown: { color: 'neutral' as const, label: 'Unverified', help: 'The provider blocks checks — Gmail and Outlook always do.' },
-    risky: { color: 'warning' as const, label: 'Catch-all', help: 'The domain accepts everything, so acceptance proves nothing.' },
-    invalid: { color: 'error' as const, label: 'Invalid', help: 'Rejected by the server. Never sent to.' }
-}
-
-const SOURCES = {
-    scraped: 'Published on their site',
-    inferred: 'Guessed from another address on the domain',
-    provided: 'Given by you',
-    imported: 'Imported from a file'
-}
 
 function verification () {
     return props.contact.email_status === null ? null : VERIFICATION[props.contact.email_status]
@@ -33,11 +20,11 @@ function origin () {
 }
 
 function when (value: string | null) {
-    return value === null ? '—' : new Date(value).toLocaleString()
+    return value === null ? 'Never' : new Date(value).toLocaleString()
 }
 
 function day (value: string | null) {
-    return value === null ? '—' : new Date(value).toLocaleDateString()
+    return value === null ? 'Never' : new Date(value).toLocaleDateString()
 }
 </script>
 

@@ -8,7 +8,7 @@ use Stringable;
 
 /**
  * Decides WHERE to look for a profile's companies. This is where the
- * intelligence of discovery lives — not in the scraping, which is plumbing.
+ * intelligence of discovery lives, not in the scraping, which is plumbing.
  *
  * The plan is returned before anything executes so the user can see it
  * and, at the supervised notch, refuse it.
@@ -29,7 +29,7 @@ class DiscoveryPlanner extends EveilAgent implements HasStructuredOutput
         Each Overpass probe is one area, its country, and one set of tags. The country
         is not optional: town names repeat across continents, so "Cambridge" without one
         matches both the English city and the American one. The area must be a name that
-        exists in OpenStreetMap — a town, a city, a region — spelled as OSM spells it
+        exists in OpenStreetMap, meaning a town, a city or a region, spelled as OSM spells it
         locally, which is the endonym: "München", not "Munich". A region that is too large
         returns nothing useful, so prefer several city-sized probes over one national one.
 
@@ -39,21 +39,21 @@ class DiscoveryPlanner extends EveilAgent implements HasStructuredOutput
         amenity=clinic, amenity=pharmacy, amenity=dentist, healthcare=*. Hospitality:
         amenity=restaurant, amenity=cafe, tourism=hotel. Industry: man_made=works,
         landuse=industrial. Education: amenity=school, amenity=college. Pick the tags
-        that describe the profile, not the ones listed here — the list is a starting
+        that describe the profile, not the ones listed here. The list is a starting
         point, not the vocabulary.
 
         Web search finds everything OpenStreetMap cannot: businesses with no premises,
         online-only operations, professions, and anything defined by what it sells
         rather than where it sits. Write queries the way a local would search, in the
         market's own language, and aim them at the companies themselves rather than at
-        directories — a query that mostly returns Tripadvisor or Yellow Pages is wasted.
+        directories. A query that mostly returns Tripadvisor or Yellow Pages is wasted.
 
         Pick the sources the profile actually calls for. A business defined by premises
         is almost entirely an OSM job; one that exists only online has no OSM presence at
         all. Using both when only one fits spends the operator's budget on noise.
 
         You are told how many probes this run may make. Map probes and web queries are
-        counted together against that one number, and anything past it will not run —
+        counted together against that one number, and anything past it will not run, so
         planning eighty probes for a run that allows twelve does not search harder, it
         just leaves sixty-eight lines nobody executes. Plan up to the number given and
         spend it on the areas and queries most likely to produce, in the order you would

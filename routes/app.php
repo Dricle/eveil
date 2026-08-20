@@ -27,6 +27,8 @@ use App\Http\Controllers\InboxController;
 use App\Http\Controllers\LeadImportController;
 use App\Http\Controllers\MailboxController;
 use App\Http\Controllers\MailboxTestController;
+use App\Http\Controllers\OnboardingController;
+use App\Http\Controllers\OnboardingSearchController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectKnowledgeBaseController;
 use App\Http\Controllers\TargetProfileController;
@@ -47,7 +49,7 @@ Route::middleware('guest')->group(function (): void {
 Route::middleware(['auth', 'project.set'])->group(function (): void {
     /*
      * Switching projects and creating one are the two things reachable without
-     * a project already selected — everything else would have nothing to show.
+     * a project already selected. Everything else would have nothing to show.
      */
     Route::put('current-project/{project}', [CurrentProjectController::class, 'update'])
         ->middleware('can:view,project')
@@ -58,6 +60,16 @@ Route::middleware(['auth', 'project.set'])->group(function (): void {
 
     Route::middleware('project.require')->group(function (): void {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+
+        /*
+         * The first ten minutes. Somebody who has just given the address of
+         * their product watches it being read, agrees with what was understood,
+         * and sees the search start: rather than landing on a dashboard of
+         * zeroes with four screens to find in the right order.
+         */
+        Route::get('onboarding', [OnboardingController::class, 'show'])->name('onboarding');
+        Route::post('onboarding/searches', [OnboardingSearchController::class, 'store'])
+            ->name('onboarding.searches');
 
         /*
          * The current project comes from the session, so none of these carry it
@@ -95,8 +107,8 @@ Route::middleware(['auth', 'project.set'])->group(function (): void {
          * for what you set once.
          */
         /*
-         * Targets. The profiles ARE the navigation of this section — each one
-         * has its own page and its own searches — so every route under it
+         * Targets. The profiles ARE the navigation of this section: each one
+         * has its own page and its own searches, so every route under it
          * shares the list and the state of a running derivation.
          */
         Route::middleware('targets.share')->group(function (): void {
@@ -128,10 +140,11 @@ Route::middleware(['auth', 'project.set'])->group(function (): void {
         Route::get('companies', [CompanyController::class, 'index'])->name('companies.index');
         Route::put('companies/{company}/status', [CompanyStatusController::class, 'update'])
             ->name('companies.status');
+        Route::get('companies/{company}', [CompanyController::class, 'show'])->name('companies.show');
 
         /*
          * And the people at them. One search covers one company, or every kept
-         * company nobody has looked at yet — clicking forty times is work the
+         * company nobody has looked at yet: clicking forty times is work the
          * app should be doing.
          */
         Route::get('contacts', [ContactController::class, 'index'])->name('contacts.index');
@@ -140,7 +153,7 @@ Route::middleware(['auth', 'project.set'])->group(function (): void {
             ->name('contacts.status');
 
         /*
-         * One person's whole history — where the address came from, which
+         * One person's whole history. Where the address came from, which
          * sequences they are in, every mail either way. Registered after the
          * literal segments above so `contacts/import` is never read as an id.
          */
@@ -164,7 +177,7 @@ Route::middleware(['auth', 'project.set'])->group(function (): void {
         /*
          * Who answered. Only real conversations reach this screen: a lead that
          * was written to and said nothing is a sequence still running, not an
-         * inbox entry. Answering by hand stops the sequence — somebody being
+         * inbox entry. Answering by hand stops the sequence: somebody being
          * written to by a person must not also get the queued follow-up.
          */
         Route::get('inbox', [InboxController::class, 'index'])->name('inbox');
@@ -173,7 +186,7 @@ Route::middleware(['auth', 'project.set'])->group(function (): void {
 
         /*
          * A list somebody already had. A button on Leads, never a section of
-         * its own — importing is one way leads arrive, not a place you go.
+         * its own: importing is one way leads arrive, not a place you go.
          */
         Route::get('contacts/import/template', [LeadImportController::class, 'show'])
             ->name('contacts.template');
@@ -181,8 +194,8 @@ Route::middleware(['auth', 'project.set'])->group(function (): void {
     });
 
     /*
-     * App settings: instance scope — one install, one operator, never granted through an
-     * organization. Outside `project.require` on purpose — which model an agent
+     * App settings: instance scope. One install, one operator, never granted through an
+     * organization. Outside `project.require` on purpose: which model an agent
      * runs on has nothing to do with whichever project is selected.
      */
     Route::prefix('app-settings')->name('app-settings.')->middleware('can:manage-app-settings')->group(function (): void {

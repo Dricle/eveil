@@ -7,7 +7,7 @@ namespace App\Enums;
  *
  * The distinction that matters is the last two. A probe that returns "no
  * verdict" after a conversation tells us something about the SERVER; one that
- * never connected tells us something about OUR network — port 25 is blocked on
+ * never connected tells us something about OUR network: port 25 is blocked on
  * most hosting, and if that were read as "this provider refuses probes" the
  * first run on such a box would mark every mail provider on earth a refuser.
  */

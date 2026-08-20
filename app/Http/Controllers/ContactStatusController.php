@@ -9,7 +9,7 @@ use App\Models\Lead;
 use Illuminate\Http\RedirectResponse;
 
 /**
- * The same verdict one person at a time, which travels up to their company —
+ * The same verdict one person at a time, which travels up to their company:
  * winning a deal with somebody wins it with the business they work for.
  *
  * Outreach normally writes this column itself (queued, contacted, replied), and

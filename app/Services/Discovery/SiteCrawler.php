@@ -19,7 +19,7 @@ use Illuminate\Support\Collection;
 class SiteCrawler
 {
     /**
-     * Paths worth reading first. A heuristic rather than a setting — the
+     * Paths worth reading first. A heuristic rather than a setting: the
      * homepage rarely says what a product costs or who it is for.
      */
     private const PRIORITY_PATHS = [
@@ -35,7 +35,7 @@ class SiteCrawler
     /**
      * @param  Closure|null  $onProgress  called after every page attempt with
      *                                    the pages read so far, what failed and
-     *                                    the ceiling — a crawl takes minutes,
+     *                                    the ceiling: a crawl takes minutes,
      *                                    and a screen showing nothing until it
      *                                    ends looks broken rather than busy.
      *
@@ -136,7 +136,7 @@ class SiteCrawler
             }
         }
 
-        // Account pages render nothing useful without a session — restogo.be
+        // Account pages render nothing useful without a session. Restogo.be
         // spent two of eleven page slots on /login and /register for zero
         // characters. Rank them below everything else.
         foreach (['login', 'register', 'signin', 'sign-in', 'signup', 'sign-up', 'connexion',

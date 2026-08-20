@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * Qualifying a company and finding a person to write to are two different
- * costs, so they are asked for separately — and the answer has to be
+ * costs, so they are asked for separately, and the answer has to be
  * remembered, or every visit to the list would look like nobody had ever
  * looked.
  *

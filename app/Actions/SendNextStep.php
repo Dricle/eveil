@@ -20,7 +20,7 @@ use App\Services\Outreach\SuppressionList;
  * checks, send it through the pinned mailbox, and set up whatever comes next.
  *
  * The checks are repeated here even though enrolment already ran them, and that
- * repetition is the point — a STOP reply, a bounce or the user marking the
+ * repetition is the point: a STOP reply, a bounce or the user marking the
  * company as a client all land between enrolment and the third follow-up, and
  * this is the last moment anything can stop the mail. A suppression list read
  * "before the campaign" is not a suppression list.
@@ -154,7 +154,7 @@ class SendNextStep
             'campaign_lead_id' => $campaignLead->id,
             'email_account_id' => $account->id,
             'direction' => MessageDirection::Outbound,
-            // Not sent, so it never gets a real one — but the column is unique
+            // Not sent, so it never gets a real one, but the column is unique
             // and the row is the record that this was attempted.
             'message_id' => 'failed-'.$campaignLead->id.'-'.$campaignLead->current_step_position.'-'.now()->timestamp,
             'subject' => $written['subject'],

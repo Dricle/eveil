@@ -17,23 +17,23 @@ use Throwable;
  *
  * The reason this exists: a search engine ranks companies that do SEO, so it
  * finds the ones already being sold to. A directory's page for one trade in one
- * town is not a company, it is two hundred companies — and for a business with
+ * town is not a company, it is two hundred companies, and for a business with
  * no site of its own it is the only place an email is published. The aggregator
  * blocklist used to delete exactly this.
  *
  * The model decides WHERE to harvest; this does the volume. JSON-LD is tried
- * first because it costs nothing to try and is perfect when present — but it is
+ * first because it costs nothing to try and is perfect when present, but it is
  * a windfall, not an assumption. The first three real directories tried emitted
- * none of it — one behind bot protection, one 403-ing unknown agents, one a
- * 737 KB JS app — so
+ * none of it: one behind bot protection, one 403-ing unknown agents, one a
+ * 737 KB JS app, so
  * **the LLM extractor is the normal path and the cost model**.
  *
  * Which is why extraction is cached: `crawled_pages` caches the fetch, not the
  * model call, and testing a directory means running the same pages repeatedly.
  *
  * Stored CSS selectors are the rung between the two and are still not built.
- * They are now worth real money rather than being speculative — learned once
- * from the model's own output, replayed free afterwards — but only once a
+ * They are now worth real money rather than being speculative: learned once
+ * from the model's own output, replayed free afterwards, but only once a
  * directory has produced more than once.
  *
  * Not a `DiscoverySourceInterface`: that interface is one probe in, one page of results
@@ -165,13 +165,13 @@ class ListingHarvester
 
         // The one call that costs money, so it is paid for once per page. Keyed
         // and expiring like the page cache it mirrors, for the same reason
-        // : public content, target profile-independent, safe to share — and it
+        // : public content, target profile-independent, safe to share, and it
         // pays off most on the re-runs that testing a directory is made of.
         //
         // The instructions are part of the key so that editing the prompt
         // invalidates what the old prompt produced. A hand-bumped version
         // constant is a version constant somebody forgets to bump, and the
-        // symptom — a prompt fix that changes nothing for a week — is nasty
+        // symptom: a prompt fix that changes nothing for a week. Is nasty
         // to diagnose.
         /** @var array<int, array<string, string>> $businesses */
         $businesses = Cache::remember(
@@ -197,8 +197,8 @@ class ListingHarvester
                 "Directory listing page: {$url}\n\n".mb_substr($parsed->text, 0, 24_000),
             );
         } catch (Throwable) {
-            // One unreadable listing must not cost a run everything before it —
-            // the same rule the qualification loop learned the hard way.
+            // One unreadable listing must not cost a run everything before it.
+            // The same rule the qualification loop learned the hard way.
             return [];
         }
 
@@ -251,8 +251,8 @@ class ListingHarvester
     }
 
     /**
-     * Dedupe on the domain when there is one — the same business listed in two
-     * categories is one business — and on the name otherwise, since a
+     * Dedupe on the domain when there is one. The same business listed in two
+     * categories is one business, and on the name otherwise, since a
      * site-less entry has nothing else to key on.
      */
     private function key(Candidate $candidate): string

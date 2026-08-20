@@ -11,7 +11,7 @@ use Illuminate\Database\Seeder;
  *
  * Locked, like the certainties in `known_hosts`: observation never overwrites
  * them and a superadmin can still edit one. Everything else is learned by
- * talking to the server, which is free — the refusal IS the signal.
+ * talking to the server, which is free: the refusal IS the signal.
  */
 class MailHostSeeder extends Seeder
 {

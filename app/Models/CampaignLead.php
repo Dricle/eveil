@@ -15,7 +15,7 @@ use Illuminate\Support\Carbon;
  * One lead's journey through one campaign. The email account is pinned for the
  * whole sequence so mailbox rotation never splits a conversation.
  *
- * A lead sits in at most one live membership — the database enforces it with a
+ * A lead sits in at most one live membership: the database enforces it with a
  * partial unique index.
  *
  * @property int $id
@@ -53,7 +53,7 @@ class CampaignLead extends Model
     }
 
     /**
-     * Both directions of the conversation, oldest first — which is the order a
+     * Both directions of the conversation, oldest first. Which is the order a
      * thread reads in, and the order a reply needs its own question in.
      *
      * @return HasMany<Message, $this>

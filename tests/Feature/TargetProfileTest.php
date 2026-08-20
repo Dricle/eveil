@@ -192,7 +192,7 @@ it('queues a derivation for the current project', function () {
     Queue::assertPushed(DeriveTargets::class, fn (DeriveTargets $job): bool => $job->project->is($project));
 
     // The row is opened before the job is queued, so the page the user lands on
-    // already says something is happening — no worker has run yet.
+    // already says something is happening. No worker has run yet.
     $run = AgentRun::query()->withoutGlobalScopes()->sole();
 
     expect($run->agent)->toBe('target-profile-deriver')

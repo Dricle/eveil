@@ -10,7 +10,7 @@ use App\Services\Discovery\ListingHarvester;
 
 /**
  * One directory page read for the businesses on it. A page of listings is not
- * one company, it is hundreds — and for a business that publishes no site of
+ * one company, it is hundreds, and for a business that publishes no site of
  * its own, it is the only place an address appears at all.
  *
  * Its own node because it is multi-page and budgeted: a directory that fights

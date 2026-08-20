@@ -14,8 +14,8 @@ use RuntimeException;
  * One step of a sequence, rewritten for one lead.
  *
  * Nobody researches a prospect by hand here: the opener is built from what the
- * pipeline already observed — the fit reason written when the company was
- * qualified, plus the product portrait — which is the entire reason discovery
+ * pipeline already observed. The fit reason written when the company was
+ * qualified, plus the product portrait: which is the entire reason discovery
  * and personalisation share one knowledge base.
  *
  * The result is deliberately NOT stored. Until sending exists there is nothing

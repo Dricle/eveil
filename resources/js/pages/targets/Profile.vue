@@ -11,7 +11,7 @@ const props = defineProps<{ profile: TargetProfile | null }>()
 
 const TEXTS = [
     { name: 'rationale', label: 'Why they buy', help: 'What makes this segment want the product.' },
-    { name: 'company_size', label: 'Company size', help: 'Headcount, locations or revenue — whatever is visible from outside.' },
+    { name: 'company_size', label: 'Company size', help: 'Headcount, locations or revenue, whatever is visible from outside.' },
     { name: 'estimated_market_size', label: 'How many there are', help: 'Rough count, and how it was arrived at.' }
 ] as const
 
@@ -25,15 +25,15 @@ const LISTS = [
 ] as const
 
 const TYPES = [
-    { label: 'Customer — they buy it', value: 'customer' },
-    { label: 'Partner — they already reach the buyer', value: 'partner' }
+    { label: 'Customer, they buy it', value: 'customer' },
+    { label: 'Partner, they already reach the buyer', value: 'partner' }
 ]
 
 // A partner is written to about what the deal does for THEM, so the two angles
-// only exist on that kind of profile — and they are what the email opens on.
+// only exist on that kind of profile, and they are what the email opens on.
 const ANGLES = [
     { name: 'access_angle', label: 'How they reach the buyer', help: 'How this partner touches the customer, how often, and how many customers one of them carries.' },
-    { name: 'partnership_angle', label: 'What is in it for them', help: 'Why the deal is worth their while. This is the opening line of the email — "buy this" never is.' }
+    { name: 'partnership_angle', label: 'What is in it for them', help: 'Why the deal is worth their while. This is the opening line of the email, and "buy this" never is.' }
 ] as const
 
 const type = ref(props.profile?.type ?? 'customer')

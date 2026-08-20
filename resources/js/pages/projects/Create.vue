@@ -21,7 +21,7 @@ const page = usePage()
                         }}
                     </h2>
                     <p class="mt-1 text-sm text-muted">
-                        Give its address. The site is read for you — there is no
+                        Give its address. The site is read for you, so there is no
                         lead list to supply.
                     </p>
                 </template>

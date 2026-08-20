@@ -10,8 +10,8 @@ use Stringable;
  * Sorts a batch of search results into what each host actually IS.
  *
  * This replaced a hand-written blocklist of aggregator domains, which could
- * never be complete — Pages d'Or, Product Hunt, BetaList, Clutch, every trade
- * directory in every country — and, worse, was throwing away the most valuable
+ * never be complete (Pages d'Or, Product Hunt, BetaList, Clutch, every trade
+ * directory in every country) and, worse, was throwing away the most valuable
  * results. A directory's page for one trade in one town is not a company, it is
  * two hundred companies, and for a business with no site of its own it is the
  * only place an address is published.
@@ -20,8 +20,8 @@ use Stringable;
  * this runs once per host ever rather than once per search.
  *
  * Deliberately blind to the target profile, which is what makes the verdict
- * shareable at all. The question is what a host IS — one organisation, or a
- * list of them — never whether it suits a particular buyer. A newspaper is a
+ * shareable at all. The question is what a host IS, one organisation or a
+ * list of them, never whether it suits a particular buyer. A newspaper is a
  * company somebody sells to; a job board is a list of companies that are
  * hiring, which is precisely what a recruitment agency hunts. Encode relevance
  * here and the answer stops being reusable across projects, which is the whole
@@ -44,33 +44,33 @@ class ResultTriage extends EveilAgent implements HasStructuredOutput
         reused by every future search on this installation, so it has to hold for all of
         them.
 
-        index — the host publishes lists of ORGANISATIONS. Directories, marketplaces,
+        index: the host publishes lists of ORGANISATIONS. Directories, marketplaces,
         review sites, job boards, delivery platforms, startup showcases, professional
         registers, chambers of commerce, trade federations with a member list, code
         hosting that lists organisations. These are the most valuable answer: one page
         can name hundreds of businesses, many of which have no website of their own and
         appear nowhere else.
 
-        entity — one organisation's own site, and nothing more. A company, a newspaper,
+        entity: one organisation's own site, and nothing more. A company, a newspaper,
         a school, an agency, a public body.
 
         A directory is run by a company, so almost every index is also an entity. Answer
-        `index` whenever the host publishes lists — that is the more useful fact, and it
+        `index` whenever the host publishes lists. That is the more useful fact, and it
         does not stop the host being treated as a business in its own right further
         down. Reserve `entity` for hosts that publish no list of organisations at all.
 
-        social — a social network or profile platform. Structurally it may well list
+        social: a social network or profile platform. Structurally it may well list
         organisations, but we cannot read it: they block automated access and their
         terms forbid it.
 
-        other — structurally NEITHER a single organisation nor a list of them: search
+        other: structurally NEITHER a single organisation nor a list of them, such as search
         engines, encyclopaedias, discussion forums, blog and publishing platforms,
         software documentation, package registries. This is not a verdict of
-        worthlessness — an individual thread or article on such a host may well name
-        real businesses — it only says the HOST is not itself a company or a directory.
+        worthlessness. An individual thread or article on such a host may well name
+        real businesses. It only says the HOST is not itself a company or a directory.
 
         The count is your strongest clue for telling index from entity. A host holding
-        twelve of twenty results is almost always an index — a real organisation appears
+        twelve of twenty results is almost always an index. A real organisation appears
         once, for its own name, not across a whole result page. One result on a host
         says nothing either way; judge it on the title and the domain.
 

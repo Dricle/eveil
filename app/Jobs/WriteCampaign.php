@@ -14,7 +14,7 @@ use Throwable;
 
 /**
  * Writing three mails on the expensive model takes a minute or two, so the
- * request never waits for it — the campaign appears in the list when it is
+ * request never waits for it: the campaign appears in the list when it is
  * written, as a draft nobody has sent anything with.
  *
  * The run row is opened by whoever queues this, as `pending`, and carried here

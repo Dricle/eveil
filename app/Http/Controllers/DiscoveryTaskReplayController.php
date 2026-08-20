@@ -8,7 +8,7 @@ use App\Models\DiscoveryTask;
 use Illuminate\Http\RedirectResponse;
 
 /**
- * Running one node again — the row already holds everything the job needs, so a
+ * Running one node again: the row already holds everything the job needs, so a
  * replay is a dispatch and nothing else. A directory that was down, a provider
  * that timed out, a page that has changed: none of them are worth paying for
  * the whole run a second time.

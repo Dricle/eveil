@@ -10,7 +10,7 @@ namespace App\Enums;
  */
 enum HostKind: string
 {
-    /** A list of businesses — harvest it, do not treat it as one company. */
+    /** A list of businesses. Harvest it, do not treat it as one company. */
     case Index = 'index';
 
     /** A company's own site. The thing we are actually looking for. */
@@ -24,7 +24,7 @@ enum HostKind: string
      * platforms, documentation.
      *
      * Called `other` and not `noise` deliberately. It says what the host is
-     * NOT, never that it is worthless — a forum thread naming the best plumbers
+     * NOT, never that it is worthless: a forum thread naming the best plumbers
      * in a city, or an article listing five companies that just raised money,
      * are real leads sitting on a host that is not itself a directory. We skip
      * them today because we read hosts, not pages; that is a limit of the

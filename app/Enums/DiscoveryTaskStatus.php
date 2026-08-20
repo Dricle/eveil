@@ -10,7 +10,7 @@ enum DiscoveryTaskStatus: string
 
     /**
      * The node failed and the run carried on. One unreadable directory must
-     * never cost the companies already found — a single malformed page is
+     * never cost the companies already found: a single malformed page is
      * enough to take a whole run down otherwise.
      */
     case Failed = 'failed';

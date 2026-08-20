@@ -21,7 +21,7 @@ use RuntimeException;
  *
  * The sequence stays stopped afterwards. Somebody who is being written to by
  * hand must not also receive the automated follow-up that was queued behind
- * them — that is the mistake this whole screen exists to prevent.
+ * them: that is the mistake this whole screen exists to prevent.
  */
 class ReplyToConversation
 {

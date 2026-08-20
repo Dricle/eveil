@@ -130,7 +130,7 @@ it('never resurrects someone who asked to be erased', function () {
 
     $this->artisan('eveil:find-contacts')->assertSuccessful();
 
-    // The stripped row stays — it IS the tombstone — but nothing is re-created
+    // The stripped row stays. It IS the tombstone, but nothing is re-created
     // and no address comes back.
     expect(Lead::count())->toBe(1)
         ->and(Lead::sole()->email)->toBeNull()
@@ -250,8 +250,8 @@ describe('email pattern inference', function () {
 
 describe('email verification', function () {
     it('rejects what it can actually disprove', function (string $email) {
-        // The blocklist lives in the database now, so it has to be loaded —
-        // without it `mailinator.com` reaches the MX check, which is a real
+        // The blocklist lives in the database now, so it has to be loaded.
+        // Without it `mailinator.com` reaches the MX check, which is a real
         // DNS call, and mailinator has perfectly good MX records.
         $this->seed(DisposableDomainSeeder::class);
 
@@ -302,8 +302,8 @@ describe('email verification', function () {
 
     it('skips a provider known to refuse, without spending the timeout', function () {
         // Nine provider names used to be hardcoded. A miss was never a wrong
-        // answer — the probe returns nothing and we say `unknown` either way —
-        // it just cost the timeout every time.
+        // answer: the probe returns nothing and we say `unknown` either way.
+        // It just cost the timeout every time.
         $this->seed(MailHostSeeder::class);
         app(Settings::class)->set('verification.probe', true);
 
@@ -325,7 +325,7 @@ describe('email verification', function () {
     it('learns nothing from a probe that never reached a server', function () {
         // Port 25 is blocked on most hosting. Counting that as a refusal would
         // have the first run on such a box mark every mail provider on earth
-        // as one — and then never probe again, anywhere.
+        // as one, and then never probe again, anywhere.
         expect(ProbeOutcome::Unreachable->isEvidence())->toBeFalse()
             ->and(ProbeOutcome::NoVerdict->isEvidence())->toBeTrue()
             ->and(ProbeOutcome::NoVerdict->isVerdict())->toBeFalse()
@@ -372,7 +372,7 @@ it('does not guess a generic address unless asked', function () {
 
 it('takes the address a directory published when the business has no site', function () {
     // Nothing to crawl and nobody to name: the listing line is the whole of
-    // what exists, and half this segment is unreachable by email at all — so
+    // what exists, and half this segment is unreachable by email at all, so
     // the one address the directory printed is not a fallback, it is the lead.
     $company = Company::factory()->create([
         'domain' => null,

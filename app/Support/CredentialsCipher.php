@@ -8,8 +8,8 @@ use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 /**
- * User secrets — SMTP/IMAP passwords, the AI provider key, future OAuth tokens
- * — are encrypted with a dedicated `CREDENTIALS_KEY`, never with `APP_KEY`
+ * User secrets: SMTP/IMAP passwords, the AI provider key, future OAuth tokens
+ *. Are encrypted with a dedicated `CREDENTIALS_KEY`, never with `APP_KEY`
  *.
  *
  * APP_KEY also encrypts cookies and sessions and should be rotated after a
@@ -92,7 +92,7 @@ class CredentialsCipher
                 'CREDENTIALS_KEY does not match the stored canary: every saved SMTP/IMAP password '
                 .'and provider key is unreadable. Restore the previous key, or re-enter the '
                 .'credentials and run the canary rewrite. A database dump without its matching '
-                .'.env is worthless — back up both together.',
+                .'.env is worthless: back up both together.',
             );
         }
 

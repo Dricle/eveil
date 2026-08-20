@@ -9,7 +9,7 @@ use Laravel\Ai\Enums\Lab;
  * The API key each provider is called with.
  *
  * It is a user secret, so it lives in `settings` under `CREDENTIALS_KEY` rather
- * than in the env — an operator who changes provider should not have to open a
+ * than in the env: an operator who changes provider should not have to open a
  * shell and restart the workers. `laravel/ai` reads its key from config when it
  * builds a driver, so the stored value is pushed into config just before an
  * agent resolves its provider.
@@ -49,7 +49,7 @@ class ProviderCredentials
     }
 
     /**
-     * Whether the provider can be called at all — from the database, or from
+     * Whether the provider can be called at all. From the database, or from
      * the env the instance was deployed with.
      */
     public function isConfigured(string $provider): bool
@@ -76,7 +76,7 @@ class ProviderCredentials
 
         // ponytail: the providers the package names. A custom
         // OpenAI-compatible endpoint is referenced by its own config key and
-        // still takes its key from the env — add a lookup here when one exists.
+        // still takes its key from the env: add a lookup here when one exists.
         foreach (Lab::cases() as $lab) {
             $key = $this->key($lab->value);
 

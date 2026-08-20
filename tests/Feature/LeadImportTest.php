@@ -133,7 +133,7 @@ it('refuses to put back somebody who asked to be forgotten', function () {
         'file' => csvFile("email\ngone@example.com\n"),
     ]);
 
-    // The request outlives the data it destroyed — a file must not be the way
+    // The request outlives the data it destroyed. A file must not be the way
     // back in.
     expect($response->baseResponse->getSession()->get('import')['rejected'][0]['reason'])
         ->toBe('This person asked to be forgotten.')

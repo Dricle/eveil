@@ -12,7 +12,7 @@ use Illuminate\Database\Seeder;
  * A cloud instance grows this table from every customer's runs, so it is smart
  * within days. A fresh self-hosted install has nobody else's learnings and
  * would otherwise pay a model to work out that Yelp lists businesses. This seed
- * closes the cold start, and it ships identically in BOTH editions — the cloud
+ * closes the cold start, and it ships identically in BOTH editions: the cloud
  * advantage is that its registry keeps growing, never that self-hosted was
  * given less.
  *
@@ -22,7 +22,7 @@ use Illuminate\Database\Seeder;
  *
  * `LOCKED` used to be a const inside `HostRegistry`, consulted before the table
  * so the certainties never cost a token. A hardcoded list shadowing a table is
- * that table minus the ability to edit it, so it lives here now — locked, which
+ * that table minus the ability to edit it, so it lives here now: locked, which
  * means no model ever overwrites it and no verdict expires, and a superadmin
  * can still change one. If seeding is skipped the app still works: the model
  * gets asked about facebook.com once and reaches the same answer for a fraction
@@ -31,7 +31,7 @@ use Illuminate\Database\Seeder;
 class KnownHostSeeder extends Seeder
 {
     /**
-     * Verdicts are STRUCTURAL and hold for every target profile — "does this
+     * Verdicts are STRUCTURAL and hold for every target profile: "does this
      * host list organisations?", never "would most customers care?". Job
      * boards, marketplaces and delivery platforms are indexes for everyone,
      * because a recruitment agency hunts companies that are hiring and a
@@ -53,7 +53,7 @@ class KnownHostSeeder extends Seeder
             // Software, startups and agencies.
             'producthunt.com', 'betalist.com', 'crunchbase.com', 'g2.com',
             'capterra.com', 'clutch.co', 'sortlist.com', 'trustpilot.com',
-            // Job boards list companies that are hiring — the lead source for
+            // Job boards list companies that are hiring: the lead source for
             // anyone selling to employers, recruiters above all.
             'indeed.com', 'glassdoor.com', 'welcometothejungle.com', 'stepstone.com',
             // Code hosting lists organisations, which is where a developer-tool
@@ -74,7 +74,7 @@ class KnownHostSeeder extends Seeder
 
     /**
      * Structurally never a company and never a list of one, for anybody. Small
-     * and stable — it changes about once a year — which is exactly why these
+     * and stable: it changes about once a year. Which is exactly why these
      * can be locked and the rest cannot.
      *
      * The social platforms are here for a different reason than the others:

@@ -16,7 +16,7 @@ use Inertia\Response;
  *
  * Only real conversations: a lead that was written to and said nothing is not an
  * inbox entry, it is a sequence still running. That is what keeps this screen
- * worth opening — the alternative is a list of five hundred rows where four are
+ * worth opening: the alternative is a list of five hundred rows where four are
  * interesting.
  *
  * Ordered by what needs a person rather than by date. An interested reply from

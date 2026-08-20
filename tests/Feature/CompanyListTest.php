@@ -1,8 +1,11 @@
 <?php
 
+use App\Enums\ContactSearchStatus;
+use App\Enums\DiscoveryRunStatus;
 use App\Enums\OutreachStatus;
 use App\Models\Company;
 use App\Models\CompanyTargetEvaluation;
+use App\Models\DiscoveryRun;
 use App\Models\Lead;
 use App\Models\Organization;
 use App\Models\Project;
@@ -216,10 +219,93 @@ it('carries a company verdict down to every person at it', function () {
         ->put(route('companies.status', $company), ['status' => 'client'])
         ->assertRedirect();
 
-    // A company already served says the same thing about every address at it —
-    // otherwise the contacts still read `new` and the cold pitch goes out.
+    // A company already served says the same thing about every address at it.
+    // Otherwise the contacts still read `new` and the cold pitch goes out.
     expect($lead->refresh()->status)->toBe(OutreachStatus::Client)
         // An erasure outlives any later verdict on the company.
         ->and($erased->refresh()->status)->toBe(OutreachStatus::Suppressed)
         ->and($elsewhere->refresh()->status)->toBe(OutreachStatus::New);
+});
+
+it('says the app is still looking while a run or a contact search is out', function () {
+    [$user, $project] = lister();
+
+    $company = scored($project, 'friterie.be', 80);
+
+    $this->actingAs($user)->get(route('companies.index'))
+        ->assertInertia(fn ($page) => $page->where('activity.searching', false));
+
+    $profile = TargetProfile::factory()->create(['project_id' => $project->id]);
+    $run = DiscoveryRun::factory()->create([
+        'project_id' => $project->id,
+        'target_profile_id' => $profile->id,
+        'status' => DiscoveryRunStatus::Running,
+        'candidates_found' => 12,
+        'qualified_count' => 3,
+    ]);
+
+    // A list still filling up must not read as an empty market: "your market is
+    // small" and "wait thirty seconds" look identical otherwise.
+    $this->actingAs($user)->get(route('companies.index'))
+        ->assertInertia(fn ($page) => $page
+            ->where('activity.searching', true)
+            ->where('activity.runs', 1)
+            ->where('activity.candidates', 12)
+            ->where('activity.qualified', 3));
+
+    $run->update(['status' => DiscoveryRunStatus::Succeeded]);
+
+    // A finished run stops the spinner, and a queued contact search starts it
+    // again on its own account.
+    $this->actingAs($user)->get(route('contacts.index'))
+        ->assertInertia(fn ($page) => $page->where('activity.searching', false));
+
+    $company->update(['contacts_status' => ContactSearchStatus::Queued]);
+
+    $this->actingAs($user)->get(route('contacts.index'))
+        ->assertInertia(fn ($page) => $page
+            ->where('activity.searching', true)
+            ->where('activity.contact_searches', 1)
+            ->where('activity.runs', 0));
+});
+
+it('shows one company with everything found about it, and the people at it', function () {
+    [$user, $project] = lister();
+
+    $company = scored($project, 'friterie-centre.be', 88);
+    $company->update([
+        'industry' => 'Friterie',
+        'location' => 'Namur',
+        'facts' => ['phone' => '081 22 33 44'],
+        'contacts_status' => ContactSearchStatus::Queued,
+    ]);
+
+    Lead::factory()->create([
+        'project_id' => $project->id,
+        'company_id' => $company->id,
+        'first_name' => 'Marcel',
+        'email' => 'marcel@friterie-centre.be',
+    ]);
+
+    $this->actingAs($user)->get(route('companies.show', $company))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('leads/Company')
+            ->where('company.domain', 'friterie-centre.be')
+            ->where('company.industry', 'Friterie')
+            ->where('company.facts.phone', '081 22 33 44')
+            // The sentence behind the score, which is also the opening line of
+            // the first mail.
+            ->has('company.evaluations', 1)
+            ->has('company.contacts', 1)
+            ->where('company.contacts.0.email', 'marcel@friterie-centre.be')
+            // Still reading the site, so an empty list would say something
+            // false about the company.
+            ->where('company.searching', true));
+});
+
+it('never opens a company from another project', function () {
+    [$user] = lister();
+
+    $this->actingAs($user)->get(route('companies.show', Company::factory()->create()))->assertNotFound();
 });

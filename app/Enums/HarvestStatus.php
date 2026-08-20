@@ -9,7 +9,7 @@ namespace App\Enums;
  */
 enum HarvestStatus: string
 {
-    /** Structured data on the page — free to read. */
+    /** Structured data on the page. Free to read. */
     case JsonLd = 'jsonld';
 
     /** No structured data; the model had to read it. Costs money per page. */
@@ -19,7 +19,7 @@ enum HarvestStatus: string
     case Blocked = 'blocked';
 
     /**
-     * Fetched, but the server sent a shell — almost no text to read. The only
+     * Fetched, but the server sent a shell: almost no text to read. The only
      * status a headless renderer would actually fix, which is why it is kept
      * apart from "read fine, had nothing on it".
      */

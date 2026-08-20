@@ -10,7 +10,7 @@ use Illuminate\Validation\Rule;
  * One step, as written by hand or corrected after the agent wrote it.
  *
  * A wait carries a duration and nothing else; an email carries a subject and a
- * body and no duration — the pause before it is the wait step in front of it,
+ * body and no duration: the pause before it is the wait step in front of it,
  * which is what makes reordering mean anything.
  */
 class CampaignStepRequest extends FormRequest
@@ -44,7 +44,7 @@ class CampaignStepRequest extends FormRequest
         return [
             'type' => $type,
             // The pause before a mail is the wait step in front of it, never a
-            // delay carried by the mail — that is what makes reordering mean
+            // delay carried by the mail. That is what makes reordering mean
             // something.
             'delay_hours' => $type === CampaignStepType::Wait ? (int) $this->validated('delay_hours') : null,
             'config' => ['intent' => (string) $this->validated('intent')],

@@ -25,7 +25,7 @@ const props = defineProps<{
 
 // Edited in place, so the row keeps what was typed until it is saved.
 // An empty box means the provider's own default, which the server stores as
-// null — the input itself only ever holds a string.
+// null, since the input itself only ever holds a string.
 const asDraft = (agents: AgentLine[]) => agents.map(agent => ({ ...agent, model: agent.model ?? '' }))
 
 const draft = ref(asDraft(props.agents))
@@ -52,7 +52,7 @@ function formatTokens (count: number) {
         <div class="max-w-5xl space-y-4">
             <p class="text-sm text-muted">
                 One line per agent, discovered from the code. A fresh install
-                works without touching this page — the defaults ship with the
+                works without touching this page. The defaults ship with the
                 schema. Changing a model here takes effect on the next call, with
                 no deploy.
             </p>

@@ -12,7 +12,7 @@ use App\Models\Lead;
  * A company and the people at it never disagree: marking a business as an
  * existing client says the same thing about every address at it, and closing a
  * deal with one person closes it for the business. So the status is copied
- * rather than tracked twice — a company excluded from outreach whose contacts
+ * rather than tracked twice: a company excluded from outreach whose contacts
  * still read `new` is exactly how an existing client receives a cold pitch.
  *
  * Two deliberate limits:

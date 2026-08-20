@@ -21,7 +21,7 @@ use Illuminate\Support\Carbon;
 
 /**
  * A mailbox we send from and read replies out of. Plain SMTP/IMAP, no OAuth
-. The ORGANIZATION owns it — credentials, daily limit and signature
+. The ORGANIZATION owns it: credentials, daily limit and signature
  * all live here. Which projects may send through it is granted separately, via
  * `projects()`: a mailbox reaches a project only when someone attaches it, so a
  * new project cannot quietly inherit the founder's personal address.
@@ -124,7 +124,7 @@ class EmailAccount extends Model
     /**
      * How many mails this mailbox may still send today.
      *
-     * Ramp-up on a new mailbox. Warm-up is deliberately absent — we do not
+     * Ramp-up on a new mailbox. Warm-up is deliberately absent: we do not
      * build it.
      *
      * The allowance belongs to the MAILBOX, never to a project or a campaign:
@@ -178,7 +178,7 @@ class EmailAccount extends Model
     }
 
     /**
-     * The share of the last hundred sends that bounced — the circuit breaker's
+     * The share of the last hundred sends that bounced. The circuit breaker's
      * input. A rolling window rather than a lifetime rate: a mailbox that had a
      * bad week in March is not the problem, one bouncing right now is.
      */

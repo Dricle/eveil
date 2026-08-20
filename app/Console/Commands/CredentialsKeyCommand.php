@@ -6,7 +6,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 
 /**
- * Generates CREDENTIALS_KEY, the key that encrypts user secrets — deliberately
+ * Generates CREDENTIALS_KEY, the key that encrypts user secrets: deliberately
  * separate from APP_KEY.
  *
  * Rotating it makes every stored SMTP/IMAP password unreadable, so the command
@@ -34,7 +34,7 @@ class CredentialsKeyCommand extends Command
         $current = preg_match('/^CREDENTIALS_KEY=(.*)$/m', $contents, $matches) ? trim($matches[1]) : '';
 
         if ($current !== '' && ! $this->option('force')) {
-            $this->components->warn('CREDENTIALS_KEY is already set. Replacing it makes every stored credential unreadable — pass --force if that is really what you want.');
+            $this->components->warn('CREDENTIALS_KEY is already set. Replacing it makes every stored credential unreadable: pass --force if that is really what you want.');
 
             return self::SUCCESS;
         }

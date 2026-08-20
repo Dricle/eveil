@@ -19,10 +19,10 @@ use Throwable;
  * `Precedence: bulk`, no `X-Mailer`, and no URL pointing anywhere near this
  * application. A link to a domain other than the sender's is both a spam marker
  * and an admission of automation. Opt-out is a SENTENCE the agent writes into
- * the body — the only opt-out channel there is.
+ * the body: the only opt-out channel there is.
  *
  * Laravel's own `Mail` facade is not used: it sends through the configured
- * mailer, and every mail here goes through a DIFFERENT one — the mailbox the
+ * mailer, and every mail here goes through a DIFFERENT one. The mailbox the
  * sequence pinned to this lead. Transports are built per account for that
  * reason, not out of preference.
  *
@@ -48,7 +48,7 @@ class Sender
 
         // In development every mail can be pointed at one address instead of the
         // lead's. The sender, the SMTP conversation and the thread are untouched,
-        // so what is being tested is the real path — only the recipient moves.
+        // so what is being tested is the real path: only the recipient moves.
         $redirect = $this->redirect();
         $recipient = $redirect ?? (string) $lead->email;
 
@@ -81,7 +81,7 @@ class Sender
 
     /**
      * The subject as it leaves. Prefixed with the intended recipient only when a
-     * mail is being diverted — every redirected mail lands in one inbox, so the
+     * mail is being diverted: every redirected mail lands in one inbox, so the
      * subject is the only place that can say who it was meant for.
      *
      * Applied on the way out and never to what is stored: the conversation, the
@@ -118,7 +118,7 @@ class Sender
     }
 
     /**
-     * The sender's own signature, if they configured one — the single trailing
+     * The sender's own signature, if they configured one. The single trailing
      * block a hand-typed mail would carry.
      */
     private function withSignature(string $body, EmailAccount $account): string

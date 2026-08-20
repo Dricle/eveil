@@ -23,6 +23,8 @@ declare module '@inertiajs/core' {
             projects: Project[]
             registerUrl: string | null
             status: string | null
+            /** What is missing before the instance can do anything. */
+            setup: { provider: boolean, mailbox: boolean }
             sidebarOpen: boolean
             [key: string]: unknown
         }

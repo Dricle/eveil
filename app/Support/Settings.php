@@ -16,7 +16,7 @@ use RuntimeException;
  * they exist before the app can run rather than being layered underneath it.
  *
  * `config/eveil.php` keeps only what is genuinely deployment rather than
- * product: service URLs, HTTP timeouts, the user agent — the things an env file
+ * product: service URLs, HTTP timeouts, the user agent. The things an env file
  * sets and no screen should.
  */
 class Settings
@@ -81,7 +81,7 @@ class Settings
      * Casting null quietly gives 0 pages crawled or a 0 ms politeness delay:
      * the run does nothing, or hammers a host, and neither says why. The
      * defaults ship in a migration precisely so this never fires in a healthy
-     * install — if it does, seeding was skipped.
+     * install: if it does, seeding was skipped.
      */
     public function int(string $key): int
     {
@@ -120,7 +120,7 @@ class Settings
 
         if ($value === null) {
             throw new RuntimeException(
-                "Setting [{$key}] is missing. Run `php artisan migrate` — defaults ship as a migration."
+                "Setting [{$key}] is missing. Run `php artisan migrate`: defaults ship as a migration."
             );
         }
 

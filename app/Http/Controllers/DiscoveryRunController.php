@@ -23,7 +23,7 @@ class DiscoveryRunController extends Controller
 {
     /**
      * The searches one profile has been put through. Searches belong to the
-     * profile that asked for them — a run means nothing without the criteria it
+     * profile that asked for them: a run means nothing without the criteria it
      * was given.
      */
     public function index(int $target): Response

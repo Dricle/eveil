@@ -27,7 +27,7 @@ use Maatwebsite\Excel\Row;
  * the line number and the reason, because "412 of 500 imported" with no list is
  * a support ticket rather than a result.
  *
- * Reading the file is `maatwebsite/excel`'s job — it also normalises the
+ * Reading the file is `maatwebsite/excel`'s job: it also normalises the
  * heading row (`First Name` becomes `first_name`), strips the BOM Excel writes,
  * and reads xlsx the day somebody uploads one. What is left here is the only
  * part that is ours: deciding what each row means.
@@ -40,7 +40,7 @@ class LeadsImport implements OnEachRow, SkipsEmptyRows, WithHeadingRow
 {
     /**
      * The columns the template ships with. Anything else in the file is
-     * ignored rather than rejected — people add their own notes column.
+     * ignored rather than rejected: people add their own notes column.
      */
     public const COLUMNS = [
         'email', 'first_name', 'last_name', 'title', 'linkedin_url', 'company_name', 'company_domain',
@@ -100,7 +100,7 @@ class LeadsImport implements OnEachRow, SkipsEmptyRows, WithHeadingRow
         $linkedin = trim((string) ($values['linkedin_url'] ?? ''));
 
         // The row number the person sees in their spreadsheet, heading row
-        // included — anything else makes the report useless to check against.
+        // included: anything else makes the report useless to check against.
         $line = $row->getIndex();
         $reason = $this->reject($email, $linkedin);
 

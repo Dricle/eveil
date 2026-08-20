@@ -10,7 +10,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Everything the app does happens inside a project, so the project is picked
- * once here rather than carried in the URL of every page — switching projects
+ * once here rather than carried in the URL of every page: switching projects
  * then keeps you where you were instead of dropping you at a different address.
  *
  * This is also the one place HTTP sets `CurrentProject`, which is what makes

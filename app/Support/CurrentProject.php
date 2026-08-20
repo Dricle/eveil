@@ -48,7 +48,7 @@ class CurrentProject
 
     /**
      * Runs a callback scoped to one project and restores the previous context
-     * afterwards — including when the callback throws, so a failed job cannot
+     * afterwards. Including when the callback throws, so a failed job cannot
      * leave the next one pointed at the wrong project.
      *
      * @template TReturn

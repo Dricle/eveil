@@ -206,3 +206,26 @@ it('offers the way back into the run from the dashboard, until a search exists',
         ->get(route('dashboard'))
         ->assertInertia(fn ($page) => $page->where('onboarding', false));
 });
+
+it('asks what the site never said, at the moment the portrait is reviewed', function () {
+    [$user, $project] = newcomer();
+
+    ProjectAnalysis::factory()->create([
+        'project_id' => $project->id,
+        'type' => AnalysisType::Website,
+        'status' => AnalysisStatus::Succeeded,
+    ]);
+
+    $project->update(['knowledge_base' => [
+        'what_it_does' => 'Ordering for restaurants.',
+        'gaps' => [['key' => 'service_area', 'question' => 'Which countries do you deliver to?']],
+    ]]);
+
+    // Answered here rather than left for a settings screen: the answer feeds
+    // the segments the next button on this page derives.
+    visiting($user, $project)
+        ->assertInertia(fn ($page) => $page
+            ->where('openQuestions.0.key', 'service_area')
+            ->where('openQuestions.0.question', 'Which countries do you deliver to?')
+            ->where('openQuestions.0.answer', null));
+});

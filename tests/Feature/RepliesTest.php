@@ -27,6 +27,7 @@ use App\Services\Outreach\InboundMail;
 use App\Services\Outreach\MailParser;
 use App\Services\Outreach\OptOutPhrases;
 use App\Services\Outreach\ReplyOutcomes;
+use App\Services\Outreach\Sender;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Ai\Tools\Request as ToolRequest;
 
@@ -601,4 +602,90 @@ it('waits a day on a soft bounce instead of throwing the lead away', function ()
 it('is not fooled into treating an ordinary reply as a bounce', function () {
     expect(MailParser::deliveryStatus("* 1 FETCH (BODY[] {90}\r\nFrom: marcel@friterie.test\r\nSubject: Re: vos commandes\r\n\r\nNon merci.\r\n)\r\n"))
         ->toBeNull();
+});
+
+it('matches a reply against the id sending actually writes, brackets or not', function () {
+    // The pause is deterministic and happens before the agent is queued, which
+    // is the whole point of that ordering: it must not depend on a model call.
+    Queue::fake();
+
+    [$mailbox, $membership] = awaitingReply();
+
+    // What the real sender puts on the wire, rather than a shape a fixture
+    // chose. The two used to differ by exactly the angle brackets, and no
+    // fixture could show it because both of its sides were written by hand.
+    $id = (new ReflectionMethod(Sender::class, 'messageId'))->invoke(app(Sender::class), $mailbox);
+
+    expect($id)->not->toStartWith('<')
+        ->and($id)->toContain('@');
+
+    Message::query()->where('direction', MessageDirection::Outbound)->update(['message_id' => $id]);
+
+    // And a server that leaves the brackets on must not break attribution
+    // either: they belong to the header syntax, not to the id.
+    fakeImap([inbound('Oui, envoyez-moi vos tarifs.', [
+        'inReplyTo' => '<'.$id.'>',
+        'messageId' => 'theirs-brackets@friterie.test',
+    ])]);
+
+    app(FetchReplies::class)->handle($mailbox->fresh());
+
+    $reply = Message::query()->where('direction', MessageDirection::Inbound)->sole();
+
+    expect($reply->campaign_lead_id)->toBe($membership->id)
+        ->and($membership->fresh()->status)->toBe(CampaignLeadStatus::Paused);
+});
+
+it('shows what was sent as well as what came back, in two lists', function () {
+    [$mailbox, $membership] = awaitingReply();
+    $user = User::factory()->create();
+    $membership->campaign->project->organization->users()->attach($user, ['role' => 'owner']);
+
+    $visit = fn (array $query = []) => test()->actingAs($user)
+        ->withSession(['current_project_id' => $membership->campaign->project_id])
+        ->get(route('inbox', $query));
+
+    // Written to and silent: a sequence still running, and never an inbox
+    // entry. That is what keeps the default list worth opening.
+    $visit()->assertInertia(fn ($page) => $page
+        ->has('conversations.data', 0)
+        ->where('counts.replies', 0)
+        ->where('counts.sent', 1));
+
+    // And the same person on the other tab, because "did anything actually go
+    // out" could otherwise only be answered one contact sheet at a time.
+    $visit(['view' => 'sent'])->assertInertia(fn ($page) => $page
+        ->where('filters.view', 'sent')
+        ->has('conversations.data', 1)
+        ->where('conversations.data.0.id', $membership->id)
+        ->where('conversations.data.0.messages.0.direction', 'outbound'));
+
+    Queue::fake();
+    fakeImap([inbound('Oui, envoyez vos tarifs.')]);
+    app(FetchReplies::class)->handle($mailbox->fresh());
+
+    $visit()->assertInertia(fn ($page) => $page
+        ->has('conversations.data', 1)
+        ->where('counts.replies', 1)
+        ->where('counts.sent', 1));
+});
+
+it('does not let a refused send look like one that arrived', function () {
+    [, $membership, $sent] = awaitingReply();
+    $user = User::factory()->create();
+    $membership->campaign->project->organization->users()->attach($user, ['role' => 'owner']);
+
+    // What a refusal leaves behind: a row that records the attempt, a synthetic
+    // id because nothing was ever assigned one, and no delivery.
+    $sent->update(['status' => MessageStatus::Failed, 'message_id' => 'failed-1-0-1']);
+
+    test()->actingAs($user)
+        ->withSession(['current_project_id' => $membership->campaign->project_id])
+        ->get(route('inbox', ['view' => 'sent']))
+        ->assertInertia(fn ($page) => $page
+            // Still listed: the attempt is a fact worth keeping, and hiding it
+            // would tell somebody nothing happened when something did.
+            ->has('conversations.data', 1)
+            // But never as a mail that arrived.
+            ->where('conversations.data.0.delivery', 'failed'));
 });

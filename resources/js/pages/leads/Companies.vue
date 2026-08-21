@@ -3,6 +3,7 @@ import { Head, router, usePoll } from '@inertiajs/vue3'
 import type { TableColumn } from '@nuxt/ui'
 import { computed, ref, watch } from 'vue'
 import LeadsLayout from '@/layouts/LeadsLayout.vue'
+import ApproveButton from '@/components/ApproveButton.vue'
 import SearchingBanner from '@/components/SearchingBanner.vue'
 import StatusSelect from '@/components/StatusSelect.vue'
 import { OUTREACH_STATUSES } from '@/lib/status'
@@ -21,6 +22,7 @@ const props = defineProps<{
         profile: number | null
         min_score: number
         excluded: boolean
+        unapproved: boolean
         search: string | null
         filter: Record<string, string>
         sort: string | null
@@ -28,6 +30,7 @@ const props = defineProps<{
     }
     total: number
     unsearched: number
+    unapproved: number
     activity: Activity
 }>()
 
@@ -36,13 +39,14 @@ const props = defineProps<{
 // market rather than as one still being searched.
 const searching = computed(() => props.activity.searching)
 
-const poll = usePoll(4000, { only: ['companies', 'activity', 'total', 'unsearched'] }, { autoStart: searching.value })
+const poll = usePoll(4000, { only: ['companies', 'activity', 'total', 'unsearched', 'unapproved'] }, { autoStart: searching.value })
 
 watch(searching, busy => busy ? poll.start() : poll.stop())
 
 const profile = ref(props.filters.profile ?? 0)
 const minScore = ref(props.filters.min_score ?? 0)
 const excluded = ref(props.filters.excluded)
+const awaiting = ref(props.filters.unapproved)
 
 const table = useTableQuery(
     companyRoutes.index.url(),
@@ -51,11 +55,12 @@ const table = useTableQuery(
     () => ({
         profile: profile.value || undefined,
         min_score: minScore.value || undefined,
-        excluded: excluded.value ? 1 : undefined
+        excluded: excluded.value ? 1 : undefined,
+        unapproved: awaiting.value ? 1 : undefined
     })
 )
 
-watch([profile, minScore, excluded], () => table.reload())
+watch([profile, minScore, excluded, awaiting], () => table.reload())
 
 const PROFILE_OPTIONS = computed(() => [
     { label: 'Every profile', value: 0 },
@@ -79,6 +84,7 @@ const SCORE_OPTIONS = [
 const COLUMNS = [
     { key: 'name', label: 'Company', sortable: true, filterable: true, width: 'min-w-32 max-w-40' },
     { key: 'status', label: 'Status', sortable: true, filterable: false, width: 'min-w-32' },
+    { key: 'approval', label: 'Approved', sortable: false, filterable: false, width: 'min-w-28' },
     { key: 'domain', label: 'Domain', sortable: true, filterable: true, width: 'min-w-28 max-w-32' },
     { key: 'industry', label: 'Industry', sortable: true, filterable: true, width: 'min-w-32 max-w-40' },
     { key: 'size', label: 'Size', sortable: true, filterable: true, width: 'min-w-32 max-w-40' },
@@ -169,6 +175,13 @@ function searchLabel (company: Company) {
                         label="Show set aside"
                     />
 
+                    <!-- The working queue. Nothing moves until these are
+                         decided, so it is worth being one switch away. -->
+                    <USwitch
+                        v-model="awaiting"
+                        :label="unapproved ? `Awaiting approval (${unapproved})` : 'Awaiting approval'"
+                    />
+
                     <UButton
                         :icon="columnFilters ? 'i-lucide-chevron-up' : 'i-lucide-sliders-horizontal'"
                         color="neutral"
@@ -184,6 +197,19 @@ function searchLabel (company: Company) {
                         variant="ghost"
                         label="Clear"
                         @click="table.clear()"
+                    />
+
+                    <UButton
+                        v-if="companies.data.some(company => !company.approved)"
+                        icon="i-lucide-thumbs-up"
+                        color="primary"
+                        variant="subtle"
+                        :label="`Approve these ${companies.data.filter(company => !company.approved).length}`"
+                        @click="router.put(
+                            companyRoutes.approval.url(),
+                            { companies: companies.data.filter(company => !company.approved).map(company => company.id), approved: true },
+                            { preserveScroll: true }
+                        )"
                     />
 
                     <UButton
@@ -357,6 +383,12 @@ function searchLabel (company: Company) {
                         :options="OUTREACH_STATUSES"
                         :url="companyRoutes.status.url(row.original.id)"
                     />
+                </template>
+
+                <!-- The last human decision before mail leaves. Saying yes
+                     also starts the search for people at that company. -->
+                <template #approval-cell="{ row }">
+                    <ApproveButton :company="row.original" />
                 </template>
 
                 <template #empty>

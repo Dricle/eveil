@@ -3,6 +3,7 @@ import { Head, router, usePoll } from '@inertiajs/vue3'
 import { computed, watch } from 'vue'
 import ContactList from '@/components/ContactList.vue'
 import LeadsLayout from '@/layouts/LeadsLayout.vue'
+import ApproveButton from '@/components/ApproveButton.vue'
 import StatusSelect from '@/components/StatusSelect.vue'
 import { OUTREACH_STATUSES } from '@/lib/status'
 import companyRoutes from '@/routes/companies'
@@ -67,11 +68,20 @@ function day (value: string | null) {
                         </p>
                     </div>
 
-                    <StatusSelect
-                        :status="company.status"
-                        :options="OUTREACH_STATUSES"
-                        :url="companyRoutes.status.url(company.id)"
-                    />
+                    <div class="flex items-center gap-2">
+                        <!-- Read the fit reason, then decide. This is the page
+                             that decision is actually made on. -->
+                        <ApproveButton
+                            :company="company"
+                            size="sm"
+                        />
+
+                        <StatusSelect
+                            :status="company.status"
+                            :options="OUTREACH_STATUSES"
+                            :url="companyRoutes.status.url(company.id)"
+                        />
+                    </div>
                 </div>
 
                 <dl class="grid gap-2 text-sm sm:grid-cols-3">

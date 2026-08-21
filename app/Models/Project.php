@@ -169,6 +169,45 @@ class Project extends Model
     }
 
     /**
+     * The questions the reading of the site left open, in one shape whatever
+     * the analysis that wrote them: `key` is the identity, `answer` is null
+     * until the user types one.
+     *
+     * Normalised here rather than at each screen because an earlier analysis
+     * stored them as plain sentences, and a page reading `question` on a
+     * string gets nothing with no error to say why.
+     *
+     * @return list<array{key: string, question: string, answer: string|null}>
+     */
+    public function openQuestions(): array
+    {
+        $gaps = $this->knowledge_base['gaps'] ?? [];
+
+        if (! is_array($gaps)) {
+            return [];
+        }
+
+        return array_values(collect($gaps)
+            ->map(function (mixed $gap, int|string $index): ?array {
+                if (is_string($gap)) {
+                    return ['key' => 'q'.$index, 'question' => $gap, 'answer' => null];
+                }
+
+                if (! is_array($gap) || ! isset($gap['key'], $gap['question'])) {
+                    return null;
+                }
+
+                return [
+                    'key' => (string) $gap['key'],
+                    'question' => (string) $gap['question'],
+                    'answer' => is_string($gap['answer'] ?? null) && $gap['answer'] !== '' ? $gap['answer'] : null,
+                ];
+            })
+            ->filter()
+            ->all());
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array

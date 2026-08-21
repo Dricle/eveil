@@ -14,10 +14,14 @@ use Inertia\Response;
 /**
  * Everyone who actually answered, across every mailbox this project sends from.
  *
- * Only real conversations: a lead that was written to and said nothing is not an
- * inbox entry, it is a sequence still running. That is what keeps this screen
- * worth opening: the alternative is a list of five hundred rows where four are
- * interesting.
+ * Only real conversations in the default list: a lead that was written to and
+ * said nothing is not an inbox entry, it is a sequence still running. That is
+ * what keeps this screen worth opening, and the alternative is a list of five
+ * hundred rows where four are interesting.
+ *
+ * Everything that LEFT is the second list, on its own tab. It answers a
+ * different question, "did anything actually go out and what did it say", which
+ * could otherwise only be answered one contact sheet at a time.
  *
  * Ordered by what needs a person rather than by date. An interested reply from
  * Tuesday outranks an out-of-office from this morning, and the agent has already
@@ -27,8 +31,49 @@ class InboxController extends Controller
 {
     public function index(Request $request): Response
     {
-        $conversations = CampaignLead::query()
-            ->whereHas('messages', fn (Builder $messages) => $messages->where('direction', MessageDirection::Inbound))
+        $sent = $request->string('view')->value() === 'sent';
+
+        $conversations = $this->conversations($request, $sent)
+            ->latest('updated_at')
+            ->paginate(20)
+            ->withQueryString();
+
+        return Inertia::render('Inbox', [
+            'conversations' => ConversationResource::collection($conversations),
+            'campaigns' => Campaign::query()->orderBy('name')->get(['id', 'name']),
+            // Both counts, always, so the tab that is not open still says
+            // whether it has anything in it. "Sent" reading zero while mails
+            // are going out is the confusion this screen is meant to end.
+            'counts' => [
+                'replies' => $this->conversations($request, false)->count(),
+                'sent' => $this->conversations($request, true)->count(),
+            ],
+            'filters' => [
+                'campaign' => $request->integer('campaign') ?: null,
+                'view' => $sent ? 'sent' : 'replies',
+            ],
+        ]);
+    }
+
+    /**
+     * The two lists this screen holds, which differ by one condition.
+     *
+     * Replies is the default and the reason the screen exists. Sent is
+     * everything that left, answered or not, because until now a mail nobody
+     * answered could only be read by opening its contact sheet one at a time,
+     * and "did anything actually go out" is the first question anybody asks.
+     *
+     * They stay two lists rather than one: mixing them would put five hundred
+     * silent rows around the four that need a person, which is exactly what
+     * keeps this screen worth opening.
+     *
+     * @return Builder<CampaignLead>
+     */
+    private function conversations(Request $request, bool $sent): Builder
+    {
+        return CampaignLead::query()
+            ->whereHas('messages', fn (Builder $messages) => $messages
+                ->where('direction', $sent ? MessageDirection::Outbound : MessageDirection::Inbound))
             ->with([
                 'campaign',
                 'lead.company',
@@ -39,17 +84,6 @@ class InboxController extends Controller
             // the screen: the global scope on `Campaign` applies inside the
             // relation query, and without it one project's inbox would show
             // another's replies.
-            ->whereHas('campaign')
-            ->latest('updated_at')
-            ->paginate(20)
-            ->withQueryString();
-
-        return Inertia::render('Inbox', [
-            'conversations' => ConversationResource::collection($conversations),
-            'campaigns' => Campaign::query()->orderBy('name')->get(['id', 'name']),
-            'filters' => [
-                'campaign' => $request->integer('campaign') ?: null,
-            ],
-        ]);
+            ->whereHas('campaign');
     }
 }

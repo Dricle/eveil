@@ -5,6 +5,7 @@ use App\Actions\EnrolCampaign;
 use App\Actions\PersonalizeMessage;
 use App\Actions\SendNextStep;
 use App\Enums\CampaignLeadStatus;
+use App\Enums\CampaignStatus;
 use App\Enums\EmailAccountStatus;
 use App\Enums\EmailStatus;
 use App\Enums\MessageDirection;
@@ -412,6 +413,33 @@ it('keeps the stored password when an edit leaves the field blank', function () 
         ->and($mailbox->smtp_password)->toBe('secret');
 });
 
+it('keeps the stored password when the blank edit arrives as JSON', function () {
+    [$user, , $mailbox] = sender();
+
+    // Inertia sends application/json, where the input lives in a different bag
+    // than a form post: the same edit that works from a test form once wrote a
+    // null password straight into a not-null column.
+    $this->actingAs($user)
+        ->putJson(route('settings.mailboxes.update', $mailbox), [
+            'name' => 'Renamed',
+            'from_name' => $mailbox->from_name,
+            'from_email' => $mailbox->from_email,
+            'smtp_host' => $mailbox->smtp_host,
+            'smtp_port' => $mailbox->smtp_port,
+            'smtp_username' => $mailbox->smtp_username,
+            'smtp_password' => null,
+            'imap_host' => $mailbox->imap_host,
+            'imap_port' => $mailbox->imap_port,
+            'imap_username' => $mailbox->imap_username,
+            'imap_password' => null,
+            'daily_limit' => 30,
+        ])
+        ->assertRedirect();
+
+    expect($mailbox->refresh()->name)->toBe('Renamed')
+        ->and($mailbox->smtp_password)->toBe('secret');
+});
+
 it('never touches a mailbox belonging to another organization', function () {
     [$user] = sender();
 
@@ -426,23 +454,33 @@ it('never touches a mailbox belonging to another organization', function () {
 it('names the cause when a mailbox refuses the login, instead of saying it failed', function () {
     $tester = app(MailboxTester::class);
     $explain = new ReflectionMethod($tester, 'explain');
+    $account = EmailAccount::factory()->make([
+        'from_email' => 'clement@example.test',
+        'smtp_username' => 'clement@other.test',
+    ]);
 
     // The whole point of the story: three of these are the same 535 to the
     // server and three completely different fixes to the user, one of which
     // they cannot perform themselves at all.
-    expect($explain->invoke($tester, '535 Please log in with your web browser: https://accounts.google.com/signin/continue', 'smtp.gmail.com', 587))
+    expect($explain->invoke($tester, '535 Please log in with your web browser: https://accounts.google.com/signin/continue', 'smtp.gmail.com', 587, $account))
         ->toContain('app password')
-        ->and($explain->invoke($tester, '535 5.7.139 Authentication unsuccessful, SmtpClientAuthentication is disabled for the Tenant', 'smtp.office365.com', 587))
+        ->and($explain->invoke($tester, '535 5.7.139 Authentication unsuccessful, SmtpClientAuthentication is disabled for the Tenant', 'smtp.office365.com', 587, $account))
         ->toContain('SMTP AUTH is off')
-        ->and($explain->invoke($tester, 'Connection could not be established with host smtp.ovh.net: stream_socket_client(): Connection timed out', 'smtp.ovh.net', 587))
+        ->and($explain->invoke($tester, 'Connection could not be established with host smtp.ovh.net: stream_socket_client(): Connection timed out', 'smtp.ovh.net', 587, $account))
         ->toContain('blocked')
-        ->and($explain->invoke($tester, 'SSL routines: wrong version number', 'imap.gandi.net', 143))
+        ->and($explain->invoke($tester, 'SSL routines: wrong version number', 'imap.gandi.net', 143, $account))
         ->toContain('465 and 993 are implicit TLS')
-        ->and($explain->invoke($tester, 'php_network_getaddresses: getaddrinfo failed: Name or service not known', 'smpt.typo.test', 587))
+        ->and($explain->invoke($tester, 'php_network_getaddresses: getaddrinfo failed: Name or service not known', 'smpt.typo.test', 587, $account))
         ->toContain('does not resolve')
+        // The login works and the envelope does not: a different mistake with
+        // a different fix, and it only shows once MAIL FROM is spoken.
+        ->and($explain->invoke($tester, 'Expected response code "250" but got code "553", with message "553 Sender is not allowed to relay emails".', 'smtppro.zoho.eu', 465, $account))
+        ->toContain('will not send as clement@example.test')
+        ->and($explain->invoke($tester, '553 Sender is not allowed to relay emails', 'smtppro.zoho.eu', 465, $account))
+        ->toContain('alias of clement@other.test')
         // Anything unrecognised keeps the server's own words: a sentence we
         // invented would be less useful than the raw truth.
-        ->and($explain->invoke($tester, '452 Too many recipients', 'mail.test', 25))
+        ->and($explain->invoke($tester, '452 Too many recipients', 'mail.test', 25, $account))
         ->toContain('452 Too many recipients');
 });
 
@@ -478,28 +516,121 @@ it('puts people into the sequence when the campaign is activated, and only then'
 
     $this->actingAs($user)
         ->withSession(['current_project_id' => $project->id])
-        ->put(route('campaigns.update', $campaign), ['name' => $campaign->name, 'status' => 'draft'])
+        ->put(route('campaigns.status', $campaign), ['status' => 'draft'])
         ->assertRedirect();
 
     expect(CampaignLead::query()->count())->toBe(0);
 
     $this->actingAs($user)
         ->withSession(['current_project_id' => $project->id])
-        ->put(route('campaigns.update', $campaign), ['name' => $campaign->name, 'status' => 'active'])
+        ->put(route('campaigns.status', $campaign), ['status' => 'active'])
         ->assertRedirect();
 
     expect(CampaignLead::query()->count())->toBe(1);
 
-    // Saving an already-live campaign must not re-add anybody: somebody
+    // Switching an already-live campaign must not re-add anybody: somebody
     // suppressed or won since activation would walk straight back in.
     CampaignLead::query()->update(['status' => CampaignLeadStatus::Stopped, 'pause_reason' => 'suppressed']);
 
     $this->actingAs($user)
         ->withSession(['current_project_id' => $project->id])
-        ->put(route('campaigns.update', $campaign), ['name' => 'Renamed', 'status' => 'active'])
+        ->put(route('campaigns.status', $campaign), ['status' => 'active'])
         ->assertRedirect();
 
     expect(CampaignLead::query()->count())->toBe(1);
+
+    // Renaming is a different edit and must not touch the switch, nor put
+    // anybody back into a sequence they were taken out of.
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->put(route('campaigns.update', $campaign), ['name' => 'Renamed'])
+        ->assertRedirect();
+
+    expect($campaign->fresh()->name)->toBe('Renamed')
+        ->and($campaign->fresh()->status)->toBe(CampaignStatus::Active)
+        ->and(CampaignLead::query()->count())->toBe(1);
+});
+
+it('carries the empty aggregates on the campaign list rather than dropping the keys', function () {
+    [$user, $project] = sender();
+
+    contactable($project);
+    $campaign = sequence($project);
+
+    // A key that is simply absent reaches the page as `undefined`, which walks
+    // past a null check and prints "Invalid Date". Nobody in the sequence is an
+    // ordinary state, not a missing one.
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->get(route('campaigns.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('campaigns.0.id', $campaign->id)
+            ->where('campaigns.0.live_leads_count', 0)
+            ->where('campaigns.0.next_action_at', null));
+
+    app(EnrolCampaign::class)->handle($campaign);
+
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->get(route('campaigns.index'))
+        ->assertInertia(fn ($page) => $page
+            ->where('campaigns.0.live_leads_count', 1)
+            ->where('campaigns.0.next_action_at', fn ($due) => $due !== null));
+});
+
+it('pauses a running sequence without touching who is in it', function () {
+    [$user, $project] = sender();
+
+    contactable($project);
+    $campaign = sequence($project);
+
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->put(route('campaigns.status', $campaign), ['status' => 'active']);
+
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->put(route('campaigns.status', $campaign), ['status' => 'paused'])
+        ->assertRedirect();
+
+    // The campaign stops being picked up, and nobody is thrown out: resuming
+    // has to carry on where the sequence was, not start it again.
+    expect($campaign->fresh()->status)->toBe(CampaignStatus::Paused)
+        ->and(CampaignLead::query()->count())->toBe(1);
+});
+
+it('says when the next mail is owed and what is standing in its way', function () {
+    [$user, $project] = sender();
+
+    contactable($project);
+    $campaign = sequence($project);
+
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->put(route('campaigns.status', $campaign), ['status' => 'active']);
+
+    $mailbox = EmailAccount::query()->sole();
+
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->get(route('campaigns.delivery', $campaign))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('campaigns/Delivery')
+            // An active campaign that has sent nothing is the normal case, so
+            // the screen has to carry the figures that say which case it is.
+            ->has('sending.next_action_at')
+            ->where('sending.window.start', 8)
+            ->where('sending.mailboxes.0.id', $mailbox->id)
+            ->where('sending.mailboxes.0.sent_today', 0)
+            ->where('sending.mailboxes.0.remaining', $mailbox->allowanceForToday())
+            ->where('sending.mailboxes.0.ready_at', null)
+            ->where('leadsTotal', 1)
+            // Enrolled and not yet written to.
+            ->where('leads.0.last_step', 0)
+            ->where('leads.0.sent', 0)
+            ->where('leads.0.next_action_at', fn ($due) => $due !== null));
 });
 
 it('refuses to grant a mailbox to a project another organization owns', function () {
@@ -541,7 +672,7 @@ it('shows where the people in one sequence have got to', function () {
 
     $this->actingAs($user)
         ->withSession(['current_project_id' => $project->id])
-        ->get(route('campaigns.show', $campaign))
+        ->get(route('campaigns.delivery', $campaign))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->where('pipeline.pending', 1)
@@ -595,4 +726,95 @@ it('puts the intended recipient in the subject of a redirected mail, and leaves 
         // An empty string is not an address, and a half-filled env line must not
         // silently divert anything.
         ->and($subjectFor(''))->toBe('vos commandes');
+});
+
+it('reads a refusal about the sender as a broken mailbox, never as a dead address', function () {
+    [$user, $project, $mailbox] = sender();
+
+    $lead = contactable($project, 'marylene@friterie.test');
+    $campaign = sequence($project);
+    app(EnrolCampaign::class)->handle($campaign);
+    $campaign->update(['status' => CampaignStatus::Active]);
+
+    $fake = fakeSender();
+    // Zoho's answer when the From address is not verified on the account. The
+    // code is one of the recipient codes, and the words are about the sender.
+    $fake->failWith = 'Expected response code "250" but got code "553", with message "553 Sender is not allowed to relay emails".';
+
+    app(SendNextStep::class)->handle(CampaignLead::query()->sole());
+
+    // Suppressing here would burn an innocent prospect for ever over a setting
+    // one screen away, and the mail never reached a recipient at all.
+    expect($lead->fresh()->status)->toBe(OutreachStatus::New)
+        ->and(Suppression::query()->where('layer', SuppressionLayer::Bounce)->count())->toBe(0)
+        ->and(Message::query()->sole()->status)->toBe(MessageStatus::Failed);
+
+    // The mailbox is what is broken, and it says so in the server's own words.
+    expect($mailbox->fresh()->status)->toBe(EmailAccountStatus::Error)
+        ->and($mailbox->fresh()->last_error)->toContain('not allowed to relay');
+
+    unset($user);
+});
+
+it('says on every screen that a mailbox has stopped, in the server own words', function () {
+    [$user, $project, $mailbox] = sender();
+
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->get(route('dashboard'))
+        ->assertInertia(fn ($page) => $page->has('setup.broken', 0));
+
+    $mailbox->update([
+        'status' => EmailAccountStatus::Error,
+        'last_error' => '553 Sender is not allowed to relay emails',
+    ]);
+
+    // Nothing else anywhere says so: the campaign stays active, the sequence
+    // stays due, and the run simply never moves. The sentence is carried
+    // verbatim because it names the setting to change.
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->get(route('dashboard'))
+        ->assertInertia(fn ($page) => $page
+            ->has('setup.broken', 1)
+            ->where('setup.broken.0.email', $mailbox->from_email)
+            ->where('setup.broken.0.status', 'error')
+            ->where('setup.broken.0.error', '553 Sender is not allowed to relay emails'));
+});
+
+it('says the same about a mailbox the bounce breaker stopped', function () {
+    [$user, $project, $mailbox] = sender();
+
+    $mailbox->update(['status' => EmailAccountStatus::Paused, 'last_error' => null]);
+
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->get(route('dashboard'))
+        ->assertInertia(fn ($page) => $page
+            ->where('setup.broken.0.status', 'paused')
+            ->where('setup.broken.0.error', null));
+});
+
+it('never mentions a mailbox belonging to another project', function () {
+    [$user, $project] = sender();
+
+    $stranger = EmailAccount::factory()->create(['status' => EmailAccountStatus::Error]);
+    $stranger->projects()->attach(Project::factory()->create());
+
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->get(route('dashboard'))
+        ->assertInertia(fn ($page) => $page->has('setup.broken', 0));
+});
+
+it('sends a real message when testing a mailbox, because the refusal comes after the body', function () {
+    [, , $mailbox] = sender();
+
+    $mailbox->update(['from_email' => 'clement@dricle.test', 'smtp_host' => '127.0.0.1', 'smtp_port' => 1]);
+
+    // Measured against a real provider: `MAIL FROM:<not-mine@example.com>` is
+    // answered `250 Sender OK` and the refusal only arrives after DATA, because
+    // what is checked is the From HEADER and not the envelope. A test that
+    // stops before DATA reports a working mailbox that cannot send a thing.
+    expect(app(MailboxTester::class)->testSmtp($mailbox))->toContain('SMTP:');
 });

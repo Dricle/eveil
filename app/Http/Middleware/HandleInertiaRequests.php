@@ -3,7 +3,9 @@
 namespace App\Http\Middleware;
 
 use App\Ai\ProviderCredentials;
+use App\Enums\EmailAccountStatus;
 use App\Http\Resources\ProjectResource;
+use App\Models\EmailAccount;
 use App\Models\Project;
 use App\Support\CurrentProject;
 use Illuminate\Http\Request;
@@ -89,7 +91,10 @@ class HandleInertiaRequests extends Middleware
      * it: nobody else can fix it, and a permanent banner about somebody else's
      * job is noise.
      *
-     * @return array{provider: bool, mailbox: bool}
+     * A mailbox that stopped itself is the third: it is not missing, it is
+     * broken, and nothing else on any screen says so.
+     *
+     * @return array{provider: bool, mailbox: bool, broken: array<int, array{id: int, email: string, status: string, error: string|null}>}
      */
     private function missingSetup(Request $request): array
     {
@@ -97,13 +102,42 @@ class HandleInertiaRequests extends Middleware
         $project = app(CurrentProject::class)->get();
 
         if ($user === null) {
-            return ['provider' => false, 'mailbox' => false];
+            return ['provider' => false, 'mailbox' => false, 'broken' => []];
         }
 
         return [
             'provider' => $user->is_super_admin === true && ! $this->hasProviderKey(),
             'mailbox' => $project !== null && ! $project->emailAccounts()->exists(),
+            'broken' => $project === null ? [] : $this->brokenMailboxes($project),
         ];
+    }
+
+    /**
+     * The mailboxes this project cannot send from, with what the mail server
+     * actually said.
+     *
+     * A mailbox stops itself on a refused login, a refused sender or a run of
+     * bounces, and until now nothing said so anywhere: the campaign stayed
+     * active, the sequence stayed due, and the screen showed a run that was
+     * simply never going to move. The server's own sentence is carried through
+     * verbatim because it is the whole of the fix: "553 Sender is not allowed
+     * to relay emails" names the setting to change, and any paraphrase of it
+     * would not.
+     *
+     * @return array<int, array{id: int, email: string, status: string, error: string|null}>
+     */
+    private function brokenMailboxes(Project $project): array
+    {
+        return $project->emailAccounts()
+            ->whereIn('status', [EmailAccountStatus::Error, EmailAccountStatus::Paused])
+            ->get()
+            ->map(fn (EmailAccount $account): array => [
+                'id' => $account->id,
+                'email' => $account->from_email,
+                'status' => $account->status->value,
+                'error' => $account->last_error,
+            ])
+            ->all();
     }
 
     /**

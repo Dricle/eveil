@@ -21,6 +21,7 @@ class ConversationResource extends JsonResource
     public function toArray(Request $request): array
     {
         $lastInbound = $this->messages->last(fn (Message $message): bool => $message->direction->isInbound());
+        $lastOutbound = $this->messages->last(fn (Message $message): bool => ! $message->direction->isInbound());
 
         return [
             'id' => $this->id,
@@ -40,6 +41,12 @@ class ConversationResource extends JsonResource
             'classification' => $lastInbound?->classification?->value,
             'needs_attention' => $lastInbound?->classification?->needsAttention() ?? false,
             'replied_at' => $lastInbound?->received_at?->toIso8601String(),
+            // What became of the last thing we sent. A send that was refused
+            // still leaves a row, on purpose: the attempt is a fact worth
+            // keeping. But a list that showed it exactly like a delivered mail
+            // would tell somebody their mail went out when it never left.
+            'sent_at' => $lastOutbound?->sent_at?->toIso8601String(),
+            'delivery' => $lastOutbound?->status?->value,
             'messages' => $this->messages->map(fn (Message $message): array => [
                 'id' => $message->id,
                 'direction' => $message->direction->value,

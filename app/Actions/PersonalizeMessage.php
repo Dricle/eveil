@@ -63,9 +63,16 @@ class PersonalizeMessage
 
         $context = [
             'product' => $campaign->project->knowledge_base,
+            // Enough to work out WHO is being written to, without deciding it
+            // here: a shared mailbox and a named person want different mails,
+            // and the address itself is half the evidence.
             'recipient' => array_filter([
                 'first_name' => $lead->first_name,
                 'title' => $lead->title,
+                'address_local_part' => $lead->email === null
+                    ? null
+                    : mb_strstr($lead->email, '@', before_needle: true),
+                'address_came_from' => $lead->email_source?->value,
             ]),
             'company' => $company === null ? null : array_filter([
                 'name' => $company->name,

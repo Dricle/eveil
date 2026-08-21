@@ -39,3 +39,14 @@ The trap: `retry_after` on the redis queue connection must outlast the LONGEST s
 Adding a supervisor means adding it to `defaults` AND to both `environments` blocks; `environments` merges the keys you name into `defaults` rather than replacing the block.
 
 The `/horizon` dashboard shows every job payload (lead names, addresses, message bodies), so the gate is `is_super_admin`: instance scope, never granted through an organization. Horizon 5.48 no longer publishes assets; there is nothing to add to `post-update-cmd`. Metrics stay blank without the scheduled `horizon:snapshot` in `routes/console.php`, which means the scheduler has to be running too.
+
+## Horizon workers keep the app they booted with: restart the container after code changes
+A Horizon worker boots the application once and keeps that container instance for its whole life. Edit a service provider, add a binding, add an enum case, and every job it takes afterwards runs against the old one. The failure does not look like its cause: `BindingResolutionException: Target [App\Ai\Contracts\SpendGuardInterface] is not instantiable`, on a binding that is right there in `AppServiceProvider::register()` and resolves fine from `sail artisan tinker`.
+
+Two tells that it is this and not a real missing binding:
+- a fresh short-lived worker succeeds on the same job: `sail artisan queue:work --queue=ai --once`
+- the "while building [...]" list names jobs from EARLIER failures, because the container's build stack was never unwound
+
+The fix is `docker compose restart horizon`. Do it after any change to providers, bindings, enums or job constructors, and before blaming the code. `horizon:terminate` is the graceful equivalent in production, but in the Sail stack `php artisan horizon` is PID 1 of its own container, so terminating it just stops the container with nothing to bring it back.
+
+While a broken worker is still running it competes for the same queue, so draining by hand does not help: restart first, retry after (`sail artisan queue:retry all`).

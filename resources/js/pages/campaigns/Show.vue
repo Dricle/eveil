@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3'
 import { ref } from 'vue'
+import CampaignHeader from '@/components/CampaignHeader.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import campaignRoutes from '@/routes/campaigns'
 import stepRoutes from '@/routes/campaigns/steps'
-import type { Pipeline } from '@/types'
+import type { CampaignStatus } from '@/types'
 
 type Step = {
     id: number
@@ -26,32 +27,13 @@ const props = defineProps<{
     campaign: {
         id: number
         name: string
-        status: string
+        status: CampaignStatus
         target_profile: { id: number | null, name: string | null, type: string | null } | null
         steps: Step[]
     }
     sample?: Sample
-    pipeline: Pipeline
 }>()
 
-// The funnel in the order the work goes, so a gap reads as a gap.
-const STAGES = [
-    { key: 'pending', label: 'Waiting to start' },
-    { key: 'running', label: 'In sequence' },
-    { key: 'paused', label: 'Paused' },
-    { key: 'completed', label: 'Finished' },
-    { key: 'stopped', label: 'Stopped' },
-    { key: 'failed', label: 'Failed' }
-] as const
-
-const STATUSES = [
-    { label: 'Draft, nothing sends', value: 'draft' },
-    { label: 'Active', value: 'active' },
-    { label: 'Paused', value: 'paused' }
-]
-
-const name = ref(props.campaign.name)
-const status = ref(props.campaign.status)
 const previewing = ref<number | null>(null)
 
 function save (step: Step) {
@@ -106,66 +88,10 @@ function preview (step: Step) {
         <Head :title="campaign.name" />
 
         <div class="space-y-6 p-6">
-            <div class="flex flex-wrap items-center gap-3">
-                <UInput
-                    v-model="name"
-                    class="w-80"
-                    @blur="router.put(campaignRoutes.update.url(campaign.id), { name, status }, { preserveScroll: true })"
-                />
-
-                <USelect
-                    v-model="status"
-                    :items="STATUSES"
-                    class="w-56"
-                    @update:model-value="value => router.put(campaignRoutes.update.url(campaign.id), { name, status: value }, { preserveScroll: true })"
-                />
-
-                <UBadge
-                    v-if="campaign.target_profile?.name"
-                    color="neutral"
-                    variant="subtle"
-                    :label="campaign.target_profile.name"
-                    :icon="campaign.target_profile.type === 'partner' ? 'i-lucide-handshake' : 'i-lucide-crosshair'"
-                />
-
-                <UButton
-                    class="ms-auto"
-                    color="error"
-                    variant="ghost"
-                    icon="i-lucide-trash-2"
-                    label="Delete"
-                    @click="router.delete(campaignRoutes.destroy.url(campaign.id))"
-                />
-            </div>
-
-            <!-- Activating the campaign is what puts people into it, so this is
-                 where the answer to "did anything actually happen" belongs. -->
-            <div
-                v-if="Object.keys(pipeline).length"
-                class="flex flex-wrap gap-4 rounded-lg p-4 text-sm ring ring-default"
-            >
-                <div
-                    v-for="stage in STAGES"
-                    :key="stage.key"
-                    class="min-w-24"
-                >
-                    <p class="text-dimmed">
-                        {{ stage.label }}
-                    </p>
-                    <p class="text-lg">
-                        {{ pipeline[stage.key] ?? 0 }}
-                    </p>
-                </div>
-            </div>
-
-            <p
-                v-else-if="campaign.status === 'draft'"
-                class="rounded-lg p-4 text-sm text-muted ring ring-default"
-            >
-                Nobody is in this sequence yet. Activating it enrols the leads
-                this project can still write to, and pins a mailbox to each one
-                for the whole sequence.
-            </p>
+            <CampaignHeader
+                :campaign="campaign"
+                tab="sequence"
+            />
 
             <div class="grid gap-6 lg:grid-cols-2">
                 <div class="space-y-3">

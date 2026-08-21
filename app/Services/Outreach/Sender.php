@@ -28,7 +28,9 @@ use Throwable;
  *
  * The Message-ID is ours on purpose. It is what an incoming reply is matched
  * against on `In-Reply-To`, which makes it the foundation of reply detection,
- * auto-pause, and the STOP that is the only way out.
+ * auto-pause, and the STOP that is the only way out. It is stored and compared
+ * BARE: the angle brackets belong to the header syntax and are added on the way
+ * out, never kept.
  */
 class Sender
 {
@@ -137,6 +139,11 @@ class Sender
     {
         $domain = mb_substr(mb_strrchr($account->from_email, '@') ?: '@localhost', 1);
 
-        return '<'.bin2hex(random_bytes(16)).'@'.$domain.'>';
+        // Bare, with no angle brackets. The brackets are how the id is written
+        // in a header, not part of the id, and a reply's `In-Reply-To` reaches
+        // us already stripped of them: storing the bracketed form meant every
+        // reply looked up an id nothing matched, and no answer was ever
+        // attributed to the mail it answered.
+        return bin2hex(random_bytes(16)).'@'.$domain;
     }
 }

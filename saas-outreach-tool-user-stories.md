@@ -1430,11 +1430,11 @@ est une story pas faite.
 |---|---|
 | 1. Setup & configuration | ✅ auth complète (Fortify : login, reset, 2FA), écran de setup, section « App settings » réservée au superadmin. Clé provider, mapping par agent, limites, registre d'hôtes: et le déploiement : image `php:8.5-fpm` + nginx + supervisord (nginx, FPM, Horizon, scheduler) dans un conteneur, `compose.deploy.yaml` à la racine avec postgres, redis et searxng, `.env.example` commenté, superadmin créé depuis l'env par un `eveil:install` idempotent |
 | 2. Projets | 🟡 cloisonnement fait et testé, CRUD fait, sélecteur de projet fait, instructions d'écriture par projet suivies par les agents qui écrivent ; manque le dashboard multi-projet (`v1`) |
-| 3: Analyse & knowledge base | 🟡 analyse déclenchée à l'enregistrement, progression du crawl et pages en échec affichées, knowledge base visible et éditable ; manque le lien vers un repo (`v1`) |
+| 3: Analyse & knowledge base | 🟡 analyse déclenchée à l'enregistrement, progression du crawl et pages en échec affichées, knowledge base visible et éditable, questions laissées ouvertes posées et répondables avec une clé stable ; manque le lien vers un repo (`v1`) |
 | 4. Agent Website | ⬜ table `recommendations` pas encore créée |
 | 5: Découverte de leads | 🟡 graphe de jobs (`discovery_tasks`) avec son écran. Lancer, suivre, rejouer, arrêter ; profils cibles éditables ; sociétés scorées, filtrables, et portant le verdict de l'utilisateur, recopié dans les deux sens entre une société et ses contacts (`client`, `won`, `lost`, `rejected`, `suppressed` sortent de l'outreach) ; contacts listés avec leur verdict de vérification et le même statut, recherche déclenchable par société ou en masse ; import CSV avec son rapport ligne à ligne ; profils partenaires dérivés par l'agent avec leurs deux angles ; sociétés sans site qualifiées sur la ligne d'annuaire et jointes à l'adresse qu'elle publie. Manque le rendu JS (5.9, reporté en `v1`) |
 | 6: Séquences | 🟡 génération IA, personnalisation par lead avec prévisualisation, éditeur d'étapes complet ; manquent l'A/B (6.4) et les variables conditionnelles (6.5), tous deux `v1` |
-| 7. Envoi | ✅ boîtes SMTP/IMAP connectables avec un test qui nomme la cause de l'échec, plafond quotidien par adresse tous projets confondus, envoi étalé sur la journée par un tick de cinq minutes, séquence qui avance seule, trois couches de suppression relues à chaque envoi, bounce dur suppressif et coupe-circuit sur le taux de bounce ; restent le ramp-up configurable (7.3, `v1`), la rotation sur plusieurs boîtes (7.4, `v1`) et tout ce qui vient de l'entrant: STOP, DSN. Qui appartient à l'Epic 8 |
+| 7. Envoi | ✅ boîtes SMTP/IMAP connectables avec un test qui nomme la cause de l'échec, plafond quotidien par adresse tous projets confondus, envoi étalé sur la journée par un tick de cinq minutes, séquence qui avance seule, démarrage et pause depuis la liste des campagnes avec la prochaine échéance et la raison quand rien ne part, approbation par société qui déclenche recherche puis inscription, inscription continue des personnes trouvées après le démarrage, trois couches de suppression relues à chaque envoi, bounce dur suppressif et coupe-circuit sur le taux de bounce ; restent le ramp-up configurable (7.3, `v1`), la rotation sur plusieurs boîtes (7.4, `v1`) et tout ce qui vient de l'entrant: STOP, DSN. Qui appartient à l'Epic 8 |
 | 8: Réponses & inbox | ✅ IMAP lu à la main, réponses attribuées par en-tête, séquence mise en pause avant toute décision, agent `reply-handler` qui agit par outils, filet d'opt-out déterministe, inbox unifiée triée par ce qui demande une personne, réponse à la main depuis la boîte d'origine, funnel et dashboard avec le taux de réponse positive, DSN asynchrones lus (5.x supprime, 4.x attend un jour) |
 | 9. Organizations & permissions | ⬜ tables faites, rien au-dessus |
 | 10: Facturation | ⬜ |
@@ -1637,11 +1637,32 @@ automatiquement.
 - Champs : ce que fait le produit, pour qui, positionnement, proposition de valeur, concurrents
 - L'édition manuelle prime sur toute ré-analyse ultérieure, et est marquée comme telle
 - **État** : la page projet (`/app/projects/{project}`) porte les onze champs du portrait. Les cinq
-  champs texte et les quatre listes sont éditables ; `language` et `confidence` sont le compte rendu
+  champs texte et les trois listes sont éditables ; `language` et `confidence` sont le compte rendu
   du modèle sur son propre run et ne sont pas redemandés, donc l'enregistrement les fusionne au lieu
   de remplacer. Les listes voyagent une ligne par item et sont découpées côté serveur: pas d'éditeur
   de tags à maintenir. Sauvegarder pose `knowledge_base_edited_by_user`, que la page affiche et que
   `AnalyzeWebsite::applyToProject()` respectait déjà
+
+**3.5** ✅ En tant qu'utilisateur, je veux répondre aux questions que la lecture du site a laissées
+ouvertes.
+- Posées dans le run guidé juste avant la validation du portrait, et rejouables depuis
+  `/app/settings/knowledge-base`
+- Répondre reste facultatif : une question sans réponse ne bloque rien
+- **État** : `gaps` n'était affiché nulle part où on puisse y répondre, et partait pourtant tel quel
+  dans les prompts aval (`DeriveTargetProfiles`, `WriteSequence`, `PersonalizeMessage` sérialisent
+  la knowledge base entière). Les agents lisaient donc des questions sans réponse. Chaque question
+  porte maintenant une `key` stable et une `answer`, et se propage par le même chemin sans plomberie
+  supplémentaire. L'identité est la clé et jamais le libellé, comme pour les recommandations : une
+  relecture qui reformule ne redemande pas ce qui est déjà répondu, une question jamais répondue que
+  le site couvre désormais disparaît, et une question **répondue** survit même si elle n'est plus
+  posée, parce que ce que l'utilisateur a tapé n'est enregistré nulle part ailleurs. Trois questions
+  au plus, et seulement celles dont la réponse change qui est visé ou ce que dit le mail : chaque
+  question est une minute prise à l'utilisateur, donc c'est de la dette au sens de l'étoile polaire.
+  Répondre n'écrit pas `knowledge_base_edited_by_user` : c'est un ajout et non une correction, et
+  geler tout le portrait contre chaque relecture serait cher payé pour une ligne. Le formulaire du
+  portrait ne touche plus aux questions : il n'a aucun moyen de porter la clé sous laquelle la
+  réponse est classée. `App\Models\Project::openQuestions()` normalise les deux formes stockées, un
+  portrait ancien gardant des phrases nues
 
 **3.3** ⬜ `v1` En tant qu'utilisateur, je veux lier le repo GitHub pour une analyse plus poussée.
 - Repos publics d'abord ; stack technique, README, issues ouvertes
@@ -1971,6 +1992,145 @@ automatiquement.
   serveur en face. Compter par campagne fait envoyer 90 à une boîte calibrée pour 30. Rien n'est
   perdu quand l'allocation est épuisée : la ligne reste due et repart le lendemain. Le ramp-up (7.3)
   est déjà dans `allowanceForToday()` ; il lui manque sa courbe configurable et son écran
+
+**8.4** ✅ En tant qu'utilisateur, je veux voir les mails PARTIS, pas seulement ceux auxquels on a
+répondu.
+- **État** : deux listes sur `/app/inbox`, « Replies » par défaut et « Sent » à côté, avec leur
+  compteur chacune. Elles ne diffèrent que d'une condition sur la direction du message, donc c'est
+  une requête paramétrée et pas un second écran. Ce qui est parti sans réponse n'était visible nulle
+  part : la seule façon de répondre à « est-ce que quelque chose est vraiment sorti » était d'ouvrir
+  les fiches contact une par une. Elles restent **deux** listes et pas une seule fusionnée : mélanger
+  mettrait cinq cents lignes muettes autour des quatre qui demandent une personne, ce qui est
+  exactement ce que l'inbox existe pour éviter. Les deux compteurs sont calculés à chaque visite,
+  donc l'onglet fermé dit quand même s'il contient quelque chose. Répondre à la main depuis « Sent »
+  passe par le même `ReplyToConversation` et arrête donc la séquence : quelqu'un à qui une personne
+  écrit ne doit pas recevoir en plus la relance en file, et le bouton le dit au lieu de le taire.
+
+**7.1 bis** ✅ En tant qu'utilisateur, je veux qu'un test de boîte vert veuille dire que je peux
+vraiment envoyer.
+- **État** : `MailboxTester::testSmtp()` envoie un **vrai message**, à l'adresse elle-même. Le login
+  n'est que la moitié de la question : un fournisseur authentifie le NOM D'UTILISATEUR puis refuse
+  l'adresse FROM quand elle n'appartient pas au compte. Et il ne le dit qu'à la fin. Mesuré contre
+  Zoho : `MAIL FROM:<pas-a-moi@example.com>` reçoit `250 Sender OK`, `RCPT TO` externe reçoit
+  `250 Recipient OK`, et le `553 Sender is not allowed to relay emails` n'arrive qu'après le corps,
+  parce que ce qui est validé est l'en-tête `From:`. Un test qui s'arrête avant DATA déclare donc
+  fonctionnelle une boîte qui ne peut rien envoyer, ce qui est pire que pas de test. Adressé à
+  elle-même : rien ne part chez personne, et l'arrivée du message est sa propre preuve.
+  Le même refus est classé `auth` par `SendFailure` et met la boîte en erreur, jamais `recipient` :
+  553 sert aux deux camps selon les fournisseurs, et supprimer un prospect innocent pour un réglage
+  d'expéditeur est l'erreur la plus chère des deux.
+
+**7.2 bis** ✅ En tant qu'utilisateur, je veux démarrer ou mettre en pause une séquence d'un geste, et
+voir quand le prochain mail part.
+- L'interrupteur est dans la LISTE des campagnes, pas seulement sur la page de l'une d'elles
+- L'écran dit la prochaine échéance, et la raison quand rien ne part
+- **État** : `PUT campaigns/{campaign}/status` a son propre contrôleur. L'interrupteur est actionné
+  depuis une ligne de liste où le nom n'est pas édité, donc le reposter avec le formulaire de la
+  campagne écraserait un renommage fait ailleurs ; renommer et démarrer sont deux gestes. Démarrer
+  depuis `draft` reste ce qui inscrit les leads, et ré-actionner sur une campagne déjà active
+  n'inscrit personne : quelqu'un supprimé ou gagné depuis y rentrerait à nouveau.
+  La page portait un funnel et **rien sur le temps**, alors que `next_action_at` existait en base
+  depuis l'inscription. Elle porte maintenant la prochaine échéance, la raison quand il ne se passe
+  rien (pas démarrée, personne d'inscrit, hors fenêtre, quota du jour épuisé, délai entre deux mails
+  d'une même adresse pas écoulé), le compteur envoyés/restants par boîte, et les cinquante premiers
+  leads avec leur étape, ce qui est réellement parti et leur échéance. Le reste est sur Contacts,
+  qui est fait pour ça. Deux règles sont lues à leur source plutôt que recopiées:
+  `DispatchDueSends::windowIsOpen()` pour la fenêtre et `EmailAccount::readyAt()` pour le délai. Un
+  écran qui garde sa propre copie finit par annoncer un envoi que le planificateur ne fera pas.
+  `current_step_position` est la position de la dernière étape FAITE, donc zéro veut dire inscrit et
+  jamais écrit : la ressource le nomme `last_step` et l'écran dit « not started », parce que
+  « étape 0 » se lit comme un bug
+
+**7.2 ter** ✅ En tant qu'utilisateur, je veux approuver une société, et que tout le reste se fasse.
+- L'approbation porte sur la SOCIÉTÉ, pas sur les adresses trouvées ce jour là
+- Elle déclenche la recherche de contacts, puis l'inscription en séquence, sans second clic
+- Gouvernée par `projects.autonomy_level`, qui jusqu'ici n'était lu nulle part
+- **État** : `companies.approved_at`. Une colonne et pas un statut, et c'est la décision qui porte
+  tout le reste : un statut voyage par **recopie** de la société vers ses personnes
+  (`SetOutreachStatus`), et une recopie ne peut pas atteindre une ligne qui n'existe pas encore. Un
+  contact trouvé la semaine suivante dans une société approuvée naîtrait non approuvé, ce qui
+  reproduit un cran plus haut le bug qu'on corrige. Le lead lit donc la permission **à travers** sa
+  société, exactement comme `Lead::contactable()` lit déjà le statut de la sienne par sous-requête.
+  Ce n'est pas un second chemin d'exclusion, ce que le statut interdit à raison : `excluded()` reste
+  l'unique sortie, `approved_at` est une permission dans l'autre sens, et outreach exige les deux.
+  Les trois crans : `supervised` n'inscrit qu'au démarrage manuel de la campagne (l'utilisateur
+  décide QUAND autant que qui), `semi_auto` inscrit les sociétés approuvées au fil de l'eau,
+  `autonomous` n'attend l'accord de personne. Approuver dispatche `FindCompanyContacts` quand
+  personne n'a encore cherché : approuver puis devoir cliquer une seconde fois est le clic que ça
+  supprime, et une société sans personne dedans ne vaut rien. Un lead **sans société** passe tous
+  les filtres : il vient d'un import fait à la main, il n'y a rien à approuver ni de segment auquel
+  appartenir, et l'exclure voudrait dire qu'une liste importée ne reçoit jamais rien.
+  Écran : bouton par ligne et bouton de lot sur la liste Leads, bouton sur la fiche société (c'est
+  là qu'on lit le `fit_reason` avant de trancher), et un interrupteur « Awaiting approval » avec son
+  compteur, qui est la file de travail réelle.
+
+**7.2 quater** ✅ En tant qu'utilisateur, je veux que les gens trouvés après le démarrage entrent dans
+la campagne qui tourne.
+- **État** : `eveil:enrol-due` toutes les cinq minutes. Une campagne ne regardait qu'une fois, au
+  moment du démarrage, et toute personne découverte ensuite restait dehors jusqu'à ce que quelqu'un
+  pense à basculer la campagne en pause puis en actif. L'extraction de contacts arrive par vagues,
+  donc « ensuite » est le cas normal et pas le cas limite. Sûr à répéter : l'inscription refuse déjà
+  quiconque est dans une séquence vivante, et l'index unique a le dernier mot.
+  Deux bugs corrigés dans le même geste. L'inscription prenait **tous** les leads contactables du
+  projet en ignorant `campaigns.target_profile_id` et `company_target_evaluations` : avec une seule
+  campagne ça ne se voit pas, avec deux un lead trouvé par le profil partenaire reçoit la séquence
+  client, et l'accroche est écrite depuis le `fit_reason` d'un profil dont la séquence ne parle pas.
+  Et l'ordre d'inscription met maintenant les adresses nominatives devant, les non confirmées
+  derrière : le coupe-circuit à 5 % de bounces existe, donc si un lot de suppositions doit le
+  déclencher, il doit le déclencher **après** que les adresses sûres sont parties, pas à leur place.
+
+**7.2 quinquies** ✅ En tant qu'utilisateur, je veux qu'on n'invente pas d'adresses, et que le mail
+s'adapte à qui le reçoit.
+- **État** : `guessGeneric` gardait `valid` **ou** `risky`. Or `risky` signifie catch-all ou serveur
+  qui refuse de répondre, c'est à dire « pas réfuté » et non « existe ». Seul `valid` est gardé
+  désormais. Mesuré sur un vrai lot de sociétés belges : sept sur huit sont chez Microsoft 365, qui
+  ne répond jamais à un `RCPT TO`, donc plus rien n'est deviné sur ce segment. C'est l'issue honnête,
+  l'étape se désactive au lieu de faire semblant, et elle reste utile ailleurs. Le probe lui-même
+  existait déjà dans `EmailVerifier` : syntaxe, domaines jetables, MX, catch-all, `RCPT TO` sans
+  jamais envoyer `DATA`.
+  Côté rédaction, `message-personalizer` reçoit maintenant `email_source` et la partie locale de
+  l'adresse, avec deux règles : un prénom qui n'est pas un prénom (« Team », « Service », le nom de
+  la société) vaut absence de prénom, et une adresse générique est une boîte partagée à qui on écrit
+  en tant que société. C'est l'agent qui tranche parce qu'il voit déjà le champ ; un test de
+  plausibilité en PHP serait une liste de prénoms à maintenir pour toujours, fausse dès le premier
+  client polonais.
+
+**7.2 sexies** ✅ En tant qu'utilisateur, je veux choisir ce que le projet fait sans me demander.
+- **État** : un champ dans les réglages du projet (`/app/settings/project`), les trois crans de
+  `AutonomyLevel` avec une ligne d'aide qui dit ce que chacun FAIT : « semi automatique » ne dit rien
+  tout seul sur qui reçoit un mail. Le lecteur avait été posé avant l'écrivain, donc seule la valeur
+  par défaut de la colonne pouvait le régler. C'est le premier morceau de 13.2, côté projet ; le
+  réglage par agent reste à faire.
+
+**6.1 bis** ✅ En tant qu'utilisateur, je veux une séquence pour chaque segment, sans les demander une
+par une.
+- Un bandeau nomme les segments auxquels rien n'est écrit, avec le bouton qui les comble
+- En mode autonome elles sont écrites sans qu'on demande
+- **État** : `App\Actions\WriteMissingCampaigns`, un bouton « Write the N missing » à côté du
+  générateur par segment, et `eveil:write-missing` toutes les heures sur les projets `autonomous`.
+  Ce qui manque n'apparaît jamais sur une liste de ce qui existe : un profil cible sans campagne est
+  un segment que les recherches continuent de remplir de sociétés que personne n'écrira jamais, et
+  aucun autre élément de l'écran ne peut le montrer. Horaire plutôt qu'aux cinq minutes : écrire
+  trois mails sur le modèle cher est l'appel le plus coûteux du produit, et les segments
+  apparaissent une ou deux fois dans la vie d'un projet. Un tick plutôt qu'un accrochage sur la fin
+  de la dérivation, parce qu'il couvre aussi un profil ajouté à la main et un projet passé en
+  autonome longtemps après. Deux garde-fous : rien n'est mis en file tant qu'une écriture est en vol
+  (le tick repasse bien avant qu'une écriture d'une minute soit finie), ni tant que le projet n'a pas
+  de knowledge base, sinon c'est un job par profil pour lever la même erreur indéfiniment. Le
+  bandeau, lui, continue de nommer les segments découverts pendant qu'une écriture tourne : un trou
+  qui disparaît le temps d'un job et revient ensuite se lit comme un bug.
+
+**6.3 bis** ✅ En tant qu'utilisateur, je veux lire une campagne sans scroller par dessus ce qui ne
+m'intéresse pas à cet instant.
+- **État** : deux pages pour une campagne, le même schéma qu'un profil cible et ses recherches.
+  « Sequence » (`/app/campaigns/{id}`) porte les étapes, leur édition, leur réordonnancement et la
+  prévisualisation sur de vrais leads ; « Delivery » (`/app/campaigns/{id}/delivery`) porte le
+  funnel, la raison quand rien ne part, les compteurs envoyés/restants par boîte et les leads de la
+  séquence. `CampaignHeader.vue` porte le nom éditable, l'interrupteur, le badge de segment, la
+  suppression et le `UNavigationMenu`, qui reste **dans la zone de contenu** : la barre du haut
+  appartient à l'application et pas à la section ouverte. Chaque page ne charge que ses propres
+  props, ce qu'un test vérifie dans les deux sens : la prévisualisation coûte un appel modèle par
+  lead et n'a rien à faire sur un écran qui parle de qui a été écrit.
 
 **7.3** ⬜ `v1` En tant qu'utilisateur, je veux un ramp-up progressif sur un nouveau compte.
 - Courbe de montée configurable, appliquée automatiquement

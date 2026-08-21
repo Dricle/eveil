@@ -27,6 +27,7 @@ class CompanyController extends Controller
         $profile = $request->integer('profile') ?: null;
         $minScore = $request->integer('min_score');
         $excluded = $request->boolean('excluded');
+        $unapproved = $request->boolean('unapproved');
         $search = $request->string('search')->trim()->value();
 
         /** @var array<string, string|null> $columns */
@@ -47,6 +48,10 @@ class CompanyController extends Controller
             // rejection: is not part of the list they are working through,
             // unless they ask to see what they set aside.
             ->when(! $excluded, fn ($query) => $query->contactable())
+            // The working queue: what is still waiting for a yes. Under
+            // anything but full autonomy this is the only list that matters,
+            // because nothing else moves until these are decided.
+            ->when($unapproved, fn ($query) => $query->whereNull('approved_at'))
             ->sorted($request->string('sort')->value(), $request->string('direction')->value())
             ->paginate(25)
             ->withQueryString();
@@ -60,6 +65,7 @@ class CompanyController extends Controller
                 'profile' => $profile,
                 'min_score' => $minScore,
                 'excluded' => $excluded,
+                'unapproved' => $unapproved,
                 'search' => $search ?: null,
                 'filter' => array_filter($columns, fn (?string $value): bool => $value !== null && $value !== ''),
                 'sort' => $request->string('sort')->value() ?: null,
@@ -68,6 +74,9 @@ class CompanyController extends Controller
             'total' => Company::query()->contactable()->count(),
             // How many are worth a bulk search: nobody has looked at them yet.
             'unsearched' => Company::query()->contactable()->whereNull('contacts_status')->count(),
+            // How many are still waiting for a yes, which is the only number
+            // that says whether the user has work to do here.
+            'unapproved' => Company::query()->contactable()->whereNull('approved_at')->count(),
         ]);
     }
 

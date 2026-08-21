@@ -22,7 +22,7 @@ function knowledgeBase(): array
         'proof_points' => ['300 factories served'],
         'language' => 'fr',
         'confidence' => 80,
-        'gaps' => ['No mention of minimum order size.'],
+        'gaps' => [['key' => 'minimum_order_size', 'question' => 'Is there a minimum order size?']],
     ];
 }
 

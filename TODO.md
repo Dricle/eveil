@@ -47,6 +47,112 @@ fournir de liste de leads. Tant que ce n'est pas vrai, Eveil est un crawler avec
       et `Lead::contactable()` sont relus à l'inscription dans la séquence et avant chaque envoi
 - [x] Activation d'une campagne → inscription des leads (`EnrolCampaign`, boîte épinglée pour toute
       la séquence), avec le funnel de la campagne sur son écran et celui du projet sur le dashboard
+- [x] **Démarrer et mettre en pause depuis la liste**, plus un select enterré sur la page de la
+      campagne : `PUT campaigns/{campaign}/status` a son propre contrôleur, parce que l'interrupteur
+      est actionné depuis une ligne de liste où le nom n'est pas édité et où le reposter écraserait
+      un renommage. Renommer et démarrer sont deux gestes distincts
+- [x] **Dire QUAND, et pourquoi pas maintenant.** La page campagne portait un funnel et rien sur le
+      temps : `next_action_at` existait en base et ne sortait nulle part. Elle affiche maintenant la
+      prochaine échéance et la raison quand rien ne part (pas démarrée, hors fenêtre, quota du jour
+      épuisé, délai entre deux mails d'une même adresse), le compteur envoyés/restants par boîte, et
+      les cinquante premiers leads de la séquence avec leur étape, ce qui est réellement parti et
+      leur échéance. La fenêtre est lue sur `DispatchDueSends::windowIsOpen()` et le délai sur
+      `EmailAccount::readyAt()` : l'écran interroge la règle que le planificateur applique, il n'en
+      garde pas une copie qui finirait par promettre un envoi qui n'aura pas lieu
+- [x] **Approbation par société, et `autonomy_level` a enfin un lecteur.** `companies.approved_at`,
+      une colonne et pas un statut : un statut voyage par RECOPIE vers les personnes, et une recopie
+      ne peut pas atteindre une ligne qui n'existe pas encore, donc un contact trouvé la semaine
+      suivante naîtrait non approuvé. Le lead lit la permission à travers sa société, comme
+      `Lead::contactable()` lit déjà le statut de la sienne. Ce n'est pas un second chemin
+      d'exclusion : `excluded()` reste unique, `approved_at` est une permission dans l'autre sens, et
+      les deux doivent passer. `supervised` n'inscrit qu'au démarrage manuel, `semi_auto` inscrit les
+      sociétés approuvées au fil de l'eau, `autonomous` n'attend l'accord de personne. Approuver
+      **déclenche aussi la recherche de contacts** : approuver puis devoir cliquer une seconde fois
+      est exactement le clic qu'on supprime. Bouton par ligne, bouton de lot sur la page, filtre
+      « Awaiting approval » avec son compteur. Un lead SANS société passe partout : il vient d'un
+      import fait à la main, il n'y a rien à approuver et l'exclure voudrait dire qu'une liste
+      importée ne reçoit jamais rien
+- [x] **Inscription continue** : `eveil:enrol-due` toutes les cinq minutes. Une campagne ne regardait
+      qu'une fois, au démarrage, et toute personne trouvée après restait dehors pour toujours. Or
+      l'extraction de contacts arrive par vagues, donc « après » est le cas normal. Idempotent par
+      construction (`whereDoesntHave` sur les adhésions vivantes, plus l'index unique)
+- [x] **L'inscription respecte le profil cible de la campagne.** Elle prenait TOUS les leads
+      contactables du projet en ignorant `campaigns.target_profile_id` et `company_target_evaluations`.
+      Avec une seule campagne ça ne se voit pas ; avec deux, un lead trouvé par le profil partenaire
+      reçoit la séquence client, et l'accroche est écrite depuis le `fit_reason` d'un profil dont la
+      séquence ne parle pas
+- [x] **Les adresses non confirmées partent en dernier**, et les devinées ne sont gardées que si le
+      serveur les CONFIRME. `guessGeneric` acceptait `valid` **ou** `risky`, or `risky` veut dire
+      catch-all ou serveur muet, c'est à dire « pas réfuté », pas « existe ». Sur un segment hébergé
+      chez un fournisseur qui refuse les probes, plus rien n'est deviné : l'étape se désactive au
+      lieu de faire semblant. Et l'ordre d'inscription met les nominatifs devant, les devinées
+      derrière, pour que le coupe-circuit à 5 % de bounces se déclenche après que les bonnes adresses
+      sont parties, pas à leur place
+- [x] **Le mail s'adapte à qui le reçoit** : `email_source` et la partie locale de l'adresse partent
+      dans le contexte de `message-personalizer`, avec la consigne qu'un prénom qui n'est pas un
+      prénom (« Team », « Service », le nom de la société) vaut absence de prénom, et qu'une adresse
+      générique est une boîte partagée à qui on écrit en tant que société. C'est l'agent qui tranche,
+      pas une liste de prénoms en PHP qui serait fausse dès le premier client polonais
+- [x] **Le cran d'autonomie se règle**, dans les réglages du projet, avec une ligne d'aide qui dit ce
+      que chaque cran FAIT plutôt que son nom. Le lecteur avait été câblé avant l'écrivain : seule la
+      valeur par défaut de la colonne pouvait le poser. Premier morceau de 13.2, côté projet
+- [x] **Un segment sans séquence est signalé, et se comble en un clic.** Ce qui manque n'apparaît
+      jamais sur une liste de ce qui existe : un profil cible sans campagne est un segment que les
+      recherches continuent de remplir de sociétés que personne n'écrira jamais. Bandeau qui les
+      nomme, bouton « Write the N missing » à côté du générateur par segment, et
+      `eveil:write-missing` toutes les heures sur les projets `autonomous`. Horaire et pas toutes les
+      cinq minutes : écrire trois mails est l'appel le plus cher du produit, et les segments
+      apparaissent une ou deux fois dans la vie d'un projet. Garde-fou : rien n'est mis en file tant
+      qu'une écriture est en vol, ni si le projet n'a pas encore de knowledge base, sinon c'est un
+      job par profil pour lever la même erreur à chaque passage
+- [x] **La page campagne se navigue par onglets**, comme un profil cible : « Sequence » (les mails,
+      l'éditeur d'étapes, la prévisualisation) et « Delivery » (`/app/campaigns/{id}/delivery` : le
+      funnel, la raison quand rien ne part, les quotas par boîte, les leads de la séquence). Un
+      `CampaignHeader` partagé porte le nom, l'interrupteur, le segment et la suppression, avec le
+      `UNavigationMenu` **dans le contenu** et jamais dans la barre d'app. Les deux se lisent à des
+      moments différents, et un seul écran obligeait à scroller par dessus le run pour éditer un mail
+- [x] **Un refus portant sur l'EXPÉDITEUR n'est plus lu comme une adresse morte.** Zoho répond
+      « 553 Sender is not allowed to relay emails » quand l'adresse From n'est pas vérifiée sur le
+      compte, et 553 était dans la liste des codes destinataire : le prospect était supprimé
+      définitivement, le message compté comme bounce, et le coupe-circuit mettait la boîte en pause
+      pour une faute qui était à un réglage de là. Les refus qui parlent de l'expéditeur (relay,
+      sender rejected, not owned by user) sont testés AVANT les codes destinataire, parce que les
+      deux erreurs ne coûtent pas la même chose : une boîte mise en pause à tort affiche les mots du
+      serveur et se répare en un clic, une adresse supprimée à tort est silencieuse et censée être
+      définitive
+- [x] **Une boîte qui s'est arrêtée le dit sur tous les écrans**, à côté des deux bandeaux existants.
+      Une boîte en `error` ou `paused` n'est pas manquante, elle est cassée, et rien nulle part ne le
+      signalait : la campagne restait active, la séquence restait due, et le run ne bougeait
+      simplement jamais. La phrase du serveur est reprise **mot pour mot**, parce que c'est elle qui
+      nomme le réglage à changer : « 553 Sender is not allowed to relay emails » dit quoi faire, une
+      paraphrase non. Scopé au projet courant, donc la boîte d'un autre projet n'apparaît pas
+- [x] **Le bouton Test envoie un vrai message**, à l'adresse elle-même. Mesuré contre Zoho : un
+      `MAIL FROM:<pas-a-moi@example.com>` reçoit `250 Sender OK`, et le refus n'arrive qu'après le
+      `DATA`, parce que ce qui est vérifié est l'en-tête `From:` et pas l'enveloppe. Un test qui
+      s'arrête avant DATA déclare fonctionnelle une boîte incapable d'envoyer quoi que ce soit, ce
+      qui est pire que pas de test. Adressé à elle-même, donc rien ne part chez personne et
+      l'arrivée du message est sa propre preuve. `explain()` a sa branche pour ce cas : « le login
+      marche, mais le serveur refuse d'envoyer en tant que X, il faut un domaine vérifié ou un alias
+      de Y »
+- [x] **Le Message-ID est stocké nu, sans chevrons.** Les chevrons appartiennent à la syntaxe de
+      l'en-tête, pas à l'identifiant, et un `In-Reply-To` entrant arrive déjà dépouillé. L'envoi
+      stockait la forme entre chevrons, donc **aucune réponse n'a jamais été attribuée** : le lookup
+      cherchait un id que rien ne portait, l'inbox restait vide et aucune séquence ne se mettait en
+      pause sur une réponse. La comparaison retrime aussi à l'entrée, pour le serveur qui laisserait
+      les chevrons. Migration pour normaliser l'existant, non réversible : remettre les chevrons
+      remettrait le bug. Le test de non-régression prend l'id du **vrai** `Sender` au lieu d'une
+      valeur choisie à la main, ce qui est exactement ce qui masquait le bug : les deux côtés de
+      chaque fixture étaient écrits par la même main
+- [x] **L'inbox a deux listes : « Replies » et « Sent ».** Ce qui est parti sans réponse n'était
+      visible nulle part : il fallait ouvrir les fiches contact une par une pour répondre à
+      « est-ce que quelque chose est vraiment sorti ». Deux listes et pas une seule, parce que
+      mélanger mettrait cinq cents lignes muettes autour des quatre qui demandent une personne, ce
+      que l'inbox existe précisément pour éviter. Les deux compteurs sont toujours calculés, donc
+      l'onglet fermé dit quand même s'il contient quelque chose. Répondre à la main depuis « Sent »
+      arrête la séquence, comme depuis « Replies », et le bouton le dit. Un envoi **refusé** y figure
+      aussi, avec son badge : la tentative est un fait qui mérite d'être gardé, et le cacher dirait
+      qu'il ne s'est rien passé alors qu'il s'est passé quelque chose. Mais il ne doit jamais avoir
+      l'air d'un mail arrivé
 - ~~7.5 warm-up~~. Hors scope assumé (ADR-023)
 
 ### Epic 8: Réponses & inbox ✅
@@ -84,6 +190,13 @@ fournir de liste de leads. Tant que ce n'est pas vrai, Eveil est un crawler avec
 - [x] Deux bandeaux en haut de chaque écran, parce qu'aucun des deux ne se signale tout seul : pas de
       clé provider (superadmin uniquement. Personne d'autre ne peut la poser) et pas de boîte mail
       attachée au projet
+- [x] Les questions laissées ouvertes par la lecture du site sont **posées et répondables**, dans le
+      run guidé juste avant la validation du portrait et sur `/app/settings/knowledge-base`. Chacune
+      porte une clé stable, donc une relecture qui reformule ne redemande pas une réponse déjà
+      donnée, et une question répondue survit même si le site la couvre désormais. Trois au plus, et
+      seulement celles dont la réponse change qui est visé ou ce que dit le mail : répondre reste
+      facultatif. Répondre n'écrit **pas** `knowledge_base_edited_by_user` : c'est un ajout, pas une
+      correction, et geler tout le portrait coûterait trop cher pour une ligne tapée
 
 ### Trous à combler dans ce qui existe déjà
 

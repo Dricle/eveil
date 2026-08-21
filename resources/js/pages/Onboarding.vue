@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, router, usePoll } from '@inertiajs/vue3'
 import { computed, watch } from 'vue'
+import OpenQuestions from '@/components/OpenQuestions.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 // Suffixed on purpose: an import sharing a name with a prop shadows that prop in
 // every template expression, silently. `searches` and `knowledgeBase` are both
@@ -9,11 +10,12 @@ import companyRoutes from '@/routes/companies'
 import searchRoutes from '@/routes/onboarding'
 import knowledgeBaseRoutes from '@/routes/settings/knowledge-base'
 import targetRoutes from '@/routes/targets'
-import type { Analysis, KnowledgeBase, TargetProfile } from '@/types'
+import type { Analysis, KnowledgeBase, OpenQuestion, TargetProfile } from '@/types'
 
 const props = defineProps<{
     analysis: Analysis | null
     knowledgeBase: KnowledgeBase | null
+    openQuestions: OpenQuestion[]
     profiles: TargetProfile[]
     deriving: boolean
     searches: number
@@ -191,6 +193,10 @@ const LISTS = ['key_features', 'competitors', 'proof_points'] as const
                         </dd>
                     </div>
                 </dl>
+
+                <!-- Asked before the confirmation, not after it: the answers
+                     feed the segments the next button derives. -->
+                <OpenQuestions :questions="openQuestions" />
 
                 <div class="flex flex-wrap items-center gap-2">
                     <UButton

@@ -136,7 +136,14 @@ class AnalyzeCommand extends Command
                 $this->components->twoColumnDetail("<fg=cyan>{$field}</>", (string) count($value).' item(s)');
 
                 foreach ($value as $item) {
-                    $this->line('    · '.Str::of((string) $item)->limit(160));
+                    // Every list is a list of sentences, except the open
+                    // questions, which carry the key their answer is filed
+                    // under alongside the question itself.
+                    $line = is_array($item)
+                        ? (string) ($item['question'] ?? json_encode($item))
+                        : (string) $item;
+
+                    $this->line('    · '.Str::of($line)->limit(160));
                 }
 
                 continue;

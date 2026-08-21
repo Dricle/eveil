@@ -153,12 +153,20 @@ class EmailAccount extends Model
      */
     public function remainingToday(): int
     {
-        $sent = $this->messages()
+        return max(0, $this->allowanceForToday() - $this->sentToday());
+    }
+
+    /**
+     * What has already left this address today, across every project. The
+     * number a screen has to show beside the allowance: "27 left" says nothing
+     * on its own about whether anything is happening.
+     */
+    public function sentToday(): int
+    {
+        return $this->messages()
             ->where('direction', MessageDirection::Outbound)
             ->where('sent_at', '>=', now()->startOfDay())
             ->count();
-
-        return max(0, $this->allowanceForToday() - $sent);
     }
 
     /**
@@ -167,6 +175,18 @@ class EmailAccount extends Model
      */
     public function readyToSend(): bool
     {
+        return $this->readyAt() === null;
+    }
+
+    /**
+     * When the gap since the last send expires, or null when it already has.
+     *
+     * The same rule `readyToSend()` asks as a yes or no, kept in one place: a
+     * screen has to say WHEN, and recomputing the gap beside it is how the two
+     * answers drift apart.
+     */
+    public function readyAt(): ?Carbon
+    {
         $gap = app(Settings::class)->array('sending')['min_gap_minutes'] ?? 6;
 
         $last = $this->messages()
@@ -174,7 +194,13 @@ class EmailAccount extends Model
             ->whereNotNull('sent_at')
             ->max('sent_at');
 
-        return $last === null || Carbon::parse($last)->addMinutes((int) $gap)->isPast();
+        if ($last === null) {
+            return null;
+        }
+
+        $ready = Carbon::parse($last)->addMinutes((int) $gap);
+
+        return $ready->isPast() ? null : $ready;
     }
 
     /**

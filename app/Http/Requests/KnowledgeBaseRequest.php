@@ -14,8 +14,11 @@ class KnowledgeBaseRequest extends FormRequest
     /**
      * The list fields, kept here because both the rules and the line-splitting
      * need to agree on which ones they are.
+     *
+     * The open questions are deliberately not among them: they are answered,
+     * not rewritten, and they carry a key this form has no way to preserve.
      */
-    public const LISTS = ['key_features', 'competitors', 'proof_points', 'gaps'];
+    public const LISTS = ['key_features', 'competitors', 'proof_points'];
 
     /**
      * @return array<string, array<int, mixed>>

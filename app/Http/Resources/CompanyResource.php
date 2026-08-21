@@ -35,6 +35,9 @@ class CompanyResource extends JsonResource
             'source_url' => $this->source_url,
             'status' => $this->status->value,
             'excluded' => $this->status->isExcluded(),
+            // The user's go-ahead, which is what lets the people found here
+            // enter a sequence on their own.
+            'approved' => $this->approved_at !== null,
             'contacts_status' => $this->contacts_status?->value,
             'contacts_count' => $this->contacts_count,
             'discovered_at' => $this->discovered_at->toIso8601String(),

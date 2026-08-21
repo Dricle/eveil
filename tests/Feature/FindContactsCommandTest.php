@@ -361,6 +361,58 @@ it('reports companies that are reachable by phone only', function () {
         ->assertSuccessful();
 });
 
+it('keeps a guessed address only when the mail server confirms it', function () {
+    companyWithSite();
+    ContactExtractor::fake([extraction(), extraction()]);
+
+    // `info@` is refused, `contact@` exists. Everything in between, the
+    // catch-all and the server that will not answer, means "we did not
+    // disprove it", which is not the same as "it is there".
+    $this->app->bind(EmailVerifier::class, fn () => new class extends EmailVerifier
+    {
+        public function __construct() {}
+
+        public function verify(string $email): EmailStatus
+        {
+            return match (mb_strstr($email, '@', before_needle: true)) {
+                'contact' => EmailStatus::Valid,
+                'info' => EmailStatus::Risky,
+                default => EmailStatus::Unknown,
+            };
+        }
+    });
+
+    $this->artisan('eveil:find-contacts', ['--guess-generic' => true])->assertSuccessful();
+
+    $lead = Lead::sole();
+
+    // A guess nobody confirmed is a bounce, and five bounces in a hundred
+    // sends pause the mailbox for every good address behind them.
+    expect($lead->email)->toBe('contact@friterie.be')
+        ->and($lead->email_source)->toBe(EmailSource::Inferred);
+});
+
+it('guesses nothing at all when no candidate can be confirmed', function () {
+    companyWithSite();
+    ContactExtractor::fake([extraction(), extraction()]);
+
+    // The shape of a provider that refuses probes, which is most of the
+    // market. The step disables itself rather than pretending.
+    $this->app->bind(EmailVerifier::class, fn () => new class extends EmailVerifier
+    {
+        public function __construct() {}
+
+        public function verify(string $email): EmailStatus
+        {
+            return EmailStatus::Unknown;
+        }
+    });
+
+    $this->artisan('eveil:find-contacts', ['--guess-generic' => true])->assertSuccessful();
+
+    expect(Lead::count())->toBe(0);
+});
+
 it('does not guess a generic address unless asked', function () {
     companyWithSite();
     ContactExtractor::fake([extraction(), extraction()]);

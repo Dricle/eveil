@@ -2,13 +2,12 @@
 
 namespace App\Http\Requests;
 
-use App\Enums\CampaignStatus;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 /**
- * A campaign as the user names it. Status is here too because activating one is
- * the same edit: there is nothing else to decide at that moment.
+ * A campaign as the user names it. Started and paused elsewhere: that switch is
+ * thrown from the list too, and a name posted from a row that is not editing it
+ * would overwrite a rename.
  */
 class CampaignRequest extends FormRequest
 {
@@ -19,7 +18,6 @@ class CampaignRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'status' => ['required', Rule::enum(CampaignStatus::class)],
         ];
     }
 }

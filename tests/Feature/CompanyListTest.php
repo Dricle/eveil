@@ -309,3 +309,22 @@ it('never opens a company from another project', function () {
 
     $this->actingAs($user)->get(route('companies.show', Company::factory()->create()))->assertNotFound();
 });
+
+it('carries the approval state and the queue of what is still undecided', function () {
+    [$user, $project] = lister();
+
+    Company::factory()->create(['project_id' => $project->id, 'approved_at' => now()]);
+    Company::factory()->count(2)->create(['project_id' => $project->id]);
+
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->get(route('companies.index', ['unapproved' => 1]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            // The only number that says whether the user has work to do here:
+            // under anything but full autonomy nothing moves until these are
+            // decided.
+            ->where('unapproved', 2)
+            ->has('companies.data', 2)
+            ->where('companies.data.0.approved', false));
+});

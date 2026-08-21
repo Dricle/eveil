@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\AutonomyLevel;
 use App\Jobs\AnalyzeProject;
 use App\Models\Organization;
 use App\Models\Project;
@@ -171,4 +172,42 @@ it('switches the current project', function () {
 
 it('lets a user with no project still reach their account', function () {
     $this->actingAs(member())->get(route('account.profile'))->assertOk();
+});
+
+it('sets how much the project does on its own', function () {
+    reachable();
+
+    $user = member();
+    $project = Project::factory()->for($user->organizations()->sole())->create(['url' => 'https://acme.test/']);
+
+    $this->actingAs($user)
+        ->putJson(route('settings.project.update'), [
+            'name' => $project->name,
+            'url' => $project->url,
+            'autonomy_level' => 'autonomous',
+        ])
+        ->assertSessionHasNoErrors();
+
+    // The reader was wired before the writer: enrolment consults this, and
+    // until now nothing but the column default could set it.
+    expect($project->fresh()->autonomy_level)->toBe(AutonomyLevel::Autonomous);
+});
+
+it('refuses a setting that is not one of the three', function () {
+    reachable();
+
+    $user = member();
+    $project = Project::factory()->for($user->organizations()->sole())->create(['url' => 'https://acme.test/']);
+
+    $this->actingAs($user)
+        ->putJson(route('settings.project.update'), [
+            'name' => $project->name,
+            'url' => $project->url,
+            'autonomy_level' => 'whatever',
+        ])
+        // A JSON request answers 422 with the errors in the body, which is
+        // what the page actually sends.
+        ->assertJsonValidationErrors('autonomy_level');
+
+    expect($project->fresh()->autonomy_level)->toBe(AutonomyLevel::SemiAuto);
 });

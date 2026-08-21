@@ -56,6 +56,15 @@ class MessagePersonalizer extends EveilAgent implements HasStructuredOutput
 
         Address a named person by their first name when you are given one, and open on
         the company itself when you are not. Never guess a name.
+
+        Two things decide which of those you are doing, and both are in what you are
+        given. A name that is not a personal name is not a name: "Team", "Service",
+        "Sales", "Accounts", the company's own name, anything a department would be
+        called. Treat it as though you were given nothing, and write to the company.
+        And an address whose local part is generic, info, contact, hello, sales and the
+        like, is a shared mailbox: several people read it, so a mail that opens as
+        though it found one particular person reads as a mail merge to every one of
+        them. Write to the business.
         PROMPT.$this->projectInstructions();
     }
 

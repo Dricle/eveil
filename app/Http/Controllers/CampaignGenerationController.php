@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\WriteMissingCampaigns;
 use App\Ai\Agents\SequenceWriter;
 use App\Enums\AgentRunStatus;
 use App\Jobs\WriteCampaign;
@@ -37,6 +38,20 @@ class CampaignGenerationController extends Controller
             'agent' => SequenceWriter::slug(),
             'status' => AgentRunStatus::Pending,
         ]));
+
+        return back();
+    }
+
+    /**
+     * One sequence for every segment that has none.
+     *
+     * The gap this fills is invisible on a list of campaigns, because what is
+     * missing does not appear on it: a segment with no sequence is one the
+     * searches keep filling with companies nobody will ever be written to.
+     */
+    public function missing(WriteMissingCampaigns $write): RedirectResponse
+    {
+        $write->handle($this->currentProject->getOrFail());
 
         return back();
     }

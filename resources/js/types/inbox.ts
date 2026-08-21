@@ -42,6 +42,10 @@ export type Conversation = {
     classification: Classification | null
     needs_attention: boolean
     replied_at: string | null
+    /** When the last outbound message was attempted. */
+    sent_at: string | null
+    /** What became of it. Anything but `sent` means it never reached anybody. */
+    delivery: 'queued' | 'sent' | 'failed' | 'bounced' | null
     messages: ConversationMessage[]
 }
 

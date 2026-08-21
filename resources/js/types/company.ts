@@ -27,6 +27,8 @@ export type Company = {
     source: string
     source_url: string | null
     status: OutreachStatus
+    /** The user's go-ahead. Nothing enters a sequence from here without it. */
+    approved: boolean
     /** True for the five statuses that take the company out of outreach. */
     excluded: boolean
     contacts_status: 'queued' | 'done' | 'failed' | null

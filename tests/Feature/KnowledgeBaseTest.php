@@ -30,7 +30,7 @@ function portrait(): array
         'key_features' => ['Route planning', 'Proof of delivery'],
         'competitors' => ['Fleetio'],
         'proof_points' => ['300 vans routed daily'],
-        'gaps' => ['Whether it does refrigerated loads'],
+        'gaps' => [['key' => 'refrigerated_loads', 'question' => 'Does it handle refrigerated loads?']],
         'language' => 'en',
         'confidence' => 80,
     ];
@@ -169,4 +169,136 @@ it('only ever writes the knowledge base of the current project', function () {
 
     expect($someoneElses->fresh()->knowledge_base_edited_by_user)->toBeFalse()
         ->and($own->fresh()->knowledge_base['what_it_does'])->toBe('Written by a stranger.');
+});
+
+it('answers a question the site never did, without freezing the portrait', function () {
+    $user = owner();
+    $project = Project::factory()->for($user->organizations()->sole())->create(['knowledge_base' => portrait()]);
+
+    $this->actingAs($user)
+        ->putJson(route('settings.knowledge-base.answers'), [
+            'answers' => ['refrigerated_loads' => '  Yes, down to two degrees.  '],
+        ])
+        ->assertSessionHasNoErrors();
+
+    $project->refresh();
+
+    expect($project->knowledge_base['gaps'][0]['answer'])->toBe('Yes, down to two degrees.')
+        // Answering adds what was missing rather than correcting what is there,
+        // so it must not stop every later reading of the site from landing.
+        ->and($project->knowledge_base_edited_by_user)->toBeFalse();
+});
+
+it('clears an answer typed by mistake', function () {
+    $user = owner();
+    $project = Project::factory()->for($user->organizations()->sole())->create([
+        'knowledge_base' => [
+            ...portrait(),
+            'gaps' => [['key' => 'refrigerated_loads', 'question' => 'Cold chain?', 'answer' => 'Wrong.']],
+        ],
+    ]);
+
+    $this->actingAs($user)
+        ->putJson(route('settings.knowledge-base.answers'), ['answers' => ['refrigerated_loads' => '   ']])
+        ->assertSessionHasNoErrors();
+
+    expect($project->fresh()->knowledge_base['gaps'][0]['answer'])->toBeNull();
+});
+
+it('sends the open questions to the page in one shape, whatever was stored', function () {
+    $user = owner();
+    Project::factory()->for($user->organizations()->sole())->create([
+        // The shape an earlier reading wrote: a sentence, with no key to file an
+        // answer under.
+        'knowledge_base' => [...portrait(), 'gaps' => ['Whether it does refrigerated loads']],
+    ]);
+
+    $this->actingAs($user)->get(route('settings.knowledge-base.edit'))
+        ->assertInertia(fn ($page) => $page
+            ->where('project.open_questions.0.question', 'Whether it does refrigerated loads')
+            ->where('project.open_questions.0.answer', null)
+            // Sent beside the portrait, never inside the form that rewrites it.
+            ->missing('project.knowledge_base.gaps'));
+});
+
+it('keeps an answer through a re-reading that rewords the question', function () {
+    $user = owner();
+    $project = Project::factory()->for($user->organizations()->sole())->create([
+        'knowledge_base' => [
+            ...portrait(),
+            'gaps' => [
+                ['key' => 'refrigerated_loads', 'question' => 'Cold chain?', 'answer' => 'Down to two degrees.'],
+                ['key' => 'minimum_order', 'question' => 'Any minimum order?', 'answer' => null],
+            ],
+        ],
+    ]);
+
+    $method = new ReflectionMethod(AnalyzeWebsite::class, 'applyToProject');
+    $method->invoke(app(AnalyzeWebsite::class), $project, [
+        ...portrait(),
+        'gaps' => [
+            ['key' => 'refrigerated_loads', 'question' => 'Does it carry refrigerated loads?'],
+            ['key' => 'contract_length', 'question' => 'Is there a minimum term?'],
+        ],
+    ], collect());
+
+    $questions = collect($project->fresh()->openQuestions())->keyBy('key');
+
+    // Identity is the key, never the wording: a re-reading that rephrases the
+    // same question must not ask for an answer already given.
+    expect($questions['refrigerated_loads']['answer'])->toBe('Down to two degrees.')
+        ->and($questions['refrigerated_loads']['question'])->toBe('Does it carry refrigerated loads?')
+        ->and($questions['contract_length']['answer'])->toBeNull()
+        // Never answered and no longer asked: nothing was lost by dropping it.
+        ->and($questions->has('minimum_order'))->toBeFalse();
+});
+
+it('keeps an answered question the site now covers', function () {
+    $user = owner();
+    $project = Project::factory()->for($user->organizations()->sole())->create([
+        'knowledge_base' => [
+            ...portrait(),
+            'gaps' => [['key' => 'service_area', 'question' => 'Where?', 'answer' => 'Benelux only.']],
+        ],
+    ]);
+
+    $method = new ReflectionMethod(AnalyzeWebsite::class, 'applyToProject');
+    $method->invoke(app(AnalyzeWebsite::class), $project, [...portrait(), 'gaps' => []], collect());
+
+    // What the user typed is knowledge, and nothing else in the app records it.
+    expect($project->fresh()->openQuestions())->toHaveCount(1)
+        ->and($project->fresh()->knowledge_base['gaps'][0]['answer'])->toBe('Benelux only.');
+});
+
+it('leaves the questions alone when the portrait is corrected', function () {
+    $user = owner();
+    $project = Project::factory()->for($user->organizations()->sole())->create([
+        'knowledge_base' => [
+            ...portrait(),
+            'gaps' => [['key' => 'refrigerated_loads', 'question' => 'Cold chain?', 'answer' => 'Yes.']],
+        ],
+    ]);
+
+    $this->actingAs($user)
+        ->putJson(route('settings.knowledge-base.update'), [
+            ...portrait(),
+            'gaps' => 'Something the form has no business sending',
+            'what_it_does' => 'Corrected.',
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($project->fresh()->knowledge_base['gaps'][0]['answer'])->toBe('Yes.');
+});
+
+it('only ever answers for the current project', function () {
+    $user = owner();
+    $someoneElses = Project::factory()->create(['knowledge_base' => portrait()]);
+
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $someoneElses->id])
+        ->putJson(route('settings.knowledge-base.answers'), [
+            'answers' => ['refrigerated_loads' => 'Written by a stranger.'],
+        ]);
+
+    expect($someoneElses->fresh()->knowledge_base['gaps'][0]['answer'] ?? null)->toBeNull();
 });

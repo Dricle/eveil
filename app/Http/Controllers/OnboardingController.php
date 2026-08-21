@@ -38,6 +38,10 @@ class OnboardingController extends Controller
                 ? null
                 : ProjectAnalysisResource::make($project->latestAnalysis),
             'knowledgeBase' => $project->knowledge_base,
+            // Asked here rather than left for the settings screen: the answers
+            // feed the segments derived on the next click, and this is the one
+            // moment the user is already watching.
+            'openQuestions' => $project->openQuestions(),
             'profiles' => TargetProfileResource::collection($profiles),
             // The same in-flight rule the Targets section uses: a run older than
             // fifteen minutes is not believed, so a worker that never came back

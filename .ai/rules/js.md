@@ -40,3 +40,8 @@ App settings (instance scope) live at `/app/app-settings/*` behind `can:manage-a
 Generate `resources/js/actions` and `resources/js/routes` from the HOST (`yarn build` / `yarn dev` shell out to `php artisan wayfinder:generate` with host PHP). Running `php artisan wayfinder:generate` inside the `laravel.test` container emits route modules WITHOUT the `.form()` helper, and every page using `v-bind="someRoute.update.form()"` then fails `yarn types:check` with "Property 'form' does not exist". A dozen errors in files you never touched, in a diff that looks unrelated.
 
 The fix if it happens: run `yarn build` on the host, which regenerates them correctly.
+
+## wayfinder:generate needs --with-form, even on the host
+`php artisan wayfinder:generate` on its own emits route modules WITHOUT `.form()`, on the host as much as in the container: the `formVariants: true` option lives in the vite plugin config, and the bare command never sees it. Every page doing `v-bind="someRoute.update.form()"` then fails `yarn types:check` with "Property 'form' does not exist", in files you never touched.
+
+Run `php artisan wayfinder:generate --with-form` when generating by hand, or just `yarn build` on the host, which passes it. Check with: `php -r 'echo substr_count(file_get_contents("resources/js/routes/settings/knowledge-base/index.ts"), ".form");'` — zero means regenerate.

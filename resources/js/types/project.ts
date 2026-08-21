@@ -14,9 +14,18 @@ export type KnowledgeBase = {
     key_features: string[]
     competitors: string[]
     proof_points: string[]
-    gaps: string[]
     language?: string
     confidence?: number
+}
+
+/**
+ * Something the website never said. `key` is the identity, so a later reading
+ * that rephrases the question does not ask it a second time.
+ */
+export type OpenQuestion = {
+    key: string
+    question: string
+    answer: string | null
 }
 
 export type Analysis = {
@@ -57,6 +66,9 @@ export type TargetProfile = {
 export type ProjectDetail = Project & {
     edited_by_user: boolean
     prompt_instructions: string | null
+    /** How much of the run happens without being asked. */
+    autonomy_level: 'supervised' | 'semi_auto' | 'autonomous'
     knowledge_base: KnowledgeBase | null
+    open_questions: OpenQuestion[]
     last_analysis: Analysis | null
 }

@@ -182,12 +182,16 @@ function note () {
                         :label="verdict(mailbox).label"
                     />
 
+                    <!-- A real message, to this address itself. Anything short
+                         of that misses a provider that refuses the from address,
+                         which it only says after the body is on the wire. -->
                     <UButton
                         icon="i-lucide-plug"
                         color="neutral"
                         variant="ghost"
                         size="xs"
                         label="Test"
+                        title="Sends a test message to this address"
                         :loading="testing === mailbox.id"
                         @click="test(mailbox)"
                     />

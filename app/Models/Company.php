@@ -33,6 +33,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $source_url
  * @property Carbon $discovered_at
  * @property OutreachStatus $status
+ * @property Carbon|null $approved_at the user's go-ahead, or null while it is still waiting for one
  * @property ContactSearchStatus|null $contacts_status
  * @property Carbon|null $contacts_searched_at
  * @property int|null $fit_score only loaded by the `withBestFit` scope
@@ -40,7 +41,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['project_id', 'domain', 'name', 'website', 'industry', 'size', 'location', 'language', 'facts', 'source', 'source_url', 'discovered_at', 'status', 'contacts_status', 'contacts_searched_at'])]
+#[Fillable(['project_id', 'domain', 'name', 'website', 'industry', 'size', 'location', 'language', 'facts', 'source', 'source_url', 'discovered_at', 'status', 'approved_at', 'contacts_status', 'contacts_searched_at'])]
 class Company extends Model
 {
     /** @use HasFactory<CompanyFactory> */
@@ -85,6 +86,21 @@ class Company extends Model
     protected function contactable(Builder $query): void
     {
         $query->whereNotIn('status', OutreachStatus::excluded());
+    }
+
+    /**
+     * The companies the user has said yes to.
+     *
+     * Separate from `contactable()` and asked in addition to it, never instead:
+     * one says outreach is still allowed here, the other that it was ever
+     * wanted. A company can pass either and fail the other.
+     *
+     * @param  Builder<Company>  $query
+     */
+    #[Scope]
+    protected function approved(Builder $query): void
+    {
+        $query->whereNotNull('approved_at');
     }
 
     /**
@@ -160,6 +176,7 @@ class Company extends Model
             'facts' => 'array',
             'discovered_at' => 'datetime',
             'status' => OutreachStatus::class,
+            'approved_at' => 'datetime',
             'contacts_status' => ContactSearchStatus::class,
             'contacts_searched_at' => 'datetime',
         ];

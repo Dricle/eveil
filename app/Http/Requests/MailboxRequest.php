@@ -65,12 +65,17 @@ class MailboxRequest extends FormRequest
     /**
      * Blank is not a password. Dropping the key entirely is what makes
      * "unchanged" different from "emptied" at the model.
+     *
+     * Removed from `getInputSource()`, not from `$this->request`: Inertia sends
+     * JSON, and on a JSON request the input lives in the json bag while
+     * `$this->request` is empty, so clearing the latter dropped nothing and the
+     * blank password reached the update as a null.
      */
     protected function prepareForValidation(): void
     {
         foreach (['smtp_password', 'imap_password'] as $field) {
             if ($this->input($field) === '' || $this->input($field) === null) {
-                $this->request->remove($field);
+                $this->getInputSource()->remove($field);
             }
         }
     }

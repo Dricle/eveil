@@ -3,8 +3,11 @@
 namespace App\Services\Outreach;
 
 use App\Models\EmailAccount;
+use Symfony\Component\Mailer\Mailer;
 use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;
 use Symfony\Component\Mailer\Transport\Smtp\Stream\SocketStream;
+use Symfony\Component\Mime\Address;
+use Symfony\Component\Mime\Email;
 use Throwable;
 
 /**
@@ -21,6 +24,11 @@ use Throwable;
  * Both halves are checked because both are needed and they fail differently: a
  * mailbox that sends but cannot be read gives us no replies, and a reply is the
  * only metric and the only opt-out channel there is.
+ *
+ * The SMTP half sends a real message, to the mailbox's own address. Anything
+ * short of that misses the failures that only appear once the message body is
+ * on the wire, and those are not rare: a provider that will not send as this
+ * From address answers only after DATA.
  */
 class MailboxTester
 {
@@ -56,12 +64,31 @@ class MailboxTester
         }
 
         try {
-            $transport->start();
-            $transport->stop();
+            // A real message, to the address itself. The login is only half the
+            // question: a provider authenticates the USERNAME and then refuses
+            // the FROM address when it is not one this account may send as,
+            // which is a different mistake with a different fix.
+            //
+            // It has to be a whole message and not an SMTP probe, measured
+            // against Zoho: `MAIL FROM:<not-mine@example.com>` is answered
+            // `250 Sender OK` and the refusal only arrives after DATA, because
+            // what is checked is the From HEADER and not the envelope. A test
+            // that stops before DATA reports a working mailbox that cannot send
+            // a thing, which is worse than no test at all.
+            //
+            // Addressed to itself, so nothing reaches anybody else and the
+            // arrival is its own proof that the mailbox really sends.
+            (new Mailer($transport))->send(
+                (new Email)
+                    ->from(new Address($account->from_email, $account->from_name))
+                    ->to($account->from_email)
+                    ->subject('Eveil: connection test')
+                    ->text("This mailbox is correctly configured in Eveil.\n\nNothing else was sent, and this message went to nobody but you.")
+            );
 
             return null;
         } catch (Throwable $e) {
-            return 'SMTP: '.$this->explain($e->getMessage(), $account->smtp_host, $account->smtp_port);
+            return 'SMTP: '.$this->explain($e->getMessage(), $account->smtp_host, $account->smtp_port, $account);
         }
     }
 
@@ -77,7 +104,7 @@ class MailboxTester
         $socket = @stream_socket_client($address, $errno, $errstr, self::TIMEOUT);
 
         if ($socket === false) {
-            return 'IMAP: '.$this->explain($errstr, $account->imap_host, $account->imap_port);
+            return 'IMAP: '.$this->explain($errstr, $account->imap_host, $account->imap_port, $account);
         }
 
         stream_set_timeout($socket, self::TIMEOUT);
@@ -86,7 +113,7 @@ class MailboxTester
             $greeting = (string) fgets($socket, 1024);
 
             if (! str_starts_with($greeting, '* OK')) {
-                return 'IMAP: '.$this->explain($greeting, $account->imap_host, $account->imap_port);
+                return 'IMAP: '.$this->explain($greeting, $account->imap_host, $account->imap_port, $account);
             }
 
             // Quoted so a password containing a space still logs in, which is
@@ -104,12 +131,12 @@ class MailboxTester
             }
 
             if (! str_contains($reply, 'a1 OK')) {
-                return 'IMAP: '.$this->explain($reply, $account->imap_host, $account->imap_port);
+                return 'IMAP: '.$this->explain($reply, $account->imap_host, $account->imap_port, $account);
             }
 
             return null;
         } catch (Throwable $e) {
-            return 'IMAP: '.$this->explain($e->getMessage(), $account->imap_host, $account->imap_port);
+            return 'IMAP: '.$this->explain($e->getMessage(), $account->imap_host, $account->imap_port, $account);
         } finally {
             @fwrite($socket, "a2 LOGOUT\r\n");
             @fclose($socket);
@@ -123,11 +150,23 @@ class MailboxTester
      * prose: providers put the actual reason in the text and reuse the same
      * 535 for all of it.
      */
-    private function explain(string $error, string $host, int $port): string
+    private function explain(string $error, string $host, int $port, EmailAccount $account): string
     {
         $lower = mb_strtolower($error);
+        $from = $account->from_email;
+        $username = $account->smtp_username;
 
         return match (true) {
+            // The login worked and the envelope did not: the provider will not
+            // send as this address. Checked first because several providers
+            // report it with the same 5xx codes they use for a bad recipient,
+            // and the fix has nothing to do with the password.
+            str_contains($lower, 'relay'),
+            str_contains($lower, 'sender is not allowed'),
+            str_contains($lower, 'sender address rejected'),
+            str_contains($lower, 'sender verify failed'),
+            str_contains($lower, 'not owned by user') => "The login worked, but the server will not send as {$from}. That address has to be one this account owns: a verified domain, or an alias of {$username}. Either change the from address, or add it to the mailbox at your provider.",
+
             str_contains($lower, 'application-specific password'),
             str_contains($lower, 'app password'),
             str_contains($lower, 'accounts.google.com/signin/continue') => 'Google refused the password. A Workspace or Gmail account needs an app password (2-step verification must be on first), not the account password, and a Workspace admin can disable app passwords for the whole organization, in which case only they can turn them back on.',

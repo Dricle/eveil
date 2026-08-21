@@ -2,14 +2,19 @@
 
 namespace App\Actions;
 
+use App\Enums\AutonomyLevel;
 use App\Enums\CampaignLeadStatus;
 use App\Enums\CampaignStatus;
+use App\Enums\EmailSource;
 use App\Models\Campaign;
 use App\Models\CampaignLead;
+use App\Models\Company;
+use App\Models\CompanyTargetEvaluation;
 use App\Models\EmailAccount;
 use App\Models\Lead;
 use App\Services\Outreach\SuppressionList;
 use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 
 /**
@@ -50,11 +55,7 @@ class EnrolCampaign
 
         $enrolled = 0;
 
-        Lead::query()
-            ->contactable()
-            ->whereNotNull('email')
-            ->whereDoesntHave('campaignLeads', fn ($query) => $query->whereIn('status', CampaignLeadStatus::live()))
-            ->with('project')
+        $this->eligible($campaign)
             ->each(function (Lead $lead) use ($campaign, $account, &$enrolled): void {
                 if (! $lead->isSendable() || $this->suppressions->suppresses($lead, $account)) {
                     return;
@@ -86,6 +87,69 @@ class EnrolCampaign
         }
 
         return $enrolled;
+    }
+
+    /**
+     * Who this campaign may take, in the order they should go out.
+     *
+     * Three filters, and each one is a bug that was there before it:
+     * the campaign's own segment (a lead found for the partner profile was
+     * being sent the customer sequence), the user's go-ahead on the company,
+     * and the addresses nobody has confirmed, which go last rather than not at
+     * all.
+     *
+     * @return Builder<Lead>
+     */
+    private function eligible(Campaign $campaign): Builder
+    {
+        return Lead::query()
+            ->contactable()
+            ->whereNotNull('email')
+            ->whereDoesntHave('campaignLeads', fn ($query) => $query->whereIn('status', CampaignLeadStatus::live()))
+            // A sequence is written for one segment, from that segment's own
+            // fit reason. Sending it to somebody another profile found makes
+            // the opener talk about the wrong thing.
+            //
+            // Both company filters let a lead with NO company through, the way
+            // `Lead::contactable()` already does. A person with no company was
+            // put there by the user's own import: there is nothing to approve
+            // and no segment to belong to, and excluding them would quietly
+            // mean an imported list never receives anything.
+            ->when($campaign->target_profile_id !== null, fn ($query) => $query
+                ->where(fn ($lead) => $lead
+                    ->whereNull('company_id')
+                    ->orWhereIn('company_id', CompanyTargetEvaluation::query()
+                        ->where('target_profile_id', $campaign->target_profile_id)
+                        ->select('company_id'))))
+            ->when($this->needsApproval($campaign), fn ($query) => $query
+                ->where(fn ($lead) => $lead
+                    ->whereNull('company_id')
+                    ->orWhereIn('company_id', Company::query()->approved()->select('id'))))
+            // Confirmed addresses first, guesses last. The bounce circuit
+            // breaker pauses a mailbox at five percent, so if a batch of
+            // guesses is going to trip it, it must trip after the addresses we
+            // are sure of have already left, not instead of them.
+            ->orderByRaw(<<<'SQL'
+                case
+                    when email_source = ? then 2
+                    when first_name is not null and first_name <> '' then 0
+                    else 1
+                end
+                SQL, [EmailSource::Inferred->value])
+            ->orderBy('id')
+            ->with('project');
+    }
+
+    /**
+     * Whether the user's go-ahead on the company is required.
+     *
+     * Only the fully autonomous setting writes to a company nobody looked at.
+     * The other two are the whole reason the approval exists, and a campaign
+     * started by hand does not make an unapproved company wanted.
+     */
+    private function needsApproval(Campaign $campaign): bool
+    {
+        return $campaign->project->autonomy_level !== AutonomyLevel::Autonomous;
     }
 
     private function stagger(int $position): CarbonInterface

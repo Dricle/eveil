@@ -36,9 +36,7 @@ class DispatchDueSends
 
         // Outside working hours nothing leaves. A 04:00 mail from somebody's
         // own mailbox reads as a machine before it reads as anything else.
-        $hour = (int) now()->format('G');
-
-        if ($hour < (int) $sending['window_start'] || $hour >= (int) $sending['window_end']) {
+        if (! $this->windowIsOpen()) {
             return 0;
         }
 
@@ -78,6 +76,21 @@ class DispatchDueSends
             });
 
         return $queued;
+    }
+
+    /**
+     * Whether the sending window is open right now.
+     *
+     * Public because a screen has to explain a campaign that is active and
+     * quiet, and asking the hour against the same setting somewhere else is how
+     * a screen ends up disagreeing with what the scheduler actually does.
+     */
+    public function windowIsOpen(): bool
+    {
+        $sending = $this->settings->array('sending');
+        $hour = (int) now()->format('G');
+
+        return $hour >= (int) $sending['window_start'] && $hour < (int) $sending['window_end'];
     }
 
     /**

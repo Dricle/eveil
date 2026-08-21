@@ -242,7 +242,7 @@ class FindContacts
      * Last resort for a site that publishes only a phone number. Which is the
      * norm for small local businesses. Every candidate is verified before it is
      * kept: a guess that bounces costs the user's sending reputation, so only
-     * an address the mail server accepts is stored, and never as `valid`.
+     * an address the mail server CONFIRMS is stored.
      */
     private function guessGeneric(Company $company): ?Lead
     {
@@ -257,7 +257,17 @@ class FindContacts
 
             $status = $this->verifier->verify($email);
 
-            if ($status === EmailStatus::Valid || $status === EmailStatus::Risky) {
+            // `Valid` alone, never `Risky`. Risky is a catch-all domain or a
+            // server that would not answer, so it means "we did not disprove
+            // it", not "it exists". Guessing an address is only defensible
+            // when the mail server confirms it: a guess nobody confirmed is a
+            // bounce, and five bounces in a hundred sends pause the mailbox
+            // for every good address behind them.
+            //
+            // On a segment hosted at a provider that refuses probes, that
+            // means nothing is ever guessed. Which is the honest outcome: the
+            // step disables itself instead of pretending.
+            if ($status === EmailStatus::Valid) {
                 return $this->store($company, [
                     'email' => $email,
                     'email_source' => EmailSource::Inferred,

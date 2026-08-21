@@ -24,7 +24,12 @@ declare module '@inertiajs/core' {
             registerUrl: string | null
             status: string | null
             /** What is missing before the instance can do anything. */
-            setup: { provider: boolean, mailbox: boolean }
+            setup: {
+                provider: boolean
+                mailbox: boolean
+                /** Mailboxes this project cannot send from, with what the server said. */
+                broken: { id: number, email: string, status: string, error: string | null }[]
+            }
             sidebarOpen: boolean
             [key: string]: unknown
         }

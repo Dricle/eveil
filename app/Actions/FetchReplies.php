@@ -102,10 +102,13 @@ class FetchReplies
             return false;
         }
 
+        // Trimmed on the way in as well as on the way out: the brackets belong
+        // to the header syntax, most servers strip them and some do not, and
+        // one that does not would silently attribute nothing at all.
         $ours = Message::query()
             ->where('email_account_id', $account->id)
             ->where('direction', MessageDirection::Outbound)
-            ->where('message_id', $mail->inReplyTo)
+            ->where('message_id', mb_trim($mail->inReplyTo, '<>'))
             ->with(['lead', 'campaignLead'])
             ->first();
 

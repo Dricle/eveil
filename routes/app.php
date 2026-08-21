@@ -10,8 +10,10 @@ use App\Http\Controllers\AppSettings\ProviderTestController;
 use App\Http\Controllers\Auth\SetupController;
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\CampaignGenerationController;
+use App\Http\Controllers\CampaignStatusController;
 use App\Http\Controllers\CampaignStepController;
 use App\Http\Controllers\CampaignStepOrderController;
+use App\Http\Controllers\CompanyApprovalController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\CompanyStatusController;
 use App\Http\Controllers\ContactController;
@@ -99,6 +101,12 @@ Route::middleware(['auth', 'project.set'])->group(function (): void {
                 ->name('knowledge-base.edit');
             Route::put('knowledge-base', [ProjectKnowledgeBaseController::class, 'update'])
                 ->name('knowledge-base.update');
+            /*
+             * Answered from onboarding as well as from here, which is why it
+             * redirects back rather than to the settings screen.
+             */
+            Route::put('knowledge-base/answers', [ProjectKnowledgeBaseController::class, 'answer'])
+                ->name('knowledge-base.answers');
         });
 
         /*
@@ -166,11 +174,30 @@ Route::middleware(['auth', 'project.set'])->group(function (): void {
          */
         Route::post('campaigns/generate', [CampaignGenerationController::class, 'store'])
             ->name('campaigns.generate');
+        /*
+         * The segments with nothing written for them. What is missing never
+         * appears on a list of what exists, so it takes a button of its own.
+         */
+        Route::post('campaigns/generate/missing', [CampaignGenerationController::class, 'missing'])
+            ->name('campaigns.generate.missing');
         Route::put('campaigns/{campaign}/step-order', [CampaignStepOrderController::class, 'update'])
             ->name('campaigns.step-order');
+        /*
+         * The one switch that makes mail leave, thrown from the list as much as
+         * from the campaign, so it is not part of the campaign's own form.
+         */
+        Route::put('campaigns/{campaign}/status', [CampaignStatusController::class, 'update'])
+            ->name('campaigns.status');
         Route::resource('campaigns.steps', CampaignStepController::class)
             ->only(['store', 'update', 'destroy'])
             ->shallow(false);
+        /*
+         * The second page of one campaign, the way a target profile has its
+         * searches: the mails and the run are read at different moments, and
+         * one screen carrying both means scrolling past the run to edit a mail.
+         */
+        Route::get('campaigns/{campaign}/delivery', [CampaignController::class, 'delivery'])
+            ->name('campaigns.delivery');
         Route::resource('campaigns', CampaignController::class)
             ->only(['index', 'store', 'show', 'update', 'destroy']);
 
@@ -191,6 +218,14 @@ Route::middleware(['auth', 'project.set'])->group(function (): void {
         Route::get('contacts/import/template', [LeadImportController::class, 'show'])
             ->name('contacts.template');
         Route::post('contacts/import', [LeadImportController::class, 'store'])->name('contacts.import');
+
+        /*
+         * The go-ahead on a company, which is what lets the people found there
+         * enter a sequence. Taken in batches because that is how the list is
+         * worked through.
+         */
+        Route::put('companies/approval', [CompanyApprovalController::class, 'update'])
+            ->name('companies.approval');
     });
 
     /*

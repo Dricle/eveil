@@ -164,7 +164,7 @@ const userMenu = computed<DropdownMenuItem[][]>(() => [
                      queue, and without a mailbox a campaign can be written and
                      activated and still never send anything. -->
                 <div
-                    v-if="page.props.setup?.provider || page.props.setup?.mailbox"
+                    v-if="page.props.setup?.provider || page.props.setup?.mailbox || page.props.setup?.broken?.length"
                     class="space-y-2 px-4 pt-4"
                 >
                     <UAlert
@@ -185,6 +185,27 @@ const userMenu = computed<DropdownMenuItem[][]>(() => [
                         title="No mailbox connected to this project"
                         description="Everything up to writing a sequence works, but nothing can be sent: a campaign will activate and then sit there. Connect one, and tick this project."
                         :actions="[{ label: 'Connect a mailbox', to: mailboxes.index.url(), color: 'warning', variant: 'solid' }]"
+                    />
+
+                    <!-- A mailbox that stopped itself is not missing, it is
+                         broken, and nothing else on any screen says so: the
+                         campaign stays active, the sequence stays due, and the
+                         run simply never moves. The server's own sentence is
+                         printed verbatim because it names the setting to
+                         change; a paraphrase of it would not. -->
+                    <UAlert
+                        v-for="mailbox in page.props.setup?.broken ?? []"
+                        :key="mailbox.id"
+                        color="error"
+                        variant="subtle"
+                        icon="i-lucide-mail-warning"
+                        :title="mailbox.status === 'error'
+                            ? `${mailbox.email} cannot send`
+                            : `${mailbox.email} has been paused`"
+                        :description="mailbox.error
+                            ? `The mail server said: ${mailbox.error}`
+                            : 'Nothing leaves this address until it is switched back on. Sequences using it stay where they are.'"
+                        :actions="[{ label: 'Fix the mailbox', to: mailboxes.index.url(), color: 'error', variant: 'solid' }]"
                     />
                 </div>
 

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\CampaignLeadStatus;
+use App\Enums\MessageDirection;
 use Database\Factories\CampaignLeadFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -61,6 +62,20 @@ class CampaignLead extends Model
     public function messages(): HasMany
     {
         return $this->hasMany(Message::class)->orderBy('id');
+    }
+
+    /**
+     * What actually left for this membership, which is not the same as the step
+     * they are on: a step whose send failed moved the position and delivered
+     * nothing.
+     *
+     * @return HasMany<Message, $this>
+     */
+    public function sentMessages(): HasMany
+    {
+        return $this->messages()
+            ->where('direction', MessageDirection::Outbound)
+            ->whereNotNull('sent_at');
     }
 
     /**

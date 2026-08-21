@@ -37,7 +37,7 @@ class MailboxTestController extends Controller
         ]);
 
         return $problem === null
-            ? back()->with('status', 'The mailbox answered on both SMTP and IMAP.')
+            ? back()->with('status', 'The mailbox answered on both SMTP and IMAP, and a test message has been sent to it. Anything short of sending one would miss a provider that refuses this from address, which it only says after the message body is on the wire.')
             : back()->withErrors(['test' => $problem]);
     }
 }

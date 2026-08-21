@@ -85,8 +85,24 @@ class WebsiteAnalyst extends EveilAgent implements HasStructuredOutput
                 ->required(),
 
             'gaps' => $schema->array()
-                ->items($schema->string())
-                ->description('What a salesperson would still need to ask before writing a good email.')
+                ->items($schema->object([
+                    'key' => $schema->string()
+                        ->description(
+                            'Stable identifier for this question, English snake_case, whatever the site language: '
+                            .'minimum_order_size, deployment_model, service_area. Asking the same question again on a '
+                            .'later reading must reuse the same key, because the answer is stored under it.'
+                        )
+                        ->required(),
+                    'question' => $schema->string()
+                        ->description('The question itself, asked plainly, in the language of the site.')
+                        ->required(),
+                ]))
+                ->description(
+                    'At most three questions a salesperson would still need answered before writing a good email, '
+                    .'and only ones whose answer would change who is approached or what the mail says. '
+                    .'Every question costs the user a minute, so leave out what is merely interesting. '
+                    .'Empty when the pages answered everything that matters.'
+                )
                 ->required(),
         ];
     }

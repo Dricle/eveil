@@ -120,11 +120,43 @@ class AnalyzeWebsite
         }
 
         $project->update([
-            'knowledge_base' => $summary,
+            'knowledge_base' => [...$summary, 'gaps' => $this->mergeOpenQuestions($project, $summary['gaps'] ?? [])],
             'default_language' => is_string($summary['language'] ?? null) && $summary['language'] !== ''
                 ? mb_substr($summary['language'], 0, 2)
                 : $pages->first()?->language,
         ]);
+    }
+
+    /**
+     * The questions a fresh reading asks, with the answers already given kept
+     * against them.
+     *
+     * Identity is the key, never the wording: a second reading that rephrases
+     * the same question would otherwise ask it again, and the user has already
+     * answered it once. An answered question the site now covers is kept too,
+     * since what the user told us is knowledge in its own right, and nothing
+     * else records it.
+     *
+     * @return list<array{key: string, question: string, answer: string|null}>
+     */
+    private function mergeOpenQuestions(Project $project, mixed $gaps): array
+    {
+        $answered = collect($project->openQuestions())
+            ->filter(fn (array $question): bool => $question['answer'] !== null)
+            ->keyBy('key');
+
+        $asked = collect(is_array($gaps) ? $gaps : [])
+            ->filter(fn (mixed $gap): bool => is_array($gap) && isset($gap['key'], $gap['question']))
+            ->map(fn (array $gap): array => [
+                'key' => (string) $gap['key'],
+                'question' => (string) $gap['question'],
+                'answer' => $answered[$gap['key']]['answer'] ?? null,
+            ])
+            ->keyBy('key');
+
+        return array_values($answered->reject(fn (array $question): bool => $asked->has($question['key']))
+            ->merge($asked)
+            ->all());
     }
 
     /**

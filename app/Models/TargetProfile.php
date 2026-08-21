@@ -48,6 +48,18 @@ class TargetProfile extends Model
     }
 
     /**
+     * The sequences written for this segment. A profile with none is a segment
+     * nothing is being said to, which is the one gap the campaign list has to
+     * point at.
+     *
+     * @return HasMany<Campaign, $this>
+     */
+    public function campaigns(): HasMany
+    {
+        return $this->hasMany(Campaign::class);
+    }
+
+    /**
      * @return HasMany<DiscoveryRun, $this>
      */
     public function discoveryRuns(): HasMany

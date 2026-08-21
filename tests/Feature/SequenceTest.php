@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\PersonalizeMessage;
+use App\Actions\WriteMissingCampaigns;
 use App\Actions\WriteSequence;
 use App\Ai\Agents\CompanyQualifier;
 use App\Ai\Agents\ContactExtractor;
@@ -9,6 +10,7 @@ use App\Ai\Agents\SequenceWriter;
 use App\Ai\Agents\TargetProfileDeriver;
 use App\Ai\Agents\WebsiteAnalyst;
 use App\Enums\AgentRunStatus;
+use App\Enums\AutonomyLevel;
 use App\Enums\CampaignStatus;
 use App\Enums\CampaignStepType;
 use App\Enums\EmailStatus;
@@ -454,4 +456,121 @@ it("appends the project's own writing instructions to the agents that write", fu
         // themselves, and they expect it to win.
         ->and((string) (new MessagePersonalizer($project))->instructions())
         ->toEndWith('Never use emoji.');
+});
+
+it('points at the segments nothing is written to, and writes them in one go', function () {
+    [$user, $project] = sequencer();
+
+    $covered = TargetProfile::factory()->create(['project_id' => $project->id]);
+    $bare = TargetProfile::factory()->create(['project_id' => $project->id]);
+
+    Campaign::factory()->create([
+        'project_id' => $project->id,
+        'target_profile_id' => $covered->id,
+    ]);
+
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->get(route('campaigns.index'))
+        ->assertOk()
+        // A segment with no sequence does not appear on a list of sequences,
+        // so nothing else on the page can point at it.
+        ->assertInertia(fn ($page) => $page
+            ->has('uncovered', 1)
+            ->where('uncovered.0.id', $bare->id));
+
+    Queue::fake();
+
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->post(route('campaigns.generate.missing'))
+        ->assertRedirect();
+
+    Queue::assertPushed(WriteCampaign::class, 1);
+    Queue::assertPushed(fn (WriteCampaign $job): bool => $job->targetProfile->is($bare));
+});
+
+it('does not queue a second pass while one is still writing', function () {
+    [, $project] = sequencer();
+
+    TargetProfile::factory()->count(2)->create(['project_id' => $project->id]);
+
+    Queue::fake();
+
+    $first = app(WriteMissingCampaigns::class)->handle($project);
+
+    // The tick comes round long before a minute-long write is finished, and
+    // without the guard the same segments would be queued on every pass.
+    $second = app(WriteMissingCampaigns::class)->handle($project);
+
+    expect($first)->toHaveCount(2)
+        ->and($second)->toHaveCount(0);
+
+    Queue::assertPushed(WriteCampaign::class, 2);
+});
+
+it('writes nothing without a product portrait to write from', function () {
+    [, $project] = sequencer();
+
+    $project->update(['knowledge_base' => null]);
+    TargetProfile::factory()->create(['project_id' => $project->id]);
+
+    Queue::fake();
+
+    // Queuing would burn one job per profile to raise the same error every
+    // time, and the screen would show a failure that is really a missing step
+    // two screens back.
+    expect(app(WriteMissingCampaigns::class)->handle($project))->toHaveCount(0);
+
+    Queue::assertNothingPushed();
+});
+
+it('writes the missing sequences by itself only when the project is left to itself', function () {
+    [, $project] = sequencer();
+
+    TargetProfile::factory()->create(['project_id' => $project->id]);
+
+    Queue::fake();
+
+    $this->artisan('eveil:write-missing')->assertSuccessful();
+
+    Queue::assertNothingPushed();
+
+    $project->update(['autonomy_level' => AutonomyLevel::Autonomous]);
+
+    $this->artisan('eveil:write-missing')->assertSuccessful();
+
+    Queue::assertPushed(WriteCampaign::class, 1);
+});
+
+it('splits one campaign across two pages, and each carries only its own', function () {
+    [$user, $project] = sequencer();
+
+    $campaign = campaignFor($project);
+
+    // The mails and the run are read at different moments. One screen carrying
+    // both meant scrolling past the run to reach the editor.
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->get(route('campaigns.show', $campaign))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('campaigns/Show')
+            ->has('campaign.steps')
+            ->missing('pipeline')
+            ->missing('sending')
+            ->missing('leads'));
+
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->get(route('campaigns.delivery', $campaign))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('campaigns/Delivery')
+            ->has('sending')
+            ->has('leads')
+            // The steps are the other page's job, and personalising a preview
+            // is a model call per lead: neither belongs on a screen about who
+            // has been written to.
+            ->missing('sample'));
 });

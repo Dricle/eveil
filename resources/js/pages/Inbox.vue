@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, router } from '@inertiajs/vue3'
+import type { NavigationMenuItem } from '@nuxt/ui'
 import { computed, ref } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { inbox } from '@/routes'
@@ -10,7 +11,8 @@ import { CLASSIFICATIONS } from '@/types/inbox'
 const props = defineProps<{
     conversations: Paginated<Conversation>
     campaigns: { id: number, name: string }[]
-    filters: { campaign: number | null }
+    counts: { replies: number, sent: number }
+    filters: { campaign: number | null, view: 'replies' | 'sent' }
 }>()
 
 // `0` rather than an empty string: reka reserves '' for clearing a select, and
@@ -22,9 +24,34 @@ const CAMPAIGN_OPTIONS = computed(() => [
     ...props.campaigns.map(item => ({ label: item.name, value: item.id }))
 ])
 
-function filter (value: number) {
-    router.get(inbox.url(), value ? { campaign: value } : {}, { preserveState: true, preserveScroll: true })
+function go (next: { campaign?: number, view?: 'replies' | 'sent' } = {}) {
+    const view = next.view ?? props.filters.view
+    const id = next.campaign ?? campaign.value
+
+    router.get(inbox.url(), {
+        ...(id ? { campaign: id } : {}),
+        ...(view === 'sent' ? { view: 'sent' } : {})
+    }, { preserveState: true, preserveScroll: true })
 }
+
+// Two lists, not one: mixing them would put five hundred silent rows around the
+// four that need a person, which is what the inbox exists to avoid. The counts
+// are on the tabs so the one that is closed still says whether it holds
+// anything.
+const TABS = computed<NavigationMenuItem[]>(() => [
+    {
+        label: `Replies (${props.counts.replies})`,
+        icon: 'i-lucide-reply',
+        active: props.filters.view === 'replies',
+        onSelect: () => go({ view: 'replies' })
+    },
+    {
+        label: `Sent (${props.counts.sent})`,
+        icon: 'i-lucide-send',
+        active: props.filters.view === 'sent',
+        onSelect: () => go({ view: 'sent' })
+    }
+])
 
 // Open on the one that needs an answer, so the screen is useful on arrival
 // rather than after a click.
@@ -36,6 +63,21 @@ function verdict (conversation: Conversation) {
 
 function when (value: string | null) {
     return value === null ? '' : new Date(value).toLocaleString()
+}
+
+// A refused send still leaves a row, on purpose: the attempt is a fact worth
+// keeping. Showing it exactly like a delivered mail would tell somebody their
+// mail went out when it never left the building.
+const DELIVERY = {
+    failed: { label: 'Not sent', color: 'error' as const, help: 'The mail server refused this one. Nobody received it.' },
+    bounced: { label: 'Bounced', color: 'error' as const, help: 'The address rejected it. Nobody received it.' },
+    queued: { label: 'Queued', color: 'neutral' as const, help: 'Waiting for its turn in the sending window.' }
+}
+
+function delivery (conversation: Conversation) {
+    return conversation.delivery && conversation.delivery !== 'sent'
+        ? DELIVERY[conversation.delivery]
+        : null
 }
 </script>
 
@@ -50,9 +92,9 @@ function when (value: string | null) {
                         Inbox
                     </h2>
                     <p class="text-sm text-muted">
-                        Everyone who answered, across every mailbox. An agent read
-                        each reply and did something about it. What it decided is
-                        on the row. Nothing was answered on your behalf.
+                        {{ filters.view === 'sent'
+                            ? 'Everything written to somebody, answered or not. A mail the server refused is here too, marked as such: the attempt is worth knowing about, and it is not the same thing as one that arrived.'
+                            : 'Everyone who answered, across every mailbox. An agent read each reply and did something about it. What it decided is on the row. Nothing was answered on your behalf.' }}
                     </p>
                 </div>
 
@@ -60,17 +102,24 @@ function when (value: string | null) {
                     v-model="campaign"
                     :items="CAMPAIGN_OPTIONS"
                     class="w-64"
-                    @update:model-value="filter"
+                    @update:model-value="value => go({ campaign: value })"
                 />
             </div>
+
+            <UNavigationMenu :items="TABS" />
 
             <p
                 v-if="!conversations.data.length"
                 class="rounded-lg p-6 text-sm text-muted ring ring-default"
             >
-                Nobody has replied yet. Only real answers land here: a lead that
-                was written to and said nothing is a sequence still running, not
-                an inbox entry.
+                <template v-if="filters.view === 'sent'">
+                    Nothing has been sent yet from this project.
+                </template>
+                <template v-else>
+                    Nobody has replied yet. Only real answers land here: a lead that
+                    was written to and said nothing is a sequence still running, not
+                    an inbox entry.
+                </template>
             </p>
 
             <div
@@ -106,12 +155,23 @@ function when (value: string | null) {
                     />
 
                     <UBadge
+                        v-if="delivery(conversation)"
+                        :color="delivery(conversation)!.color"
+                        variant="subtle"
+                        icon="i-lucide-mail-x"
+                        :label="delivery(conversation)!.label"
+                        :title="delivery(conversation)!.help"
+                    />
+
+                    <UBadge
                         color="neutral"
                         variant="outline"
                         :label="conversation.campaign.name"
                     />
 
-                    <span class="text-sm text-dimmed">{{ when(conversation.replied_at) }}</span>
+                    <span class="text-sm text-dimmed">{{
+                        when(filters.view === 'sent' ? conversation.sent_at : conversation.replied_at)
+                    }}</span>
                 </button>
 
                 <div
@@ -126,6 +186,10 @@ function when (value: string | null) {
                     >
                         <p class="mb-1 text-xs text-dimmed">
                             {{ message.direction === 'inbound' ? 'Them' : 'You' }} · {{ when(message.at) }} · {{ message.subject }}
+                            <span
+                                v-if="message.direction === 'outbound' && message.status && message.status !== 'sent'"
+                                class="text-error"
+                            >· never left: {{ message.status }}</span>
                         </p>
                         <p class="whitespace-pre-wrap">
                             {{ message.body }}
@@ -144,7 +208,9 @@ function when (value: string | null) {
                         <UFormField
                             name="body"
                             :error="errors.body"
-                            help="Sent from the same mailbox, in the same thread. Your signature is added if the mailbox has one."
+                            :help="filters.view === 'sent'
+                                ? 'Sent from the same mailbox, in the same thread. Writing by hand stops the sequence: nobody should get your mail and the queued follow-up as well.'
+                                : 'Sent from the same mailbox, in the same thread. Your signature is added if the mailbox has one.'"
                         >
                             <UTextarea
                                 name="body"
@@ -157,7 +223,7 @@ function when (value: string | null) {
                         <UButton
                             type="submit"
                             :loading="processing"
-                            label="Send reply"
+                            :label="filters.view === 'sent' ? 'Send and stop the sequence' : 'Send reply'"
                         />
                     </Form>
                 </div>

@@ -5,9 +5,32 @@ import SettingsLayout from '@/layouts/SettingsLayout.vue'
 import projectRoutes from '@/routes/settings/project'
 import type { ProjectDetail } from '@/types'
 
-defineProps<{ project: ProjectDetail }>()
+const props = defineProps<{ project: ProjectDetail }>()
 
 const confirmingDelete = ref(false)
+
+// Bound rather than left to `default-value` like the text fields, because the
+// help line under it changes with the choice: what each setting DOES is the
+// whole question, and the labels alone cannot carry it.
+const autonomy = ref(props.project.autonomy_level)
+
+const AUTONOMY = [
+    {
+        label: 'Supervised',
+        value: 'supervised',
+        help: 'Nothing is written to anybody until you approve the company AND start the campaign yourself. Nobody is added to a running sequence behind you.'
+    },
+    {
+        label: 'Semi automatic',
+        value: 'semi_auto',
+        help: 'You approve companies; everything after that happens on its own. Approving one also goes looking for the people there, and they join the running sequence as they are found.'
+    },
+    {
+        label: 'Autonomous',
+        value: 'autonomous',
+        help: 'No approval is asked for. Every company a search qualifies is written to, unless you have set it aside yourself.'
+    }
+]
 </script>
 
 <template>
@@ -71,6 +94,23 @@ const confirmingDelete = ref(false)
                             :default-value="project.prompt_instructions ?? ''"
                             :rows="5"
                             :maxlength="2000"
+                            class="w-full"
+                        />
+                    </UFormField>
+
+                    <!-- The one setting that decides how much happens without
+                         being asked. Worth spelling out per option: "semi auto"
+                         says nothing on its own about who gets written to. -->
+                    <UFormField
+                        label="How much it does on its own"
+                        name="autonomy_level"
+                        :error="errors.autonomy_level"
+                        :help="AUTONOMY.find(level => level.value === autonomy)?.help"
+                    >
+                        <USelect
+                            v-model="autonomy"
+                            name="autonomy_level"
+                            :items="AUTONOMY"
                             class="w-full"
                         />
                     </UFormField>

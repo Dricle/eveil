@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Form, Head, usePoll } from '@inertiajs/vue3'
 import { computed, watch } from 'vue'
+import OpenQuestions from '@/components/OpenQuestions.vue'
 import SettingsLayout from '@/layouts/SettingsLayout.vue'
 import knowledgeBase from '@/routes/settings/knowledge-base'
 import type { ProjectDetail } from '@/types'
@@ -25,8 +26,7 @@ const TEXTS = [
 const LISTS = [
     { name: 'key_features', label: 'Key features' },
     { name: 'competitors', label: 'Competitors' },
-    { name: 'proof_points', label: 'Proof points' },
-    { name: 'gaps', label: 'Open questions' }
+    { name: 'proof_points', label: 'Proof points' }
 ] as const
 
 // The list fields go over the wire one item per line; the server splits them.
@@ -90,6 +90,11 @@ function lines (field: typeof LISTS[number]['name']): string {
                     </ul>
                 </template>
             </UAlert>
+
+            <OpenQuestions
+                :questions="project.open_questions"
+                title="Open questions"
+            />
 
             <template v-if="project.knowledge_base">
                 <div class="flex flex-wrap items-center gap-2 text-sm text-muted">

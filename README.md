@@ -25,7 +25,7 @@ cd eveil
 cp deploy/.env.example .env
 ```
 
-Fill in four values:
+Three values to fill in, two more you can leave alone:
 
 | Variable | What it is |
 | --- | --- |
@@ -33,6 +33,7 @@ Fill in four values:
 | `DB_PASSWORD` | Any long random string. The stack creates the database with it. |
 | `SEARXNG_SECRET` | Any long random string. Only signs the bundled search engine's own requests. |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Optional. Set them and the first account is created on boot; leave them empty and the setup screen asks instead. |
+| `APP_PORT` | Optional, **defaults to `80`**. The host port the app is published on. Change it if something already holds 80. |
 
 Leave `APP_KEY` and `CREDENTIALS_KEY` empty: they are generated on first boot.
 Fill them in only if you would rather manage them yourself; anything set there
@@ -43,6 +44,11 @@ Then bring it up:
 ```bash
 docker compose -f compose.deploy.yaml up -d
 ```
+
+The app answers on **port 80 inside the container**, published on the host as
+`APP_PORT`, which defaults to **80**. So a default install is reachable at
+`http://<the-host>` and that is what you point a proxy or a tunnel at. Plain
+HTTP, deliberately: TLS belongs to whatever sits in front.
 
 Open `APP_URL`. You land on the setup screen, or on the login if you set the
 `ADMIN_*` pair. Migrations run on boot, before anything serves a request or picks
@@ -70,16 +76,35 @@ not take the site with it.
 | `redis` | Queue, cache, locks. All three. |
 | `searxng` | The search engine discovery reads. Bundled so a first run needs no paid search API. |
 
-### TLS
+### TLS, reverse proxies and tunnels
 
-The image speaks plain HTTP on port 80 and expects a reverse proxy in front: 
-Traefik, Caddy, nginx, whatever already holds your certificates.
+The image speaks plain HTTP on container port 80, published as `APP_PORT`
+(default 80), and expects something in front to hold the certificates: Traefik,
+Caddy, nginx, a Cloudflare tunnel, whatever you already run.
 
-Which is why `APP_URL` matters more than it looks: once it is an `https://`
-address, every link the app generates is built from it. Get it wrong and
-password-reset mails point somewhere that does not answer. The app deliberately
-does not trust `X-Forwarded-*` headers instead: a client able to reach it
-directly could then choose the host those links point at.
+Point that thing at the app's HTTP address, which is one of two depending on
+where it runs:
+
+| Where the proxy runs | Address to give it |
+| --- | --- |
+| On the host, beside Docker | `http://localhost:${APP_PORT}` (so `http://localhost:80` by default) |
+| As a container on the same Compose project | `http://app:80`, by service name, whatever `APP_PORT` says |
+
+The second is worth preferring when you can: nothing has to be published on the
+host at all, and you can drop the `ports:` mapping from `compose.deploy.yaml`.
+The Compose project is named `eveil`, so the default network is `eveil_default`
+and `app` resolves on it.
+
+A Cloudflare tunnel is the second row. `cloudflared` in the same project, with
+its ingress pointed at `http://app:80`, and nothing of Eveil exposed to the
+internet except through the tunnel.
+
+**Whichever you choose, set `APP_URL` to the public `https://` address.** It
+matters more than it looks: every link the app generates is built from it, so
+get it wrong and password-reset mails point somewhere that does not answer. The
+app deliberately does not read `X-Forwarded-*` to work the address out instead:
+a client able to reach it directly could then choose the host those links point
+at. `APP_URL` is the single answer, and it is yours to give.
 
 ### Keys and backups
 

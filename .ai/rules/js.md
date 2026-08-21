@@ -60,4 +60,4 @@ The fix is a local draft synced from props, which is what `app-settings/Agents.v
 
 then `v-model="draft[q.key]"`. Inertia's `<Form>` still collects by input `name`, so nothing else changes. Do NOT "fix" it with a changing `:key`: that remounts the field and loses focus and caret mid-typing.
 
-Still on `default-value` and due the same treatment: `settings/KnowledgeBase.vue`, `settings/Project.vue`, `targets/Profile.vue`, `app-settings/Limits.vue`, `account/Profile.vue`. `auth/ResetPassword.vue` is safe, nothing re-renders it.
+Every screen has been swept: `OpenQuestions.vue`, `settings/KnowledgeBase.vue`, `settings/Project.vue`, `targets/Profile.vue`, `app-settings/Limits.vue` and `account/Profile.vue` all hold a draft now. The only `default-value` left in the codebase is `auth/ResetPassword.vue`, which is safe because nothing ever re-renders it. Keep it that way: a new form field starts bound.

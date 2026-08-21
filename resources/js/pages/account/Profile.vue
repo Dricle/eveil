@@ -1,9 +1,21 @@
 <script setup lang="ts">
 import { Form, Head, usePage } from '@inertiajs/vue3'
+import { ref, watch } from 'vue'
 import AccountLayout from '@/layouts/AccountLayout.vue'
 import { update } from '@/routes/user-profile-information'
 
 const page = usePage()
+
+// Bound, never left to `default-value`: Nuxt UI reads that prop once at mount,
+// and Vue then patches a form element's value against what the DOM holds, so
+// every later render writes the frozen first value back over what was typed.
+const name = ref(page.props.auth.user.name)
+const email = ref(page.props.auth.user.email)
+
+watch(() => page.props.auth.user, (user) => {
+    name.value = user.name
+    email.value = user.email
+})
 </script>
 
 <template>
@@ -32,8 +44,8 @@ const page = usePage()
                     :error="errors.name"
                 >
                     <UInput
+                        v-model="name"
                         name="name"
-                        :default-value="page.props.auth.user.name"
                         required
                         class="w-full"
                     />
@@ -45,10 +57,10 @@ const page = usePage()
                     :error="errors.email"
                 >
                     <UInput
+                        v-model="email"
                         name="email"
                         type="email"
                         autocomplete="username"
-                        :default-value="page.props.auth.user.email"
                         required
                         class="w-full"
                     />

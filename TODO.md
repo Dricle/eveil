@@ -163,6 +163,15 @@ fournir de liste de leads. Tant que ce n'est pas vrai, Eveil est un crawler avec
       fusionné, contrairement à `save()` : un `claude-opus-5` transporté chez OpenAI donnerait un
       mapping qui a l'air configuré et ne peut pas marcher. Seuls les fournisseurs avec une clé sont
       proposés, et un POST sur un autre est refusé en 422 plutôt qu'enregistré
+- [x] **Plus aucun champ de formulaire sur `default-value`.** Nuxt UI lit cette prop **une fois**, au
+      montage (`useVModel` sans `passive`), et Vue patche ensuite la `value` d'un champ en la
+      comparant à ce que le DOM contient, pas au rendu précédent : chaque re-render réécrit donc la
+      valeur figée par dessus ce qui a été tapé. Vu sur l'onboarding, trois réponses enregistrées et
+      trois cases vides sous un compteur qui disait « 3 of 3 ». Les cinq autres écrans avaient le
+      même défaut, dont `settings/KnowledgeBase.vue` qui poll toutes les 3 s pendant une analyse et
+      écrasait donc la saisie trois fois par minute. Tous tiennent maintenant un brouillon
+      synchronisé sur les props, comme `app-settings/Agents.vue` le faisait déjà. Pas de correctif
+      par `:key` changeant : ça remonte le champ et fait perdre le curseur en pleine frappe
 - ~~7.5 warm-up~~. Hors scope assumé (ADR-023)
 
 ### Epic 8: Réponses & inbox ✅

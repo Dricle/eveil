@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, usePoll } from '@inertiajs/vue3'
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import OpenQuestions from '@/components/OpenQuestions.vue'
 import SettingsLayout from '@/layouts/SettingsLayout.vue'
 import knowledgeBase from '@/routes/settings/knowledge-base'
@@ -33,6 +33,22 @@ const LISTS = [
 function lines (field: typeof LISTS[number]['name']): string {
     return (props.project.knowledge_base?.[field] ?? []).join('\n')
 }
+
+// Every box is bound, never left to `default-value`: Nuxt UI reads that prop
+// once at mount, and Vue then patches a form element's value against what the
+// DOM holds, so every later render writes the frozen first value back over what
+// was typed. This page polls every three seconds while a crawl is out, so
+// without this it would wipe what somebody is typing three times a minute.
+const draft = ref<Record<string, string>>({})
+
+function fill () {
+    draft.value = {
+        ...Object.fromEntries(TEXTS.map(field => [field.name, props.project.knowledge_base?.[field.name] ?? ''])),
+        ...Object.fromEntries(LISTS.map(field => [field.name, lines(field.name)]))
+    }
+}
+
+watch(() => props.project, fill, { immediate: true, deep: true })
 </script>
 
 <template>
@@ -130,8 +146,8 @@ function lines (field: typeof LISTS[number]['name']): string {
                                 :error="errors[field.name]"
                             >
                                 <UTextarea
+                                    v-model="draft[field.name]"
                                     :name="field.name"
-                                    :default-value="project.knowledge_base[field.name]"
                                     :rows="3"
                                     autoresize
                                     class="w-full"
@@ -147,8 +163,8 @@ function lines (field: typeof LISTS[number]['name']): string {
                                 :error="errors[field.name]"
                             >
                                 <UTextarea
+                                    v-model="draft[field.name]"
                                     :name="field.name"
-                                    :default-value="lines(field.name)"
                                     :rows="3"
                                     autoresize
                                     class="w-full"

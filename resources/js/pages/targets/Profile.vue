@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, router } from '@inertiajs/vue3'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import TargetHeader from '@/components/TargetHeader.vue'
 import TargetsLayout from '@/layouts/TargetsLayout.vue'
 import discoveryRuns from '@/routes/discovery-runs'
@@ -42,6 +42,26 @@ const type = ref(props.profile?.type ?? 'customer')
 function lines (field: typeof LISTS[number]['name']): string {
     return (props.profile?.criteria?.[field] ?? []).join('\n')
 }
+
+// Every field is bound, never left to `default-value`: Nuxt UI reads that prop
+// once at mount, and Vue then patches a form element's value against what the
+// DOM holds, so every later render writes the frozen first value back over what
+// was typed. Saving re-renders this page, and so does switching profile in the
+// list beside it, which would otherwise show the previous one's criteria.
+const name = ref('')
+const draft = ref<Record<string, string>>({})
+const active = ref(true)
+
+watch(() => props.profile, (profile) => {
+    name.value = profile?.name ?? ''
+    type.value = profile?.type ?? 'customer'
+    active.value = profile?.is_active ?? true
+
+    draft.value = {
+        ...Object.fromEntries([...TEXTS, ...ANGLES].map(field => [field.name, profile?.criteria?.[field.name] ?? ''])),
+        ...Object.fromEntries(LISTS.map(field => [field.name, lines(field.name)]))
+    }
+}, { immediate: true, deep: true })
 </script>
 
 <template>
@@ -65,8 +85,8 @@ function lines (field: typeof LISTS[number]['name']): string {
                     :error="errors.name"
                 >
                     <UInput
+                        v-model="name"
                         name="name"
-                        :default-value="profile?.name"
                         required
                         class="w-full"
                     />
@@ -94,8 +114,8 @@ function lines (field: typeof LISTS[number]['name']): string {
                     :error="errors[field.name]"
                 >
                     <UTextarea
+                        v-model="draft[field.name]"
                         :name="field.name"
-                        :default-value="profile?.criteria?.[field.name]"
                         :rows="2"
                         autoresize
                         class="w-full"
@@ -111,8 +131,8 @@ function lines (field: typeof LISTS[number]['name']): string {
                     :error="errors[field.name]"
                 >
                     <UTextarea
+                        v-model="draft[field.name]"
                         :name="field.name"
-                        :default-value="profile?.criteria?.[field.name]"
                         :rows="2"
                         autoresize
                         class="w-full"
@@ -128,8 +148,8 @@ function lines (field: typeof LISTS[number]['name']): string {
                     :error="errors[field.name]"
                 >
                     <UTextarea
+                        v-model="draft[field.name]"
                         :name="field.name"
-                        :default-value="lines(field.name)"
                         :rows="3"
                         autoresize
                         class="w-full"
@@ -137,8 +157,8 @@ function lines (field: typeof LISTS[number]['name']): string {
                 </UFormField>
 
                 <UCheckbox
+                    v-model="active"
                     name="is_active"
-                    :default-value="profile?.is_active ?? true"
                     label="Search for these companies"
                     description="Every active profile is one more discovery run, and one more budget."
                 />

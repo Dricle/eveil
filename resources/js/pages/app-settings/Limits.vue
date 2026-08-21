@@ -1,11 +1,27 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3'
+import { ref, watch } from 'vue'
 import AppSettingsLayout from '@/layouts/AppSettingsLayout.vue'
 import limitRoutes from '@/routes/app-settings/limits'
 
-defineProps<{
+const props = defineProps<{
     limits: Record<string, number | boolean>
 }>()
+
+// Bound, never left to `default-value`: Nuxt UI reads that prop once at mount,
+// and Vue then patches a form element's value against what the DOM holds, so
+// every later render writes the frozen first value back over what was typed.
+// Saving re-renders this page, which is exactly when it bites.
+const draft = ref<Record<string, number>>({})
+const probe = ref(false)
+
+watch(() => props.limits, (limits) => {
+    draft.value = Object.fromEntries(
+        Object.entries(limits).map(([name, value]) => [name, Number(value)])
+    )
+
+    probe.value = Boolean(limits.verification_probe)
+}, { immediate: true, deep: true })
 
 // Everything tunable from a screen, and the whole of it. What is not here is
 // deployment: service URLs, HTTP timeouts, the user agent. That stays in the
@@ -82,9 +98,9 @@ const GROUPS: { title: string, hint: string, fields: { name: string, label: stri
                         :error="errors[field.name]"
                     >
                         <UInput
+                            v-model="draft[field.name]"
                             :name="field.name"
                             type="number"
-                            :default-value="Number(limits[field.name])"
                             required
                             class="w-full"
                         />
@@ -97,9 +113,9 @@ const GROUPS: { title: string, hint: string, fields: { name: string, label: stri
                         :error="errors.verification_probe"
                     >
                         <UCheckbox
+                            v-model="probe"
                             name="verification_probe"
                             value="1"
-                            :default-value="Boolean(limits.verification_probe)"
                             label="Probe the mail server before trusting an address"
                         />
                     </UFormField>

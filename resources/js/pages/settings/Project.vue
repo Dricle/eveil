@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, router } from '@inertiajs/vue3'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import SettingsLayout from '@/layouts/SettingsLayout.vue'
 import projectRoutes from '@/routes/settings/project'
 import type { ProjectDetail } from '@/types'
@@ -9,10 +9,21 @@ const props = defineProps<{ project: ProjectDetail }>()
 
 const confirmingDelete = ref(false)
 
-// Bound rather than left to `default-value` like the text fields, because the
-// help line under it changes with the choice: what each setting DOES is the
-// whole question, and the labels alone cannot carry it.
+// Every field is bound, never left to `default-value`: Nuxt UI reads that prop
+// once at mount, and Vue then patches a form element's value against what the
+// DOM holds, so every later render writes the frozen first value back over what
+// was typed. Saving re-renders this page, which is exactly when it bites.
+const name = ref(props.project.name)
+const url = ref(props.project.url)
+const instructions = ref(props.project.prompt_instructions ?? '')
 const autonomy = ref(props.project.autonomy_level)
+
+watch(() => props.project, (project) => {
+    name.value = project.name
+    url.value = project.url
+    instructions.value = project.prompt_instructions ?? ''
+    autonomy.value = project.autonomy_level
+})
 
 const AUTONOMY = [
     {
@@ -60,8 +71,8 @@ const AUTONOMY = [
                         :error="errors.name"
                     >
                         <UInput
+                            v-model="name"
                             name="name"
-                            :default-value="project.name"
                             required
                             class="w-full"
                         />
@@ -73,8 +84,8 @@ const AUTONOMY = [
                         :error="errors.url"
                     >
                         <UInput
+                            v-model="url"
                             name="url"
-                            :default-value="project.url"
                             required
                             class="w-full"
                         />
@@ -90,8 +101,8 @@ const AUTONOMY = [
                         help="Followed by every sequence and every mail personalised from one. E.g. write in French, never use emoji, say vous rather than tu."
                     >
                         <UTextarea
+                            v-model="instructions"
                             name="prompt_instructions"
-                            :default-value="project.prompt_instructions ?? ''"
                             :rows="5"
                             :maxlength="2000"
                             class="w-full"

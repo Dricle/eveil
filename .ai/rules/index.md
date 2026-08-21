@@ -9,6 +9,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Cloud/** | .ai/rules/cloud.md |
 | app/Http/Controllers/** | .ai/rules/controllers.md |
 | database/** | .ai/rules/database.md |
+| deploy/** | .ai/rules/deploy.md |
 | app/Services/Discovery/** | .ai/rules/discovery.md |
 | **, composer.json | .ai/rules/general.md |
 | app/Jobs/Discovery/** | .ai/rules/jobs-discovery.md |

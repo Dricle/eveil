@@ -45,15 +45,19 @@ WORKDIR /var/www
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-interaction
 
+# No `COPY .yarn`: `/.yarn/*` is gitignored and nothing is excepted back in, so
+# the directory does not exist in a clone and the build died on it. Corepack was
+# enabled above and reads the version from `packageManager` in `package.json`,
+# which is the whole of what Yarn 4 needs here. Add the COPY back only if a
+# pinned release or a patch is ever committed under `.yarn/`.
 COPY package.json yarn.lock .yarnrc.yml .npmrc ./
-COPY .yarn ./.yarn
 RUN yarn install --immutable
 
 COPY . .
 
 RUN composer dump-autoload --optimize --classmap-authoritative \
     && yarn build \
-    && rm -rf node_modules .yarn/cache
+    && rm -rf node_modules .yarn
 
 COPY deploy/nginx.conf /etc/nginx/sites-available/default
 COPY deploy/supervisord.conf /etc/supervisor/conf.d/eveil.conf

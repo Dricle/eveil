@@ -23,6 +23,14 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Laravel's default list minus `X-Forwarded-Host`: it decides where a
+        // user lands after signing in, and the proxy list is `*`.
+        $middleware->trustProxies(at: '*', headers: Request::HEADER_X_FORWARDED_FOR
+            | Request::HEADER_X_FORWARDED_PORT
+            | Request::HEADER_X_FORWARDED_PROTO
+            | Request::HEADER_X_FORWARDED_PREFIX
+            | Request::HEADER_X_FORWARDED_AWS_ELB);
+
         $middleware->web(append: [
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,

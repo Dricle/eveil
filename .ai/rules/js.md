@@ -45,3 +45,19 @@ The fix if it happens: run `yarn build` on the host, which regenerates them corr
 `php artisan wayfinder:generate` on its own emits route modules WITHOUT `.form()`, on the host as much as in the container: the `formVariants: true` option lives in the vite plugin config, and the bare command never sees it. Every page doing `v-bind="someRoute.update.form()"` then fails `yarn types:check` with "Property 'form' does not exist", in files you never touched.
 
 Run `php artisan wayfinder:generate --with-form` when generating by hand, or just `yarn build` on the host, which passes it. Check with: `php -r 'echo substr_count(file_get_contents("resources/js/routes/settings/knowledge-base/index.ts"), ".form");'` — zero means regenerate.
+
+## Never leave a form field on `default-value`: bind it with v-model
+Nuxt UI reads `defaultValue` ONCE. `Textarea.vue` and `Input.vue` do `useVModel(props, 'modelValue', emits, { defaultValue: props.defaultValue })` without `passive`, so the value is captured at mount and never tracks the prop again. Vue then patches a form element's `value` against what the DOM currently holds rather than against the previous vnode, so **every re-render writes that frozen first value back over whatever the user typed**.
+
+What it looks like: answer three questions on the onboarding, save, and the boxes come back empty while the counter above them says "3 of 3 answered". The data was saved correctly; the display overwrote itself. Any `back()`/redirect that re-renders the same component does it, and a `usePoll` on the page does it every few seconds while somebody is typing.
+
+The fix is a local draft synced from props, which is what `app-settings/Agents.vue` already does:
+
+    const draft = ref<Record<string, string>>({})
+    watch(() => props.questions, questions => {
+        draft.value = Object.fromEntries(questions.map(q => [q.key, q.answer ?? '']))
+    }, { immediate: true, deep: true })
+
+then `v-model="draft[q.key]"`. Inertia's `<Form>` still collects by input `name`, so nothing else changes. Do NOT "fix" it with a changing `:key`: that remounts the field and loses focus and caret mid-typing.
+
+Still on `default-value` and due the same treatment: `settings/KnowledgeBase.vue`, `settings/Project.vue`, `targets/Profile.vue`, `app-settings/Limits.vue`, `account/Profile.vue`. `auth/ResetPassword.vue` is safe, nothing re-renders it.

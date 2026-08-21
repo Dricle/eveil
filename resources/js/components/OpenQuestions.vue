@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3'
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import knowledgeBaseRoutes from '@/routes/settings/knowledge-base'
 import type { OpenQuestion } from '@/types'
 
@@ -12,7 +12,21 @@ const props = defineProps<{
     title?: string
 }>()
 
-const answered = computed(() => props.questions.filter(question => question.answer !== null).length)
+// Held here and bound with `v-model`, never left to `default-value`.
+//
+// Nuxt UI reads `defaultValue` ONCE, at mount, and Vue patches a form
+// element's `value` against what the DOM currently holds rather than against
+// the previous render. So every re-render writes that frozen first value back
+// over whatever was typed: answer three questions, save, and the boxes come
+// back empty while the counter above them says three of three. The data was
+// never the problem; the display was overwriting itself.
+const draft = ref<Record<string, string>>({})
+
+watch(() => props.questions, (questions) => {
+    draft.value = Object.fromEntries(questions.map(question => [question.key, question.answer ?? '']))
+}, { immediate: true, deep: true })
+
+const answered = computed(() => Object.values(draft.value).filter(answer => answer.trim() !== '').length)
 </script>
 
 <template>
@@ -44,8 +58,8 @@ const answered = computed(() => props.questions.filter(question => question.answ
                 :name="`answers[${question.key}]`"
             >
                 <UTextarea
+                    v-model="draft[question.key]"
                     :name="`answers[${question.key}]`"
-                    :default-value="question.answer ?? ''"
                     :rows="2"
                     autoresize
                     class="w-full"

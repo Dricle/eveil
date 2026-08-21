@@ -119,6 +119,29 @@ class AgentSettings
     }
 
     /**
+     * Moves one agent to another provider, keeping its timeout and REPLACING
+     * its model rather than merging over it.
+     *
+     * `save()` merges and drops empties on purpose, which is right for a form
+     * where a blank field means "leave that alone". It is wrong here: a model
+     * id belongs to the provider that publishes it, so carrying
+     * `claude-opus-5` across to OpenAI would leave every agent configured to
+     * call a model that does not exist there, and the screen would show a
+     * mapping that cannot work.
+     *
+     * A null model is written as absent, which is how `model()` says "let the
+     * provider pick its own default".
+     */
+    public function switchProvider(string $agent, string $provider, ?string $model): void
+    {
+        $this->settings->set("agents.{$agent}", array_filter([
+            'provider' => $provider,
+            'model' => $model,
+            'timeout' => $this->timeout($agent),
+        ], fn (mixed $value): bool => $value !== null));
+    }
+
+    /**
      * Drops the row, so the agent falls back to `self::DEFAULT`.
      *
      * Note what this does NOT do: restore whatever the install originally

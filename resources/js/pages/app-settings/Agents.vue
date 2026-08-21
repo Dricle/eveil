@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3'
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import AppSettingsLayout from '@/layouts/AppSettingsLayout.vue'
 import agentRoutes from '@/routes/app-settings/agents'
 
@@ -43,6 +43,24 @@ function save (line: { slug: string, provider: string, model: string, timeout: n
 function formatTokens (count: number) {
     return count.toLocaleString()
 }
+
+// The first move for anybody not using the provider that ships. Eight lines
+// changed one at a time, each needing a model id looked up somewhere else, is
+// where a setup screen loses people.
+//
+// Only providers with a key: a mapping pointing at one without looks configured
+// here and fails in a job an hour later.
+const usable = computed(() => props.labs.filter(lab => props.configured[lab]))
+
+// Nothing to offer when every agent already runs on the only provider that can
+// be called.
+const elsewhere = computed(() => usable.value.filter(
+    lab => props.agents.some(agent => agent.provider !== lab)
+))
+
+function switchAll (provider: string) {
+    router.put(agentRoutes.provider.url(), { provider }, { preserveScroll: true })
+}
 </script>
 
 <template>
@@ -56,6 +74,37 @@ function formatTokens (count: number) {
                 schema. Changing a model here takes effect on the next call, with
                 no deploy.
             </p>
+
+            <!-- One click for the whole mapping. Every agent keeps its timeout
+                 and lands on the new provider's equivalent model: the one that
+                 was on the smartest stays on the smartest, the one that was on
+                 the cheapest stays on the cheapest. -->
+            <div
+                v-if="elsewhere.length"
+                class="flex flex-wrap items-center gap-3 rounded-lg bg-elevated p-4"
+            >
+                <div class="min-w-0 flex-1">
+                    <p class="text-sm font-medium">
+                        Move every agent to one provider
+                    </p>
+                    <p class="text-sm text-muted">
+                        Each keeps its timeout and lands on that provider's equivalent
+                        model, the smartest for the ones that write, the cheapest for
+                        the ones that read a page and return fields. Change any of them
+                        below afterwards.
+                    </p>
+                </div>
+
+                <UButton
+                    v-for="lab in elsewhere"
+                    :key="lab"
+                    color="primary"
+                    variant="subtle"
+                    icon="i-lucide-replace-all"
+                    :label="`Everything on ${lab}`"
+                    @click="switchAll(lab)"
+                />
+            </div>
 
             <div
                 v-for="line in draft"

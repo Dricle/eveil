@@ -153,6 +153,16 @@ fournir de liste de leads. Tant que ce n'est pas vrai, Eveil est un crawler avec
       aussi, avec son badge : la tentative est un fait qui mérite d'être gardé, et le cacher dirait
       qu'il ne s'est rien passé alors qu'il s'est passé quelque chose. Mais il ne doit jamais avoir
       l'air d'un mail arrivé
+- [x] **« Everything on openai » en un clic** sur `/app/app-settings/agents`. Le premier geste de
+      quiconque n'utilise pas le fournisseur livré était de changer huit lignes une par une, chacune
+      demandant d'aller chercher un identifiant de modèle ailleurs : c'est là qu'un écran de réglages
+      perd les gens. Chaque agent garde son **timeout** (un modèle qui réfléchit meurt sur les 60 s
+      par défaut, quel que soit le fournisseur) et atterrit sur le modèle de **même palier** chez le
+      nouveau : celui qui était sur le plus intelligent y reste, celui qui était sur le moins cher
+      aussi, et sinon c'est le défaut annoncé par le fournisseur. Le modèle est **remplacé** et pas
+      fusionné, contrairement à `save()` : un `claude-opus-5` transporté chez OpenAI donnerait un
+      mapping qui a l'air configuré et ne peut pas marcher. Seuls les fournisseurs avec une clé sont
+      proposés, et un POST sur un autre est refusé en 422 plutôt qu'enregistré
 - ~~7.5 warm-up~~. Hors scope assumé (ADR-023)
 
 ### Epic 8: Réponses & inbox ✅

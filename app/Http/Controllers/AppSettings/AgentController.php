@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\AppSettings;
 
+use App\Actions\SwitchAgentProvider;
 use App\Ai\AgentSettings;
 use App\Ai\ModelCatalogue;
 use App\Ai\ProviderCredentials;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AppSettings\AgentSettingRequest;
+use App\Http\Requests\AppSettings\ProviderSwitchRequest;
 use App\Models\AgentRun;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -71,6 +73,31 @@ class AgentController extends Controller
         // this and the prices are one operation, never two.
         return to_route('app-settings.agents.index')
             ->with('status', $agent.' saved. In cloud, adjust credit_prices in the same move.');
+    }
+
+    /**
+     * Every agent onto one provider, which is the first move for anybody not
+     * using the one that ships. Changing eight lines by hand, each needing a
+     * model id looked up elsewhere, is where a setup screen loses people.
+     */
+    public function switchProvider(
+        ProviderSwitchRequest $request,
+        SwitchAgentProvider $switch,
+        ProviderCredentials $credentials,
+    ): RedirectResponse {
+        $provider = $request->string('provider')->value();
+
+        // Refused rather than saved: a mapping pointing at a provider with no
+        // key looks configured on this screen and fails in a job an hour later.
+        abort_unless($credentials->isConfigured($provider), 422);
+
+        $moved = $switch->handle($provider);
+
+        return to_route('app-settings.agents.index')->with(
+            'status',
+            "{$moved} agents moved to {$provider}, each keeping its timeout and landing on that "
+            .'provider\'s equivalent model. Change any of them below. In cloud, adjust credit_prices in the same move.',
+        );
     }
 
     public function destroy(string $agent, AgentSettings $agents): RedirectResponse

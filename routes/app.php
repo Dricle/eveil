@@ -242,6 +242,12 @@ Route::middleware(['auth', 'project.set'])->group(function (): void {
         Route::post('provider/{provider}/test', [ProviderTestController::class, 'store'])->name('provider.test');
 
         Route::get('agents', [AgentController::class, 'index'])->name('agents.index');
+        /*
+         * Before `agents/{agent}`, or the word `provider` would be read as an
+         * agent slug and 404.
+         */
+        Route::put('agents/provider', [AgentController::class, 'switchProvider'])
+            ->name('agents.provider');
         Route::put('agents/{agent}', [AgentController::class, 'update'])->name('agents.update');
         Route::delete('agents/{agent}', [AgentController::class, 'destroy'])->name('agents.destroy');
 

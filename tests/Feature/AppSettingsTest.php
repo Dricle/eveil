@@ -251,3 +251,54 @@ function limitPayload(array $overrides = []): array
         ...$overrides,
     ];
 }
+
+it('moves every agent onto one provider in a click, keeping each timeout and tier', function () {
+    // Through the screen that owns it: the key is stored encrypted, and a row
+    // written any other way fails to decrypt when the guard reads it back.
+    $this->actingAs(superAdmin())
+        ->put(route('app-settings.provider.update'), ['provider' => 'openai', 'key' => 'sk-test-value']);
+
+    // The two ends of the shipped mapping: one that writes prose on the smart
+    // model, one that reads a page and returns fields on the cheap one.
+    $before = [
+        'website-analyst' => app(AgentSettings::class)->timeout('website-analyst'),
+        'contact-extractor' => app(AgentSettings::class)->timeout('contact-extractor'),
+    ];
+
+    $this->actingAs(superAdmin())
+        ->put(route('app-settings.agents.provider'), ['provider' => 'openai'])
+        ->assertRedirect(route('app-settings.agents.index'));
+
+    $agents = app(AgentSettings::class);
+
+    foreach ($agents->known() as $agent) {
+        expect($agents->providerName($agent))->toBe('openai');
+    }
+
+    // The timeout is not the provider's business: a thinking model on the 60s
+    // HTTP default dies, and that is true whoever serves it.
+    expect($agents->timeout('website-analyst'))->toBe($before['website-analyst'])
+        ->and($agents->timeout('contact-extractor'))->toBe($before['contact-extractor'])
+        // And no model id from the provider we left: one that does not exist on
+        // the new one is a mapping that looks configured and cannot work.
+        ->and($agents->model('website-analyst'))->not->toContain('claude')
+        ->and($agents->model('contact-extractor'))->not->toContain('claude');
+});
+
+it('refuses to move everything onto a provider with no key', function () {
+    $before = app(AgentSettings::class)->providerName('website-analyst');
+
+    // Saved, it would look configured on this screen and fail in a job an hour
+    // later, which is the one failure this screen exists to prevent.
+    $this->actingAs(superAdmin())
+        ->put(route('app-settings.agents.provider'), ['provider' => 'openai'])
+        ->assertStatus(422);
+
+    expect(app(AgentSettings::class)->providerName('website-analyst'))->toBe($before);
+});
+
+it('keeps the bulk switch away from an ordinary user', function () {
+    $this->actingAs(User::factory()->create())
+        ->put(route('app-settings.agents.provider'), ['provider' => 'openai'])
+        ->assertForbidden();
+});

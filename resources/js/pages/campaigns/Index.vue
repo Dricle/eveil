@@ -183,6 +183,18 @@ function due (campaign: Campaign): string {
 
                 <span class="text-sm text-muted">{{ due(campaign) }}</span>
 
+                <!-- Enrolment happens when the switch is thrown and on a
+                     scheduled tick a supervised project never gets, so people
+                     approved after the start need a way in. -->
+                <UButton
+                    v-if="campaign.status === 'active'"
+                    icon="i-lucide-refresh-cw"
+                    color="neutral"
+                    variant="ghost"
+                    label="Add people now"
+                    @click="router.post(campaignRoutes.enrol.url(campaign.id), {}, { preserveScroll: true })"
+                />
+
                 <CampaignSwitch :campaign="campaign" />
             </div>
         </div>

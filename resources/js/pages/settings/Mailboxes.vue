@@ -483,16 +483,15 @@ function note () {
                         name="projects"
                         help="A project with no mailbox cannot send at all, which is the safe default for one you have just created."
                     >
-                        <div class="space-y-1">
-                            <UCheckbox
-                                v-for="project in projects"
-                                :key="project.id"
-                                v-model="form.projects"
-                                :value="project.id"
-                                :label="project.name"
-                                name="projects[]"
-                            />
-                        </div>
+                        <!-- A group, not a list of checkboxes: a lone UCheckbox
+                             is boolean and ignores an array model, so every box
+                             read back as unchecked when editing. -->
+                        <UCheckboxGroup
+                            v-model="form.projects"
+                            :items="projects"
+                            value-key="id"
+                            label-key="name"
+                        />
                     </UFormField>
 
                     <!-- The checkbox group posts nothing when every box is

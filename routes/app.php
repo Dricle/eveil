@@ -9,6 +9,7 @@ use App\Http\Controllers\AppSettings\ProviderController;
 use App\Http\Controllers\AppSettings\ProviderTestController;
 use App\Http\Controllers\Auth\SetupController;
 use App\Http\Controllers\CampaignController;
+use App\Http\Controllers\CampaignEnrolmentController;
 use App\Http\Controllers\CampaignGenerationController;
 use App\Http\Controllers\CampaignStatusController;
 use App\Http\Controllers\CampaignStepController;
@@ -188,6 +189,13 @@ Route::middleware(['auth', 'project.set'])->group(function (): void {
          */
         Route::put('campaigns/{campaign}/status', [CampaignStatusController::class, 'update'])
             ->name('campaigns.status');
+        /*
+         * The same enrolment the switch performs, on demand: people approved
+         * after a campaign started are otherwise waiting on a scheduled tick
+         * that a supervised project never gets.
+         */
+        Route::post('campaigns/{campaign}/enrol', [CampaignEnrolmentController::class, 'store'])
+            ->name('campaigns.enrol');
         Route::resource('campaigns.steps', CampaignStepController::class)
             ->only(['store', 'update', 'destroy'])
             ->shallow(false);

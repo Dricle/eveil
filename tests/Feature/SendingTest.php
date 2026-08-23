@@ -24,6 +24,7 @@ use App\Models\User;
 use App\Services\Outreach\MailboxTester;
 use App\Services\Outreach\Sender;
 use App\Services\Outreach\SuppressionList;
+use App\Support\CurrentProject;
 use Illuminate\Support\Facades\Queue;
 
 /**
@@ -817,4 +818,47 @@ it('sends a real message when testing a mailbox, because the refusal comes after
     // what is checked is the From HEADER and not the envelope. A test that
     // stops before DATA reports a working mailbox that cannot send a thing.
     expect(app(MailboxTester::class)->testSmtp($mailbox))->toContain('SMTP:');
+});
+
+it('enrols people found after the campaign started, and refuses to on a draft', function () {
+    [$user, $project] = sender();
+
+    $campaign = sequence($project);
+
+    // Started with nobody reachable, which is the case that leaves a live
+    // campaign reading "nobody in it yet".
+    $campaign->update(['status' => CampaignStatus::Active]);
+    expect($campaign->campaignLeads()->count())->toBe(0);
+
+    contactable($project);
+
+    $this->actingAs($user)
+        ->post(route('campaigns.enrol', $campaign->id))
+        ->assertRedirect();
+
+    expect($campaign->campaignLeads()->count())->toBe(1);
+
+    $draft = sequence($project);
+    contactable($project, 'autre@friterie.test');
+
+    $this->actingAs($user)->post(route('campaigns.enrol', $draft->id));
+
+    expect($draft->refresh()->status)->toBe(CampaignStatus::Draft)
+        ->and($draft->campaignLeads()->count())->toBe(0);
+});
+
+it('does not enrol into another project\'s campaign', function () {
+    [$user, $project] = sender();
+
+    $campaign = sequence($project);
+    $campaign->update(['status' => CampaignStatus::Active]);
+
+    $stranger = sequence(Project::factory()->create());
+    $stranger->update(['status' => CampaignStatus::Active]);
+
+    app(CurrentProject::class)->set($project);
+
+    $this->actingAs($user)
+        ->post(route('campaigns.enrol', $stranger->id))
+        ->assertNotFound();
 });

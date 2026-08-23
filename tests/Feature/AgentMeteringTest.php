@@ -122,3 +122,39 @@ it('spends freely on a self-hosted instance', function () {
     expect(app(SpendGuardInterface::class))->toBeInstanceOf(UnmeteredSpend::class)
         ->and(app(SpendGuardInterface::class)->refusal(Project::factory()->create(), 'website-analyst'))->toBeNull();
 });
+
+it('records the provider that answered, not the one that was asked', function () {
+    // Failover means the run can be served by somebody other than the provider
+    // the agent asked for, and the meter is read as "what did each provider
+    // cost us". Recording the request attributed the tokens to a provider that
+    // never billed for them.
+    WebsiteAnalyst::fake([
+        new StructuredTextResponse(
+            ['what_it_does' => 'Widgets.'],
+            '{}',
+            new Usage(promptTokens: 10, completionTokens: 5),
+            new Meta('gemini', 'gemini-3.7-flash'),
+        ),
+    ]);
+
+    analyst()->prompt('Analyse this.');
+
+    expect(AgentRun::sole())
+        ->provider->toBe('gemini')
+        ->model->toBe('gemini-3.7-flash');
+});
+
+it('keeps the SDK invocation id, which is what the step and tool events are keyed by', function () {
+    WebsiteAnalyst::fake([
+        new StructuredTextResponse(
+            ['what_it_does' => 'Widgets.'],
+            '{}',
+            new Usage(promptTokens: 10, completionTokens: 5),
+            new Meta('anthropic', 'claude-opus-5'),
+        ),
+    ]);
+
+    analyst()->prompt('Analyse this.');
+
+    expect(AgentRun::sole()->invocation_id)->not->toBeNull();
+});

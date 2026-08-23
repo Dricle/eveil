@@ -23,6 +23,7 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $project_id
  * @property string $agent
+ * @property string|null $invocation_id
  * @property AgentRunStatus $status
  * @property string|null $provider
  * @property string|null $model
@@ -36,7 +37,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['project_id', 'agent', 'status', 'provider', 'model', 'input', 'output', 'tokens_in', 'tokens_out', 'duration_ms', 'error'])]
+#[Fillable(['project_id', 'agent', 'invocation_id', 'status', 'provider', 'model', 'input', 'output', 'tokens_in', 'tokens_out', 'duration_ms', 'error'])]
 class AgentRun extends Model
 {
     /** @use HasFactory<AgentRunFactory> */

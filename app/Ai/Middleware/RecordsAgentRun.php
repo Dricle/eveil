@@ -36,7 +36,14 @@ class RecordsAgentRun
         $attributes = [
             'project_id' => $agent->project->id,
             'agent' => $agent::slug(),
+            // The SDK's own id for this invocation, one per run and the same
+            // one across every failover attempt. Nothing here joins on it: it
+            // is what makes the step and tool events, which persist nowhere,
+            // findable next to the row they belong to.
+            'invocation_id' => $prompt->invocationId,
             'status' => AgentRunStatus::Running,
+            // Who was ASKED. Failover can answer from somebody else, so this is
+            // overwritten below with whoever actually did.
             'provider' => $prompt->provider->name(),
             'model' => $prompt->model,
             'input' => ['prompt' => $prompt->prompt],
@@ -91,6 +98,12 @@ class RecordsAgentRun
         return $response->then(function (AgentResponse $response) use ($run, $startedAt): void {
             $run->update([
                 'status' => AgentRunStatus::Succeeded,
+                // The provider and model that ANSWERED, which after a failover
+                // is not the one that was asked. Recording the request meant
+                // the meter attributed a run to a provider that never billed
+                // for it. Absent on a fake, so the request stands in.
+                'provider' => $response->meta->provider ?? $run->provider,
+                'model' => $response->meta->model ?? $run->model,
                 'output' => property_exists($response, 'structured')
                     ? ['structured' => $response->structured]
                     : ['text' => $response->text],

@@ -2236,14 +2236,30 @@ m'intéresse pas à cet instant.
   leads et sociétés encore en jeu, campagnes actives, funnel, huit derniers runs d'agent, et les
   **tokens**. Jamais d'euros, aucun provider ne publie un prix
 
-### Epic 9: Organizations & permissions `v1`. **Cœur, pas cloud**
+### Epic 9: Organizations & permissions `v1`. **Cœur, pas cloud** ✅
 
 > Disponible dans les deux éditions. `app/Cloud/` ne contient que facturation et crédits (ADR-025).
 
-**9.1** ⬜ En tant qu'utilisateur cloud, je veux créer mon compte et devenir owner de mon organization.
-**9.2** ⬜ En tant qu'admin, je veux inviter des membres avec un rôle.
-**9.3** ⬜ En tant qu'admin, je veux accorder l'accès projet par projet.
+**9.1** ✅ En tant qu'utilisateur cloud, je veux créer mon compte et devenir owner de mon organization.
+- `App\Actions\CreateAccount` : setup et inscription passent tous les deux par là, donc "un compte a
+  toujours une organization" tient en un seul endroit
+**9.2** ✅ En tant qu'admin, je veux inviter des membres avec un rôle.
+- Pas de table `invitations`. Le lien EST l'invite : `URL::temporarySignedRoute` signe
+  organization/email/role dans la query string, avec une expiration portée par la signature elle-même.
+  Rien à stocker, rien à expirer à la main, "renvoyer" est juste émettre un nouveau lien. Ce que ça
+  coûte, assumé : pas de liste des invites en attente, pas de bouton pour en annuler une — jugé pas
+  assez utile pour justifier une table. Rôle limité à admin/member : un second owner est un geste plus
+  sensible, pas couvert ici. Le mail part sur la config `MAIL_*` ordinaire, la même que la
+  réinitialisation de mot de passe, dans les deux éditions
+**9.3** ✅ En tant qu'admin, je veux accorder l'accès projet par projet.
 - Un membre sans accès à un projet ne le voit pas, ne le devine pas via une URL, et reçoit un 404
+- Owner et Admin gardent l'accès à tout : seul `member` a besoin d'une ligne `project_user`, posée
+  depuis l'écran des membres avec le même geste que `MailboxController` accorde une boîte à des
+  projets. `ProjectPolicy::view()` et `Project::visibleTo()` appliquent la même règle des deux côtés,
+  donc le switcher ne liste jamais un projet sur lequel un clic 404rait ensuite
+- Départ volontaire toujours permis, quel que soit le rôle. La seule chose qu'on ne peut ni retirer ni
+  rétrograder : le dernier owner, quel que soit qui le demande — sinon l'organization devient
+  inatteignable, la même panne que `DeleteAccount` évite déjà côté suppression de compte
 
 ### Epic 10: Facturation `v1`
 

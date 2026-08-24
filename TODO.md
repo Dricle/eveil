@@ -249,11 +249,24 @@ fournir de liste de leads. Tant que ce n'est pas vrai, Eveil est un crawler avec
 
 ## v1. L'édition cloud
 
-### Epic 9: Organizations & permissions. *Cœur, pas cloud* (tables faites, rien au-dessus)
+### Epic 9: Organizations & permissions. *Cœur, pas cloud* ✅
 
-- [ ] **9.1** Création de compte → owner de l'organization
-- [ ] **9.2** Inviter des membres avec un rôle
-- [ ] **9.3** Accès projet par projet: un membre sans accès reçoit un 404, pas un 403
+- [x] **9.1** Création de compte → owner de l'organization. `App\Actions\CreateAccount`, commun à
+      `/app/setup` et à l'inscription : un compte a toujours une organization, jamais deux chemins
+- [x] **9.2** Inviter des membres avec un rôle. Pas de table `invitations` : le lien signé
+      (`URL::temporarySignedRoute`) EST l'invite, organization/email/role dans la query string,
+      signature et expiration portées par l'URL elle-même. Rien à stocker, rien à purger, "renvoyer"
+      est juste un nouveau lien. Perdu volontairement pour ne pas construire une table pour ça :
+      liste des invites en attente, bouton d'annulation. Rôle limité à admin/member, jamais owner : un
+      second owner est un geste à part, pas encore construit. Accepté avec ou sans compte existant, sur
+      le mail applicatif ordinaire (`MAIL_*`), pas de traitement cloud particulier
+- [x] **9.3** Accès projet par projet, 404 pas 403. Owner et Admin gardent l'accès complet ; seul
+      `member` a besoin d'une ligne `project_user`, posée depuis l'écran des membres exactement comme
+      une boîte mail est accordée à des projets. `ProjectPolicy::view()` et `Project::visibleTo()`
+      appliquent la même règle, donc le switcher ne liste jamais un projet sur lequel il 404 ensuite.
+      Le seul rôle qui ne peut ni être retiré ni être rétrogradé : le dernier owner, quel que soit qui
+      le demande
+- Départ volontaire toujours permis, quel que soit le rôle, sauf le dernier owner (même règle)
 
 ### Epic 10. Facturation
 

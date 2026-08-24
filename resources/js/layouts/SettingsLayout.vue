@@ -5,6 +5,7 @@ import { computed } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import knowledgeBase from '@/routes/settings/knowledge-base'
 import mailboxes from '@/routes/settings/mailboxes'
+import members from '@/routes/settings/members'
 import project from '@/routes/settings/project'
 
 defineProps<{
@@ -23,7 +24,8 @@ const items = computed<NavigationMenuItem[]>(() =>
         },
         // Organization scope rather than project: one address is often used by
         // two products and never by a third.
-        { label: 'Mailboxes', icon: 'i-lucide-mail', to: mailboxes.index.url() }
+        { label: 'Mailboxes', icon: 'i-lucide-mail', to: mailboxes.index.url() },
+        { label: 'Members', icon: 'i-lucide-users', to: members.index.url() }
     ].map(item => ({ ...item, active: page.url.startsWith(item.to) }))
 )
 </script>

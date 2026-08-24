@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AutonomyLevel;
+use App\Enums\OrganizationRole;
 use Database\Factories\ProjectFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -69,7 +70,18 @@ class Project extends Model
     #[Scope]
     protected function visibleTo(Builder $query, User $user): void
     {
-        $query->whereIn('organization_id', $user->organizations()->select('organizations.id'));
+        // Owner and Admin see every project in an organization they hold
+        // that role in; `member` needs an explicit grant on `project_user`
+        // for each one. `ProjectPolicy::view()` enforces the same split on a
+        // single project, so a listing here never surfaces something the
+        // switcher would then 404 on.
+        $unrestrictedOrganizationIds = $user->organizations()
+            ->wherePivotIn('role', [OrganizationRole::Owner->value, OrganizationRole::Admin->value])
+            ->pluck('organizations.id');
+
+        $query->where(fn (Builder $query) => $query
+            ->whereIn('organization_id', $unrestrictedOrganizationIds)
+            ->orWhereHas('users', fn (Builder $members) => $members->whereKey($user->id)));
     }
 
     /**

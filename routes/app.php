@@ -7,6 +7,7 @@ use App\Http\Controllers\AppSettings\KnownHostController;
 use App\Http\Controllers\AppSettings\LimitController;
 use App\Http\Controllers\AppSettings\ProviderController;
 use App\Http\Controllers\AppSettings\ProviderTestController;
+use App\Http\Controllers\Auth\InvitationController;
 use App\Http\Controllers\Auth\SetupController;
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\CampaignEnrolmentController;
@@ -34,6 +35,7 @@ use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\OnboardingSearchController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectKnowledgeBaseController;
+use App\Http\Controllers\Settings\MemberController;
 use App\Http\Controllers\TargetProfileController;
 use App\Http\Controllers\TargetProfileDerivationController;
 use Illuminate\Support\Facades\Route;
@@ -48,6 +50,19 @@ Route::middleware('guest')->group(function (): void {
     Route::get('setup', [SetupController::class, 'create'])->name('setup');
     Route::post('setup', [SetupController::class, 'store']);
 });
+
+/*
+ * Reachable whether the visitor is authenticated or not: an existing user
+ * just accepts, a brand new one sets a name and password first. Neither
+ * branch is `guest`-only, which is why this is not in the group above.
+ *
+ * No `{token}`: the query string itself (organization, email, role,
+ * signature) IS the invite, via `URL::temporarySignedRoute`. The GET route
+ * is what the signature is generated against; the POST reuses the identical
+ * query string and validates it the same way.
+ */
+Route::get('invitations/accept', [InvitationController::class, 'show'])->name('invitations.accept');
+Route::post('invitations/accept', [InvitationController::class, 'store']);
 
 Route::middleware(['auth', 'project.set'])->group(function (): void {
     /*
@@ -97,6 +112,16 @@ Route::middleware(['auth', 'project.set'])->group(function (): void {
             Route::delete('mailboxes/{mailbox}', [MailboxController::class, 'destroy'])->name('mailboxes.destroy');
             Route::post('mailboxes/{mailbox}/test', [MailboxTestController::class, 'store'])
                 ->name('mailboxes.test');
+
+            /*
+             * Organization-scoped, same reasoning as mailboxes above: who is
+             * on the team has nothing to do with which project is currently
+             * selected, only with which organization owns it.
+             */
+            Route::get('members', [MemberController::class, 'index'])->name('members.index');
+            Route::post('members', [MemberController::class, 'store'])->name('members.store');
+            Route::put('members/{user}', [MemberController::class, 'update'])->name('members.update');
+            Route::delete('members/{user}', [MemberController::class, 'destroy'])->name('members.destroy');
 
             Route::get('knowledge-base', [ProjectKnowledgeBaseController::class, 'edit'])
                 ->name('knowledge-base.edit');

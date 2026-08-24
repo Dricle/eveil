@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Organization;
 use App\Models\Project;
 use Closure;
 use RuntimeException;
@@ -34,6 +35,17 @@ class CurrentProject
     public function getOrFail(): Project
     {
         return $this->project ?? throw new RuntimeException('No current project is set.');
+    }
+
+    /**
+     * The organization that owns the current project, never
+     * `$user->organizations()->first()`: once a user can belong to more than
+     * one (accepting a second invitation), "first" stops meaning anything.
+     * Organization-scoped settings screens (mailboxes, members) read this.
+     */
+    public function organization(): Organization
+    {
+        return $this->getOrFail()->organization;
     }
 
     public function id(): ?int

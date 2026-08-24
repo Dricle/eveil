@@ -6,6 +6,7 @@ use App\Http\Requests\MailboxRequest;
 use App\Http\Resources\MailboxResource;
 use App\Http\Resources\ProjectResource;
 use App\Models\EmailAccount;
+use App\Support\CurrentProject;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -23,9 +24,11 @@ use Inertia\Response;
  */
 class MailboxController extends Controller
 {
-    public function index(Request $request): Response
+    public function __construct(private CurrentProject $currentProject) {}
+
+    public function index(): Response
     {
-        $organization = $request->user()->organizations()->firstOrFail();
+        $organization = $this->currentProject->organization();
 
         return Inertia::render('settings/Mailboxes', [
             'mailboxes' => MailboxResource::collection(
@@ -43,7 +46,7 @@ class MailboxController extends Controller
 
     public function store(MailboxRequest $request): RedirectResponse
     {
-        $organization = $request->user()->organizations()->firstOrFail();
+        $organization = $this->currentProject->organization();
 
         $mailbox = $organization->emailAccounts()->create($request->safe()->except('projects'));
 

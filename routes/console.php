@@ -34,3 +34,11 @@ Schedule::command('eveil:write-missing')->hourly();
 // inbox is read on a rhythm of its own. A mailbox that stopped sending still
 // receives the answers to what already went out.
 Schedule::command('eveil:fetch-replies')->everyFiveMinutes();
+
+// A discovery run that already succeeded is a budget cap hit, not a market
+// exhausted: nothing gets searched for again unless something starts a second
+// run. Six hours, not five minutes like enrol/send: this is the expensive
+// AI-heavy step, deliberately sparser, and each project's own lead limits cap
+// how far it is allowed to go. Contact-finding needs no tick of its own:
+// QualifyCandidate already dispatches it the moment a company is kept.
+Schedule::command('eveil:discover-due')->everySixHours();

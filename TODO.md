@@ -263,6 +263,11 @@ fournir de liste de leads. Tant que ce n'est pas vrai, Eveil est un crawler avec
 - [ ] **10.1** Abonnement Stripe
 - [ ] **10.2** Consommation vs plan, ventilée par projet depuis `agent_runs`
 - [ ] **10.3** Core gratuit sans limite artificielle en self-hosted (ADR-025)
+- Découverte continue (`eveil:discover-due`, tourne déjà) attend son portefeuille ici, rien de plus :
+  le garde-fou passe par `SpendGuardInterface`, déjà consulté à CHAQUE appel agent, découverte comprise.
+  Brancher le portefeuille cloud suffit ; aucun câblage spécifique à la découverte à écrire. Les plafonds
+  `daily_lead_limit` / `lead_limit` par projet restent en plus, dans les deux éditions : ADR-019 ne les
+  remplace pas.
 
 ### Epic 4: Agent Website (rien de fait, table `recommendations` inexistante)
 
@@ -308,6 +313,11 @@ fournir de liste de leads. Tant que ce n'est pas vrai, Eveil est un crawler avec
 - [ ] **Epic 12** API publique, serveur MCP, webhooks CRM
 - [ ] Drivers providers de leads (Apollo, Hunter), vérification email tierce
 - [ ] Registres officiels d'entreprises (BCE/KBO, SIRENE, Companies House) comme sources de découverte
+- [ ] Profil cible proposé par l'agent lui-même, depuis un signal rencontré en cours de découverte
+      (le cas ADR-031 des intermédiaires, mais automatique plutôt que remarqué par un humain), lancé
+      SANS validation même en profil supervisé (vision produit: l'app grandit seule, le seul frein est
+      le budget). Reste à concevoir : le seuil de confiance avant de créer le profil, pour ne pas
+      brûler du budget sur un pattern mal lu par le modèle.
 
 ---
 

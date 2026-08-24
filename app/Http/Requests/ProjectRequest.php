@@ -30,6 +30,9 @@ class ProjectRequest extends FormRequest
             // is left to do by itself is a decision you take once you have
             // watched it work, not one you can make before it has run.
             'autonomy_level' => ['sometimes', Rule::enum(AutonomyLevel::class)],
+            // The throttle on continuous discovery. Null stays uncapped.
+            'daily_lead_limit' => ['nullable', 'integer', 'min:1'],
+            'lead_limit' => ['nullable', 'integer', 'min:1'],
         ];
     }
 

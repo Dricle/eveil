@@ -17,12 +17,16 @@ const name = ref(props.project.name)
 const url = ref(props.project.url)
 const instructions = ref(props.project.prompt_instructions ?? '')
 const autonomy = ref(props.project.autonomy_level)
+const dailyLeadLimit = ref(props.project.daily_lead_limit)
+const leadLimit = ref(props.project.lead_limit)
 
 watch(() => props.project, (project) => {
     name.value = project.name
     url.value = project.url
     instructions.value = project.prompt_instructions ?? ''
     autonomy.value = project.autonomy_level
+    dailyLeadLimit.value = project.daily_lead_limit
+    leadLimit.value = project.lead_limit
 })
 
 const AUTONOMY = [
@@ -122,6 +126,40 @@ const AUTONOMY = [
                             v-model="autonomy"
                             name="autonomy_level"
                             :items="AUTONOMY"
+                            class="w-full"
+                        />
+                    </UFormField>
+
+                    <!-- Continuous discovery's throttle: how far it may go
+                         before it stops on its own, for today and forever. -->
+                    <UFormField
+                        label="New leads per day"
+                        name="daily_lead_limit"
+                        :error="errors.daily_lead_limit"
+                        help="Discovery and contact-finding pause for the rest of the day once this many new leads have been found today. Leave empty for no daily cap. Counts every lead on the project, however it was found."
+                    >
+                        <UInput
+                            v-model="dailyLeadLimit"
+                            type="number"
+                            name="daily_lead_limit"
+                            min="1"
+                            placeholder="No daily cap"
+                            class="w-full"
+                        />
+                    </UFormField>
+
+                    <UFormField
+                        label="New leads, ever"
+                        name="lead_limit"
+                        :error="errors.lead_limit"
+                        help="Discovery and contact-finding stop for good once the project has this many leads in total. Leave empty for no lifetime cap."
+                    >
+                        <UInput
+                            v-model="leadLimit"
+                            type="number"
+                            name="lead_limit"
+                            min="1"
+                            placeholder="No lifetime cap"
                             class="w-full"
                         />
                     </UFormField>

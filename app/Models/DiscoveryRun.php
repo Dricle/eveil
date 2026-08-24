@@ -8,6 +8,8 @@ use App\Enums\DiscoveryTaskKind;
 use App\Models\Concerns\BelongsToProject;
 use Database\Factories\DiscoveryRunFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -68,6 +70,24 @@ class DiscoveryRun extends Model
     public function tasks(): HasMany
     {
         return $this->hasMany(DiscoveryTask::class);
+    }
+
+    /**
+     * Still in flight: not yet succeeded, exhausted, aborted or failed. What
+     * decides whether continuous discovery may start another run for the same
+     * profile, so it never has two running at once.
+     *
+     * @param  Builder<DiscoveryRun>  $query
+     */
+    #[Scope]
+    protected function open(Builder $query): void
+    {
+        $query->whereNotIn('status', [
+            DiscoveryRunStatus::Succeeded,
+            DiscoveryRunStatus::Exhausted,
+            DiscoveryRunStatus::Aborted,
+            DiscoveryRunStatus::Failed,
+        ]);
     }
 
     /**

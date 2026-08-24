@@ -68,6 +68,10 @@ export type ProjectDetail = Project & {
     prompt_instructions: string | null
     /** How much of the run happens without being asked. */
     autonomy_level: 'supervised' | 'semi_auto' | 'autonomous'
+    /** Pauses continuous discovery for the rest of the day once reached. Null is uncapped. */
+    daily_lead_limit: number | null
+    /** Stops continuous discovery permanently once reached. Null is uncapped. */
+    lead_limit: number | null
     knowledge_base: KnowledgeBase | null
     open_questions: OpenQuestion[]
     last_analysis: Analysis | null

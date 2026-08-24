@@ -551,6 +551,14 @@ Ce que ça change pour B1 : **la mesure n'est pas bloquante.** On livre sur les 
 `agent_runs` donne le coût réel, la grille s'ajuste en base. Seul le *ratio entre actions* doit être à
 peu près juste au départ, sinon une action se vend à perte sans que personne ne le voie.
 
+**Le portefeuille de crédits ne remplace aucun garde-fou existant, il s'ajoute.** La découverte
+continue (`eveil:discover-due`, tourne toutes les six heures par profil cible actif) est bornée par
+`projects.daily_lead_limit` / `lead_limit`, dans les deux éditions. Le jour où le portefeuille cloud
+existe, il se branche sur le seam déjà en place (`SpendGuardInterface`, consulté à chaque appel agent
+via `RecordsAgentRun`) sans rien câbler de spécifique à la découverte : un projet à sec s'arrête sur le
+même mécanisme qu'un projet qui a atteint son plafond de leads, l'un n'annule pas l'autre. En
+self-hosted il n'y a et il n'y aura jamais de portefeuille : seuls les plafonds par projet existent.
+
 ### ADR-020: Découverte insuffisante : diagnostic, puis élargissement borné
 *(résout B2)*
 

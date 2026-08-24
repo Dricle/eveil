@@ -211,3 +211,38 @@ it('refuses a setting that is not one of the three', function () {
 
     expect($project->fresh()->autonomy_level)->toBe(AutonomyLevel::SemiAuto);
 });
+
+it('saves the throttle on continuous discovery', function () {
+    reachable();
+
+    $user = member();
+    $project = Project::factory()->for($user->organizations()->sole())->create(['url' => 'https://acme.test/']);
+
+    $this->actingAs($user)
+        ->putJson(route('settings.project.update'), [
+            'name' => $project->name,
+            'url' => $project->url,
+            'daily_lead_limit' => 25,
+            'lead_limit' => 10000,
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($project->fresh())
+        ->daily_lead_limit->toBe(25)
+        ->lead_limit->toBe(10000);
+});
+
+it('refuses a lead limit that could never be reached', function () {
+    reachable();
+
+    $user = member();
+    $project = Project::factory()->for($user->organizations()->sole())->create(['url' => 'https://acme.test/']);
+
+    $this->actingAs($user)
+        ->putJson(route('settings.project.update'), [
+            'name' => $project->name,
+            'url' => $project->url,
+            'daily_lead_limit' => 0,
+        ])
+        ->assertJsonValidationErrors('daily_lead_limit');
+});

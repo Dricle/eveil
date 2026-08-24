@@ -27,10 +27,12 @@ use Illuminate\Support\Carbon;
  * @property string|null $default_language
  * @property string|null $prompt_instructions
  * @property AutonomyLevel $autonomy_level
+ * @property int|null $daily_lead_limit
+ * @property int|null $lead_limit
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['organization_id', 'name', 'url', 'knowledge_base', 'knowledge_base_edited_by_user', 'default_language', 'prompt_instructions', 'autonomy_level'])]
+#[Fillable(['organization_id', 'name', 'url', 'knowledge_base', 'knowledge_base_edited_by_user', 'default_language', 'prompt_instructions', 'autonomy_level', 'daily_lead_limit', 'lead_limit'])]
 class Project extends Model
 {
     /** @use HasFactory<ProjectFactory> */
@@ -205,6 +207,27 @@ class Project extends Model
             })
             ->filter()
             ->all());
+    }
+
+    /**
+     * Whether today's new leads have already reached the daily cap. Counted
+     * against every lead on the project, whatever found it: the setting says
+     * "how many new people today", not "how many the scheduler added".
+     */
+    public function hasReachedDailyLeadLimit(): bool
+    {
+        return $this->daily_lead_limit !== null
+            && $this->leads()->whereDate('discovered_at', today())->count() >= $this->daily_lead_limit;
+    }
+
+    /**
+     * Whether the project has ever discovered as many leads as it is allowed,
+     * ever. Unlike the daily cap this never resets: once true, continuous
+     * discovery stops for this project until the limit is raised.
+     */
+    public function hasReachedLeadLimit(): bool
+    {
+        return $this->lead_limit !== null && $this->leads()->count() >= $this->lead_limit;
     }
 
     /**

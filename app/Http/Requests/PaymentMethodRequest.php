@@ -7,18 +7,15 @@ use App\Support\CurrentProject;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Creating a new organization and renaming the current one share this
- * request, same reasoning as `ProjectRequest`: any authenticated user may
- * create one, but renaming the one already selected needs Owner or Admin.
+ * No fields at all: this only exists to gate who may open the Stripe-hosted
+ * `setup`-mode Checkout that saves a card on file. Owner or Admin, same tier
+ * as starting a checkout or configuring auto top-up — a saved card is what
+ * makes that charge itself possible.
  */
-class OrganizationRequest extends FormRequest
+class PaymentMethodRequest extends FormRequest
 {
     public function authorize(CurrentProject $currentProject): bool
     {
-        if ($this->route()?->getName() === 'organizations.store') {
-            return true;
-        }
-
         $role = $currentProject->getOrFail()->organization->roleOf($this->user());
 
         return in_array($role, [OrganizationRole::Owner, OrganizationRole::Admin], true);
@@ -29,8 +26,6 @@ class OrganizationRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
-            'name' => ['required', 'string', 'max:255'],
-        ];
+        return [];
     }
 }

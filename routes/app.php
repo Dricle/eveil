@@ -113,6 +113,16 @@ Route::middleware(['auth', 'project.set'])->group(function (): void {
             Route::delete('project', [ProjectController::class, 'destroy'])->name('project.destroy');
 
             /*
+             * Organization-scoped, same reasoning as mailboxes below: a
+             * rename has nothing to do with which project is currently
+             * selected, only with which organization owns it.
+             */
+            Route::get('organization/general', [OrganizationController::class, 'edit'])
+                ->name('organization.general.edit');
+            Route::put('organization/general', [OrganizationController::class, 'update'])
+                ->name('organization.general.update');
+
+            /*
              * Mailboxes belong to the ORGANIZATION, so these sit outside
              * anything project-scoped: one address is often used by two
              * products and never by a third, and which projects may send

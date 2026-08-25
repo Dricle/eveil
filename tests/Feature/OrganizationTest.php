@@ -2,6 +2,7 @@
 
 use App\Enums\OrganizationRole;
 use App\Models\Organization;
+use App\Models\Project;
 use App\Models\User;
 
 it('creates an organization with the creator as owner', function () {
@@ -47,4 +48,44 @@ it('redirects to create a project already scoped to the new organization', funct
     $organization = Organization::query()->where('name', 'Third Co')->sole();
 
     $response->assertRedirect(route('projects.create', ['organization_id' => $organization->id]));
+});
+
+it('lets an owner rename the current organization', function () {
+    $organization = Organization::factory()->create(['name' => 'Old name']);
+    $user = User::factory()->create();
+    $organization->users()->attach($user, ['role' => OrganizationRole::Owner->value]);
+    Project::factory()->for($organization)->create();
+
+    $this->actingAs($user)
+        ->put(route('settings.organization.general.update'), ['name' => 'New name'])
+        ->assertRedirect(route('settings.organization.general.edit'));
+
+    expect($organization->fresh()->name)->toBe('New name');
+});
+
+it('shows the current organization on the General settings screen, to any member', function () {
+    $organization = Organization::factory()->create(['name' => 'Acme']);
+    $user = User::factory()->create();
+    $organization->users()->attach($user, ['role' => OrganizationRole::Member->value]);
+    $project = Project::factory()->for($organization)->create();
+    $user->projects()->attach($project);
+
+    $this->actingAs($user)->get(route('settings.organization.general.edit'))
+        ->assertInertia(fn ($page) => $page
+            ->component('settings/OrganizationGeneral')
+            ->where('organization.name', 'Acme'));
+});
+
+it('refuses a plain member renaming the organization', function () {
+    $organization = Organization::factory()->create(['name' => 'Old name']);
+    $user = User::factory()->create();
+    $organization->users()->attach($user, ['role' => OrganizationRole::Member->value]);
+    $project = Project::factory()->for($organization)->create();
+    $user->projects()->attach($project);
+
+    $this->actingAs($user)
+        ->put(route('settings.organization.general.update'), ['name' => 'New name'])
+        ->assertForbidden();
+
+    expect($organization->fresh()->name)->toBe('Old name');
 });

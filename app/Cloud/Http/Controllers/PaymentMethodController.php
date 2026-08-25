@@ -3,6 +3,7 @@
 namespace App\Cloud\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\PaymentMethodRequest;
 use App\Support\CurrentProject;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
@@ -22,7 +23,7 @@ class PaymentMethodController extends Controller
 {
     public function __construct(private CurrentProject $currentProject) {}
 
-    public function create(): Response
+    public function create(PaymentMethodRequest $request): Response
     {
         $organization = $this->currentProject->organization();
 

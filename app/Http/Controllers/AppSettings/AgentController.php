@@ -6,6 +6,7 @@ use App\Actions\SwitchAgentProvider;
 use App\Ai\AgentSettings;
 use App\Ai\ModelCatalogue;
 use App\Ai\ProviderCredentials;
+use App\Cloud\Models\CreditPrice;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AppSettings\AgentSettingRequest;
 use App\Http\Requests\AppSettings\ProviderSwitchRequest;
@@ -28,8 +29,14 @@ class AgentController extends Controller
 {
     public function index(AgentSettings $agents, ProviderCredentials $credentials, ModelCatalogue $models): Response
     {
+        // Averages computed in SQL, not `sum / calls` in PHP: a zero-call
+        // agent would divide by zero, and the database already has to do
+        // the grouping regardless.
         $spend = AgentRun::query()
-            ->selectRaw('agent, count(*) as calls, sum(tokens_in) as tokens_in, sum(tokens_out) as tokens_out')
+            ->selectRaw(
+                'agent, count(*) as calls, sum(tokens_in) as tokens_in, sum(tokens_out) as tokens_out, '
+                .'round(avg(tokens_in)) as avg_tokens_in, round(avg(tokens_out)) as avg_tokens_out'
+            )
             ->groupBy('agent')
             ->get()
             ->keyBy('agent');
@@ -46,6 +53,16 @@ class AgentController extends Controller
                     'calls' => (int) ($spend[$slug]->calls ?? 0),
                     'tokens_in' => (int) ($spend[$slug]->tokens_in ?? 0),
                     'tokens_out' => (int) ($spend[$slug]->tokens_out ?? 0),
+                    // Per call, not just the running total: a superadmin
+                    // calibrating `credit_prices` needs "what does ONE call
+                    // cost", the same shape as the grid itself.
+                    'avg_tokens_in' => (int) ($spend[$slug]->avg_tokens_in ?? 0),
+                    'avg_tokens_out' => (int) ($spend[$slug]->avg_tokens_out ?? 0),
+                    // Cloud's calibration target (ADR-019). Present on every
+                    // edition — the row is harmless where nothing reads it —
+                    // so the screen never needs an edition check to decide
+                    // whether the column exists, only whether to show it.
+                    'credit_price' => CreditPrice::current($slug),
                 ])
                 ->values()
                 ->all(),

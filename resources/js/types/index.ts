@@ -1,4 +1,5 @@
 export * from './auth'
+export * from './billing'
 export * from './campaign'
 export * from './company'
 export * from './discovery'

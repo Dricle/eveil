@@ -1,5 +1,5 @@
 import type { Auth } from '@/types/auth'
-import type { Project } from '@/types/project'
+import type { Organization, Project } from '@/types/project'
 
 // Extend ImportMeta interface for Vite...
 declare module 'vite/client' {
@@ -21,6 +21,11 @@ declare module '@inertiajs/core' {
             auth: Auth
             currentProject: Project | null
             projects: Project[]
+            organizations: Organization[]
+            /** Self-hosted never renders billing UI: nothing gated on it does more than check this. */
+            edition: 'self' | 'cloud'
+            /** Absent on self-hosted and while no project is selected — cloud, zero credits is `{ balance: 0 }`, not null. */
+            wallet: { balance: number } | null
             registerUrl: string | null
             status: string | null
             /** What is missing before the instance can do anything. */

@@ -37,7 +37,12 @@ class MailboxController extends Controller
             // Which projects a mailbox may be granted to: everything this
             // organization owns, so "use for all projects" is a select-all in
             // the UI and never a state in the schema.
-            'projects' => ProjectResource::collection($organization->projects()->orderBy('name')->get()),
+            // `setRelation` rather than `with('organization')`: every row is
+            // already this same, already-loaded organization, so eager
+            // loading would only requery it.
+            'projects' => ProjectResource::collection(
+                $organization->projects()->orderBy('name')->get()->each->setRelation('organization', $organization)
+            ),
             // Said out loud on the screen it affects: an instance quietly sending
             // every mail to one address looks exactly like outreach working.
             'redirectTo' => config('eveil.outreach.redirect_to'),

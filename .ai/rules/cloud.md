@@ -21,20 +21,20 @@ Implementation rules:
 - `credit_prices` is versioned with `effective_from`, never edited in place, and each transaction freezes the rate charged at debit time. Otherwise a price change reprices history and billing stops being reproducible.
 - A run aborted by our own error is not billed; a run the user interrupts bills the work actually produced.
 
-## Cloud pricing: credits only, 3x markup, guarded trial
-ADR-024. Credits are the only cloud model: no bring-your-own-key tier. Anyone who wants to supply their own key runs the self-hosted edition, which is free and built for it.
+## Cloud pricing: pay-as-you-go, no plans, no subscription
+ADR-024, revised: credits are the only cloud model, and there is no tiered/subscription layer above them — no plan to pick, no Stripe subscription, no recurring invoice. A customer tops up whatever dollar amount they choose, converted to credits at one flat, published rate (`billing.credits_per_dollar`, superadmin-adjustable). Anyone who wants to supply their own key runs the self-hosted edition, which is free and built for it.
 
-Calibration: 1000 credits = $1 real cost; a 100-lead campaign = 3500 credits ≈ €3.50. Target margin 3× → ~€0.10 per qualified lead, enrichment and sequencing included (cheaper than Apollo, which is $0.05–0.15 per exported contact, for more product).
+Calibration: 1000 credits = $1 real cost. Target margin 3× → ~€0.10 per qualified lead, enrichment and sequencing included (cheaper than Apollo, which is $0.05–0.15 per exported contact, for more product). A miscalibrated rate loses money silently: AI is the entire variable cost, nothing else absorbs it — always check `billing.credits_per_dollar` against real cost before changing it.
 
-A miscalibrated plan loses money silently: AI is the entire variable cost, nothing else absorbs it. €29/mo including 25,000 credits would cost us €25: 15% margin. Always check a plan's included credits against real cost before shipping it.
+Provider price rises are absorbed by ADR-019, not by the top-up rate: add a new `credit_prices` row with a later `effective_from` raising credits-per-action. Consumption per dollar goes down; the published rate does not move under an existing customer's feet.
 
-Provider price rises are absorbed by ADR-019: add a new `credit_prices` row with a later `effective_from` raising credits-per-action. Customers' consumption goes up, their rate does not.
+Auto top-up (`Organization::auto_topup_threshold`/`auto_topup_amount_cents`) is the pay-as-you-go answer to a subscription's auto-renewal: an off-session Stripe charge against the card already on file, checked after every debit (`AutoTopUp::maybeTrigger`, called from `CreditSpendGuard::charge()`), never inside `Organization::debit()`'s transaction — the Stripe call is a network round-trip and must not hold a DB lock. Concurrency is guarded the same way as the balance itself: `Organization::claimAutoTopUpLock()` is one atomic `UPDATE`, not a check-then-charge.
 
 Trial: ~5000 credits at signup, enough for one complete campaign through to replies. The self-hosted edition is free, so a trial that stops short of the first reply convinces nobody.
 
 The trial grant is a REAL abuse vector: this product is an email-extraction machine and 5000 free credits is ~100 qualified leads. Mandatory guards: verified email, one project only, a cap on leads DISCOVERED (not just credits), and no CSV export before a first payment. Trial users can see and email their leads; they do not walk away with the file.
 
-Expiry: subscription credits expire at period end, purchased packs last 12 months. Without expiry you accrue a liability of unspent credits bought at old rates.
+Credits never expire, whether from the trial grant or a top-up — a customer who buys 100 credits can spend them years later. This is a deliberate liability (unspent credits bought at old rates), accepted for the goodwill of "credits you paid for are always yours," same posture as OpenAI/Anthropic API credits.
 
 ## Cloud is born smart; self-hosted starts cold. That is a selling point, not a limit
 `known_hosts`, `crawled_pages` and the listing-extraction cache are shared instance-wide. In cloud that means ONE registry fed by every customer: someone prospecting restaurants pays a model to work out that a national directory is an index, and the next customer prospecting bakeries gets it free. A cloud account is useful from the first run in a way a fresh self-hosted install cannot be, because the self-hosted install has nobody else's learnings.

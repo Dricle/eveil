@@ -76,6 +76,20 @@ it('logs out', function () {
     $this->assertGuest();
 });
 
+it('sends an Inertia location visit on logout, not a redirect the SPA would try to render', function () {
+    // `/` isn't an Inertia page, so a plain redirect leaves Inertia's client
+    // trying to swap its own page data into non-Inertia HTML. A 409 with
+    // `X-Inertia-Location` is what tells the client to leave the SPA and do
+    // a real `window.location` visit instead.
+    $this->actingAs(User::factory()->create())
+        ->withHeaders(['X-Inertia' => 'true'])
+        ->post(route('logout'))
+        ->assertStatus(409)
+        ->assertHeader('X-Inertia-Location', '/');
+
+    $this->assertGuest();
+});
+
 it('keeps guests off the application', function () {
     $this->get(route('dashboard'))->assertRedirect(route('login'));
     $this->get(route('account.profile'))->assertRedirect(route('login'));

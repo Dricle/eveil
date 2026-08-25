@@ -268,19 +268,58 @@ fournir de liste de leads. Tant que ce n'est pas vrai, Eveil est un crawler avec
       le demande
 - Départ volontaire toujours permis, quel que soit le rôle, sauf le dernier owner (même règle)
 
-### Epic 10. Facturation
+### Epic 10. Facturation 🟡
 
 - [x] Couture de refus de dépense posée : `SpendGuardInterface` consulté par le middleware de
-      métrage avant l'appel au provider, `UnmeteredSpend` en self-hosted. Reste au cloud d'y brancher
-      son portefeuille
-- [ ] **10.1** Abonnement Stripe
-- [ ] **10.2** Consommation vs plan, ventilée par projet depuis `agent_runs`
-- [ ] **10.3** Core gratuit sans limite artificielle en self-hosted (ADR-025)
-- Découverte continue (`eveil:discover-due`, tourne déjà) attend son portefeuille ici, rien de plus :
-  le garde-fou passe par `SpendGuardInterface`, déjà consulté à CHAQUE appel agent, découverte comprise.
-  Brancher le portefeuille cloud suffit ; aucun câblage spécifique à la découverte à écrire. Les plafonds
-  `daily_lead_limit` / `lead_limit` par projet restent en plus, dans les deux éditions : ADR-019 ne les
-  remplace pas.
+      métrage avant l'appel au provider, `UnmeteredSpend` en self-hosted.
+- [x] **10.1** Pay-as-you-go Stripe, pas d'abonnement. `laravel/cashier:^16.7`, `Organization` est
+      le modèle billable (jamais `User` ni `Project`), mais aucune table `subscriptions` : pas de
+      plan, pas de tier, un seul solde (`organizations.credits_balance`) qui n'expire jamais. Pas de
+      table `credit_wallets` séparée : une colonne, pas un modèle, pour ce qu'un wallet contenait
+      vraiment. Un top-up
+      achète un montant $ libre, converti au taux plat `billing.credits_per_dollar` via un produit ad
+      hoc construit à la volée (`StartCheckout`, aucun `Price` Stripe à préconfigurer) ; le nombre de
+      crédits est figé dans les metadata de la session au moment du clic, jamais recalculé par le
+      webhook. `collectTaxIds()` activé sur cette session : case "j'achète en tant qu'entreprise" côté
+      Stripe, numéro de TVA + adresse de facturation saisis et stockés sur le client Stripe, jamais
+      chez nous — aucun calcul de TVA automatique (Stripe Tax), juste la collecte pour la facture.
+      `SpendGuardInterface` gagne `charge()`, appelé une seule fois, après
+      succès, dans `RecordsAgentRun` — jamais facturé sur une erreur du provider (ADR-019). Débit
+      atomique (`Organization::debit()`, même motif que `DiscoveryRun::claim()`). `credit_prices`
+      (prix par action agent, ADR-019, sans rapport avec le taux $→crédits) versionné et seedé par
+      migration. Essai : 5 000 crédits à la création d'une organization cloud, un seul projet
+      (`Organization::hasReachedTrialProjectLimit()`), plafond de leads du jour appliqué au premier
+      projet (`billing.trial_lead_limit`). Auto top-up : recharge hors-session (`AutoTopUp`,
+      déclenché après chaque débit) contre la carte déjà enregistrée. Le moyen de paiement est
+      enregistré via une Checkout Session Stripe en mode `setup` (`PaymentMethodController`, aucun
+      formulaire hébergé chez nous, pas de Stripe.js à charger) ; c'est le webhook
+      `checkout.session.completed` (`SavePaymentMethodOnSetup`), pas le retour du navigateur, qui
+      enregistre réellement la carte — le SetupIntent n'arrive qu'en ID brut dans le payload, donc
+      récupéré via l'API pour lire son `payment_method`. Verrou atomique
+      (`Organization::claimAutoTopUpLock()`) pour ne jamais facturer deux fois la même chute sous
+      le seuil. Webhooks Stripe via les listeners `WebhookReceived` de Cashier
+      (`app/Cloud/Listeners`), idempotents par l'index unique partiel sur `stripe_event_id`. Aucun
+      crédit n'expire jamais (crédit acheté = acquis, comme OpenAI/Anthropic). Factures : le
+      Billing Portal Stripe hébergé (`BillingPortalController`, une ligne — `redirectToBillingPortal()`),
+      pas une liste ni des PDF maison ; `invoice_creation.enabled` sur la session de top-up pour
+      qu'un paiement one-shot produise une vraie Invoice à y lister, sinon le portail n'aurait rien
+      à montrer. Switcher sidebar refondu (un seul popover, projets de l'organization courante +
+      autres organizations + création des deux), inspiré du `StoreSwitcher` de Sendboo mais sans
+      son checkout forcé
+- [ ] **10.2** Consommation vs plan, ventilée par projet depuis `agent_runs` : le solde et
+      l'historique existent (`OrganizationBillingController`), pas encore la ventilation par projet
+- [x] **10.3** Core gratuit sans limite artificielle en self-hosted (ADR-025) : `CloudServiceProvider`
+      se neutralise entièrement hors édition cloud, aucune table de crédits jamais consultée
+- Reste à faire, noté plutôt que deviné : page "General" de renommage de l'organization (le
+  formulaire de création existe, pas encore l'édition), et qui peut déclencher un checkout /
+  configurer l'auto top-up — n'importe quel membre le peut aujourd'hui, pas seulement owner/admin.
+  Vérifié bout-en-bout avec de vraies clés Stripe de test et `stripe listen --forward-to
+  .../stripe/webhook` : checkout, webhooks. Encore en attente : enregistrement du moyen de
+  paiement, charge hors-session de l'auto top-up, et le Billing Portal + `invoice_creation`
+- Découverte continue (`eveil:discover-due`) est couverte par cette couture sans rien câbler de
+  spécifique : `SpendGuardInterface` est déjà consulté à CHAQUE appel agent. Les plafonds
+  `daily_lead_limit` / `lead_limit` par projet restent en plus, dans les deux éditions : ADR-019 ne
+  les remplace pas
 
 ### Epic 4: Agent Website (rien de fait, table `recommendations` inexistante)
 

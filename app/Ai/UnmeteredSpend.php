@@ -22,4 +22,9 @@ class UnmeteredSpend implements SpendGuardInterface
     {
         return null;
     }
+
+    public function charge(Project $project, string $agent, int $agentRunId): void
+    {
+        // Nothing billed here, nothing to settle.
+    }
 }

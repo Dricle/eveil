@@ -27,6 +27,13 @@ function analyst(): WebsiteAnalyst
     return new WebsiteAnalyst(Project::factory()->create());
 }
 
+// One test below rebinds this to prove the refusal path; the binding is a
+// GLOBAL container override that outlives that test unless put back, failing
+// every other file's agent calls with "no credits left".
+afterEach(function () {
+    app()->bind(SpendGuardInterface::class, UnmeteredSpend::class);
+});
+
 it('records tokens, cost and duration for a successful call', function () {
     WebsiteAnalyst::fake([
         new StructuredTextResponse(
@@ -96,6 +103,8 @@ it('never calls the provider when the guard refuses, and says why on the row', f
         {
             return 'This project has no credits left. Top up to keep the searches running.';
         }
+
+        public function charge(Project $project, string $agent, int $agentRunId): void {}
     });
 
     // Blows up if it is ever reached, which is the proof that matters: the

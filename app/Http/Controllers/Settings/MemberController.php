@@ -33,7 +33,11 @@ class MemberController extends Controller
 
         return Inertia::render('settings/Members', [
             'members' => MemberResource::collection($organization->users()->orderBy('name')->get()),
-            'projects' => ProjectResource::collection($organization->projects()->orderBy('name')->get()),
+            // `setRelation` rather than `with('organization')`: every row is
+            // already this same, already-loaded organization.
+            'projects' => ProjectResource::collection(
+                $organization->projects()->orderBy('name')->get()->each->setRelation('organization', $organization)
+            ),
         ]);
     }
 

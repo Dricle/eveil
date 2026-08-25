@@ -3,6 +3,14 @@ export type Project = {
     name: string
     url: string
     analyzed: boolean
+    organization_id: number
+    organization_name: string
+}
+
+/** The switcher's "other organizations" list, and the current one's label. */
+export type Organization = {
+    id: number
+    name: string
 }
 
 export type KnowledgeBase = {

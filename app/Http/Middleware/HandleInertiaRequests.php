@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Ai\ProviderCredentials;
 use App\Enums\EmailAccountStatus;
+use App\Http\Resources\OrganizationResource;
 use App\Http\Resources\ProjectResource;
 use App\Models\EmailAccount;
 use App\Models\Project;
@@ -65,7 +66,21 @@ class HandleInertiaRequests extends Middleware
             },
             'projects' => fn (): array|ResourceCollection => $user === null
                 ? []
-                : ProjectResource::collection(Project::visibleTo($user)->orderBy('name')->get()),
+                : ProjectResource::collection(Project::visibleTo($user)->with('organization')->orderBy('name')->get()),
+            // Every organization the user belongs to, for the switcher's
+            // "other organizations" list and the current one's section
+            // label. Cloud-only concepts (billing) stay out of this: it is
+            // reachable from self-hosted too, which has organizations without
+            // ever having a wallet.
+            'organizations' => fn (): array|ResourceCollection => $user === null
+                ? []
+                : OrganizationResource::collection($user->organizations()->orderBy('name')->get()),
+            'edition' => config('eveil.edition'),
+            // Cloud only, and a closure for the same reason as `currentProject`
+            // above: the route middleware that picks it has not run yet here.
+            // Absent on self-hosted and while no project is selected, so a page
+            // can tell "not cloud" from "cloud, zero credits".
+            'wallet' => fn (): ?array => $this->currentWallet(),
             // A URL rather than a flag: with sign-ups closed the route is not
             // registered at all, so neither Wayfinder nor `route()` can name
             // it and pages have nothing to link to.
@@ -79,6 +94,29 @@ class HandleInertiaRequests extends Middleware
             // route middleware that picks it has not run yet.
             'setup' => fn (): array => $this->missingSetup($request),
         ];
+    }
+
+    /**
+     * The current organization's credit balance, for the persistent chip in
+     * `AppLayout`'s header. Self-hosted never reads `credits_balance` at
+     * all — `app/Cloud` billing concepts stay entirely out of that edition's
+     * pages.
+     *
+     * @return array{balance: int}|null
+     */
+    private function currentWallet(): ?array
+    {
+        if (config('eveil.edition') !== 'cloud') {
+            return null;
+        }
+
+        $project = app(CurrentProject::class);
+
+        if (! $project->isSet()) {
+            return null;
+        }
+
+        return ['balance' => $project->organization()->credits_balance];
     }
 
     /**

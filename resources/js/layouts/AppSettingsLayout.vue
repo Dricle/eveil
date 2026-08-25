@@ -4,9 +4,11 @@ import type { NavigationMenuItem } from '@nuxt/ui'
 import { computed } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import agents from '@/routes/app-settings/agents'
+import billing from '@/routes/app-settings/billing'
 import hosts from '@/routes/app-settings/hosts'
 import limits from '@/routes/app-settings/limits'
 import provider from '@/routes/app-settings/provider'
+import sending from '@/routes/app-settings/sending'
 
 defineProps<{
     title: string
@@ -23,7 +25,13 @@ const items = computed<NavigationMenuItem[]>(() =>
         },
         { label: 'Agents', icon: 'i-lucide-bot', to: agents.index.url() },
         { label: 'Limits', icon: 'i-lucide-gauge', to: limits.edit.url() },
-        { label: 'Host registry', icon: 'i-lucide-globe', to: hosts.index.url() }
+        { label: 'Sending', icon: 'i-lucide-send', to: sending.edit.url() },
+        { label: 'Host registry', icon: 'i-lucide-globe', to: hosts.index.url() },
+        // `billing.*` is never read on self-hosted (`.ai/rules/cloud.md`), so
+        // the tab itself only exists where the settings would do anything.
+        ...(page.props.edition === 'cloud'
+            ? [{ label: 'Billing', icon: 'i-lucide-credit-card', to: billing.edit.url() }]
+            : [])
     ].map(item => ({ ...item, active: page.url.startsWith(item.to) }))
 )
 </script>

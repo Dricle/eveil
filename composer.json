@@ -12,6 +12,7 @@
         "php": "^8.3",
         "inertiajs/inertia-laravel": "^3.0",
         "laravel/ai": "v0.11.0",
+        "laravel/cashier": "^16.7",
         "laravel/fortify": "^1.38",
         "laravel/framework": "^13.17",
         "laravel/horizon": "^5.48",
@@ -51,6 +52,7 @@
             "@php artisan key:generate",
             "@php artisan eveil:credentials-key",
             "@php artisan migrate --force",
+            "@php artisan db:seed --class=Database\\\\Seeders\\\\InstallSeeder --force",
             "yarn install",
             "yarn build"
         ],

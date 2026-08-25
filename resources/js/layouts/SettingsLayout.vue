@@ -3,6 +3,7 @@ import { usePage } from '@inertiajs/vue3'
 import type { NavigationMenuItem } from '@nuxt/ui'
 import { computed } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
+import billing from '@/routes/settings/organization/billing'
 import knowledgeBase from '@/routes/settings/knowledge-base'
 import mailboxes from '@/routes/settings/mailboxes'
 import members from '@/routes/settings/members'
@@ -25,7 +26,12 @@ const items = computed<NavigationMenuItem[]>(() =>
         // Organization scope rather than project: one address is often used by
         // two products and never by a third.
         { label: 'Mailboxes', icon: 'i-lucide-mail', to: mailboxes.index.url() },
-        { label: 'Members', icon: 'i-lucide-users', to: members.index.url() }
+        { label: 'Members', icon: 'i-lucide-users', to: members.index.url() },
+        // Cloud only: self-hosted has no wallet, no plan, nothing this
+        // screen would show.
+        ...(page.props.edition === 'cloud'
+            ? [{ label: 'Billing', icon: 'i-lucide-credit-card', to: billing.edit.url() }]
+            : [])
     ].map(item => ({ ...item, active: page.url.startsWith(item.to) }))
 )
 </script>

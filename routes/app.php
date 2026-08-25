@@ -1,12 +1,20 @@
 <?php
 
+use App\Cloud\Http\Controllers\AutoTopUpController;
+use App\Cloud\Http\Controllers\BillingPortalController;
+use App\Cloud\Http\Controllers\CheckoutController;
+use App\Cloud\Http\Controllers\OrganizationBillingController;
+use App\Cloud\Http\Controllers\PaymentMethodController;
 use App\Http\Controllers\Account\AccountDeletionController;
 use App\Http\Controllers\Account\TwoFactorController;
 use App\Http\Controllers\AppSettings\AgentController;
+use App\Http\Controllers\AppSettings\BillingController;
+use App\Http\Controllers\AppSettings\CreditPriceController;
 use App\Http\Controllers\AppSettings\KnownHostController;
 use App\Http\Controllers\AppSettings\LimitController;
 use App\Http\Controllers\AppSettings\ProviderController;
 use App\Http\Controllers\AppSettings\ProviderTestController;
+use App\Http\Controllers\AppSettings\SendingController;
 use App\Http\Controllers\Auth\InvitationController;
 use App\Http\Controllers\Auth\SetupController;
 use App\Http\Controllers\CampaignController;
@@ -33,6 +41,7 @@ use App\Http\Controllers\MailboxController;
 use App\Http\Controllers\MailboxTestController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\OnboardingSearchController;
+use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectKnowledgeBaseController;
 use App\Http\Controllers\Settings\MemberController;
@@ -76,6 +85,9 @@ Route::middleware(['auth', 'project.set'])->group(function (): void {
     Route::get('projects/create', [ProjectController::class, 'create'])->name('projects.create');
     Route::post('projects', [ProjectController::class, 'store'])->name('projects.store');
 
+    Route::get('organizations/create', [OrganizationController::class, 'create'])->name('organizations.create');
+    Route::post('organizations', [OrganizationController::class, 'store'])->name('organizations.store');
+
     Route::middleware('project.require')->group(function (): void {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
@@ -112,6 +124,30 @@ Route::middleware(['auth', 'project.set'])->group(function (): void {
             Route::delete('mailboxes/{mailbox}', [MailboxController::class, 'destroy'])->name('mailboxes.destroy');
             Route::post('mailboxes/{mailbox}/test', [MailboxTestController::class, 'store'])
                 ->name('mailboxes.test');
+
+            /*
+             * Cloud billing. The route exists in both editions (one repo,
+             * nothing withheld — ADR-025) but is reachable only through a nav
+             * link cloud renders: self-hosted has no Stripe key, so a direct
+             * hit here fails at the Stripe call rather than doing anything.
+             */
+            Route::get('organization/billing', [OrganizationBillingController::class, 'edit'])
+                ->name('organization.billing.edit');
+            Route::post('organization/billing/checkout', [CheckoutController::class, 'store'])
+                ->name('organization.billing.checkout');
+            Route::put('organization/billing/auto-topup', [AutoTopUpController::class, 'update'])
+                ->name('organization.billing.auto-topup');
+            Route::get('organization/billing/portal', [BillingPortalController::class, 'create'])
+                ->name('organization.billing.portal');
+
+            /*
+             * Off-session charging needs a card on file before the wallet
+             * ever crosses the threshold. Stripe-hosted (Checkout in `setup`
+             * mode, no line items): the redirect IS the whole flow, nothing
+             * to render on our side.
+             */
+            Route::get('organization/billing/payment-method', [PaymentMethodController::class, 'create'])
+                ->name('organization.billing.payment-method.create');
 
             /*
              * Organization-scoped, same reasoning as mailboxes above: who is
@@ -283,12 +319,23 @@ Route::middleware(['auth', 'project.set'])->group(function (): void {
             ->name('agents.provider');
         Route::put('agents/{agent}', [AgentController::class, 'update'])->name('agents.update');
         Route::delete('agents/{agent}', [AgentController::class, 'destroy'])->name('agents.destroy');
+        Route::post('agents/{agent}/credit-price', [CreditPriceController::class, 'store'])->name('agents.credit-price');
 
         Route::get('limits', [LimitController::class, 'edit'])->name('limits.edit');
         Route::put('limits', [LimitController::class, 'update'])->name('limits.update');
 
+        Route::get('sending', [SendingController::class, 'edit'])->name('sending.edit');
+        Route::put('sending', [SendingController::class, 'update'])->name('sending.update');
+
         Route::get('hosts', [KnownHostController::class, 'index'])->name('hosts.index');
         Route::put('hosts/{known_host}', [KnownHostController::class, 'update'])->name('hosts.update');
+
+        // Cloud only in practice (`billing.*` is never read on self-hosted),
+        // but not edition-gated at the route: `.ai/rules/controllers.md`'s
+        // "404 for access, not a feature that doesn't apply here" — the nav
+        // tab hides itself off `edition` instead.
+        Route::get('billing', [BillingController::class, 'edit'])->name('billing.edit');
+        Route::put('billing', [BillingController::class, 'update'])->name('billing.update');
     });
 
     /*

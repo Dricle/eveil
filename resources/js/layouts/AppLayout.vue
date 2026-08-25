@@ -8,8 +8,10 @@ import companies from '@/routes/companies'
 import { profile } from '@/routes/account'
 import { update as switchProject } from '@/routes/current-project'
 import appSettings from '@/routes/app-settings/provider'
-import { create } from '@/routes/projects'
+import { create as createProject } from '@/routes/projects'
+import { create as createOrganization } from '@/routes/organizations'
 import mailboxes from '@/routes/settings/mailboxes'
+import organizationBilling from '@/routes/settings/organization/billing'
 import projectSettings from '@/routes/settings/project'
 import targets from '@/routes/targets'
 
@@ -58,22 +60,60 @@ const items = computed<NavigationMenuItem[]>(() => [
 
 // The project list is the switcher, not a nav entry: every screen below the
 // dashboard belongs to one project, so choosing it is context, not navigation.
-const projectMenu = computed<DropdownMenuItem[][]>(() => [
-    page.props.projects.map(project => ({
-        label: project.name,
-        icon: project.id === page.props.currentProject?.id
-            ? 'i-lucide-check'
-            : 'i-lucide-folder',
-        onSelect: () => router.put(switchProject.url(project.id))
-    })),
-    [
-        {
-            label: 'New project',
-            icon: 'i-lucide-plus',
-            to: create.url()
-        }
+//
+// One popover for both levels rather than two separate switchers: the
+// current organization's projects, "new project", a separator, every OTHER
+// organization the user is in (switching to whichever project of theirs
+// sorts first, or straight to project creation if it has none yet), "new
+// organization" last.
+const currentOrganizationId = computed(() => page.props.currentProject?.organization_id ?? null)
+
+const otherOrganizations = computed(() =>
+    page.props.organizations.filter(organization => organization.id !== currentOrganizationId.value))
+
+function firstProjectOf (organizationId: number) {
+    return page.props.projects.find(project => project.organization_id === organizationId)
+}
+
+const projectMenu = computed<DropdownMenuItem[][]>(() => {
+    const currentOrgProjects = page.props.projects.filter(project => project.organization_id === currentOrganizationId.value)
+
+    return [
+        currentOrgProjects.map(project => ({
+            label: project.name,
+            icon: project.id === page.props.currentProject?.id
+                ? 'i-lucide-check'
+                : 'i-lucide-folder',
+            onSelect: () => router.put(switchProject.url(project.id))
+        })),
+        [
+            {
+                label: 'New project',
+                icon: 'i-lucide-plus',
+                to: createProject.url()
+            }
+        ],
+        otherOrganizations.value.map((organization) => {
+            const project = firstProjectOf(organization.id)
+
+            return {
+                label: organization.name,
+                icon: 'i-lucide-building-2',
+                to: project
+                    ? undefined
+                    : createProject.url({ query: { organization_id: organization.id } }),
+                onSelect: project ? () => router.put(switchProject.url(project.id)) : undefined
+            }
+        }),
+        [
+            {
+                label: 'New organization',
+                icon: 'i-lucide-plus',
+                to: createOrganization.url()
+            }
+        ]
     ]
-])
+})
 
 // App settings are a scope of their own, whoever runs the install and never
 // somebody granted access through an organization, so the entry only exists
@@ -109,14 +149,31 @@ const userMenu = computed<DropdownMenuItem[][]>(() => [
                     class="w-full"
                 >
                     <UButton
-                        :label="page.props.currentProject?.name ?? 'No project'"
-                        icon="i-lucide-folder"
-                        trailing-icon="i-lucide-chevrons-up-down"
                         color="neutral"
                         variant="ghost"
                         block
-                        class="justify-start overflow-hidden font-semibold"
-                    />
+                        class="justify-start overflow-hidden"
+                    >
+                        <UIcon
+                            name="i-lucide-folder"
+                            class="size-5 shrink-0"
+                        />
+                        <span
+                            v-if="open"
+                            class="min-w-0 flex-1 text-left leading-tight"
+                        >
+                            <span class="block truncate font-semibold">{{ page.props.currentProject?.name ?? 'No project' }}</span>
+                            <span
+                                v-if="page.props.currentProject"
+                                class="block truncate text-xs text-muted"
+                            >{{ page.props.currentProject.organization_name }}</span>
+                        </span>
+                        <UIcon
+                            v-if="open"
+                            name="i-lucide-chevrons-up-down"
+                            class="size-4 shrink-0 text-muted"
+                        />
+                    </UButton>
                 </UDropdownMenu>
             </template>
 
@@ -156,6 +213,19 @@ const userMenu = computed<DropdownMenuItem[][]>(() => [
                 />
 
                 <slot name="header" />
+
+                <!-- App-wide status, not page content — the header bar is
+                     reserved for exactly this (`.ai/rules/js.md`). -->
+                <UButton
+                    v-if="page.props.wallet"
+                    :href="organizationBilling.edit.url()"
+                    :label="`${page.props.wallet.balance.toLocaleString()} credits`"
+                    icon="i-lucide-coins"
+                    color="neutral"
+                    variant="subtle"
+                    size="sm"
+                    class="ml-auto"
+                />
             </div>
 
             <div class="flex-1 overflow-y-auto">

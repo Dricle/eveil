@@ -19,6 +19,11 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <!-- Self-hosted is the default the whole suite assumes (unmetered spend,
+             no billing UI); `.env`'s APP_EDITION can be `cloud` for local Stripe
+             work, and without this override every test would inherit that.
+             Cloud-specific tests flip it back with config()->set() themselves. -->
+        <env name="APP_EDITION" value="self"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>

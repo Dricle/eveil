@@ -16,8 +16,10 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // Ships in both editions: the head start a fresh install gets before
-        // it has learned anything of its own.
-        $this->call([KnownHostSeeder::class, DisposableDomainSeeder::class, MailHostSeeder::class]);
+        // it has learned anything of its own. Also run standalone from
+        // `composer setup` and the deploy entrypoint, which is why it is its
+        // own seeder rather than three calls duplicated here.
+        $this->call(InstallSeeder::class);
 
         User::factory()->create([
             'name' => 'Test User',

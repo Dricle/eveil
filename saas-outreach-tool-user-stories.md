@@ -688,31 +688,45 @@ point d'intégration pour brancher un service tiers si l'utilisateur y tient vra
 
 **Tier B entièrement tranché** (ADR-019 à ADR-023). Les écrans du v0 peuvent être dessinés.
 
-### ADR-024: Tarification cloud : crédits seuls, avec dotation d'essai
+### ADR-024: Tarification cloud : crédits seuls, pay-as-you-go, avec dotation d'essai
 *(résout C1)*
 
-**Modèle unique : les crédits.** Pas de formule « apporte ta clé » en cloud. Celui qui veut fournir sa
-propre clé installe le self-hosted, qui est gratuit et fait pour ça.
+**Modèle unique : les crédits, achetés au fil de l'eau.** Pas de formule « apporte ta clé » en cloud —
+celui qui veut fournir sa propre clé installe le self-hosted, qui est gratuit et fait pour ça. Pas de
+plan/tier non plus, et pas d'abonnement Stripe : un client recharge le montant qu'il veut, converti au
+taux plat publié (`billing.credits_per_dollar`, ajustable par un superadmin sans redéploiement). Un
+crédit acheté vaut le même prix qu'un autre, quel que soit le montant du top-up.
 
 **Calibrage.** 1000 crédits = 1 $ de coût réel ; une campagne de 100 leads = 3500 crédits ≈ 3,50 €.
 Marge cible **3×**, soit ~0,10 € le lead qualifié, enrichissement et séquençage compris.
 
-| Usage mensuel | Crédits | Coût réel | Prix à 3× |
+| Top-up (exemple) | Crédits | Coût réel | Ce que ça couvre à 3× |
 |---|---|---|---|
-| 200 leads | 7 000 | 7 € | 21 € |
-| 600 leads | 21 000 | 21 € | 63 € |
-| 1 500 leads | 52 000 | 52 € | 157 € |
+| 21 € | 7 000 | 7 € | ~200 leads |
+| 63 € | 21 000 | 21 € | ~600 leads |
+| 157 € | 52 000 | 52 € | ~1 500 leads |
 
 Repère : lemlist facture ~55 €/siège **et** vend l'enrichissement en plus ; Apollo tourne autour de
 0,05–0,15 $ le contact exporté. À 3× on est moins cher qu'Apollo pour plus de produit.
 
-⚠️ **Un abonnement mal calibré met dans le rouge sans prévenir** : l'IA est la totalité du coût
-variable, il n'y a rien d'autre pour absorber. 29 €/mois incluant 25 000 crédits nous coûterait 25 €: 
-15 % de marge.
+⚠️ **Un taux mal calibré met dans le rouge sans prévenir** : l'IA est la totalité du coût variable, il
+n'y a rien d'autre pour absorber. `billing.credits_per_dollar` trop généreux coûte plus qu'il ne
+rapporte sur chaque dollar rechargé, silencieusement.
 
-**Le risque de marge est couvert par ADR-019** : si le provider augmente ses prix, on monte le nombre
-de crédits par action via une nouvelle ligne `effective_from`. La consommation des clients augmente,
-leur tarif ne bouge pas.
+**Le risque de marge est couvert par ADR-019, séparément du taux $→crédits** : si le provider augmente
+ses prix, on monte le nombre de crédits par action via une nouvelle ligne `credit_prices.effective_from`
+— indépendant du taux de conversion `billing.credits_per_dollar`, qui reste stable pour le client. La
+consommation en crédits d'une même action augmente, le prix du crédit lui-même ne bouge pas.
+
+**Auto top-up : l'équivalent pay-as-you-go du renouvellement automatique d'un abonnement.** Un client
+enregistre une carte — Stripe-hébergé, une Checkout Session en mode `setup`, aucun formulaire chez
+nous — et fixe un seuil et un montant : sous le seuil, une charge hors-session recharge
+automatiquement, sans confirmation puisque personne n'est au
+clavier au moment où le solde franchit la limite. Vérifié après chaque débit
+(`CreditSpendGuard::charge()` → `AutoTopUp::maybeTrigger()`), jamais dans la transaction du débit
+lui-même — l'appel Stripe est un aller-retour réseau qui ne doit jamais tenir un verrou DB. La
+concurrence est gardée par un `UPDATE` atomique (`Organization::claimAutoTopUpLock()`), même motif que
+`Organization::debit()`.
 
 **Dotation d'essai** : ~5 000 crédits à l'inscription, de quoi mener une campagne complète jusqu'aux
 réponses. Le self-hosted étant gratuit, un essai qui ne va pas jusqu'à la première réponse ne convainc
@@ -724,9 +738,10 @@ vérifié, **un seul projet** en essai, **plafond de leads découverts** (pas se
 **aucun export CSV** avant un premier paiement. L'utilisateur voit ses leads et peut leur écrire ; il
 ne repart pas avec le fichier.
 
-**Expiration** (défaut) : les crédits d'abonnement expirent en fin de période, les packs achetés sont
-valables 12 mois. Sans expiration, on accumule une dette de crédits non consommés et un client peut
-revenir trois ans plus tard avec un stock acheté au tarif de l'époque.
+**Expiration : aucune.** Un crédit, qu'il vienne de la dotation d'essai ou d'un top-up, n'expire
+jamais — un client qui achète 100 crédits peut les dépenser des années plus tard. Dette délibérée
+(crédits non consommés achetés au tarif de l'époque), acceptée pour la promesse "un crédit payé vous
+appartient", même posture que les crédits API OpenAI/Anthropic.
 
 ### ADR-025: AGPL partout, CLA à sortie libre (modèle Postiz)
 *(résout C2)*
@@ -739,8 +754,12 @@ juridique, seulement un mécanisme de chargement conditionnel. Sans cette préci
 mettra du code dans six mois en le croyant protégé.
 
 **Périmètre de `app/Cloud/` : facturation et comptage de crédits, rien d'autre.**
-Stripe, `credit_prices`, `credit_wallets`, `credit_transactions`, garde-fous d'essai. Tout le reste est
-dans le cœur: organizations, rôles, invitations, accès par projet compris, donc **disponibles en
+Stripe, `credit_prices`, `credit_transactions`, garde-fous d'essai. Le solde lui-même
+(`organizations.credits_balance`) est une colonne du cœur, pas une table à part sous `app/Cloud/` —
+toujours zéro et jamais écrite en self-hosted, mais rangée avec le reste des champs de facturation
+du modèle plutôt que derrière une relation one-to-one vers une table à un seul entier. Tout le
+reste est dans le cœur: organizations, rôles, invitations, accès par projet compris, donc
+**disponibles en
 self-hosted**. Le cloud n'ajoute que l'hébergement géré, la facturation et le support. C'est ce
 qu'exige la promesse « le core reste gratuit sans limite artificielle » (story 10.3), et ça évite un
 second chemin de code pour le multi-utilisateur.
@@ -1374,7 +1393,7 @@ agent_runs             project_id, agent (slug de la classe), status, input, out
 ── cloud uniquement, app/Cloud/ (ADR-019) ───────────────────────────────────
 credit_prices          action, credits, effective_from, active
                        ← versionnée, jamais éditée en place
-credit_wallets         organization_id, balance
+                       ← le solde lui-même est organizations.credits_balance, pas une table à part
 credit_transactions    organization_id, type: purchase|hold|charge|release|refund|grant,
                        action, quantity, unit_credits, credits, agent_run_id,
                        balance_after   ← fige le tarif au moment du débit
@@ -2261,25 +2280,95 @@ m'intéresse pas à cet instant.
   rétrograder : le dernier owner, quel que soit qui le demande — sinon l'organization devient
   inatteignable, la même panne que `DeleteAccount` évite déjà côté suppression de compte
 
-### Epic 10: Facturation `v1`
+### Epic 10: Facturation `v1` 🟡
 
-> **Couture déjà posée** : `App\Ai\Contracts\SpendGuardInterface`, consulté par le middleware de
-> métrage **avant** l'appel au provider. Self-hosted lie `UnmeteredSpend`, qui laisse tout passer,
-> parce que la clé du provider de l'opérateur paie et que refuser là contredirait la promesse d'un
-> core sans limite artificielle. Le cloud liera son portefeuille par-dessus depuis `app/Cloud/`, sans
-> qu'aucun site d'appel change. C'est le seul endroit correct : un run de découverte met en file des
-> dizaines de qualifications et, depuis que garder une société déclenche sa recherche de contacts,
-> autant d'extractions, le tout sans écran entre les deux. Un contrôle au bouton n'arrêterait rien.
-> La ligne `agent_runs` est marquée avant de lever, sinon un écran qui l'interroge tourne
-> indéfiniment.
+> **Couture posée puis branchée** : `App\Ai\Contracts\SpendGuardInterface`, consulté par le
+> middleware de métrage **avant** l'appel au provider. Self-hosted lie `UnmeteredSpend`, qui laisse
+> tout passer. Le cloud lie `App\Cloud\Ai\CreditSpendGuard` par-dessus depuis `app/Cloud/`, sans
+> qu'aucun site d'appel change : c'est le seul endroit correct, pour la même raison qu'avant
+> (dizaines de qualifications et d'extractions en file, aucun écran entre elles). `charge()` a
+> rejoint l'interface : appelé une seule fois, dans le callback de succès de `RecordsAgentRun`,
+> jamais quand le provider lève — c'est ce qui fait tenir "un run interrompu par notre erreur n'est
+> pas facturé" (ADR-019) sans code séparé pour ça.
 
-
-**10.1** ⬜ En tant qu'utilisateur cloud, je veux m'abonner par carte (Stripe).
-**10.2** ⬜ En tant qu'utilisateur cloud, je veux voir ma consommation par rapport à mon plan.
-- Leads découverts, emails envoyés, coût IA: ventilés par projet, alimentés par `agent_runs`
-**10.3** ⬜ En tant qu'utilisateur self-hosted, je veux que le core reste gratuit sans limite artificielle.
+**10.1** ✅ En tant qu'utilisateur cloud, je veux recharger des crédits par carte (Stripe), sans plan ni abonnement.
+- `laravel/cashier:^16.7`, `Organization` est le modèle billable (pas `User`, pas `Project`) :
+  `stripe_id`/`pm_type`/`pm_last_four`/`trial_ends_at` migrés sur `organizations`. **Pas de table
+  `subscriptions`** : le produit n'a aucun abonnement Stripe, ces migrations n'ont jamais été
+  ajoutées plutôt que retirées après coup
+- Solde de crédits réel, pas le modèle post-payé habituel de Cashier (mesuré sur Sendboo,
+  étudié comme référence pour cet epic : facturation à l'usage rapportée après coup, portillon
+  binaire par compte, aucun ledger — ne convient pas à ADR-019/024, qui veut bloquer l'action
+  précise qui découvrirait le solde). `organizations.credits_balance` : un seul solde, jamais
+  remis à zéro, jamais expiré — pay-as-you-go, pas de bucket abonnement à réinitialiser chaque
+  période. Pas de table `credit_wallets` séparée : une colonne du cœur, aux côtés de `stripe_id`
+  et des champs auto-topup, pas un modèle pour un entier seul. Débit atomique en une seule
+  requête conditionnelle (`Organization::debit()`), même motif que
+  `DiscoveryRun::claim()`. `credit_prices` (prix par action agent) versionné, seedé par migration
+  comme `seed_default_settings`, grille corrigée de l'ADR-019 — sans rapport avec le taux $→crédits
+  d'un top-up
+- Top-up à montant libre : `StartCheckout` construit un produit ad hoc Stripe à la volée (aucun
+  `Price` à créer dans le dashboard au préalable), au taux plat `billing.credits_per_dollar`
+  (superadmin-ajustable, `app/app-settings/billing`). Le nombre de crédits est figé dans les
+  metadata de la session Checkout au moment du clic, jamais recalculé par le webhook : ce que le
+  client a vu sur le bouton est ce qu'il reçoit, même si le taux change avant la confirmation
+  Stripe. `collectTaxIds()` activé sur cette session (`Checkout::customer()->collectTaxIds()`,
+  pas le raccourci `checkoutCharge()` qui ne permet pas de le chaîner) : case "j'achète en tant
+  qu'entreprise" côté Stripe, numéro de TVA + adresse de facturation, stockés sur le client Stripe
+  — jamais chez nous, et jamais de calcul de TVA automatique (Stripe Tax), seulement la collecte
+  pour la facture
+- Auto top-up : `Organization.auto_topup_threshold`/`auto_topup_amount_cents`, une carte enregistrée
+  via une Checkout Session Stripe en mode `setup` (`PaymentMethodController::create()`, aucune ligne
+  d'article, aucun formulaire ni Stripe.js chez nous) puis une charge hors-session
+  (`Organization::charge(..., ['off_session' => true])`) déclenchée après chaque débit
+  (`AutoTopUp::maybeTrigger()`, appelé depuis `CreditSpendGuard::charge()` — jamais dans la
+  transaction du débit lui-même, l'appel Stripe est réseau). C'est le webhook
+  `checkout.session.completed` (`SavePaymentMethodOnSetup`) qui enregistre la carte, jamais le retour
+  du navigateur : le payload ne porte le `setup_intent` qu'en ID brut, donc récupéré via l'API pour
+  lire son `payment_method`. Verrou de concurrence atomique
+  (`Organization::claimAutoTopUpLock()`, cooldown 10 min) : deux appels d'agent qui franchissent le
+  seuil à quelques instants d'écart ne doivent déclencher qu'une seule charge
+- Essai : 5 000 crédits à la création d'une organization cloud (`GrantTrialCredits`), un seul projet
+  (`Organization::hasReachedTrialProjectLimit()`, vérifié dans `ProjectRequest::authorize()`),
+  plafond quotidien de leads découverts appliqué au premier projet (`billing.trial_lead_limit`,
+  réutilise `lead_limit` plutôt qu'une deuxième colonne). Export CSV avant premier paiement : rien à
+  gérer, l'export n'existe pas encore
+- Checkout jamais forcé à la création d'organization, contrairement à Sendboo : ADR-024 est
+  essai-d'abord, le bouton vit dans `/app/settings/organization/billing`
+- Webhooks Stripe via le listener `WebhookReceived` de Cashier (`app/Cloud/Listeners`), enregistré
+  explicitement dans `CloudServiceProvider` (la découverte automatique de Laravel ne scanne que
+  `app/Listeners/`) : `GrantCreditsOnCheckout` (`checkout.session.completed`, seul événement à
+  créditer — pas de renouvellement à écouter puisqu'il n'y a pas d'abonnement). Idempotent par un
+  index unique partiel sur `stripe_event_id` : une deuxième livraison du même événement Stripe
+  échoue la contrainte, ce qui annule toute la transaction (crédit du wallet compris) plutôt que de
+  créditer deux fois
+- Aucun crédit n'expire jamais : pas de sweep, pas de colonne d'expiration sur
+  `credit_transactions`. `credits_balance` est un solde simple qui ne bouge qu'en dépense
+  (`Organization::debit()`) ou en dotation (essai, achat)
+- Factures : Stripe hébergé de bout en bout, pas de liste ni de PDF maison — le Billing Portal
+  (`BillingPortalController`, une ligne : `redirectToBillingPortal()`), et
+  `invoice_creation.enabled` sur la session de top-up pour qu'un paiement one-shot produise une
+  vraie Invoice à y lister (sans ça, un Checkout en mode `payment` ne crée qu'une Charge, jamais
+  une Invoice, et le portail n'aurait rien à montrer). Lien caché tant que l'organization est en
+  essai (`!onTrial`, pas de nouvelle prop nécessaire — équivaut déjà à "a un `stripe_id`")
+- Switcher sidebar refondu en un seul popover (jamais deux), inspiré du `StoreSwitcher` de Sendboo :
+  projets de l'organization courante, "nouveau projet", puis les autres organizations (bascule vers
+  leur premier projet, ou tout droit vers la création si elles n'en ont aucun), "nouvelle
+  organization"
+**10.2** 🟡 En tant qu'utilisateur cloud, je veux voir ma consommation par rapport à mon plan.
+- Solde et historique existent (`OrganizationBillingController`) ; la ventilation par PROJET depuis
+  `agent_runs` reste à faire
+**10.3** ✅ En tant qu'utilisateur self-hosted, je veux que le core reste gratuit sans limite artificielle.
+- `CloudServiceProvider::register()` se neutralise entièrement (`config('eveil.edition') !== 'cloud'`
+  → retour immédiat) : aucune table de crédits, aucun listener, aucune commande jamais enregistrée
 - Le cloud ajoute uniquement : **hébergement géré, facturation, clé IA fournie, support**
 - Le multi-utilisateur n'en fait **pas** partie. Il est dans le cœur (ADR-025)
+
+Reste ouvert, noté plutôt que deviné : page de renommage de l'organization (la création existe, pas
+l'édition), restreindre qui peut déclencher un checkout / configurer l'auto top-up à owner/admin
+(n'importe quel membre le peut aujourd'hui). Vérifié bout-en-bout avec de vraies clés Stripe de
+test et `stripe listen` : checkout et webhooks. Encore en attente : enregistrement du moyen de
+paiement, charge hors-session de l'auto top-up, et le Billing Portal + `invoice_creation`.
 
 ### Epic 11: LinkedIn `plus tard`
 

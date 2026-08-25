@@ -12,8 +12,13 @@ it('can create every model from its factory', function (string $model) {
     expect($model::factory()->create())->toBeInstanceOf($model);
 })->with(function () {
     // Datasets are resolved before the application boots, so no `app_path()`.
-    return collect(glob(__DIR__.'/../../app/Models/*.php'))
-        ->map(fn (string $path): string => 'App\\Models\\'.basename($path, '.php'))
+    return collect([
+        ['dir' => __DIR__.'/../../app/Models', 'namespace' => 'App\\Models\\'],
+        ['dir' => __DIR__.'/../../app/Cloud/Models', 'namespace' => 'App\\Cloud\\Models\\'],
+    ])
+        ->flatMap(fn (array $group): array => collect(glob($group['dir'].'/*.php'))
+            ->map(fn (string $path): string => $group['namespace'].basename($path, '.php'))
+            ->all())
         ->filter(fn (string $model): bool => is_subclass_of($model, Model::class)
             && in_array(HasFactory::class, class_uses_recursive($model), strict: true))
         ->values()

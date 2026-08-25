@@ -2,6 +2,7 @@
 
 use App\Ai\AgentSettings;
 use App\Ai\ProviderCredentials;
+use App\Cloud\Models\CreditPrice;
 use App\Enums\HostKind;
 use App\Models\AgentRun;
 use App\Models\KnownHost;
@@ -27,7 +28,9 @@ it('keeps every app setting away from an ordinary user', function (string $route
     'app-settings.provider.edit',
     'app-settings.agents.index',
     'app-settings.limits.edit',
+    'app-settings.sending.edit',
     'app-settings.hosts.index',
+    'app-settings.billing.edit',
 ]);
 
 it('opens app settings for whoever runs the install', function (string $route, string $component) {
@@ -38,7 +41,9 @@ it('opens app settings for whoever runs the install', function (string $route, s
     ['app-settings.provider.edit', 'app-settings/Provider'],
     ['app-settings.agents.index', 'app-settings/Agents'],
     ['app-settings.limits.edit', 'app-settings/Limits'],
+    ['app-settings.sending.edit', 'app-settings/Sending'],
     ['app-settings.hosts.index', 'app-settings/Hosts'],
+    ['app-settings.billing.edit', 'app-settings/Billing'],
 ]);
 
 it('stores a provider key encrypted and never sends it back', function () {
@@ -137,7 +142,36 @@ it('shows what each agent has already spent', function () {
             ->where('agents.10.slug', 'website-analyst')
             ->where('agents.10.calls', 2)
             ->where('agents.10.tokens_in', 200)
-            ->where('agents.10.tokens_out', 100));
+            ->where('agents.10.tokens_out', 100)
+            ->where('agents.10.avg_tokens_in', 100)
+            ->where('agents.10.avg_tokens_out', 50));
+});
+
+it('has no credit price for an agent nobody has priced', function () {
+    // The shipped grid prices every known agent at install time
+    // (`create_credit_billing_tables`), so "unpriced" only exists once that
+    // row is gone.
+    CreditPrice::where('agent', 'website-analyst')->delete();
+
+    $this->actingAs(superAdmin())->get(route('app-settings.agents.index'))
+        ->assertInertia(fn ($page) => $page->where('agents.10.credit_price', null));
+});
+
+it('calibrates an agent\'s credit price by adding a new versioned row, never editing in place', function () {
+    $before = CreditPrice::where('agent', 'website-analyst')->count();
+
+    $this->actingAs(superAdmin())
+        ->post(route('app-settings.agents.credit-price', 'website-analyst'), ['credits' => 260])
+        ->assertRedirect(route('app-settings.agents.index'));
+
+    expect(CreditPrice::current('website-analyst'))->toBe(260)
+        ->and(CreditPrice::where('agent', 'website-analyst')->count())->toBe($before + 1);
+});
+
+it('refuses a credit price for an agent slug that no class answers to', function () {
+    $this->actingAs(superAdmin())
+        ->post(route('app-settings.agents.credit-price', 'agent-that-never-existed'), ['credits' => 100])
+        ->assertNotFound();
 });
 
 it('marks the agents a weak model would break rather than merely blunt', function () {
@@ -191,6 +225,59 @@ it('refuses a politeness delay of zero', function () {
         ->assertSessionHasErrors('crawl_delay_ms');
 
     expect(app(Settings::class)->int('crawl.delay_ms'))->toBe(500);
+});
+
+it('saves the sending pace', function () {
+    $this->actingAs(superAdmin())
+        ->put(route('app-settings.sending.update'), [
+            'window_start' => 7,
+            'window_end' => 19,
+            'min_gap_minutes' => 10,
+            'max_bounce_rate' => 0.08,
+        ])
+        ->assertRedirect(route('app-settings.sending.edit'));
+
+    expect(app(Settings::class)->array('sending'))->toBe([
+        'window_start' => 7,
+        'window_end' => 19,
+        'min_gap_minutes' => 10,
+        'max_bounce_rate' => 0.08,
+    ]);
+});
+
+it('refuses a sending window that ends before it starts', function () {
+    $this->actingAs(superAdmin())
+        ->put(route('app-settings.sending.update'), [
+            'window_start' => 18,
+            'window_end' => 8,
+            'min_gap_minutes' => 6,
+            'max_bounce_rate' => 0.05,
+        ])
+        ->assertSessionHasErrors('window_end');
+});
+
+it('saves the trial and rate configuration', function () {
+    $this->actingAs(superAdmin())
+        ->put(route('app-settings.billing.update'), [
+            'trial_credits' => 4000,
+            'trial_lead_limit' => 400,
+            'credits_per_dollar' => 1200,
+        ])
+        ->assertRedirect(route('app-settings.billing.edit'));
+
+    expect(app(Settings::class)->int('billing.trial_credits'))->toBe(4000)
+        ->and(app(Settings::class)->int('billing.trial_lead_limit'))->toBe(400)
+        ->and(app(Settings::class)->int('billing.credits_per_dollar'))->toBe(1200);
+});
+
+it('refuses a rate of zero, which would make every top-up free', function () {
+    $this->actingAs(superAdmin())
+        ->put(route('app-settings.billing.update'), [
+            'trial_credits' => 5000,
+            'trial_lead_limit' => 500,
+            'credits_per_dollar' => 0,
+        ])
+        ->assertSessionHasErrors('credits_per_dollar');
 });
 
 it('locks a host verdict a human corrected', function () {

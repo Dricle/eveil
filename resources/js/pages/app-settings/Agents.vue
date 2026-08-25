@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3'
+import { Head, router, usePage } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import AppSettingsLayout from '@/layouts/AppSettingsLayout.vue'
 import agentRoutes from '@/routes/app-settings/agents'
@@ -14,6 +14,10 @@ type AgentLine = {
     calls: number
     tokens_in: number
     tokens_out: number
+    avg_tokens_in: number
+    avg_tokens_out: number
+    /** Present on every edition; only cloud ever reads it as a real price. */
+    credit_price: number | null
 }
 
 const props = defineProps<{
@@ -23,10 +27,16 @@ const props = defineProps<{
     models: Record<string, string[]>
 }>()
 
+const page = usePage()
+
 // Edited in place, so the row keeps what was typed until it is saved.
 // An empty box means the provider's own default, which the server stores as
 // null, since the input itself only ever holds a string.
-const asDraft = (agents: AgentLine[]) => agents.map(agent => ({ ...agent, model: agent.model ?? '' }))
+const asDraft = (agents: AgentLine[]) => agents.map(agent => ({
+    ...agent,
+    model: agent.model ?? '',
+    creditPriceDraft: agent.credit_price ?? 0
+}))
 
 const draft = ref(asDraft(props.agents))
 
@@ -37,6 +47,14 @@ function save (line: { slug: string, provider: string, model: string, timeout: n
         provider: line.provider,
         model: line.model || null,
         timeout: line.timeout
+    }, { preserveScroll: true })
+}
+
+function saveCreditPrice (line: { slug: string, creditPriceDraft: number }) {
+    // A new versioned row, never an update (ADR-019) — the server enforces
+    // this, the client just posts what was typed.
+    router.post(agentRoutes.creditPrice.url(line.slug), {
+        credits: line.creditPriceDraft
     }, { preserveScroll: true })
 }
 
@@ -197,6 +215,44 @@ function switchAll (provider: string) {
                         {{ line.calls }} calls ·
                         {{ formatTokens(line.tokens_in) }} in /
                         {{ formatTokens(line.tokens_out) }} out
+                        <template v-if="line.calls">
+                            · avg {{ formatTokens(line.avg_tokens_in) }} in /
+                            {{ formatTokens(line.avg_tokens_out) }} out per call
+                        </template>
+                    </p>
+                </div>
+
+                <!-- Cloud's calibration target for ADR-019's per-agent grid.
+                     The row exists on every edition (harmless where nothing
+                     reads it), so only the DISPLAY is gated here. -->
+                <div
+                    v-if="page.props.edition === 'cloud'"
+                    class="flex items-end gap-3 border-t border-default pt-3"
+                >
+                    <UFormField
+                        label="Credit price"
+                        :name="`${line.slug}-credit-price`"
+                    >
+                        <UInput
+                            v-model.number="line.creditPriceDraft"
+                            type="number"
+                            min="1"
+                            class="w-28"
+                        />
+                    </UFormField>
+
+                    <UButton
+                        color="neutral"
+                        variant="soft"
+                        label="Save price"
+                        @click="saveCreditPrice(line)"
+                    />
+
+                    <p
+                        v-if="line.credit_price === null"
+                        class="flex-1 text-right text-sm text-warning"
+                    >
+                        Not priced yet — every call is refused.
                     </p>
                 </div>
             </div>

@@ -27,4 +27,12 @@ interface SpendGuardInterface
      * two answers to disagree.
      */
     public function refusal(Project $project, string $agent): ?string;
+
+    /**
+     * Called once, after a successful call `refusal()` already allowed:
+     * settle what it cost. Never called when the provider throws, which is
+     * what makes "a run aborted by our own error is not billed" (ADR-019)
+     * fall out of the call order rather than needing its own bookkeeping.
+     */
+    public function charge(Project $project, string $agent, int $agentRunId): void;
 }

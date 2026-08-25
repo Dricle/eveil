@@ -41,6 +41,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'project.require' => RequireCurrentProject::class,
             'targets.share' => ShareTargetProfiles::class,
         ]);
+
+        // Stripe posts here directly, with no CSRF token to send. Cashier's
+        // own service provider registers this route outside `routes/app.php`
+        // (no `/app` prefix), matching `config('cashier.path')`'s default.
+        // Self-hosted never receives a request here at all: nothing tells
+        // Stripe this URL exists unless `eveil.edition` is cloud.
+        $middleware->preventRequestForgery(except: ['stripe/*']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

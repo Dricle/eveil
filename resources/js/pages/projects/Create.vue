@@ -3,6 +3,10 @@ import { Form, Head, usePage } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { store } from '@/routes/projects'
 
+defineProps<{
+    organizationId: number | null
+}>()
+
 const page = usePage()
 </script>
 
@@ -56,6 +60,13 @@ const page = usePage()
                             class="w-full"
                         />
                     </UFormField>
+
+                    <input
+                        v-if="organizationId"
+                        type="hidden"
+                        name="organization_id"
+                        :value="organizationId"
+                    >
 
                     <UButton
                         type="submit"

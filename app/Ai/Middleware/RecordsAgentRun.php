@@ -95,7 +95,7 @@ class RecordsAgentRun
             throw $e;
         }
 
-        return $response->then(function (AgentResponse $response) use ($run, $startedAt): void {
+        return $response->then(function (AgentResponse $response) use ($agent, $run, $startedAt): void {
             $run->update([
                 'status' => AgentRunStatus::Succeeded,
                 // The provider and model that ANSWERED, which after a failover
@@ -111,6 +111,11 @@ class RecordsAgentRun
                 'tokens_out' => $response->usage->completionTokens,
                 'duration_ms' => $this->elapsed($startedAt),
             ]);
+
+            // Only ever reached on success: a thrown call never billed,
+            // which is the whole of how ADR-019's "aborted by our error is
+            // not billed" rule is kept without a second code path for it.
+            $this->guard->charge($agent->project, $agent::slug(), $run->id);
         });
     }
 

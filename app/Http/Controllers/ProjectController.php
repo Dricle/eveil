@@ -6,6 +6,7 @@ use App\Http\Requests\ProjectRequest;
 use App\Http\Resources\ProjectDetailResource;
 use App\Jobs\AnalyzeProject;
 use App\Support\CurrentProject;
+use App\Support\Settings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -20,19 +21,33 @@ use Inertia\Response;
  */
 class ProjectController extends Controller
 {
-    public function __construct(private CurrentProject $currentProject) {}
+    public function __construct(private CurrentProject $currentProject, private Settings $settings) {}
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
-        return Inertia::render('projects/Create');
+        return Inertia::render('projects/Create', [
+            // Only ever present right after `organizations/Create`'s
+            // redirect: the brand new organization this project should join,
+            // which nothing in the session can name yet.
+            'organizationId' => $request->integer('organization_id') ?: null,
+        ]);
     }
 
     public function store(ProjectRequest $request): RedirectResponse
     {
-        // No organization picker until multi-organization lands; a user always
-        // owns one, created with their account.
-        $project = $request->user()->organizations()->firstOrFail()
-            ->projects()->create($request->validated());
+        $organization = $request->organization($this->currentProject);
+        $data = $request->safe()->except('organization_id');
+
+        // The second trial guard ADR-024 asks for, next to the credit spend:
+        // a cap on leads DISCOVERED, not chosen by the user, so a trial
+        // organization cannot opt out of it by leaving the field blank.
+        // Reuses `lead_limit`, which continuous discovery already respects,
+        // rather than a second column meaning the same thing.
+        if ($organization->isOnTrial()) {
+            $data['lead_limit'] = $this->settings->int('billing.trial_lead_limit');
+        }
+
+        $project = $organization->projects()->create($data);
 
         AnalyzeProject::dispatch($project);
 

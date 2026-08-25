@@ -28,7 +28,7 @@ export default defineConfig({
             ui: {
                 colors: {
                     primary: 'cyan',
-                    neutral: 'neutral'
+                    neutral: 'mist'
                 },
                 // Menus portal into <body> with no z-index of their own, so the
                 // sidebar's fixed `z-10` container paints over them.

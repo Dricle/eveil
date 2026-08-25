@@ -24,6 +24,10 @@ class ProjectResource extends JsonResource
             'name' => $this->name,
             'url' => $this->url,
             'analyzed' => $this->knowledge_base !== null,
+            // For the sidebar switcher, which groups projects by the
+            // organization that owns them.
+            'organization_id' => $this->organization_id,
+            'organization_name' => $this->organization->name,
         ];
     }
 }

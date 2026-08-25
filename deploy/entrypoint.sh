@@ -58,6 +58,12 @@ case "$1" in
     /usr/bin/supervisord)
         php artisan migrate --force --isolated
 
+        # The head start every install gets: known directories, the
+        # disposable-domain blocklist, mail providers that refuse probes.
+        # `updateOrCreate`/transactional-replace under the hood, so running it
+        # again on every boot is a no-op, not a duplicate.
+        php artisan db:seed --class='Database\Seeders\InstallSeeder' --force
+
         # Allowed to fail without taking the boot down: a rejected
         # ADMIN_PASSWORD is a typo in an env file, and the setup screen is still
         # a perfectly good way in. Refusing to serve would turn one bad variable

@@ -19,45 +19,56 @@ const page = usePage()
 
 const open = ref(true)
 
-// `active`/`exact` are left to Nuxt UI's own Link component wherever one
-// href is enough: it computes its match from the raw `to` prop in JS, same
-// `page.url` we'd compare against, so a custom check here is pure
-// duplication. Targets is the one exception — a discovery run's own page
-// lives at a DIFFERENT top-level path (`/app/discovery-runs/{id}`, not
-// nested under `/app/targets`), which no single href/exact combination can
-// express, so it keeps an explicit check.
+// AppServiceProvider forces an absolute root URL for the whole app in prod
+// (needed so a password-reset email doesn't link to plain http), and
+// Wayfinder bakes that into every generated `xxx.url()` call at build time —
+// so these return absolute URLs in prod but relative ones in local dev.
+// `page.url` from Inertia is always relative. Nuxt UI's own built-in
+// active-link detection compares the two directly and would silently never
+// match in prod, so every item needs its href's origin stripped before
+// comparing — a plain `to`+`exact` pair on the item is not enough here.
+function isCurrent (path: string): boolean {
+    return page.url.startsWith(path.replace(/^https?:\/\/[^/]+/, ''))
+}
+
 const items = computed<NavigationMenuItem[]>(() => [
     {
         label: 'Dashboard',
         icon: 'i-lucide-house',
         to: dashboard.url(),
-        exact: true
+        active: page.url === dashboard.url().replace(/^https?:\/\/[^/]+/, '')
     },
     {
         label: 'Targets',
         icon: 'i-lucide-crosshair',
         to: targets.index.url(),
-        active: page.url.startsWith(targets.index.url()) || page.url.startsWith('/app/discovery-runs')
+        active: isCurrent(targets.index.url()) || page.url.startsWith('/app/discovery-runs')
     },
     {
         label: 'Leads',
         icon: 'i-lucide-building-2',
-        to: companies.index.url()
+        to: companies.index.url(),
+        active: isCurrent(companies.index.url())
     },
     {
         label: 'Campaigns',
         icon: 'i-lucide-send',
-        to: campaigns.index.url()
+        to: campaigns.index.url(),
+        active: isCurrent(campaigns.index.url())
     },
     {
         label: 'Inbox',
         icon: 'i-lucide-inbox',
-        to: inbox.url()
+        to: inbox.url(),
+        active: isCurrent(inbox.url())
     },
     {
         label: 'Settings',
         icon: 'i-lucide-settings',
-        to: projectSettings.edit.url()
+        to: projectSettings.edit.url(),
+        // Broad on purpose: mailboxes, billing, members and other settings
+        // pages all live under this one prefix, not just the project-edit page.
+        active: page.url.startsWith('/app/settings')
     }
 ])
 

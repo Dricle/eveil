@@ -128,8 +128,7 @@ volume copy is then never read.
 ### Updating
 
 ```bash
-git pull
-docker compose -f compose.deploy.yaml up -d --build
+./update.sh
 ```
 
 ---

@@ -14,9 +14,9 @@ use Laravel\Cashier\Events\WebhookReceived;
 
 /**
  * Registered unconditionally in `bootstrap/providers.php` — loading the
- * class costs nothing, and ADR-025 is explicit that `app/Cloud/` is a
- * conditional-loading mechanism, not a legal boundary, so the class existing
- * in the self-hosted codebase is the point, not an accident.
+ * class costs nothing, and `app/Cloud/` is deliberately a conditional-
+ * loading mechanism, not a legal boundary, so the class existing in the
+ * self-hosted codebase is the point, not an accident.
  *
  * Everything it DOES is gated on edition: self-hosted's `register()` is a
  * no-op, and `SpendGuardInterface` stays bound to `UnmeteredSpend`

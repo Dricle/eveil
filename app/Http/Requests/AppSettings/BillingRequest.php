@@ -5,9 +5,9 @@ namespace App\Http\Requests\AppSettings;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Cloud-only product decisions (ADR-024): what a trial is worth, and the
- * flat rate every top-up converts through — pay-as-you-go, no plan tiers to
- * keep priced separately.
+ * Cloud-only product decisions: what a trial is worth, and the flat rate
+ * every top-up converts through — pay-as-you-go, no plan tiers to keep
+ * priced separately.
  */
 class BillingRequest extends FormRequest
 {

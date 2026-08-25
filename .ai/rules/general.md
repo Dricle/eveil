@@ -15,13 +15,11 @@ Positioning, stated precisely: the whole category. Lemlist, Instantly, Smartlead
 
 Do NOT claim "no open-source lemlist alternative exists": [Linki](https://github.com/moaljumaa/linki) is open source and claims that exact slot. It rates poor on evaluation: LinkedIn-first, manual targeting, effectively a lead magnet for Opsily managed hosting. So the slot is claimed but not occupied. Still cite Linki honestly: claiming to be alone on a niche where a repo exists costs credibility for nothing. Eveil's defensible slot is **email-first + zero-config targeting derived from the product URL**.
 
-Open questions live in a numbered register in §9 of the spec. It is currently EMPTY: every question raised so far is settled as ADR-010 to ADR-030. Add any new question there with an identifier, and promote it to an ADR in §3 once settled.
-
 Hierarchy: User → Organization (billable entity) → Project (one product/site to promote, e.g. Dricle, Sendboo) → leads/campaigns/email accounts, all scoped to project.
 
-Two per-project AI roles: Website (crawls the site → knowledge base, plus site and acquisition suggestions, ADR-032) and Sales (derives target profiles, finds and qualifies companies, extracts contacts, runs outreach). A profile targets a customer OR a partner: whoever already touches the customer (ADR-031). One agent class per specialisation backs them, in `app/Ai/Agents/`, each its own settings key: there is no role taxonomy (ADR-026).
+Two per-project AI roles: Website (crawls the site → knowledge base, plus site and acquisition suggestions) and Sales (derives target profiles, finds and qualifies companies, extracts contacts, runs outreach). A profile targets a customer OR a partner: whoever already touches the customer. One agent class per specialisation backs them, in `app/Ai/Agents/`, each its own settings key: there is no role taxonomy.
 
-Ships in two editions from one codebase: free self-hosted (docker compose) and paid cloud. Scope lives in saas-outreach-tool-user-stories.md at repo root: read it before planning features.
+Ships in two editions from one codebase: free self-hosted (docker compose) and paid cloud. `GUIDELINES.md` at repo root holds the durable product/architecture decisions and the reasoning behind them: read it before proposing anything that touches licensing, pricing, the self-hosted/cloud split, deliverability, or the shape of discovery.
 
 ## Stack: verified versions and traps
 Installed: Laravel 13, Inertia v3 + Vue 3, Wayfinder, Pest 5, Larastan, Pint, Boost. PostgreSQL everywhere, tests included (ADR-010): the SQLite the starter shipped with is gone. Redis for queues, cache and locks, with `laravel/horizon` running the workers (ADR-011): see `.ai/rules/jobs.md`.
@@ -78,16 +76,16 @@ Nuxt UI 4 supplies the components. Three things it needs, already wired:
 
 Theme: Vue mode has no `app.config.ts`, so what the Nuxt UI theme builder puts there goes in the plugin's `ui` option instead. Currently `colors: { primary: 'cyan', neutral: 'neutral' }`. The font is Raleway, declared twice on purpose: `bunny('Raleway')` in `vite.config.ts` fetches it, `--font-sans` in `resources/css/app.css` uses it. Do not go looking for `--ui-color-primary-*` in the built CSS: Nuxt UI injects the palettes at runtime from a Vue plugin, so they only ever exist in the bundle and in the live DOM.
 
-## Decisions: licence AGPL, edition split, v0 scope
+## Decisions: licence AGPL, edition split, scope
 - Licence: AGPL-3.0. Anyone hosting a modified version must publish their code: blocks a competing cloud. Do not add code under an incompatible licence.
 - One repo, two editions. Cloud-only code lives under `app/Cloud/`, registered conditionally by a ServiceProvider on `APP_EDITION=self|cloud`. No second repo, no separate build.
-- v0 = single vertical slice: scrape site → knowledge base → AI lead discovery → AI sequence → SMTP send with daily cap → IMAP reply detection → auto-pause → unified inbox. Orgs, multi-user and LinkedIn are deferred to v1+: this is BUILD ORDER, not an edition split: self-hosted gets organizations, invitations and access management too, in core (see ADR-025 below).
 - Sending: user's own SMTP/IMAP only. No ESP relay (cold outreach through Postmark/SES gets the account banned).
+- Full reasoning behind every product/architecture decision — licensing, pricing, autonomy levels, deliverability, discovery's job-graph shape, and more — lives in `GUIDELINES.md` at repo root. Read it before proposing anything that touches those areas: the answer, and the reasoning behind it, is probably already there.
 
 ## AGPL everywhere, free-outbound CLA, cloud dir holds billing only
-ADR-025. One `LICENSE`, AGPL-3.0, the whole repo: `app/Cloud/` included. No separately-licensed directory, no feature withheld from self-hosted.
+One `LICENSE`, AGPL-3.0, the whole repo: `app/Cloud/` included. No separately-licensed directory, no feature withheld from self-hosted.
 
-`app/Cloud/` is NOT a legal boundary, only a conditional-loading mechanism, and its scope is **billing and credit metering, nothing else**: Stripe, `credit_prices`, `credit_transactions`, trial guards. Everything else lives in core: organizations, roles, invitations and per-project access included, so **self-hosted gets multi-user**. Cloud adds only managed hosting, billing, the supplied AI key, and support. Do not put a feature behind `app/Cloud/` thinking it is protected; it isn't, and it would break the "core stays free with no artificial limits" promise (story 10.3).
+`app/Cloud/` is NOT a legal boundary, only a conditional-loading mechanism, and its scope is **billing and credit metering, nothing else**: Stripe, `credit_prices`, `credit_transactions`, trial guards. Everything else lives in core: organizations, roles, invitations and per-project access included, so **self-hosted gets multi-user**. Cloud adds only managed hosting, billing, the supplied AI key, and support. Do not put a feature behind `app/Cloud/` thinking it is protected; it isn't, and it would break the "core stays free with no artificial limits" promise.
 
 The credit balance itself is `organizations.credits_balance`, a plain column on the CORE `organizations` table (alongside `stripe_id`/`pm_type`/`auto_topup_*`) — not a `credit_wallets` table under `app/Cloud/`. It is a cloud-only VALUE, always zero and never written to on self-hosted, but the column lives with the rest of the model's billing fields rather than behind a one-to-one relation to a table holding a single integer.
 
@@ -95,34 +93,17 @@ CLA is required, modelled on Postiz: a licence grant, never a copyright assignme
 
 Strategic corollary: the moat is hosting, brand and execution speed. Not code. Postiz (AGPL-3.0, no `ee/`, cloud runs identical code, monetised on hosting alone) is the precedent being followed.
 
-Before going public: write `ICLA.md`, `CCLA.md`, `CONTRIBUTING.md`, wire a CLA-check bot, and have a lawyer review it. This is the one project decision that cannot be undone.
+Before going public: write `ICLA.md`, `CCLA.md`, `CONTRIBUTING.md`, wire a CLA-check bot, and have a lawyer review it. This is the one project decision that cannot be undone. Also before any public communication: pick a domain and run an EUIPO trademark search — the name stays "Eveil", `.com/.app/.io/.ai/.be` are taken, `.dev/.email/.so`, `geteveil.com` and `useeveil.com` are the candidates.
 
-## All blocking open questions are settled: ADR-010 to ADR-033
-The §9 register in the spec is empty: everything raised is decided as ADR-010 through ADR-030, plus ADR-031 (partner profiles), ADR-032 (acquisition recommendations) and ADR-033 (job-graph discovery, directories as a source) added as scope. Read §3 of `saas-outreach-tool-user-stories.md` before proposing anything architectural: the answer is probably already there, with its reasoning.
+## GitHub Issues is the tracker; `GUIDELINES.md` is the reasoning
+[github.com/Dricle/eveil/issues](https://github.com/Dricle/eveil/issues) tracks what's left to build — one issue per feature, staged with milestones (`v1`, `v2: inbound`, `later`) and themed with labels, not a file in the repo. It replaced a root-level `TODO.md` once the two started drifting apart from the code; don't recreate that file or a third parallel list.
 
-Two deadlines remain, non-blocking for development but not to be discovered the night before launch:
-- Before opening the repo: write `ICLA.md`, `CCLA.md`, `CONTRIBUTING.md`, wire a CLA-check bot, have a lawyer review the licence and CLA (ADR-025).
-- Before any public communication: pick the domain and run an EUIPO trademark search (ADR-030). The name stays "Eveil"; `eveil.com/.app/.io/.ai/.be` are taken, while `eveil.dev/.email/.so`, `geteveil.com` and `useeveil.com` are the candidates to check. Known and accepted downsides: the missing accent (French spells it Éveil), a saturated French keyword, and poor readability for English speakers.
+`GUIDELINES.md` holds the durable "why" — product vision, positioning, and every settled architectural/business decision with its reasoning. It is not a task list and does not get a checkbox for each open issue; when a new open question gets settled, its reasoning goes into `GUIDELINES.md`, and any GitHub issue it resolves gets closed with a reference to the commit, not to a section number.
 
-When a new open question appears, add it to the §9 register with an identifier, and promote it to an ADR in §3 once settled.
-
-## `TODO.md` is the working tracker: read it first, update it always
-Decided scope outruns built code, so status is tracked, and `TODO.md` at the repo root is where it is tracked. It is the list in EXECUTION ORDER, one line per story, and it is the file to open when the question is "what is left": not the 2000-line spec. Read it before planning anything.
-
-**Update it in the same commit as the code, every time.** A checkbox left unticked after the work shipped is worse than no list: the next session re-reads an epic marked `rien de fait` and either rebuilds it or distrusts the whole file. Same for the epic heading beside it.
-
-- `[x]` only when the story is genuinely done and tested. A story with the backend done and no screen stays `[ ]` with a `🟡` and one line naming what is missing: half-ticked is how a list starts lying.
-- Add a line for work that turns out to be needed and is not on the list yet. Removing lines is for scope that got dropped, and say so rather than deleting silently.
-- The out-of-scope block at the bottom is load-bearing: never tick anything in it, never build it.
-
-`saas-outreach-tool-user-stories.md` §7 keeps the DETAIL behind each line: the marker, the per-epic rollup, and the paragraph on how it was actually built and what was deliberately left out. Keep it in step in the same commit, because that paragraph is where the reasoning for a `🟡` lives and a one-line checkbox cannot carry it. When the schema for a story does not exist yet, say so there: several ADRs (031 partner target profiles, 032 recommendations, 033 directories) are decided in the spec but have no migration, and that gap is invisible from the ADR text alone.
-
-Do not add a THIRD list: no issues file, no task list in a new document. Two files, one of them a one-line-per-story checklist, is the ceiling. They drift apart within a week and then nobody trusts any of them.
-
-## Code comments never cite the spec, and examples stay domain-agnostic
+## Code comments never cite an issue number, and examples stay domain-agnostic
 Two rules for anything under `app/`, `config/`, `database/` or `tests/`.
 
-**No `ADR-0XX`, no `Epic N`, no `story N.N` in code.** `saas-outreach-tool-user-stories.md` is our working document and goes away after the MVP; a public repo full of dangling references to a file nobody has is worse than no comment. Keep the REASONING, drop the citation: write "a leak between projects is the worst bug this app can ship", not "(ADR-003)". Same for roadmap framing: never "this arrives with Epic 1". If something is provisional, say what makes it provisional ("temporary while we validate the approach"), and check first whether it actually is. `eveil:agent-model` reads as scaffolding but is permanent: a settings screen will front the same values, and the command is still how you change a model over SSH on a self-hosted box.
+**No issue number, no "Epic N", no "story N.N" in code.** A public repo full of references to a tracker entry nobody browsing the code has open is worse than no comment. Keep the REASONING, drop the citation: write "a leak between projects is the worst bug this app can ship", not "(#42)" or "(ADR-003)". Same for roadmap framing: never "this arrives with Epic 1". If something is provisional, say what makes it provisional ("temporary while we validate the approach"), and check first whether it actually is. `eveil:agent-model` reads as scaffolding but is permanent: a settings screen will front the same values, and the command is still how you change a model over SSH on a self-hosted box.
 
 **Examples in prompts and comments must not anchor on one industry.** Whatever product is being tested at the time leaks into agent instructions: a food-ordering project fills them with restaurants, friteries and pizzerias. Which biases the model on every OTHER kind of business the app is for. Concrete examples are good and abstract ones teach nothing; the fix is to VARY them across sectors, not to remove them. An target profile example should span software, local services and industry; an Overpass tag list should cover offices, health, retail, trade and industry, and say the list is a starting point rather than the vocabulary. Place names in examples: prefer the neutral or globally recognisable over the local.
 

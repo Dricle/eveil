@@ -10,8 +10,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Carbon;
 
 /**
- * Cloud's calibration screen for ADR-019's per-agent grid. Reachable on
- * self-hosted too (`.ai/rules/controllers.md`'s "404 for access, not a
+ * Cloud's calibration screen for the per-agent credit price grid. Reachable
+ * on self-hosted too (`.ai/rules/controllers.md`'s "404 for access, not a
  * feature that doesn't apply here") — the row it writes just sits unused,
  * since `UnmeteredSpend` never queries `credit_prices` there.
  */

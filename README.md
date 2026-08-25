@@ -8,10 +8,11 @@ and reads the replies.
 Self-hostable, AGPL-3.0, and the free edition has no artificial limits:
 unlimited mailboxes, unlimited leads, your data on your own machine.
 
-> **Status: v0.** The whole loop works end to end. Site analysis, lead
-> discovery, sequences, sending, replies. Not built yet: multi-user
-> organizations, billing, LinkedIn, a public API. `TODO.md` lists exactly what is
-> and is not done.
+> **Status: v0 + cloud backbone.** The whole outbound loop works end to end —
+> site analysis, lead discovery, sequences, sending, replies — plus
+> organizations, roles, and pay-as-you-go billing for the cloud edition. Not
+> built yet: LinkedIn, a public API, the inbound half. See
+> [Issues](https://github.com/Dricle/eveil/issues) for exactly what's left.
 
 ---
 
@@ -222,7 +223,7 @@ out to `php artisan wayfinder:generate`. For the same reason, never run
 `.form()` helper and the type check then fails in files you did not touch.
 
 ```bash
-./vendor/bin/sail artisan test          # 436 tests
+./vendor/bin/sail artisan test          # the suite
 ./vendor/bin/sail composer lint         # Pint
 yarn lint:check && yarn types:check     # eslint, vue-tsc
 ```
@@ -231,9 +232,8 @@ Postgres is required, including for tests: the schema leans on JSONB, partial
 unique indexes and `ilike`, so SQLite would pass tests that production fails.
 
 Two documents are worth reading before changing anything.
-`saas-outreach-tool-user-stories.md` holds the decisions and the reasoning behind
-them; `.ai/rules/` holds the settled conventions and the traps somebody already
-walked into.
+`GUIDELINES.md` holds the decisions and the reasoning behind them; `.ai/rules/`
+holds the settled conventions and the traps somebody already walked into.
 
 ---
 

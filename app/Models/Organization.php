@@ -23,9 +23,9 @@ use Laravel\Cashier\Billable;
  * Cashier requires the trait directly on the model class, which is a
  * compile-time construct a conditional loader cannot reach around. It is
  * inert unless called, and every call site (checkout, webhook listeners, the
- * credit guard) still lives in `app/Cloud/` (ADR-025's boundary is about
- * billing CODE PATHS and withheld features, not about which file a required
- * trait use-statement sits in).
+ * credit guard) still lives in `app/Cloud/`: that boundary is about billing
+ * CODE PATHS and withheld features, not about which file a required trait
+ * use-statement sits in.
  *
  * @property int $id
  * @property string $name
@@ -90,8 +90,8 @@ class Organization extends Model
 
     /**
      * Never became a paying Stripe customer. Credit-based, not date-based:
-     * ADR-024 sets no trial LENGTH, the trial ends when either the credits or
-     * the patience run out, not on a calendar. `stripe_id` is set once, on
+     * no trial LENGTH is set, the trial ends when either the credits or the
+     * patience run out, not on a calendar. `stripe_id` is set once, on
      * the organization's first successful purchase, and never cleared, so
      * this never reverts to true after it turns false.
      *
@@ -106,8 +106,8 @@ class Organization extends Model
     }
 
     /**
-     * The one guard rail ADR-024 puts on project count: a trial organization
-     * may have exactly one.
+     * The one guard rail on project count during a trial: a trial
+     * organization may have exactly one.
      */
     public function hasReachedTrialProjectLimit(): bool
     {

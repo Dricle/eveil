@@ -19,7 +19,7 @@ class ProjectRequest extends FormRequest
 {
     /**
      * Only `store` can ever add a SECOND project to a trial organization —
-     * `update` edits the one that already exists, so the ADR-024 one-project
+     * `update` edits the one that already exists, so the trial's one-project
      * limit has nothing to say about it.
      */
     public function authorize(CurrentProject $currentProject): bool

@@ -6,30 +6,27 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Cloud only (ADR-019, ADR-024): a self-hosted instance never reads these,
- * `UnmeteredSpend` short-circuits before any query would touch them. Two
- * tables, one migration, per the grouping convention (`.ai/rules/database.md`).
- * The balance itself lives on `organizations.credits_balance`
+ * Cloud only: a self-hosted instance never reads these, `UnmeteredSpend`
+ * short-circuits before any query would touch them. Two tables, one
+ * migration, per the grouping convention (`.ai/rules/database.md`). The
+ * balance itself lives on `organizations.credits_balance`
  * (`add_stripe_billing_to_organizations_table`), not a third table here: it
  * was one column behind a whole model for what a wallet actually held.
  */
 return new class extends Migration
 {
     /**
-     * The grid from ADR-019/ADR-024, seeded here rather than a seeder for the
-     * same reason `seed_default_settings` is a migration: a forgotten seeder
-     * leaves every agent call refused with no price to charge. Keyed on the
-     * agent slug (`EveilAgent::slug()`, kebab-case class basename), not the
-     * ADR's human-readable action names.
+     * The grid, seeded here rather than a seeder for the same reason
+     * `seed_default_settings` is a migration: a forgotten seeder leaves
+     * every agent call refused with no price to charge. Keyed on the agent
+     * slug (`EveilAgent::slug()`, kebab-case class basename).
      *
-     * `listing-extractor`, `result-triage` and `contact-page-finder` are not
-     * in the ADR's named grid (it prices the five customer-facing actions and
-     * `discovery.plan`/`sequence.generate`/`lead.personalize`/`reply.handle`).
-     * They're still separate metered agent calls inside a discovery run, so
-     * they need a price or every one would be refused. Estimated at the same
-     * Haiku-extraction tier as `company-qualifier`, flagged for correction
-     * once `agent_runs` has real token counts for them — same practice ADR-019
-     * already uses for its own "estimé" lines.
+     * `listing-extractor`, `result-triage` and `contact-page-finder` price
+     * agent calls that happen inside a discovery run but aren't one of the
+     * customer-facing actions the grid was first calibrated against, so
+     * they're estimated at the same Haiku-extraction tier as
+     * `company-qualifier` — flag for correction once `agent_runs` has real
+     * token counts for them.
      */
     private const GRID = [
         'website-analyst' => 200,

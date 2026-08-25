@@ -127,9 +127,9 @@ Route::middleware(['auth', 'project.set'])->group(function (): void {
 
             /*
              * Cloud billing. The route exists in both editions (one repo,
-             * nothing withheld — ADR-025) but is reachable only through a nav
-             * link cloud renders: self-hosted has no Stripe key, so a direct
-             * hit here fails at the Stripe call rather than doing anything.
+             * nothing withheld) but is reachable only through a nav link
+             * cloud renders: self-hosted has no Stripe key, so a direct hit
+             * here fails at the Stripe call rather than doing anything.
              */
             Route::get('organization/billing', [OrganizationBillingController::class, 'edit'])
                 ->name('organization.billing.edit');

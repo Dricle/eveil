@@ -32,7 +32,7 @@ class ContinueDiscovery
     /**
      * Never two runs for the same profile at once, and never another run for a
      * profile the last one diagnosed as the wrong target: that is escalated to
-     * the user, not re-searched (ADR-020).
+     * the user, not re-searched.
      */
     private function ready(TargetProfile $profile): bool
     {

@@ -14,7 +14,7 @@ use Inertia\Response;
  * A second (or third) organization for a user who already has one — the
  * first is never created here, `App\Actions\CreateAccount` makes it together
  * with the account at signup. No checkout at creation, unlike some
- * references: ADR-024 is trial-first, a wallet is seeded and checkout is a
+ * references: trial-first — a trial balance is granted and checkout is a
  * button in Billing settings once it runs out, not a forced next step.
  */
 class OrganizationController extends Controller

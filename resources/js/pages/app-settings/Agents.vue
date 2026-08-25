@@ -51,8 +51,8 @@ function save (line: { slug: string, provider: string, model: string, timeout: n
 }
 
 function saveCreditPrice (line: { slug: string, creditPriceDraft: number }) {
-    // A new versioned row, never an update (ADR-019) — the server enforces
-    // this, the client just posts what was typed.
+    // A new versioned row, never an update — the server enforces this,
+    // the client just posts what was typed.
     router.post(agentRoutes.creditPrice.url(line.slug), {
         credits: line.creditPriceDraft
     }, { preserveScroll: true })
@@ -222,9 +222,10 @@ function switchAll (provider: string) {
                     </p>
                 </div>
 
-                <!-- Cloud's calibration target for ADR-019's per-agent grid.
-                     The row exists on every edition (harmless where nothing
-                     reads it), so only the DISPLAY is gated here. -->
+                <!-- Cloud's calibration target for the per-agent credit
+                     price grid. The row exists on every edition (harmless
+                     where nothing reads it), so only the DISPLAY is gated
+                     here. -->
                 <div
                     v-if="page.props.edition === 'cloud'"
                     class="flex items-end gap-3 border-t border-default pt-3"

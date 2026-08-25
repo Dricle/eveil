@@ -11,7 +11,7 @@ use Illuminate\Support\Carbon;
 /**
  * What one agent call costs, versioned. Never edited in place: a price
  * change adds a row with a later `effective_from`, so a transaction already
- * charged at the old rate stays reproducible (ADR-019).
+ * charged at the old rate stays reproducible.
  *
  * @property int $id
  * @property string $agent

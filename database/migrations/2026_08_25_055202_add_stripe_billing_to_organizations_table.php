@@ -6,8 +6,8 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * Cashier's customer columns, on `organizations` rather than `users`: the
- * organization is the billable entity (ADR-019), never a project or a user.
- * Published from `cashier-migrations` and retargeted from the package's
+ * organization is the billable entity, never a project or a user. Published
+ * from `cashier-migrations` and retargeted from the package's
  * `users` default, per Cashier's own docs: a non-default Billable model needs
  * its migrations altered to match.
  */

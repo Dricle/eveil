@@ -38,9 +38,9 @@ class ProjectController extends Controller
         $organization = $request->organization($this->currentProject);
         $data = $request->safe()->except('organization_id');
 
-        // The second trial guard ADR-024 asks for, next to the credit spend:
-        // a cap on leads DISCOVERED, not chosen by the user, so a trial
-        // organization cannot opt out of it by leaving the field blank.
+        // The second trial guard, next to the credit spend: a cap on leads
+        // DISCOVERED, not chosen by the user, so a trial organization cannot
+        // opt out of it by leaving the field blank.
         // Reuses `lead_limit`, which continuous discovery already respects,
         // rather than a second column meaning the same thing.
         if ($organization->isOnTrial()) {

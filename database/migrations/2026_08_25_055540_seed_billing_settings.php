@@ -4,8 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Cloud-only product decisions, adjustable without a redeploy (ADR-024):
- * how many credits a trial starts with, and the flat exchange rate every
+ * Cloud-only product decisions, adjustable without a redeploy: how many
+ * credits a trial starts with, and the flat exchange rate every
  * top-up (manual or auto) converts through. Never read on self-hosted. A
  * migration rather than a seeder, same reason as `seed_default_settings`:
  * a forgotten seeder leaves cloud unsellable.
@@ -14,8 +14,8 @@ return new class extends Migration
 {
     /** @var array<string, mixed> */
     private const DEFAULTS = [
-        // ~5000 credits ≈ one full campaign through to replies (ADR-024):
-        // a trial that stops short of the first reply convinces nobody, and
+        // ~5000 credits ≈ one full campaign through to replies: a trial
+        // that stops short of the first reply convinces nobody, and
         // the self-hosted edition is free, so there is no smaller floor that
         // still makes the case.
         'billing.trial_credits' => 5000,

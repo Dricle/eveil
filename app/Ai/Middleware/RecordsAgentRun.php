@@ -113,8 +113,8 @@ class RecordsAgentRun
             ]);
 
             // Only ever reached on success: a thrown call never billed,
-            // which is the whole of how ADR-019's "aborted by our error is
-            // not billed" rule is kept without a second code path for it.
+            // which is the whole of how "aborted by our error is not
+            // billed" is kept without a second code path for it.
             $this->guard->charge($agent->project, $agent::slug(), $run->id);
         });
     }

@@ -4,3 +4,9 @@ export type CreditTransactionRow = {
     agent: string | null
     created_at: string | null
 }
+
+export type ProjectCreditRow = {
+    id: number
+    name: string
+    credits: number
+}

@@ -3,7 +3,7 @@ import { Form, Head } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import SettingsLayout from '@/layouts/SettingsLayout.vue'
 import billingRoutes from '@/routes/settings/organization/billing'
-import type { CreditTransactionRow } from '@/types'
+import type { CreditTransactionRow, ProjectCreditRow } from '@/types'
 
 const props = defineProps<{
     checkout: string | null
@@ -13,7 +13,14 @@ const props = defineProps<{
     hasPaymentMethod: boolean
     autoTopup: { threshold: number | null, amountCents: number | null }
     transactions: CreditTransactionRow[]
+    creditsByProject: ProjectCreditRow[]
 }>()
+
+// The bar is relative to whichever project spent the most, not to the org's
+// total: a two-project org where one spent 90 and the other 10 should show a
+// nearly-empty bar for the second, not a 10% sliver next to a 90% one that
+// both read as "small".
+const highestSpend = computed(() => Math.max(1, ...props.creditsByProject.map(row => row.credits)))
 
 const topUpDollars = ref(20)
 const topUpCredits = computed(() => Math.floor(topUpDollars.value * props.creditsPerDollar))
@@ -264,6 +271,32 @@ function describe (row: CreditTransactionRow): string {
                     variant="link"
                     label="Change payment method"
                 />
+            </UCard>
+
+            <UCard v-if="creditsByProject.length > 1">
+                <template #header>
+                    <h2 class="font-medium">
+                        Spend by project
+                    </h2>
+                </template>
+
+                <div class="space-y-3">
+                    <div
+                        v-for="project in creditsByProject"
+                        :key="project.id"
+                    >
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-muted">{{ project.name }}</span>
+                            <span>{{ project.credits.toLocaleString() }} credits</span>
+                        </div>
+                        <div class="mt-1 h-1.5 w-full rounded-full bg-elevated">
+                            <div
+                                class="h-1.5 rounded-full bg-primary"
+                                :style="{ width: `${(project.credits / highestSpend) * 100}%` }"
+                            />
+                        </div>
+                    </div>
+                </div>
             </UCard>
 
             <UCard v-if="transactions.length">

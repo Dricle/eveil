@@ -58,6 +58,17 @@ case "$1" in
     /usr/bin/supervisord)
         php artisan migrate --force --isolated
 
+        # `App\Support\Settings` caches the whole `settings` table forever
+        # (Redis, `rememberForever`), because it is read on every agent call
+        # and changes maybe twice a year. A migration that changes what an
+        # EXISTING key holds — adds a field to `discovery`, say — writes
+        # straight to the table and can't safely flush this itself: Redis is
+        # not guaranteed reachable while migrations run. So it has to happen
+        # here instead, once Redis is up (the app service depends on its
+        # healthcheck), or every boot after such a migration keeps serving a
+        # snapshot that predates it until something else evicts the key.
+        php artisan cache:forget eveil.settings || true
+
         # The head start every install gets: known directories, the
         # disposable-domain blocklist, mail providers that refuse probes.
         # `updateOrCreate`/transactional-replace under the hood, so running it

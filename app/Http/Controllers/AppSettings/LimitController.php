@@ -31,6 +31,7 @@ class LimitController extends Controller
                 'discovery_max_qualified' => $discovery['max_qualified'],
                 'discovery_max_pages' => $discovery['max_pages'],
                 'discovery_max_queries' => $discovery['max_queries'],
+                'discovery_min_profile_confidence' => $discovery['min_profile_confidence'],
                 'crawl_max_pages' => $this->settings->int('crawl.max_pages'),
                 'crawl_delay_ms' => $this->settings->int('crawl.delay_ms'),
                 'crawl_cache_ttl_days' => $this->settings->int('crawl.cache_ttl_days'),
@@ -51,13 +52,15 @@ class LimitController extends Controller
     {
         $values = $request->validated();
 
-        // The four discovery budgets are one row: they are spent against each
-        // other inside a single run.
+        // One row: the four budgets are spent against each other inside a
+        // single run, and the confidence floor decides whether an
+        // agent-authored profile is trusted to open one automatically at all.
         $this->settings->set('discovery', [
             'max_companies' => $values['discovery_max_companies'],
             'max_qualified' => $values['discovery_max_qualified'],
             'max_pages' => $values['discovery_max_pages'],
             'max_queries' => $values['discovery_max_queries'],
+            'min_profile_confidence' => $values['discovery_min_profile_confidence'],
         ]);
 
         $this->settings->set('crawl.max_pages', $values['crawl_max_pages']);

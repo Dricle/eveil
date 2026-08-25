@@ -54,6 +54,8 @@ export type TargetProfile = {
     type: 'customer' | 'partner'
     source: 'agent' | 'human'
     is_active: boolean
+    confidence: number | null
+    needs_review: boolean
     criteria: {
         rationale?: string
         company_size?: string

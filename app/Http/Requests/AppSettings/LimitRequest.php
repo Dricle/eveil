@@ -21,6 +21,10 @@ class LimitRequest extends FormRequest
             'discovery_max_qualified' => ['required', 'integer', 'min:1', 'max:1000'],
             'discovery_max_pages' => ['required', 'integer', 'min:1', 'max:2000'],
             'discovery_max_queries' => ['required', 'integer', 'min:1', 'max:200'],
+            // Below this, an agent-proposed target profile is stored inactive
+            // and waits for a human to look at it rather than spending on its
+            // own guess.
+            'discovery_min_profile_confidence' => ['required', 'integer', 'min:0', 'max:100'],
             'crawl_max_pages' => ['required', 'integer', 'min:1', 'max:200'],
             // The politeness delay between two fetches of the same host.
             'crawl_delay_ms' => ['required', 'integer', 'min:100', 'max:60000'],

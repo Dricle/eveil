@@ -74,6 +74,18 @@ watch(() => props.profile, (profile) => {
                 tab="profile"
             />
 
+            <!-- The model reported low confidence in its own guess: it lands
+                 inactive rather than spending budget on its own next tick, and
+                 stays this way until a human looks at it. -->
+            <UAlert
+                v-if="profile?.needs_review"
+                color="warning"
+                variant="subtle"
+                icon="i-lucide-shield-question"
+                title="The agent wasn't confident about this one"
+                :description="`Scored ${profile.confidence}% confidence, below the floor to search on its own. Review the criteria below and turn it on, or search with it manually, whenever you're satisfied.`"
+            />
+
             <Form
                 v-slot="{ errors, processing, recentlySuccessful }"
                 v-bind="profile ? targets.update.form(profile.id) : targets.store.form()"

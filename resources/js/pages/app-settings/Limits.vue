@@ -34,7 +34,8 @@ const GROUPS: { title: string, hint: string, fields: { name: string, label: stri
             { name: 'discovery_max_queries', label: 'Search queries' },
             { name: 'discovery_max_companies', label: 'Companies found' },
             { name: 'discovery_max_qualified', label: 'Companies scored' },
-            { name: 'discovery_max_pages', label: 'Pages fetched' }
+            { name: 'discovery_max_pages', label: 'Pages fetched' },
+            { name: 'discovery_min_profile_confidence', label: 'Min. confidence to auto-run a proposed profile (%)' }
         ]
     },
     {

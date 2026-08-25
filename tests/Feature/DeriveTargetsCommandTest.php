@@ -140,6 +140,23 @@ it('says so when no project matches', function () {
         ->assertFailed();
 });
 
+it('stores a low-confidence profile inactive, and a confident one active', function () {
+    projectWithKnowledgeBase();
+
+    TargetProfileDeriver::fake([['profiles' => [
+        [...profile('Friteries wallonnes'), 'confidence' => 20],
+        [...profile('Pizzerias bruxelloises'), 'confidence' => 60],
+    ]]]);
+
+    $this->artisan('eveil:derive-targets')->assertSuccessful();
+
+    $shaky = TargetProfile::query()->firstWhere('name', 'Friteries wallonnes');
+    $confident = TargetProfile::query()->firstWhere('name', 'Pizzerias bruxelloises');
+
+    expect($shaky->is_active)->toBeFalse()
+        ->and($confident->is_active)->toBeTrue();
+});
+
 it('derives partner profiles alongside customers, with the angles the email will open on', function () {
     // A market of businesses that publish a phone and no address is a right
     // profile nobody can be written to. Whoever already visits or invoices them

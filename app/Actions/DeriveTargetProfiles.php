@@ -8,6 +8,7 @@ use App\Enums\TargetProfileType;
 use App\Models\AgentRun;
 use App\Models\Project;
 use App\Models\TargetProfile;
+use App\Support\Settings;
 use Illuminate\Support\Collection;
 use Laravel\Ai\Responses\StructuredAgentResponse;
 use RuntimeException;
@@ -19,6 +20,8 @@ use RuntimeException;
  */
 class DeriveTargetProfiles
 {
+    public function __construct(private Settings $settings) {}
+
     /**
      * @return Collection<int, TargetProfile>
      */
@@ -79,6 +82,9 @@ class DeriveTargetProfiles
             ? $profile['name']
             : 'Profil sans nom';
 
+        $confidence = $profile['confidence'] ?? null;
+        $minConfidence = $this->settings->array('discovery')['min_profile_confidence'];
+
         return TargetProfile::create([
             'project_id' => $project->id,
             'name' => $name,
@@ -89,7 +95,13 @@ class DeriveTargetProfiles
             // is has to be queryable on the row itself.
             'criteria' => collect($profile)->except(['name', 'type'])->all(),
             'source' => TargetProfileSource::Agent,
-            'is_active' => true,
+
+            // Below the floor, the model itself was not confident about this
+            // guess: it lands visibly off rather than silently spending budget
+            // on the next scheduler tick. `ContinueDiscovery` enforces the same
+            // rule independently, but a profile a human never has to notice is
+            // worth more than one they have to catch mid-run.
+            'is_active' => $confidence === null || $confidence >= $minConfidence,
         ]);
     }
 

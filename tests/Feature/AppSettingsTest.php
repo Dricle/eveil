@@ -207,13 +207,18 @@ it('suggests the models a provider names for itself, without fixing the choice',
 
 it('saves the tunable limits', function () {
     $this->actingAs(superAdmin())
-        ->put(route('app-settings.limits.update'), limitPayload(['discovery_max_companies' => 12, 'crawl_delay_ms' => 900]))
+        ->put(route('app-settings.limits.update'), limitPayload([
+            'discovery_max_companies' => 12,
+            'discovery_min_profile_confidence' => 75,
+            'crawl_delay_ms' => 900,
+        ]))
         ->assertRedirect(route('app-settings.limits.edit'));
 
     expect(app(Settings::class)->array('discovery')['max_companies'])->toBe(12)
+        ->and(app(Settings::class)->array('discovery')['min_profile_confidence'])->toBe(75)
         ->and(app(Settings::class)->int('crawl.delay_ms'))->toBe(900)
-        // The other three budgets are spent against each other inside one run,
-        // so writing one must not drop the rest.
+        // The other budgets are spent against each other inside one run, so
+        // writing one must not drop the rest.
         ->and(app(Settings::class)->array('discovery')['max_queries'])->toBe(12);
 });
 
@@ -323,6 +328,7 @@ function limitPayload(array $overrides = []): array
         'discovery_max_qualified' => 25,
         'discovery_max_pages' => 60,
         'discovery_max_queries' => 12,
+        'discovery_min_profile_confidence' => 60,
         'crawl_max_pages' => 15,
         'crawl_delay_ms' => 500,
         'crawl_cache_ttl_days' => 7,

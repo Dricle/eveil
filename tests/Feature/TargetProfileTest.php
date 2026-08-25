@@ -143,6 +143,50 @@ it('keeps what the model reported about itself when the user corrects a profile'
         ->and($profile->source)->toBe(TargetProfileSource::Human);
 });
 
+it('flags a low-confidence agent profile as needing review, and a confident one as not', function () {
+    $user = targeter();
+    $project = Project::factory()->for($user->organizations()->sole())->create();
+
+    $shaky = TargetProfile::factory()->create([
+        'project_id' => $project->id,
+        'source' => TargetProfileSource::Agent,
+        'is_active' => false,
+        'criteria' => ['confidence' => 20],
+    ]);
+
+    $confident = TargetProfile::factory()->create([
+        'project_id' => $project->id,
+        'source' => TargetProfileSource::Agent,
+        'is_active' => true,
+        'criteria' => ['confidence' => 90],
+    ]);
+
+    $this->actingAs($user)->get(route('targets.show', $shaky))
+        ->assertInertia(fn ($page) => $page->where('profile.needs_review', true)->where('profile.confidence', 20));
+
+    $this->actingAs($user)->get(route('targets.show', $confident))
+        ->assertInertia(fn ($page) => $page->where('profile.needs_review', false)->where('profile.confidence', 90));
+});
+
+it('clears the review flag once a human edits a shaky profile', function () {
+    $user = targeter();
+    $project = Project::factory()->for($user->organizations()->sole())->create();
+
+    $shaky = TargetProfile::factory()->create([
+        'project_id' => $project->id,
+        'source' => TargetProfileSource::Agent,
+        'is_active' => false,
+        'criteria' => ['confidence' => 20],
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('targets.update', $shaky), profileForm(['is_active' => true]))
+        ->assertRedirect(route('targets.show', $shaky));
+
+    $this->actingAs($user)->get(route('targets.show', $shaky))
+        ->assertInertia(fn ($page) => $page->where('profile.needs_review', false));
+});
+
 it('refuses to save a profile with no name', function () {
     $user = targeter();
     Project::factory()->for($user->organizations()->sole())->create();

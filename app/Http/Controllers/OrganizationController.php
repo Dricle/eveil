@@ -2,11 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Cloud\Actions\GrantTrialCredits;
-use App\Enums\OrganizationRole;
+use App\Actions\CreateOrganization;
 use App\Http\Requests\OrganizationRequest;
 use App\Http\Resources\OrganizationResource;
-use App\Models\Organization;
 use App\Support\CurrentProject;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -30,15 +28,9 @@ class OrganizationController extends Controller
         return Inertia::render('organizations/Create');
     }
 
-    public function store(OrganizationRequest $request, GrantTrialCredits $grantTrialCredits): RedirectResponse
+    public function store(OrganizationRequest $request, CreateOrganization $createOrganization): RedirectResponse
     {
-        $organization = Organization::create($request->validated());
-
-        $organization->users()->attach($request->user(), ['role' => OrganizationRole::Owner->value]);
-
-        if (config('eveil.edition') === 'cloud') {
-            $grantTrialCredits->handle($organization);
-        }
+        $organization = $createOrganization->handle($request->validated('name'), $request->user());
 
         return to_route('projects.create', ['organization_id' => $organization->id]);
     }

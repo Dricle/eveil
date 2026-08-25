@@ -38,6 +38,20 @@ it('creates the super admin and their organization at setup', function () {
     $this->assertAuthenticatedAs($user);
 });
 
+it('grants trial credits at setup too, on the cloud edition', function () {
+    config()->set('eveil.edition', 'cloud');
+
+    $this->post(route('setup'), [
+        'name' => 'Ada',
+        'organization' => 'Acme Tools',
+        'email' => 'ada@example.test',
+        'password' => 'correct-horse-battery',
+        'password_confirmation' => 'correct-horse-battery',
+    ])->assertSessionHasNoErrors();
+
+    expect(Organization::query()->sole()->credits_balance)->toBeGreaterThan(0);
+});
+
 it('refuses a second setup once an account exists', function () {
     User::factory()->create();
 
@@ -206,6 +220,40 @@ it('registers a user with their own organization when sign-ups are open', functi
     $this->assertAuthenticatedAs($user);
 
     Notification::assertSentTo($user, VerifyEmail::class);
+});
+
+it('grants trial credits to a freshly registered organization on the cloud edition', function () {
+    config()->set('eveil.edition', 'cloud');
+
+    $this->post(route('register.store'), [
+        'name' => 'Ada',
+        'organization' => 'Acme Tools',
+        'email' => 'ada@example.test',
+        'password' => 'correct-horse-battery',
+        'password_confirmation' => 'correct-horse-battery',
+    ])->assertSessionHasNoErrors();
+
+    $organization = Organization::query()->sole();
+
+    // The FIRST organization every user gets, via `CreateAccount` — not the
+    // "add another organization" path `OrganizationController::store()`
+    // covers, which is the only one this was ever wired into before.
+    expect($organization->credits_balance)->toBeGreaterThan(0)
+        ->and($organization->isOnTrial())->toBeTrue();
+});
+
+it('grants no credits at all on self-hosted registration', function () {
+    config()->set('eveil.edition', 'self');
+
+    $this->post(route('register.store'), [
+        'name' => 'Ada',
+        'organization' => 'Acme Tools',
+        'email' => 'ada@example.test',
+        'password' => 'correct-horse-battery',
+        'password_confirmation' => 'correct-horse-battery',
+    ]);
+
+    expect(Organization::query()->sole()->credits_balance)->toBe(0);
 });
 
 it('keeps a freshly registered, unverified user off the app until they verify', function () {

@@ -2,8 +2,6 @@
 
 namespace App\Actions;
 
-use App\Enums\OrganizationRole;
-use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
@@ -15,6 +13,8 @@ use Illuminate\Support\Facades\DB;
  */
 class CreateAccount
 {
+    public function __construct(private CreateOrganization $createOrganization) {}
+
     /**
      * @param  array{name: string, email: string, password: string, organization: string}  $data
      */
@@ -36,9 +36,7 @@ class CreateAccount
                 $user->forceFill(['is_super_admin' => true, 'email_verified_at' => now()])->save();
             }
 
-            $organization = Organization::create(['name' => $data['organization']]);
-
-            $organization->users()->attach($user, ['role' => OrganizationRole::Owner->value]);
+            $this->createOrganization->handle($data['organization'], $user);
 
             return $user;
         });

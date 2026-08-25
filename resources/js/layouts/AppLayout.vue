@@ -19,12 +19,19 @@ const page = usePage()
 
 const open = ref(true)
 
+// `active`/`exact` are left to Nuxt UI's own Link component wherever one
+// href is enough: it computes its match from the raw `to` prop in JS, same
+// `page.url` we'd compare against, so a custom check here is pure
+// duplication. Targets is the one exception — a discovery run's own page
+// lives at a DIFFERENT top-level path (`/app/discovery-runs/{id}`, not
+// nested under `/app/targets`), which no single href/exact combination can
+// express, so it keeps an explicit check.
 const items = computed<NavigationMenuItem[]>(() => [
     {
         label: 'Dashboard',
         icon: 'i-lucide-house',
         to: dashboard.url(),
-        active: page.url === dashboard.url()
+        exact: true
     },
     {
         label: 'Targets',
@@ -35,26 +42,22 @@ const items = computed<NavigationMenuItem[]>(() => [
     {
         label: 'Leads',
         icon: 'i-lucide-building-2',
-        to: companies.index.url(),
-        active: page.url.startsWith(companies.index.url())
+        to: companies.index.url()
     },
     {
         label: 'Campaigns',
         icon: 'i-lucide-send',
-        to: campaigns.index.url(),
-        active: page.url.startsWith(campaigns.index.url())
+        to: campaigns.index.url()
     },
     {
         label: 'Inbox',
         icon: 'i-lucide-inbox',
-        to: inbox.url(),
-        active: page.url.startsWith(inbox.url())
+        to: inbox.url()
     },
     {
         label: 'Settings',
         icon: 'i-lucide-settings',
-        to: projectSettings.edit.url(),
-        active: page.url.startsWith('/app/settings')
+        to: projectSettings.edit.url()
     }
 ])
 

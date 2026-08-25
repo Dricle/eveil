@@ -73,7 +73,7 @@ Route::middleware('guest')->group(function (): void {
 Route::get('invitations/accept', [InvitationController::class, 'show'])->name('invitations.accept');
 Route::post('invitations/accept', [InvitationController::class, 'store']);
 
-Route::middleware(['auth', 'project.set'])->group(function (): void {
+Route::middleware(['auth', 'verified', 'project.set'])->group(function (): void {
     /*
      * Switching projects and creating one are the two things reachable without
      * a project already selected. Everything else would have nothing to show.

@@ -55,10 +55,17 @@ class AcceptInvitation
             throw ValidationException::withMessages(['name' => ["An account already exists for {$email}. Log in, then open the invitation link again."]]);
         }
 
-        return User::create([
+        $user = User::create([
             'name' => $data['name'],
             'email' => $email,
             'password' => $data['password'],
         ]);
+
+        // Clicking a signed link mailed to this exact address already proves
+        // ownership of it: asking them to then also click a SECOND link, from
+        // a second email, to verify the same address would be pure friction.
+        $user->forceFill(['email_verified_at' => now()])->save();
+
+        return $user;
     }
 }

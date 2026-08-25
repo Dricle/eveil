@@ -28,7 +28,12 @@ class CreateAccount
             ]);
 
             if ($isSuperAdmin) {
-                $user->forceFill(['is_super_admin' => true])->save();
+                // The super admin is whoever ran the setup screen or set
+                // ADMIN_EMAIL on their own box: nobody is confirming an
+                // address for them. A public registration is the one path
+                // where the address is a stranger's claim, and that is the
+                // one case `MustVerifyEmail` exists to cover.
+                $user->forceFill(['is_super_admin' => true, 'email_verified_at' => now()])->save();
             }
 
             $organization = Organization::create(['name' => $data['organization']]);

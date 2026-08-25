@@ -17,6 +17,9 @@ it('creates the first super admin from the environment', function () {
 
     expect($user->email)->toBe('clement@abcreche.test')
         ->and($user->is_super_admin)->toBeTrue()
+        // Whoever ran this owns the box; nobody is confirming an address
+        // for them.
+        ->and($user->email_verified_at)->not->toBeNull()
         // Self-hosted runs the same organization code path as cloud: a user
         // without one can own nothing and dies on the first project.
         ->and($user->organizations()->sole()->name)->toBe('ABCreche');

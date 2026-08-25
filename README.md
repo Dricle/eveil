@@ -40,6 +40,10 @@ Leave `APP_KEY` and `CREDENTIALS_KEY` empty: they are generated on first boot.
 Fill them in only if you would rather manage them yourself; anything set there
 wins.
 
+Leave the `MAIL_*` block for later too — the app boots without it, but
+password resets, member invitations and email verification need it filled in
+before they can actually send. See [Email (SMTP)](#email-smtp) below.
+
 Then bring it up:
 
 ```bash
@@ -106,6 +110,33 @@ get it wrong and password-reset mails point somewhere that does not answer. The
 app deliberately does not read `X-Forwarded-*` to work the address out instead:
 a client able to reach it directly could then choose the host those links point
 at. `APP_URL` is the single answer, and it is yours to give.
+
+### Email (SMTP)
+
+The app sends its own mail for three things: password resets, member
+invitations and, if sign-ups are open, verifying a new account's address.
+**Not** the outreach sender — campaigns go out through the mailboxes
+connected inside the app, over their own SMTP, configured separately in
+Settings → Mailboxes.
+
+`.env` ships with `MAIL_MAILER=smtp` and the rest of the `MAIL_*` block
+empty, which is enough to boot but not enough to actually send anything.
+Fill in the usual six:
+
+```
+MAIL_MAILER=smtp
+MAIL_HOST=
+MAIL_PORT=587
+MAIL_USERNAME=
+MAIL_PASSWORD=
+MAIL_FROM_ADDRESS="eveil@yourdomain.com"
+```
+
+Any SMTP-compatible provider works — Postmark, Mailgun, Amazon SES, Brevo,
+Cloudflare, a Google Workspace or Microsoft 365 mailbox, or a mail server you
+already run: it is Laravel's own mail configuration underneath, nothing
+Eveil-specific to it. Whichever you pick, send yourself a password-reset mail
+once things are up to confirm it actually left.
 
 ### Keys and backups
 

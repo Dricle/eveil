@@ -4,6 +4,7 @@ use App\Enums\OrganizationRole;
 use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use PragmaRX\Google2FA\Google2FA;
@@ -23,7 +24,10 @@ it('creates the super admin and their organization at setup', function () {
 
     $user = User::query()->sole();
 
-    expect($user->is_super_admin)->toBeTrue();
+    expect($user->is_super_admin)->toBeTrue()
+        // Whoever ran the setup screen owns the box; nobody is confirming
+        // an address for them.
+        ->and($user->email_verified_at)->not->toBeNull();
 
     $organization = Organization::query()->sole();
 
@@ -180,6 +184,8 @@ it('does not register the sign-up routes when sign-ups are closed', function () 
 });
 
 it('registers a user with their own organization when sign-ups are open', function () {
+    Notification::fake();
+
     $this->post(route('register.store'), [
         'name' => 'Ada',
         'organization' => 'Acme Tools',
@@ -192,9 +198,55 @@ it('registers a user with their own organization when sign-ups are open', functi
     $organization = Organization::query()->sole();
 
     expect($user->is_super_admin)->toBeFalse()
-        ->and($organization->roleOf($user))->toBe(OrganizationRole::Owner);
+        ->and($organization->roleOf($user))->toBe(OrganizationRole::Owner)
+        // A stranger's claim on an address, unlike setup or an accepted
+        // invitation: this is the one path `MustVerifyEmail` exists for.
+        ->and($user->email_verified_at)->toBeNull();
 
     $this->assertAuthenticatedAs($user);
+
+    Notification::assertSentTo($user, VerifyEmail::class);
+});
+
+it('keeps a freshly registered, unverified user off the app until they verify', function () {
+    Notification::fake();
+
+    $this->post(route('register.store'), [
+        'name' => 'Ada',
+        'organization' => 'Acme Tools',
+        'email' => 'ada@example.test',
+        'password' => 'correct-horse-battery',
+        'password_confirmation' => 'correct-horse-battery',
+    ]);
+
+    $user = User::query()->sole();
+
+    $this->get(route('dashboard'))->assertRedirect(route('verification.notice'));
+
+    // Resending doesn't verify anything by itself, just proves the guard
+    // above didn't block the one route an unverified user needs.
+    $this->post(route('verification.send'))->assertSessionHasNoErrors();
+    Notification::assertSentToTimes($user, VerifyEmail::class, 2);
+    // The 2nd is the resend above; the 1st came from registering, sent by
+    // Laravel's own default wiring for the `Registered` event, not
+    // anything this app registers itself.
+
+    // `assertSentTo`'s callback runs once per matching notification sent
+    // (two by now), so clicking the link from inside it would fire the
+    // click twice; pull the most recent one out and click it on its own.
+    $verifyUrl = Notification::sent($user, VerifyEmail::class)->last()->toMail($user)->actionUrl;
+
+    // No `?verified=1`: hitting the dashboard unverified, above, already
+    // stored it as the session's "intended" URL (`Redirect::guest()` does
+    // that), and `redirect()->intended()` prefers it over Fortify's own
+    // fallback.
+    $this->get($verifyUrl)->assertRedirect(route('dashboard'));
+
+    expect($user->fresh()->hasVerifiedEmail())->toBeTrue();
+
+    // Past the `verified` gate now: a fresh organization with no project of
+    // its own yet redirects to create one, a different reason than before.
+    $this->get(route('dashboard'))->assertRedirect(route('projects.create'));
 });
 
 it('gives two organizations of the same name distinct slugs', function () {

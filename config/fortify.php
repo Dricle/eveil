@@ -150,7 +150,12 @@ return [
         // the routes are never registered, so `/app/register` is a genuine 404.
         env('REGISTRATION_ENABLED', true) ? Features::registration() : null,
         Features::resetPasswords(),
-        // Features::emailVerification(),
+        // Only a public self-registration ever lands unverified: the setup
+        // screen, `eveil:install` and an accepted invitation all mark the
+        // address verified at creation, since none of those is a stranger
+        // claiming an address nobody has confirmed (`CreateAccount`,
+        // `AcceptInvitation`).
+        Features::emailVerification(),
         Features::updateProfileInformation(),
         Features::updatePasswords(),
         Features::twoFactorAuthentication([

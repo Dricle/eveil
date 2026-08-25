@@ -26,7 +26,11 @@ it('creates the account and joins as a guest', function () {
 
     $user = User::query()->where('email', 'newbie@example.test')->sole();
 
-    expect($organization->roleOf($user))->toBe(OrganizationRole::Admin);
+    expect($organization->roleOf($user))->toBe(OrganizationRole::Admin)
+        // Clicking a signed link mailed to this exact address already
+        // proves ownership of it; a second verification email would be
+        // pure friction.
+        ->and($user->email_verified_at)->not->toBeNull();
 
     $this->assertAuthenticatedAs($user);
 });

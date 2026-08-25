@@ -70,6 +70,15 @@ class TargetProfileDeriver extends EveilAgent implements HasStructuredOutput
         sectors, geographies or competitors, use them. Do not invent a market the
         product shows no sign of serving.
 
+        Confidence asks a narrower question than it looks: would someone who knows this
+        market immediately recognise the profile as correct and searchable, not whether
+        the product's own site spells the buyer out in those words. Most sites describe
+        what they do, not who exactly buys it, so reason from the product, its price,
+        the examples it gives and ordinary market logic, the way you would advising a
+        founder over coffee. A profile you would tell that founder to start searching for
+        today deserves 70 or above. Reserve anything below 50 for a real guess: a market
+        the portrait only hints at, or one you are inventing more than reading.
+
         Write the profiles in the language of the product's own market, not in English,
         unless the market is English-speaking.
         PROMPT.$this->projectInstructions();
@@ -135,7 +144,7 @@ class TargetProfileDeriver extends EveilAgent implements HasStructuredOutput
                     ->required(),
 
                 'confidence' => $schema->integer()->min(0)->max(100)
-                    ->description('How well the portrait supported this profile, rather than how attractive it looks.')
+                    ->description('0-100. Would someone who knows this market recognise it as correct and searchable today? Not whether the site literally names the buyer.')
                     ->required(),
             ]))->required(),
         ];

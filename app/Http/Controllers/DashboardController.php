@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Cloud\Models\CreditTransaction;
 use App\Enums\CampaignStatus;
 use App\Enums\MessageDirection;
 use App\Enums\ReplyClassification;
@@ -24,9 +25,11 @@ use Inertia\Response;
  * `messages` rather than from campaign state, because a mail that left is a fact
  * and a status is a summary.
  *
- * Token counts, never money: no provider reports a price, so a figure in euros
- * would be our own arithmetic against a number that drifts. Wrong quietly, in
- * a column that looks authoritative.
+ * Tokens on self-hosted, credits spent on cloud, never both and never a
+ * conversion between them shown to the user: a self-hosted operator pays
+ * their own provider and wants token counts; a cloud customer is billed in
+ * credits and must never see a token count or a model name, whatever it
+ * would convert to.
  */
 class DashboardController extends Controller
 {
@@ -58,8 +61,17 @@ class DashboardController extends Controller
                     ->whereHas('campaign')
                     ->where('pause_reason', 'awaiting_human')
                     ->count(),
-                'tokens_in' => (int) AgentRun::query()->sum('tokens_in'),
-                'tokens_out' => (int) AgentRun::query()->sum('tokens_out'),
+                ...(config('eveil.edition') === 'cloud'
+                    ? [
+                        'credits_spent' => abs((int) CreditTransaction::query()
+                            ->where('type', 'debit')
+                            ->whereHas('agentRun')
+                            ->sum('credits')),
+                    ]
+                    : [
+                        'tokens_in' => (int) AgentRun::query()->sum('tokens_in'),
+                        'tokens_out' => (int) AgentRun::query()->sum('tokens_out'),
+                    ]),
             ],
             // The funnel: how far the people in sequences have actually got.
             'pipeline' => CampaignLead::query()

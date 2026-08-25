@@ -152,12 +152,23 @@ function when (value: string | null) {
                         <span class="text-dimmed">{{ run.status }} · {{ when(run.at) }}</span>
                     </div>
 
-                    <!-- Tokens, never money: no provider reports a price, so a
-                         figure in euros would be our own arithmetic against a
-                         number that drifts. -->
-                    <p class="border-t border-default pt-2 text-xs text-dimmed">
+                    <!-- Self-hosted sees tokens: no provider reports a price,
+                         so a figure in euros would be our own arithmetic
+                         against a number that drifts. Cloud sees credits
+                         spent instead — never a token count, never a model
+                         name. -->
+                    <p
+                        v-if="'tokens_in' in stats"
+                        class="border-t border-default pt-2 text-xs text-dimmed"
+                    >
                         {{ stats.tokens_in.toLocaleString() }} tokens in ·
                         {{ stats.tokens_out.toLocaleString() }} out
+                    </p>
+                    <p
+                        v-else
+                        class="border-t border-default pt-2 text-xs text-dimmed"
+                    >
+                        {{ stats.credits_spent.toLocaleString() }} credits spent
                     </p>
                 </div>
             </div>

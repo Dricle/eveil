@@ -52,6 +52,10 @@ export type Conversation = {
 /** The funnel on the dashboard: how far the people in sequences have got. */
 export type Pipeline = Partial<Record<'pending' | 'running' | 'paused' | 'completed' | 'failed' | 'stopped', number>>
 
+/**
+ * Tokens on self-hosted, credits spent on cloud — never both, and never a
+ * conversion between them: a cloud customer must never see a token count.
+ */
 export type DashboardStats = {
     companies: number
     contacts: number
@@ -63,4 +67,14 @@ export type DashboardStats = {
     awaiting_human: number
     tokens_in: number
     tokens_out: number
+} | {
+    companies: number
+    contacts: number
+    active_campaigns: number
+    sent: number
+    replies: number
+    positive: number
+    positive_rate: number | null
+    awaiting_human: number
+    credits_spent: number
 }

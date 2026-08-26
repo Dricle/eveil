@@ -49,6 +49,11 @@ class ProjectRequest extends FormRequest
             // as little as possible, and house style is something you write
             // once you have read what the agent produces without it.
             'prompt_instructions' => ['nullable', 'string', 'max:2000'],
+            // Edit screen only. Never sent back to the browser, so a blank
+            // submission means "keep the one stored", not "remove it" —
+            // `prepareForValidation()` below drops the key entirely rather
+            // than let it validate to null and overwrite what is there.
+            'github_token' => ['nullable', 'string', 'max:255'],
             // Edit screen only, like the instructions above: how much a project
             // is left to do by itself is a decision you take once you have
             // watched it work, not one you can make before it has run.
@@ -87,6 +92,16 @@ class ProjectRequest extends FormRequest
 
         if (is_string($url)) {
             $this->merge(['url' => Url::fromInput($url)]);
+        }
+
+        // Blank is not a token, same reasoning as `MailboxRequest`'s
+        // passwords. Checked against both '' and null: Laravel's global
+        // `ConvertEmptyStringsToNull` middleware turns a blank field into
+        // null before this ever runs. Removed from the input bag entirely,
+        // not just set to null, so `validated()` never carries the key and
+        // `fill()` leaves the stored token alone.
+        if ($this->input('github_token') === '' || $this->input('github_token') === null) {
+            $this->getInputSource()->remove('github_token');
         }
     }
 }

@@ -21,6 +21,7 @@ class ReadRepoFile implements Tool
         private string $owner,
         private string $repo,
         private string $branch,
+        private ?string $githubToken = null,
     ) {}
 
     public function description(): Stringable|string
@@ -36,7 +37,7 @@ class ReadRepoFile implements Tool
     {
         $path = trim((string) ($request['path'] ?? ''), '/');
 
-        $text = $this->reader->file($this->owner, $this->repo, $this->branch, $path);
+        $text = $this->reader->file($this->owner, $this->repo, $this->branch, $path, $this->githubToken);
 
         return $text ?? "Could not read \"{$path}\": missing, binary, or too large.";
     }

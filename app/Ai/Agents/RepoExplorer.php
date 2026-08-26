@@ -38,6 +38,7 @@ class RepoExplorer extends EveilAgent implements HasStructuredOutput, HasTools
         private string $repo,
         private string $branch,
         private Collection $paths,
+        private ?string $githubToken = null,
     ) {
         parent::__construct($project);
     }
@@ -74,7 +75,7 @@ class RepoExplorer extends EveilAgent implements HasStructuredOutput, HasTools
     {
         return [
             new ListRepoPaths($this->paths),
-            new ReadRepoFile($this->reader, $this->owner, $this->repo, $this->branch),
+            new ReadRepoFile($this->reader, $this->owner, $this->repo, $this->branch, $this->githubToken),
         ];
     }
 

@@ -130,6 +130,8 @@ watch(() => props.project, fill, { immediate: true, deep: true })
                     <p class="mt-1 text-sm text-muted">
                         Source often names capabilities the site never mentions, or
                         contradicts something it oversells. GitHub only, for now.
+                        A private repository needs a token saved on the Project
+                        settings page first.
                         "Deep analysis" lets the model roam the repo itself instead of
                         reading a handful of fixed files — slower and more expensive,
                         worth it for a repo the quick read left thin.

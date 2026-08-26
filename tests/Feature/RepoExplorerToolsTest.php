@@ -53,3 +53,17 @@ it('explains rather than errors when a file cannot be read', function () {
 
     expect($result)->toContain('Could not read');
 });
+
+it('reads a private repo file through the authenticated Contents API', function () {
+    Http::fake([
+        'https://api.github.com/repos/acme/widgets/contents/README.md*' => Http::response('# Private'),
+    ]);
+
+    $tool = new ReadRepoFile(app(RepoReader::class), 'acme', 'widgets', 'main', 'ghp_secret');
+
+    $result = (string) $tool->handle(new Request(['path' => 'README.md']));
+
+    expect($result)->toBe('# Private');
+
+    Http::assertSent(fn ($request): bool => $request->hasHeader('Authorization', 'Bearer ghp_secret'));
+});

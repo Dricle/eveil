@@ -101,3 +101,38 @@ it('returns null for a file that cannot be read', function () {
 
     expect(app(RepoReader::class)->file('acme', 'widgets', 'main', 'gone.md'))->toBeNull();
 });
+
+it('sends the token as a bearer header on every GitHub request, when given one', function () {
+    fakeGithub([], [
+        'https://api.github.com/repos/acme/widgets/contents/README.md*' => Http::response('# Widgets'),
+    ]);
+
+    app(RepoReader::class)->resolve('https://github.com/acme/widgets', 'ghp_secret');
+    app(RepoReader::class)->file('acme', 'widgets', 'main', 'README.md', 'ghp_secret');
+
+    Http::assertSent(fn ($request): bool => $request->url() === 'https://api.github.com/repos/acme/widgets'
+        && $request->hasHeader('Authorization', 'Bearer ghp_secret'));
+
+    Http::assertSent(fn ($request): bool => str_starts_with($request->url(), 'https://api.github.com/repos/acme/widgets/contents/README.md')
+        && $request->hasHeader('Authorization', 'Bearer ghp_secret'));
+});
+
+it('reads a file through the Contents API instead of the CDN once a token is given', function () {
+    Http::fake([
+        'https://api.github.com/repos/acme/widgets/contents/README.md*' => Http::response('# Private widgets'),
+    ]);
+
+    $text = app(RepoReader::class)->file('acme', 'widgets', 'main', 'README.md', 'ghp_secret');
+
+    expect($text)->toBe('# Private widgets');
+
+    Http::assertNotSent(fn ($request): bool => str_contains($request->url(), 'raw.githubusercontent.com'));
+});
+
+it('never sends a token when none is given', function () {
+    fakeGithub();
+
+    app(RepoReader::class)->resolve('https://github.com/acme/widgets');
+
+    Http::assertSent(fn ($request): bool => ! $request->hasHeader('Authorization'));
+});

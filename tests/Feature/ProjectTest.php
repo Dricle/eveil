@@ -232,6 +232,48 @@ it('saves the throttle on continuous discovery', function () {
         ->lead_limit->toBe(10000);
 });
 
+it('stores a github token but never sends it back to the browser', function () {
+    reachable();
+
+    $user = member();
+    $project = Project::factory()->for($user->organizations()->sole())->create(['url' => 'https://acme.test/']);
+
+    $this->actingAs($user)
+        ->put(route('settings.project.update'), [
+            'name' => $project->name,
+            'url' => $project->url,
+            'github_token' => 'ghp_secret',
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($project->fresh()->github_token)->toBe('ghp_secret');
+
+    $this->actingAs($user)->get(route('settings.project.edit'))
+        ->assertInertia(fn ($page) => $page->missing('project.github_token'));
+});
+
+it('keeps the stored github token when the field is left blank', function () {
+    reachable();
+
+    $user = member();
+    $project = Project::factory()->for($user->organizations()->sole())->create([
+        'url' => 'https://acme.test/',
+        'github_token' => 'ghp_secret',
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('settings.project.update'), [
+            'name' => 'Renamed',
+            'url' => $project->url,
+            'github_token' => '',
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($project->fresh())
+        ->name->toBe('Renamed')
+        ->github_token->toBe('ghp_secret');
+});
+
 it('refuses a lead limit that could never be reached', function () {
     reachable();
 

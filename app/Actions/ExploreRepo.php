@@ -43,7 +43,8 @@ class ExploreRepo
             'status' => AnalysisStatus::Running,
         ]);
 
-        $resolved = $this->reader->resolve($codeRepository->url);
+        $token = $project->github_token;
+        $resolved = $this->reader->resolve($codeRepository->url, $token);
 
         if ($resolved === null) {
             $analysis->update(['status' => AnalysisStatus::Failed, 'error' => 'Not a GitHub repository URL, or GitHub could not be reached.']);
@@ -51,7 +52,7 @@ class ExploreRepo
             return $analysis;
         }
 
-        $paths = $this->reader->paths($resolved['owner'], $resolved['repo'], $resolved['branch']);
+        $paths = $this->reader->paths($resolved['owner'], $resolved['repo'], $resolved['branch'], $token);
 
         try {
             /** @var StructuredAgentResponse $response */
@@ -62,6 +63,7 @@ class ExploreRepo
                 $resolved['repo'],
                 $resolved['branch'],
                 $paths,
+                $token,
             ))->prompt($this->prompt($codeRepository, $paths));
         } catch (Throwable $e) {
             $analysis->update(['status' => AnalysisStatus::Failed, 'error' => $e->getMessage()]);

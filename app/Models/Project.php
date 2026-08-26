@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use App\Casts\EncryptedCredential;
 use App\Enums\AutonomyLevel;
 use App\Enums\OrganizationRole;
 use Database\Factories\ProjectFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -23,6 +25,7 @@ use Illuminate\Support\Carbon;
  * @property int $organization_id
  * @property string $name
  * @property string $url
+ * @property string|null $github_token
  * @property array<string, mixed>|null $knowledge_base
  * @property bool $knowledge_base_edited_by_user
  * @property string|null $default_language
@@ -33,7 +36,8 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['organization_id', 'name', 'url', 'knowledge_base', 'knowledge_base_edited_by_user', 'default_language', 'prompt_instructions', 'autonomy_level', 'daily_lead_limit', 'lead_limit'])]
+#[Fillable(['organization_id', 'name', 'url', 'github_token', 'knowledge_base', 'knowledge_base_edited_by_user', 'default_language', 'prompt_instructions', 'autonomy_level', 'daily_lead_limit', 'lead_limit'])]
+#[Hidden(['github_token'])]
 class Project extends Model
 {
     /** @use HasFactory<ProjectFactory> */
@@ -251,6 +255,7 @@ class Project extends Model
             'knowledge_base' => 'array',
             'knowledge_base_edited_by_user' => 'boolean',
             'autonomy_level' => AutonomyLevel::class,
+            'github_token' => EncryptedCredential::class,
         ];
     }
 }

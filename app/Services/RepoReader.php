@@ -14,11 +14,14 @@ use Throwable;
  * beside `SiteCrawler` rather than under `Discovery` — same reasoning
  * `HtmlText`/`ParsedPage` live in `Support`.
  *
- * GitHub only, unauthenticated: no token infrastructure exists anywhere in
- * the app, and reading a handful of files from a public repo needs none.
- * The unauthenticated rate limit (~60 requests/hour/IP) is a real ceiling on
- * how often this can run, not a correctness concern — the same tone as the
- * SearXNG note about watching for rate-limits.
+ * GitHub only. Unauthenticated by default — reading a handful of files from
+ * a public repo needs no token, and the unauthenticated rate limit (~60
+ * requests/hour/IP) is a real ceiling on how often this can run, not a
+ * correctness concern, the same tone as the SearXNG note about watching for
+ * rate-limits. Every method takes an optional per-project token
+ * (`Project::$github_token`) for the one thing an unauthenticated request
+ * cannot do at all: GitHub answers 404 for a private repo either way, which
+ * is indistinguishable from "does not exist" without one.
  */
 class RepoReader
 {
@@ -38,7 +41,7 @@ class RepoReader
      * @return Collection<int, array{path: string, text: string}>|null null
      *                                                                 when the URL is not a GitHub repo, or GitHub could not be reached
      */
-    public function read(string $url, ?string &$reason = null): ?Collection
+    public function read(string $url, ?string &$reason = null, ?string $token = null): ?Collection
     {
         $reason = null;
         $parsed = CodeRepository::parseGithubUrl($url);
@@ -51,7 +54,7 @@ class RepoReader
 
         [$owner, $repo] = $parsed;
 
-        $meta = $this->fetchJson("https://api.github.com/repos/{$owner}/{$repo}");
+        $meta = $this->fetchJson("https://api.github.com/repos/{$owner}/{$repo}", $token);
 
         if ($meta === null) {
             $reason = "Could not read {$owner}/{$repo} from GitHub.";
@@ -60,14 +63,14 @@ class RepoReader
         }
 
         $branch = is_string($meta['default_branch'] ?? null) ? $meta['default_branch'] : 'main';
-        $tree = $this->fetchJson("https://api.github.com/repos/{$owner}/{$repo}/git/trees/{$branch}?recursive=1");
+        $tree = $this->fetchJson("https://api.github.com/repos/{$owner}/{$repo}/git/trees/{$branch}?recursive=1", $token);
 
         $paths = collect(is_array($tree['tree'] ?? null) ? $tree['tree'] : [])
             ->map(fn (mixed $entry): mixed => is_array($entry) ? ($entry['path'] ?? null) : null)
             ->filter(fn (mixed $path): bool => is_string($path));
 
         $files = $this->selectPaths($paths, $this->settings->int('repo.max_files'))
-            ->map(fn (string $path): ?array => $this->fetchRaw($owner, $repo, $branch, $path))
+            ->map(fn (string $path): ?array => $this->fetchRaw($owner, $repo, $branch, $path, $token))
             ->filter()
             ->values();
 
@@ -81,7 +84,7 @@ class RepoReader
      *
      * @return array{owner: string, repo: string, branch: string}|null
      */
-    public function resolve(string $url): ?array
+    public function resolve(string $url, ?string $token = null): ?array
     {
         $parsed = CodeRepository::parseGithubUrl($url);
 
@@ -91,7 +94,7 @@ class RepoReader
 
         [$owner, $repo] = $parsed;
 
-        $meta = $this->fetchJson("https://api.github.com/repos/{$owner}/{$repo}");
+        $meta = $this->fetchJson("https://api.github.com/repos/{$owner}/{$repo}", $token);
 
         if ($meta === null) {
             return null;
@@ -109,9 +112,9 @@ class RepoReader
      *
      * @return Collection<int, string>
      */
-    public function paths(string $owner, string $repo, string $branch): Collection
+    public function paths(string $owner, string $repo, string $branch, ?string $token = null): Collection
     {
-        $tree = $this->fetchJson("https://api.github.com/repos/{$owner}/{$repo}/git/trees/{$branch}?recursive=1");
+        $tree = $this->fetchJson("https://api.github.com/repos/{$owner}/{$repo}/git/trees/{$branch}?recursive=1", $token);
 
         return collect(is_array($tree['tree'] ?? null) ? $tree['tree'] : [])
             ->map(fn (mixed $entry): mixed => is_array($entry) ? ($entry['path'] ?? null) : null)
@@ -124,9 +127,9 @@ class RepoReader
      * Null covers missing, binary-rejected and over-budget alike: the tool
      * only needs to tell the model "could not read this", not why.
      */
-    public function file(string $owner, string $repo, string $branch, string $path): ?string
+    public function file(string $owner, string $repo, string $branch, string $path, ?string $token = null): ?string
     {
-        return $this->fetchRaw($owner, $repo, $branch, $path)['text'] ?? null;
+        return $this->fetchRaw($owner, $repo, $branch, $path, $token)['text'] ?? null;
     }
 
     /**
@@ -167,12 +170,13 @@ class RepoReader
     /**
      * @return array<string, mixed>|null
      */
-    private function fetchJson(string $url): ?array
+    private function fetchJson(string $url, ?string $token = null): ?array
     {
         try {
             $response = Http::withHeaders([
                 'User-Agent' => (string) config('eveil.crawl.user_agent'),
                 'Accept' => 'application/vnd.github+json',
+                ...$this->authHeader($token),
             ])->timeout((int) config('eveil.crawl.timeout'))->get($url);
         } catch (Throwable) {
             return null;
@@ -188,16 +192,27 @@ class RepoReader
     }
 
     /**
+     * Public repos go straight to the CDN, same as always. A token switches
+     * the request to the Contents API instead: raw.githubusercontent.com
+     * does not honour an Authorization header for a private repo, so that
+     * path stays 404 there no matter what is sent, while the API's own
+     * "give me the file body, not JSON" media type does the same job once
+     * authenticated.
+     *
      * @return array{path: string, text: string}|null
      */
-    private function fetchRaw(string $owner, string $repo, string $branch, string $path): ?array
+    private function fetchRaw(string $owner, string $repo, string $branch, string $path, ?string $token = null): ?array
     {
-        $url = "https://raw.githubusercontent.com/{$owner}/{$repo}/{$branch}/{$path}";
+        $url = $token === null
+            ? "https://raw.githubusercontent.com/{$owner}/{$repo}/{$branch}/{$path}"
+            : "https://api.github.com/repos/{$owner}/{$repo}/contents/{$path}?ref={$branch}";
 
         try {
-            $response = Http::withHeaders(['User-Agent' => (string) config('eveil.crawl.user_agent')])
-                ->timeout((int) config('eveil.crawl.timeout'))
-                ->get($url);
+            $response = Http::withHeaders([
+                'User-Agent' => (string) config('eveil.crawl.user_agent'),
+                ...($token === null ? [] : ['Accept' => 'application/vnd.github.raw']),
+                ...$this->authHeader($token),
+            ])->timeout((int) config('eveil.crawl.timeout'))->get($url);
         } catch (Throwable) {
             return null;
         }
@@ -213,6 +228,14 @@ class RepoReader
         }
 
         return ['path' => $path, 'text' => $this->storable($body)];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function authHeader(?string $token): array
+    {
+        return $token === null ? [] : ['Authorization' => "Bearer {$token}"];
     }
 
     /**

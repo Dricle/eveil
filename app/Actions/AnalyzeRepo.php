@@ -41,7 +41,7 @@ class AnalyzeRepo
         ]);
 
         $reason = null;
-        $files = $this->reader->read($codeRepository->url, $reason);
+        $files = $this->reader->read($codeRepository->url, $reason, $project->github_token);
 
         if ($files === null) {
             $analysis->update(['status' => AnalysisStatus::Failed, 'error' => $reason]);

@@ -24,6 +24,31 @@ export type KnowledgeBase = {
     proof_points: string[]
     language?: string
     confidence?: number
+    repositories?: RepoFindings[]
+    recommendations?: Recommendation[]
+}
+
+/** What `RepoAnalyst` found in one linked repo, folded into the knowledge base. */
+export type RepoFindings = {
+    code_repository_id: number
+    name: string
+    tech_stack: string[]
+    capabilities: string[]
+    notes: string
+    confidence: number
+}
+
+/**
+ * An acquisition lever the product is missing, grounded in specific
+ * evidence (ADR-032, minus its state machine: this list is replaced
+ * wholesale on each re-analysis, nothing is dismissed or done yet).
+ */
+export type Recommendation = {
+    key: string
+    idea: string
+    evidence: string
+    impact: 'high' | 'medium' | 'low'
+    effort: 'high' | 'medium' | 'low'
 }
 
 /**
@@ -38,6 +63,7 @@ export type OpenQuestion = {
 
 export type Analysis = {
     id: number
+    type: 'website' | 'repo'
     status: string
     error: string | null
     failures: { url: string, reason: string }[]
@@ -45,6 +71,14 @@ export type Analysis = {
     pages_planned: number
     running: boolean
     finished_at: string | null
+}
+
+export type CodeRepositoryRow = {
+    id: number
+    name: string
+    url: string
+    provider: string | null
+    last_analysis: Analysis | null
 }
 
 /** Who the search goes after. Everything but the name lives in `criteria`. */
@@ -85,4 +119,5 @@ export type ProjectDetail = Project & {
     knowledge_base: KnowledgeBase | null
     open_questions: OpenQuestion[]
     last_analysis: Analysis | null
+    code_repositories: CodeRepositoryRow[]
 }

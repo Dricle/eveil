@@ -30,6 +30,7 @@ class LimitRequest extends FormRequest
             'crawl_delay_ms' => ['required', 'integer', 'min:100', 'max:60000'],
             'crawl_cache_ttl_days' => ['required', 'integer', 'min:1', 'max:365'],
             'contacts_max_pages' => ['required', 'integer', 'min:1', 'max:50'],
+            'repo_max_files' => ['required', 'integer', 'min:1', 'max:30'],
             'verification_probe' => ['boolean'],
             'verification_timeout' => ['required', 'integer', 'min:1', 'max:60'],
             'searxng_per_query' => ['required', 'integer', 'min:1', 'max:100'],

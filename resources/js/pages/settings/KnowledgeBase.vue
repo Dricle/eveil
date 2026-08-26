@@ -1,19 +1,29 @@
 <script setup lang="ts">
-import { Form, Head, usePoll } from '@inertiajs/vue3'
+import { Form, Head, router, usePoll } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import OpenQuestions from '@/components/OpenQuestions.vue'
 import SettingsLayout from '@/layouts/SettingsLayout.vue'
 import knowledgeBase from '@/routes/settings/knowledge-base'
+import repositories from '@/routes/settings/repositories'
 import type { ProjectDetail } from '@/types'
 
 const props = defineProps<{ project: ProjectDetail }>()
 
+const repoUrl = ref('')
+
 const analysing = computed(() => props.project.last_analysis?.running === true)
 
-// Only while a crawl is out. Nothing else on this page changes on its own.
-const poll = usePoll(3000, { only: ['project'] }, { autoStart: analysing.value })
+// Any repo still reading, not just the site: the same "reading X" banner
+// language, shown for whichever kind is actually in flight.
+const analysingRepo = computed(() =>
+    props.project.code_repositories.some(repo => repo.last_analysis?.running === true))
 
-watch(analysing, busy => busy ? poll.start() : poll.stop())
+// Only while a crawl or a repo read is out. Nothing else on this page
+// changes on its own.
+const busy = computed(() => analysing.value || analysingRepo.value)
+const poll = usePoll(3000, { only: ['project'] }, { autoStart: busy.value })
+
+watch(busy, isBusy => isBusy ? poll.start() : poll.stop())
 
 const TEXTS = [
     { name: 'what_it_does', label: 'What it does', help: 'What the product is, and the problem it removes.' },
@@ -111,6 +121,139 @@ watch(() => props.project, fill, { immediate: true, deep: true })
                 :questions="project.open_questions"
                 title="Open questions"
             />
+
+            <UCard>
+                <template #header>
+                    <h2 class="font-medium">
+                        Code repositories
+                    </h2>
+                    <p class="mt-1 text-sm text-muted">
+                        Source often names capabilities the site never mentions, or
+                        contradicts something it oversells. GitHub only, for now.
+                    </p>
+                </template>
+
+                <div
+                    v-if="!project.code_repositories.length"
+                    class="text-sm text-muted"
+                >
+                    No repository linked yet.
+                </div>
+
+                <div
+                    v-else
+                    class="space-y-2"
+                >
+                    <div
+                        v-for="repo in project.code_repositories"
+                        :key="repo.id"
+                        class="flex items-center justify-between gap-3 rounded-lg bg-elevated p-3 text-sm"
+                    >
+                        <div class="min-w-0">
+                            <a
+                                :href="repo.url"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="truncate font-medium hover:underline"
+                            >{{ repo.name }}</a>
+                            <p class="text-xs text-dimmed">
+                                <template v-if="repo.last_analysis?.running">
+                                    Reading… {{ repo.last_analysis.pages_read }} of up to
+                                    {{ repo.last_analysis.pages_planned }} files
+                                </template>
+                                <template v-else-if="repo.last_analysis?.status === 'failed'">
+                                    {{ repo.last_analysis.error ?? 'Could not be read.' }}
+                                </template>
+                                <template v-else-if="repo.last_analysis">
+                                    Read successfully.
+                                </template>
+                                <template v-else>
+                                    Not read yet.
+                                </template>
+                            </p>
+                        </div>
+
+                        <UButton
+                            type="button"
+                            color="error"
+                            variant="ghost"
+                            icon="i-lucide-trash-2"
+                            size="sm"
+                            @click="router.delete(repositories.destroy.url(repo.id))"
+                        />
+                    </div>
+                </div>
+
+                <template #footer>
+                    <Form
+                        v-slot="{ errors, processing }"
+                        v-bind="repositories.store.form()"
+                        class="flex items-start gap-3"
+                        @success="repoUrl = ''"
+                    >
+                        <UFormField
+                            class="flex-1"
+                            name="url"
+                            :error="errors.url"
+                        >
+                            <UInput
+                                v-model="repoUrl"
+                                name="url"
+                                placeholder="https://github.com/owner/repo"
+                                class="w-full"
+                            />
+                        </UFormField>
+                        <UButton
+                            type="submit"
+                            :loading="processing"
+                            label="Link"
+                        />
+                    </Form>
+                </template>
+            </UCard>
+
+            <UCard v-if="project.knowledge_base?.recommendations?.length">
+                <template #header>
+                    <h2 class="font-medium">
+                        Acquisition ideas
+                    </h2>
+                    <p class="mt-1 text-sm text-muted">
+                        Levers the product is missing, each grounded in something specific
+                        the portrait or the repo actually shows.
+                    </p>
+                </template>
+
+                <div class="space-y-3">
+                    <div
+                        v-for="idea in project.knowledge_base.recommendations"
+                        :key="idea.key"
+                        class="rounded-lg bg-elevated p-3"
+                    >
+                        <div class="flex items-center justify-between gap-2">
+                            <p class="font-medium">
+                                {{ idea.idea }}
+                            </p>
+                            <div class="flex shrink-0 gap-1.5">
+                                <UBadge
+                                    :color="idea.impact === 'high' ? 'success' : idea.impact === 'medium' ? 'warning' : 'neutral'"
+                                    variant="subtle"
+                                    size="sm"
+                                    :label="`${idea.impact} impact`"
+                                />
+                                <UBadge
+                                    :color="idea.effort === 'low' ? 'success' : idea.effort === 'medium' ? 'warning' : 'neutral'"
+                                    variant="subtle"
+                                    size="sm"
+                                    :label="`${idea.effort} effort`"
+                                />
+                            </div>
+                        </div>
+                        <p class="mt-1 text-sm text-muted">
+                            {{ idea.evidence }}
+                        </p>
+                    </div>
+                </div>
+            </UCard>
 
             <template v-if="project.knowledge_base">
                 <div class="flex flex-wrap items-center gap-2 text-sm text-muted">

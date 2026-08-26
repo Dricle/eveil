@@ -35,6 +35,7 @@ class ProjectDetailResource extends ProjectResource
             'last_analysis' => $this->latestAnalysis === null
                 ? null
                 : ProjectAnalysisResource::make($this->latestAnalysis),
+            'code_repositories' => CodeRepositoryResource::collection($this->codeRepositories),
         ];
     }
 }

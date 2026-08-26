@@ -120,7 +120,14 @@ class AnalyzeWebsite
         }
 
         $project->update([
-            'knowledge_base' => [...$summary, 'gaps' => $this->mergeOpenQuestions($project, $summary['gaps'] ?? [])],
+            'knowledge_base' => [
+                ...$summary,
+                // Not this run's to know about: repos are read on their own
+                // schedule (`AnalyzeRepo`), and a website re-analysis that
+                // dropped them would silently undo that work.
+                'repositories' => $project->knowledge_base['repositories'] ?? [],
+                'gaps' => $this->mergeOpenQuestions($project, $summary['gaps'] ?? []),
+            ],
             'default_language' => is_string($summary['language'] ?? null) && $summary['language'] !== ''
                 ? mb_substr($summary['language'], 0, 2)
                 : $pages->first()?->language,
@@ -179,7 +186,32 @@ class AnalyzeWebsite
         }
 
         $body = implode("\n\n---\n\n", $sections);
+        $repos = $this->repoDigest($project);
 
-        return "Website of {$project->name} ({$project->url}).\n\n{$body}";
+        return "Website of {$project->name} ({$project->url}).\n\n{$body}".($repos === '' ? '' : "\n\n---\n\n{$repos}");
+    }
+
+    /**
+     * Whatever `AnalyzeRepo` has already found, short enough to always fit:
+     * this is a digest of an already-structured analysis, not raw file
+     * text, so it costs little of the model-input budget for what it adds.
+     */
+    private function repoDigest(Project $project): string
+    {
+        $repositories = $project->knowledge_base['repositories'] ?? [];
+
+        if (! is_array($repositories) || $repositories === []) {
+            return '';
+        }
+
+        $sections = collect($repositories)->map(function (array $repo): string {
+            $techStack = implode(', ', $repo['tech_stack'] ?? []);
+            $capabilities = implode('; ', $repo['capabilities'] ?? []);
+            $notes = $repo['notes'] ?? '';
+
+            return "### {$repo['name']}\nTech stack: {$techStack}\nCapabilities: {$capabilities}\nNotes: {$notes}";
+        });
+
+        return "## Linked repositories\n\n".$sections->implode("\n\n");
     }
 }

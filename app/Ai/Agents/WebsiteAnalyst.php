@@ -32,6 +32,20 @@ class WebsiteAnalyst extends EveilAgent implements HasStructuredOutput
         Be concrete. "A platform that helps teams collaborate" is useless; name what the
         product actually does, for whom, and what it replaces. Prefer the words the
         company uses about itself over your own paraphrase.
+
+        You are also given, when it exists, a short digest of what a linked code repository
+        actually contains: its tech stack and the capabilities found there. Source code
+        often reveals something the site never mentions, or contradicts something it
+        oversells; when it is available, read it as carefully as the pages.
+
+        Beyond the portrait, name acquisition levers this product is plainly missing — a
+        referral scheme, editorial content, a trade fair, an offer to schools in the
+        sector — never the generic playbook any assistant emits in thirty seconds. Every
+        one must cite what the portrait, the crawl or the repo digest actually shows is
+        missing: "your site has no blog while the three competitors you name publish
+        weekly" is a recommendation; "do content marketing" is not, and must not be
+        written. Rank each by impact and effort rather than listing whatever comes to
+        mind first.
         PROMPT.$this->projectInstructions();
     }
 
@@ -102,6 +116,35 @@ class WebsiteAnalyst extends EveilAgent implements HasStructuredOutput
                     .'and only ones whose answer would change who is approached or what the mail says. '
                     .'Every question costs the user a minute, so leave out what is merely interesting. '
                     .'Empty when the pages answered everything that matters.'
+                )
+                ->required(),
+
+            'recommendations' => $schema->array()
+                ->items($schema->object([
+                    'key' => $schema->string()
+                        ->description(
+                            'Stable identifier for this idea, English snake_case: referral_program, '
+                            .'sector_case_studies, developer_docs. A later re-analysis proposing the same lever '
+                            .'must reuse the same key.'
+                        )
+                        ->required(),
+                    'idea' => $schema->string()
+                        ->description('The concrete acquisition lever, named as a person would act on it, never as generic advice.')
+                        ->required(),
+                    'evidence' => $schema->string()
+                        ->description('What in the portrait, the crawl or the repo digest actually shows this is missing. Never left empty or generic.')
+                        ->required(),
+                    'impact' => $schema->string()->enum(['high', 'medium', 'low'])
+                        ->description('How much reaching a new audience this way would plausibly move the needle.')
+                        ->required(),
+                    'effort' => $schema->string()->enum(['high', 'medium', 'low'])
+                        ->description('How much building or running this lever would plausibly take.')
+                        ->required(),
+                ]))
+                ->description(
+                    'Acquisition levers this product is missing, each grounded in specific evidence, ranked by '
+                    .'impact and effort rather than listed in whatever order they came to mind. Empty when nothing '
+                    .'concrete enough to act on is visible from what you were given.'
                 )
                 ->required(),
         ];

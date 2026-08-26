@@ -49,4 +49,30 @@ class CodeRepository extends Model
 
         return is_string($host) ? mb_strtolower($host) : null;
     }
+
+    /**
+     * `RepoReader` only reads GitHub for now (issue's own scope): GitLab and
+     * Gitea are a later driver behind the same `provider()` host check, not
+     * built yet. A trailing `.git`, slash, or `/tree/{branch}` is stripped,
+     * since that is what pasting a repo's own address bar usually carries.
+     *
+     * @return array{0: string, 1: string}|null owner, repo
+     */
+    public static function parseGithubUrl(string $url): ?array
+    {
+        $host = parse_url($url, PHP_URL_HOST);
+
+        if (! is_string($host) || mb_strtolower($host) !== 'github.com') {
+            return null;
+        }
+
+        $path = (string) parse_url($url, PHP_URL_PATH);
+        $segments = array_values(array_filter(explode('/', $path), fn (string $s): bool => $s !== ''));
+
+        if (count($segments) < 2) {
+            return null;
+        }
+
+        return [$segments[0], preg_replace('/\.git$/', '', $segments[1])];
+    }
 }

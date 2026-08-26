@@ -42,7 +42,7 @@ watch(busy, isBusy => isBusy ? poll.start() : poll.stop())
 const retryingRepoId = ref<number | null>(null)
 const retryingFromAnalysisId = ref<number | null>(null)
 
-watch(() => props.project.code_repositories, repos => {
+watch(() => props.project.code_repositories, (repos) => {
     const repo = repos.find(repo => repo.id === retryingRepoId.value)
     if (repo && repo.last_analysis?.id !== retryingFromAnalysisId.value) {
         retryingRepoId.value = null

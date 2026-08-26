@@ -310,6 +310,7 @@ Route::middleware(['auth', 'verified', 'project.set'])->group(function (): void 
          * written to by a person must not also get the queued follow-up.
          */
         Route::get('inbox', [InboxController::class, 'index'])->name('inbox');
+        Route::get('inbox/sent', [InboxController::class, 'sent'])->name('inbox.sent');
         Route::post('inbox/{conversation}/reply', [ConversationReplyController::class, 'store'])
             ->name('inbox.reply');
 

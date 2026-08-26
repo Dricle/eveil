@@ -4,7 +4,7 @@ import type { NavigationMenuItem } from '@nuxt/ui'
 import { computed, ref } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { inbox } from '@/routes'
-import { reply as replyRoute } from '@/routes/inbox'
+import { reply as replyRoute, sent as sentRoute } from '@/routes/inbox'
 import type { Conversation, Paginated } from '@/types'
 import { CLASSIFICATIONS } from '@/types/inbox'
 
@@ -24,13 +24,17 @@ const CAMPAIGN_OPTIONS = computed(() => [
     ...props.campaigns.map(item => ({ label: item.name, value: item.id }))
 ])
 
-function go (next: { campaign?: number, view?: 'replies' | 'sent' } = {}) {
+// Replies and Sent are separate routes, not a query param on one: a param a
+// pagination link can silently drop switches the screen back to Replies
+// mid-click, which is the bug two routes make impossible.
+function go (next: { campaign?: number, view?: 'replies' | 'sent', page?: number } = {}) {
     const view = next.view ?? props.filters.view
     const id = next.campaign ?? campaign.value
+    const url = view === 'sent' ? sentRoute.url() : inbox.url()
 
-    router.get(inbox.url(), {
+    router.get(url, {
         ...(id ? { campaign: id } : {}),
-        ...(view === 'sent' ? { view: 'sent' } : {})
+        ...(next.page ? { page: next.page } : {})
     }, { preserveState: true, preserveScroll: true })
 }
 
@@ -237,7 +241,7 @@ function delivery (conversation: Conversation) {
                     :default-page="conversations.meta.current_page"
                     :items-per-page="conversations.meta.per_page"
                     :total="conversations.meta.total"
-                    @update:page="page => router.get(inbox.url({ query: { page } }), {}, { preserveState: true })"
+                    @update:page="page => go({ page })"
                 />
             </div>
         </div>

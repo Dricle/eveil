@@ -645,6 +645,10 @@ it('shows what was sent as well as what came back, in two lists', function () {
         ->withSession(['current_project_id' => $membership->campaign->project_id])
         ->get(route('inbox', $query));
 
+    $visitSent = fn (array $query = []) => test()->actingAs($user)
+        ->withSession(['current_project_id' => $membership->campaign->project_id])
+        ->get(route('inbox.sent', $query));
+
     // Written to and silent: a sequence still running, and never an inbox
     // entry. That is what keeps the default list worth opening.
     $visit()->assertInertia(fn ($page) => $page
@@ -652,9 +656,9 @@ it('shows what was sent as well as what came back, in two lists', function () {
         ->where('counts.replies', 0)
         ->where('counts.sent', 1));
 
-    // And the same person on the other tab, because "did anything actually go
-    // out" could otherwise only be answered one contact sheet at a time.
-    $visit(['view' => 'sent'])->assertInertia(fn ($page) => $page
+    // And the same person on the other route, because "did anything actually
+    // go out" could otherwise only be answered one contact sheet at a time.
+    $visitSent()->assertInertia(fn ($page) => $page
         ->where('filters.view', 'sent')
         ->has('conversations.data', 1)
         ->where('conversations.data.0.id', $membership->id)
@@ -681,7 +685,7 @@ it('does not let a refused send look like one that arrived', function () {
 
     test()->actingAs($user)
         ->withSession(['current_project_id' => $membership->campaign->project_id])
-        ->get(route('inbox', ['view' => 'sent']))
+        ->get(route('inbox.sent'))
         ->assertInertia(fn ($page) => $page
             // Still listed: the attempt is a fact worth keeping, and hiding it
             // would tell somebody nothing happened when something did.

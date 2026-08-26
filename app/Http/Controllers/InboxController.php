@@ -19,9 +19,9 @@ use Inertia\Response;
  * what keeps this screen worth opening, and the alternative is a list of five
  * hundred rows where four are interesting.
  *
- * Everything that LEFT is the second list, on its own tab. It answers a
- * different question, "did anything actually go out and what did it say", which
- * could otherwise only be answered one contact sheet at a time.
+ * Everything that LEFT is the second list, on its own route (`inbox.sent`).
+ * It answers a different question, "did anything actually go out and what did
+ * it say", which could otherwise only be answered one contact sheet at a time.
  *
  * Ordered by what needs a person rather than by date. An interested reply from
  * Tuesday outranks an out-of-office from this morning, and the agent has already
@@ -31,8 +31,22 @@ class InboxController extends Controller
 {
     public function index(Request $request): Response
     {
-        $sent = $request->string('view')->value() === 'sent';
+        return $this->render($request, sent: false);
+    }
 
+    /**
+     * Everything that LEFT, its own route rather than a query param on
+     * `index`: a param a pagination link can silently drop switches the
+     * screen back to Replies mid-click, which is exactly the bug this route
+     * exists to make impossible.
+     */
+    public function sent(Request $request): Response
+    {
+        return $this->render($request, sent: true);
+    }
+
+    private function render(Request $request, bool $sent): Response
+    {
         $conversations = $this->conversations($request, $sent)
             ->latest('updated_at')
             ->paginate(20)

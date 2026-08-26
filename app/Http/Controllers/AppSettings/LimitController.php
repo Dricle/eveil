@@ -36,6 +36,7 @@ class LimitController extends Controller
                 'crawl_delay_ms' => $this->settings->int('crawl.delay_ms'),
                 'crawl_cache_ttl_days' => $this->settings->int('crawl.cache_ttl_days'),
                 'contacts_max_pages' => $this->settings->int('contacts.max_pages'),
+                'repo_max_files' => $this->settings->int('repo.max_files'),
                 'verification_probe' => $this->settings->bool('verification.probe'),
                 'verification_timeout' => $this->settings->int('verification.timeout'),
                 'searxng_per_query' => $this->settings->int('sources.searxng.per_query'),
@@ -67,6 +68,7 @@ class LimitController extends Controller
         $this->settings->set('crawl.delay_ms', $values['crawl_delay_ms']);
         $this->settings->set('crawl.cache_ttl_days', $values['crawl_cache_ttl_days']);
         $this->settings->set('contacts.max_pages', $values['contacts_max_pages']);
+        $this->settings->set('repo.max_files', $values['repo_max_files']);
         $this->settings->set('verification.probe', $values['verification_probe']);
         $this->settings->set('verification.timeout', $values['verification_timeout']);
         $this->settings->set('sources.searxng.per_query', $values['searxng_per_query']);

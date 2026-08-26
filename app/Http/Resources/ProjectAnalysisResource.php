@@ -19,6 +19,7 @@ class ProjectAnalysisResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'type' => $this->type->value,
             'status' => $this->status->value,
             'error' => $this->error,
             'failures' => $this->failures ?? [],

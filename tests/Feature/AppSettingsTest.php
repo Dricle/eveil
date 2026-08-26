@@ -139,12 +139,12 @@ it('shows what each agent has already spent', function () {
 
     $this->actingAs(superAdmin())->get(route('app-settings.agents.index'))
         ->assertInertia(fn ($page) => $page
-            ->where('agents.10.slug', 'website-analyst')
-            ->where('agents.10.calls', 2)
-            ->where('agents.10.tokens_in', 200)
-            ->where('agents.10.tokens_out', 100)
-            ->where('agents.10.avg_tokens_in', 100)
-            ->where('agents.10.avg_tokens_out', 50));
+            ->where('agents.12.slug', 'website-analyst')
+            ->where('agents.12.calls', 2)
+            ->where('agents.12.tokens_in', 200)
+            ->where('agents.12.tokens_out', 100)
+            ->where('agents.12.avg_tokens_in', 100)
+            ->where('agents.12.avg_tokens_out', 50));
 });
 
 it('has no credit price for an agent nobody has priced', function () {
@@ -154,7 +154,7 @@ it('has no credit price for an agent nobody has priced', function () {
     CreditPrice::where('agent', 'website-analyst')->delete();
 
     $this->actingAs(superAdmin())->get(route('app-settings.agents.index'))
-        ->assertInertia(fn ($page) => $page->where('agents.10.credit_price', null));
+        ->assertInertia(fn ($page) => $page->where('agents.12.credit_price', null));
 });
 
 it('calibrates an agent\'s credit price by adding a new versioned row, never editing in place', function () {
@@ -181,8 +181,8 @@ it('marks the agents a weak model would break rather than merely blunt', functio
             // returns wrong ones that look like results.
             ->where('agents.0.slug', 'company-qualifier')
             ->where('agents.0.strict', true)
-            ->where('agents.10.slug', 'website-analyst')
-            ->where('agents.10.strict', false));
+            ->where('agents.12.slug', 'website-analyst')
+            ->where('agents.12.strict', false));
 });
 
 it('suggests the models a provider names for itself, without fixing the choice', function () {
@@ -333,6 +333,7 @@ function limitPayload(array $overrides = []): array
         'crawl_delay_ms' => 500,
         'crawl_cache_ttl_days' => 7,
         'contacts_max_pages' => 4,
+        'repo_max_files' => 8,
         'verification_probe' => true,
         'verification_timeout' => 5,
         'searxng_per_query' => 20,

@@ -22,7 +22,7 @@ class ProjectKnowledgeBaseController extends Controller
     {
         return Inertia::render('settings/KnowledgeBase', [
             'project' => ProjectDetailResource::make(
-                $this->currentProject->getOrFail()->load('latestAnalysis')
+                $this->currentProject->getOrFail()->load('latestAnalysis', 'codeRepositories')
             ),
         ]);
     }

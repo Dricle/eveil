@@ -23,6 +23,7 @@ function knowledgeBase(): array
         'language' => 'fr',
         'confidence' => 80,
         'gaps' => [['key' => 'minimum_order_size', 'question' => 'Is there a minimum order size?']],
+        'recommendations' => [],
     ];
 }
 
@@ -205,4 +206,39 @@ it('stops with a readable message when no provider key is configured', function 
 
     // Nothing was created: a missing key must not leave a half-built project.
     expect(Project::count())->toBe(0);
+});
+
+it('carries recommendations and a linked repo\'s findings through', function () {
+    fakeSite();
+    WebsiteAnalyst::fake([[...knowledgeBase(), 'recommendations' => [
+        ['key' => 'referral_program', 'idea' => 'A referral scheme', 'evidence' => 'No competitor names one either.', 'impact' => 'medium', 'effort' => 'low'],
+    ]]]);
+
+    $this->artisan('eveil:analyze', ['url' => 'https://acme.test'])->assertSuccessful();
+
+    expect(Project::sole()->knowledge_base['recommendations'][0]['idea'])->toBe('A referral scheme');
+});
+
+it('keeps a linked repo\'s findings across a website re-analysis', function () {
+    fakeSite();
+    WebsiteAnalyst::fake([knowledgeBase(), knowledgeBase()]);
+
+    $this->artisan('eveil:analyze', ['url' => 'https://acme.test'])->assertSuccessful();
+
+    $project = Project::sole();
+    $project->update(['knowledge_base' => [
+        ...$project->knowledge_base,
+        'repositories' => [['code_repository_id' => 1, 'name' => 'acme/widgets', 'tech_stack' => ['PHP']]],
+    ]]);
+
+    $this->artisan('eveil:analyze', ['url' => 'https://acme.test', '--fresh' => true])->assertSuccessful();
+
+    // Not `toBe`: `knowledge_base` is `jsonb` (`.ai/rules/database.md`), and
+    // jsonb does not round-trip key order, only content.
+    $repositories = $project->fresh()->knowledge_base['repositories'];
+
+    expect($repositories)->toHaveCount(1)
+        ->and($repositories[0]['code_repository_id'])->toBe(1)
+        ->and($repositories[0]['name'])->toBe('acme/widgets')
+        ->and($repositories[0]['tech_stack'])->toBe(['PHP']);
 });

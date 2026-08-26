@@ -49,6 +49,11 @@ const GROUPS: { title: string, hint: string, fields: { name: string, label: stri
         ]
     },
     {
+        title: 'Reading a repo',
+        hint: 'How many of a linked repo\'s priority files (README, package manifest, changelog) get read.',
+        fields: [{ name: 'repo_max_files', label: 'Files per repo' }]
+    },
+    {
         title: 'Email verification',
         hint: 'Port 25 is blocked on most hosting, so the probe usually times out into "unknown" rather than proving anything.',
         fields: [{ name: 'verification_timeout', label: 'SMTP probe timeout (s)' }]

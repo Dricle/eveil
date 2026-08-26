@@ -31,10 +31,10 @@ const poll = usePoll(3000, { only: ['project'] }, { autoStart: busy.value })
 watch(busy, isBusy => isBusy ? poll.start() : poll.stop())
 
 // The POST round-trips almost instantly, but the row only flips to
-// `running` once a queue worker actually picks the job up — kept "retrying"
-// past the request itself, until a poll shows a NEW analysis row for this
-// repo (by id, not just status: a repo that fails again just as fast would
-// otherwise look identical to one that never started retrying).
+// `running` once a queue worker actually picks the job up, so this stays
+// "retrying" past the request itself, until a poll shows a NEW analysis row
+// for this repo (by id, not just status: a repo that fails again just as
+// fast would otherwise look identical to one that never started retrying).
 const retryingRepoId = ref<number | null>(null)
 const retryingFromAnalysisId = ref<number | null>(null)
 
@@ -161,7 +161,7 @@ watch(() => props.project, fill, { immediate: true, deep: true })
                         Source often names capabilities the site never mentions, or
                         contradicts something it oversells. GitHub only, for now.
                         "Deep analysis" lets the model roam the repo itself instead of
-                        reading a handful of fixed files — slower and more expensive,
+                        reading a handful of fixed files: slower and more expensive,
                         worth it for a repo the quick read left thin.
                     </p>
                 </template>
@@ -187,7 +187,7 @@ watch(() => props.project, fill, { immediate: true, deep: true })
                         label="GitHub token"
                         name="github_token"
                         :error="errors.github_token"
-                        help="Leave blank to keep the one stored. Only needed to read a private repository — a fine-grained personal access token scoped to just that repo is safest."
+                        help="Leave blank to keep the one stored. Only needed to read a private repository: a fine-grained personal access token scoped to just that repo is safest."
                     >
                         <UInput
                             v-model="githubToken"

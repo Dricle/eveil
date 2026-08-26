@@ -81,6 +81,20 @@ class Organization extends Model
     }
 
     /**
+     * The instance operator's own organization: never billed, in cloud or
+     * anywhere else. Checked by owner rather than by any member, because an
+     * operator who joins a customer's organization to help debug it must not
+     * turn that organization free by walking in.
+     */
+    public function ownedBySuperAdmin(): bool
+    {
+        return $this->users()
+            ->wherePivot('role', OrganizationRole::Owner->value)
+            ->where('is_super_admin', true)
+            ->exists();
+    }
+
+    /**
      * @return HasMany<CreditTransaction, $this>
      */
     public function creditTransactions(): HasMany

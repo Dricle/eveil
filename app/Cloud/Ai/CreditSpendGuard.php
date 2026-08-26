@@ -20,6 +20,12 @@ class CreditSpendGuard implements SpendGuardInterface
 
     public function refusal(Project $project, string $agent): ?string
     {
+        // The operator's own organization: dogfooding the product must not
+        // cost the operator credits, in cloud or anywhere else.
+        if ($project->organization->ownedBySuperAdmin()) {
+            return null;
+        }
+
         $price = CreditPrice::current($agent);
 
         if ($price === null) {
@@ -37,6 +43,10 @@ class CreditSpendGuard implements SpendGuardInterface
 
     public function charge(Project $project, string $agent, int $agentRunId): void
     {
+        if ($project->organization->ownedBySuperAdmin()) {
+            return;
+        }
+
         $price = CreditPrice::current($agent);
 
         if ($price === null) {

@@ -10,6 +10,7 @@ use App\Cloud\Models\CreditTransaction;
 use App\Models\AgentRun;
 use App\Models\Organization;
 use App\Models\Project;
+use App\Models\User;
 use Laravel\Ai\Responses\Data\Meta;
 use Laravel\Ai\Responses\Data\Usage;
 use Laravel\Ai\Responses\StructuredTextResponse;
@@ -94,6 +95,51 @@ it('debits atomically, never past what the organization actually holds', functio
     $organization->refresh();
 
     expect($organization->credits_balance)->toBe(0);
+});
+
+it('never charges the operator\'s own organization', function () {
+    $organization = organizationWithBalance(1000);
+    $project = Project::factory()->for($organization)->create();
+    $superAdmin = User::factory()->create(['is_super_admin' => true]);
+    $organization->users()->attach($superAdmin, ['role' => 'owner']);
+
+    WebsiteAnalyst::fake([
+        new StructuredTextResponse(
+            ['what_it_does' => 'Widgets.'],
+            '{}',
+            new Usage(promptTokens: 10, completionTokens: 5),
+            new Meta('anthropic', 'claude-opus-5'),
+        ),
+    ]);
+
+    (new WebsiteAnalyst($project))->prompt('Analyse this.');
+
+    expect($organization->fresh()->credits_balance)->toBe(1000)
+        ->and(CreditTransaction::count())->toBe(0);
+});
+
+// A superadmin who joins an EXISTING customer's organization to help debug
+// it must not turn that organization free by walking in: the free ride is
+// for the operator's own organization, owner only, not for every org they
+// can see.
+it('still charges an organization the superadmin only belongs to, not owns', function () {
+    $organization = organizationWithBalance(1000);
+    $project = Project::factory()->for($organization)->create();
+    $superAdmin = User::factory()->create(['is_super_admin' => true]);
+    $organization->users()->attach($superAdmin, ['role' => 'member']);
+
+    WebsiteAnalyst::fake([
+        new StructuredTextResponse(
+            ['what_it_does' => 'Widgets.'],
+            '{}',
+            new Usage(promptTokens: 10, completionTokens: 5),
+            new Meta('anthropic', 'claude-opus-5'),
+        ),
+    ]);
+
+    (new WebsiteAnalyst($project))->prompt('Analyse this.');
+
+    expect($organization->fresh()->credits_balance)->toBe(800);
 });
 
 it('refuses with a clear message when nobody priced the agent', function () {

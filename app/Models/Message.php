@@ -21,6 +21,7 @@ use Illuminate\Support\Carbon;
  * @property int $lead_id
  * @property int|null $campaign_lead_id
  * @property int $email_account_id
+ * @property int|null $step_variant_id
  * @property MessageDirection $direction
  * @property string $message_id
  * @property string|null $in_reply_to
@@ -33,7 +34,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['lead_id', 'campaign_lead_id', 'email_account_id', 'direction', 'message_id', 'in_reply_to', 'subject', 'body', 'classification', 'status', 'sent_at', 'received_at'])]
+#[Fillable(['lead_id', 'campaign_lead_id', 'email_account_id', 'step_variant_id', 'direction', 'message_id', 'in_reply_to', 'subject', 'body', 'classification', 'status', 'sent_at', 'received_at'])]
 class Message extends Model
 {
     /** @use HasFactory<MessageFactory> */
@@ -61,6 +62,17 @@ class Message extends Model
     public function emailAccount(): BelongsTo
     {
         return $this->belongsTo(EmailAccount::class);
+    }
+
+    /**
+     * Which template produced this send — null on an inbound message, and
+     * on anything sent before this column existed.
+     *
+     * @return BelongsTo<StepVariant, $this>
+     */
+    public function stepVariant(): BelongsTo
+    {
+        return $this->belongsTo(StepVariant::class);
     }
 
     /**

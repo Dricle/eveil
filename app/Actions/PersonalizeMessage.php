@@ -6,6 +6,7 @@ use App\Ai\Agents\MessagePersonalizer;
 use App\Models\AgentRun;
 use App\Models\CampaignStep;
 use App\Models\CompanyTargetEvaluation;
+use App\Models\EmailExample;
 use App\Models\Lead;
 use Laravel\Ai\Responses\StructuredAgentResponse;
 use RuntimeException;
@@ -22,7 +23,7 @@ use RuntimeException;
  * to store it for, and a cached mail written days before it goes out is a mail
  * that no longer matches what the user has since edited.
  *
- * @phpstan-type Personalisation array{subject: string, body: string}
+ * @phpstan-type Personalisation array{subject: string, body: string, step_variant_id: int}
  */
 class PersonalizeMessage
 {
@@ -49,6 +50,10 @@ class PersonalizeMessage
         return [
             'subject' => (string) ($response->structured['subject'] ?? $variant->subject),
             'body' => (string) ($response->structured['body'] ?? $variant->body),
+            // Which template this came from, so the eventual `Message` row
+            // can be traced back to it: the one thing that lets a step's
+            // own track record ever be measured.
+            'step_variant_id' => $variant->id,
         ];
     }
 
@@ -90,8 +95,10 @@ class PersonalizeMessage
         ];
 
         $json = (string) json_encode($context, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $examples = EmailExample::promptDigest();
 
-        return "Step to rewrite:\nSubject: {$subject}\n\n{$body}\n\n---\n\nWho it is going to:\n{$json}";
+        return "Step to rewrite:\nSubject: {$subject}\n\n{$body}\n\n---\n\nWho it is going to:\n{$json}"
+            .($examples === '' ? '' : "\n\n---\n\n{$examples}");
     }
 
     /**

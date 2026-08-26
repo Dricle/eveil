@@ -22,6 +22,7 @@ use App\Models\AgentRun;
 use App\Models\Campaign;
 use App\Models\Company;
 use App\Models\CompanyTargetEvaluation;
+use App\Models\EmailExample;
 use App\Models\Lead;
 use App\Models\Organization;
 use App\Models\Project;
@@ -118,6 +119,35 @@ it('writes a whole sequence from the product and the segment', function () {
         ->and($first->config['intent'])->toBe('Open on what their ordering looks like today.');
 });
 
+it('feeds the writer a random sample of proven examples, when any exist', function () {
+    [, $project] = sequencer();
+    $profile = TargetProfile::factory()->create(['project_id' => $project->id]);
+
+    EmailExample::factory()->create(['subject' => 'a proven opener', 'body' => 'body text here']);
+
+    SequenceWriter::fake([writtenSequence()]);
+
+    app(WriteSequence::class)->handle($project, $profile);
+
+    $prompt = (string) (AgentRun::query()->where('agent', 'sequence-writer')->sole()->input['prompt'] ?? '');
+
+    expect($prompt)->toContain('Examples of successful emails')
+        ->toContain('a proven opener');
+});
+
+it('writes no examples section at all while the bank is still empty', function () {
+    [, $project] = sequencer();
+    $profile = TargetProfile::factory()->create(['project_id' => $project->id]);
+
+    SequenceWriter::fake([writtenSequence()]);
+
+    app(WriteSequence::class)->handle($project, $profile);
+
+    $prompt = (string) (AgentRun::query()->where('agent', 'sequence-writer')->sole()->input['prompt'] ?? '');
+
+    expect($prompt)->not->toContain('Examples of successful emails');
+});
+
 it('gives a wait step a duration even when the writer forgets one', function () {
     // A wait of zero runs the sequence straight through, which reads as
     // automation at the other end.
@@ -190,9 +220,13 @@ it('personalises a step from what the qualifier observed about the company', fun
     MessagePersonalizer::fake([['subject' => 'votre carte en PDF', 'body' => 'Bonjour Marcel, …']]);
 
     $campaign = campaignFor($project, $profile);
-    $written = app(PersonalizeMessage::class)->handle($campaign->steps->first(), $lead);
+    $step = $campaign->steps->first();
+    $written = app(PersonalizeMessage::class)->handle($step, $lead);
 
-    expect($written['subject'])->toBe('votre carte en PDF');
+    expect($written['subject'])->toBe('votre carte en PDF')
+        // What `SendNextStep` needs to trace a sent message back to the
+        // template that produced it.
+        ->and($written['step_variant_id'])->toBe($step->variants()->sole()->id);
 
     // What the model was given: the reason this company was kept, in the words
     // the qualifier used, plus the language the mail must be written in.

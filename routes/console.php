@@ -42,3 +42,9 @@ Schedule::command('eveil:fetch-replies')->everyFiveMinutes();
 // how far it is allowed to go. Contact-finding needs no tick of its own:
 // QualifyCandidate already dispatches it the moment a company is kept.
 Schedule::command('eveil:discover-due')->everySixHours();
+
+// A step's own track record only settles once it has real volume, and more
+// sends accumulate every day, so this re-checks daily rather than judging
+// each step once. Cheap either way: nothing to do once every step already
+// promoted or still short of the floor is skipped.
+Schedule::command('eveil:promote-proven-emails')->daily();

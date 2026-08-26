@@ -37,7 +37,7 @@ beforeEach(function () {
         ->andReturnUsing(function ($step, $lead) {
             $variant = $step->variants()->first();
 
-            return ['subject' => $variant->subject, 'body' => $variant->body];
+            return ['subject' => $variant->subject, 'body' => $variant->body, 'step_variant_id' => $variant->id];
         })
         ->byDefault();
 });
@@ -103,10 +103,13 @@ it('sends the first mail, records it, and marks the person contacted', function 
         ->and($fake->sent[0]['in_reply_to'])->toBeNull();
 
     $message = Message::query()->sole();
+    $variant = $campaign->steps()->first()->variants()->sole();
 
     expect($message->direction)->toBe(MessageDirection::Outbound)
         ->and($message->status)->toBe(MessageStatus::Sent)
         ->and($message->sent_at)->not->toBeNull()
+        // The one thing that lets a step's own track record ever be measured.
+        ->and($message->step_variant_id)->toBe($variant->id)
         ->and($lead->refresh()->status)->toBe(OutreachStatus::Contacted)
         ->and($lead->last_contacted_at)->not->toBeNull();
 });
@@ -187,13 +190,20 @@ it('suppresses an address the server called dead, and never retries it', functio
     $fake->failWith = '550 5.1.1 <marcel@friterie.test>: Recipient address rejected: User unknown';
 
     $lead = contactable($project);
-    app(EnrolCampaign::class)->handle(sequence($project));
+    $campaign = sequence($project);
+    app(EnrolCampaign::class)->handle($campaign);
 
     app(SendNextStep::class)->handle(CampaignLead::query()->firstOrFail());
 
+    $message = Message::query()->sole();
+    $variant = $campaign->steps()->first()->variants()->sole();
+
     expect(Suppression::query()->where('layer', SuppressionLayer::Bounce)->where('email_account_id', $mailbox->id)->count())->toBe(1)
         ->and($lead->refresh()->status)->toBe(OutreachStatus::Suppressed)
-        ->and(Message::query()->sole()->status)->toBe(MessageStatus::Bounced)
+        ->and($message->status)->toBe(MessageStatus::Bounced)
+        // Tracked even on a bounce: a step's own clean record needs to know
+        // which of its sends never actually arrived.
+        ->and($message->step_variant_id)->toBe($variant->id)
         ->and(CampaignLead::query()->firstOrFail()->status)->toBe(CampaignLeadStatus::Stopped)
         ->and($mailbox->refresh()->status)->toBe(EmailAccountStatus::Active);
 });

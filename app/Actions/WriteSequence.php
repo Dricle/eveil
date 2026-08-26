@@ -8,6 +8,7 @@ use App\Enums\CampaignStepType;
 use App\Models\AgentRun;
 use App\Models\Campaign;
 use App\Models\CampaignStep;
+use App\Models\EmailExample;
 use App\Models\Project;
 use App\Models\TargetProfile;
 use Illuminate\Support\Facades\DB;
@@ -110,7 +111,10 @@ class WriteSequence
             JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
         );
 
+        $examples = EmailExample::promptDigest();
+
         return "Product: {$project->name} ({$project->url})\n\n{$portrait}\n\n"
-            ."Segment [{$targetProfile->name}], of kind {$targetProfile->type->value}:\n{$criteria}";
+            ."Segment [{$targetProfile->name}], of kind {$targetProfile->type->value}:\n{$criteria}"
+            .($examples === '' ? '' : "\n\n---\n\n{$examples}");
     }
 }

@@ -93,6 +93,11 @@ class Settings
         return (bool) $this->required($key);
     }
 
+    public function float(string $key): float
+    {
+        return (float) $this->required($key);
+    }
+
     /**
      * @return array<mixed>
      */

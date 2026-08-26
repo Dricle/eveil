@@ -71,6 +71,19 @@ export type Analysis = {
     pages_planned: number
     running: boolean
     finished_at: string | null
+    /** Null until the analysis succeeds. Shape depends on `type`. */
+    summary: Record<string, unknown> | null
+    /** What was actually read: pages for a website, files for a repo. */
+    files: { url: string, title: string, chars: number }[]
+}
+
+/** What `RepoAnalyst` and `RepoExplorer` both return, `files_read` deep-only. */
+export type RepoAnalysisSummary = {
+    tech_stack: string[]
+    capabilities: string[]
+    notes: string
+    confidence: number
+    files_read?: string[]
 }
 
 export type CodeRepositoryRow = {

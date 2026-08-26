@@ -6,11 +6,15 @@ import SettingsLayout from '@/layouts/SettingsLayout.vue'
 import knowledgeBase from '@/routes/settings/knowledge-base'
 import projectRoutes from '@/routes/settings/project'
 import repositories from '@/routes/settings/repositories'
-import type { CodeRepositoryRow, ProjectDetail } from '@/types'
+import type { CodeRepositoryRow, ProjectDetail, RepoAnalysisSummary } from '@/types'
 
 const props = defineProps<{ project: ProjectDetail }>()
 
 const repoUrl = ref('')
+
+const resultRepoId = ref<number | null>(null)
+const resultRepo = computed(() => props.project.code_repositories.find(repo => repo.id === resultRepoId.value) ?? null)
+const resultSummary = computed(() => resultRepo.value?.last_analysis?.summary as RepoAnalysisSummary | undefined)
 
 // Never sent back from the server: blank always means "unchanged" here,
 // never "no token stored".
@@ -260,6 +264,16 @@ watch(() => props.project, fill, { immediate: true, deep: true })
 
                         <div class="flex shrink-0 items-center gap-1">
                             <UButton
+                                v-if="repo.last_analysis?.summary"
+                                type="button"
+                                color="neutral"
+                                variant="ghost"
+                                icon="i-lucide-file-text"
+                                size="sm"
+                                label="Result"
+                                @click="resultRepoId = repo.id"
+                            />
+                            <UButton
                                 v-if="repo.last_analysis?.status === 'failed'"
                                 type="button"
                                 color="error"
@@ -442,5 +456,92 @@ watch(() => props.project, fill, { immediate: true, deep: true })
                 </Form>
             </template>
         </div>
+
+        <UModal
+            :open="resultRepo !== null"
+            :title="resultRepo?.name"
+            :description="`${resultRepo?.last_analysis?.type === 'repo_deep' ? 'Deep analysis' : 'Quick read'} result`"
+            :ui="{ content: 'max-w-lg' }"
+            @update:open="open => { if (!open) resultRepoId = null }"
+        >
+            <template #body>
+                <div
+                    v-if="resultSummary"
+                    class="space-y-4 text-sm"
+                >
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-medium">
+                            Tech stack
+                        </h3>
+                        <UBadge
+                            color="neutral"
+                            variant="subtle"
+                            size="sm"
+                            :label="`${resultSummary.confidence}/100 confidence`"
+                        />
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                        <UBadge
+                            v-for="item in resultSummary.tech_stack"
+                            :key="item"
+                            color="primary"
+                            variant="subtle"
+                            :label="item"
+                        />
+                        <span
+                            v-if="!resultSummary.tech_stack.length"
+                            class="text-muted"
+                        >Nothing named.</span>
+                    </div>
+
+                    <div>
+                        <h3 class="mb-1 font-medium">
+                            Capabilities
+                        </h3>
+                        <ul
+                            v-if="resultSummary.capabilities.length"
+                            class="list-disc space-y-1 pl-4"
+                        >
+                            <li
+                                v-for="item in resultSummary.capabilities"
+                                :key="item"
+                            >
+                                {{ item }}
+                            </li>
+                        </ul>
+                        <p
+                            v-else
+                            class="text-muted"
+                        >
+                            Nothing found.
+                        </p>
+                    </div>
+
+                    <div v-if="resultSummary.notes">
+                        <h3 class="mb-1 font-medium">
+                            Notes
+                        </h3>
+                        <p class="text-muted">
+                            {{ resultSummary.notes }}
+                        </p>
+                    </div>
+
+                    <div v-if="resultRepo?.last_analysis?.files.length">
+                        <h3 class="mb-1 font-medium">
+                            Files read ({{ resultRepo.last_analysis.files.length }})
+                        </h3>
+                        <ul class="max-h-40 space-y-0.5 overflow-y-auto font-mono text-xs text-muted">
+                            <li
+                                v-for="file in resultRepo.last_analysis.files"
+                                :key="file.url"
+                                class="truncate"
+                            >
+                                {{ file.url }}
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </template>
+        </UModal>
     </SettingsLayout>
 </template>

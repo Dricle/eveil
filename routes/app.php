@@ -193,6 +193,8 @@ Route::middleware(['auth', 'verified', 'project.set'])->group(function (): void 
                 ->name('repositories.store');
             Route::delete('repositories/{codeRepository}', [CodeRepositoryController::class, 'destroy'])
                 ->name('repositories.destroy');
+            Route::post('repositories/{codeRepository}/retry', [CodeRepositoryController::class, 'retry'])
+                ->name('repositories.retry');
 
             /*
              * The deep, tool-calling read — manual and priced, never

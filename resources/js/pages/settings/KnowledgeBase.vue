@@ -4,12 +4,17 @@ import { computed, ref, watch } from 'vue'
 import OpenQuestions from '@/components/OpenQuestions.vue'
 import SettingsLayout from '@/layouts/SettingsLayout.vue'
 import knowledgeBase from '@/routes/settings/knowledge-base'
+import projectRoutes from '@/routes/settings/project'
 import repositories from '@/routes/settings/repositories'
 import type { ProjectDetail } from '@/types'
 
 const props = defineProps<{ project: ProjectDetail }>()
 
 const repoUrl = ref('')
+
+// Never sent back from the server: blank always means "unchanged" here,
+// never "no token stored".
+const githubToken = ref('')
 
 const analysing = computed(() => props.project.last_analysis?.running === true)
 
@@ -130,13 +135,54 @@ watch(() => props.project, fill, { immediate: true, deep: true })
                     <p class="mt-1 text-sm text-muted">
                         Source often names capabilities the site never mentions, or
                         contradicts something it oversells. GitHub only, for now.
-                        A private repository needs a token saved on the Project
-                        settings page first.
                         "Deep analysis" lets the model roam the repo itself instead of
                         reading a handful of fixed files — slower and more expensive,
                         worth it for a repo the quick read left thin.
                     </p>
                 </template>
+
+                <Form
+                    v-slot="{ errors, processing, recentlySuccessful }"
+                    v-bind="projectRoutes.update.form()"
+                    class="mb-4 flex items-start gap-3 border-b border-default pb-4"
+                    @success="githubToken = ''"
+                >
+                    <input
+                        type="hidden"
+                        name="name"
+                        :value="project.name"
+                    >
+                    <input
+                        type="hidden"
+                        name="url"
+                        :value="project.url"
+                    >
+                    <UFormField
+                        class="flex-1"
+                        label="GitHub token"
+                        name="github_token"
+                        :error="errors.github_token"
+                        help="Leave blank to keep the one stored. Only needed to read a private repository — a fine-grained personal access token scoped to just that repo is safest."
+                    >
+                        <UInput
+                            v-model="githubToken"
+                            name="github_token"
+                            type="password"
+                            placeholder="github_pat_…"
+                            class="w-full"
+                        />
+                    </UFormField>
+                    <UButton
+                        type="submit"
+                        class="mt-6"
+                        :loading="processing"
+                        label="Save"
+                    />
+                    <span
+                        v-if="recentlySuccessful"
+                        class="mt-8 text-sm text-muted"
+                    >Saved.</span>
+                </Form>
 
                 <div
                     v-if="!project.code_repositories.length"
@@ -185,6 +231,16 @@ watch(() => props.project, fill, { immediate: true, deep: true })
                         </div>
 
                         <div class="flex shrink-0 items-center gap-1">
+                            <UButton
+                                v-if="repo.last_analysis?.status === 'failed'"
+                                type="button"
+                                color="error"
+                                variant="ghost"
+                                icon="i-lucide-rotate-cw"
+                                size="sm"
+                                label="Retry"
+                                @click="router.post(repositories.retry.url(repo.id))"
+                            />
                             <UButton
                                 type="button"
                                 color="neutral"

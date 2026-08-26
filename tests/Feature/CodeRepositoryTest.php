@@ -108,3 +108,27 @@ it('does not let a project explore another project\'s repo', function () {
 
     Queue::assertNotPushed(ExploreRepo::class);
 });
+
+it('retries reading a repo', function () {
+    Queue::fake();
+    [$user, $project] = repoOwner();
+    $repository = CodeRepository::factory()->for($project)->create();
+
+    $this->actingAs($user)
+        ->post(route('settings.repositories.retry', $repository))
+        ->assertSessionHasNoErrors();
+
+    Queue::assertPushed(AnalyzeRepo::class, fn (AnalyzeRepo $job): bool => $job->codeRepository->is($repository));
+});
+
+it('does not let a project retry another project\'s repo', function () {
+    Queue::fake();
+    [$user] = repoOwner();
+    $other = CodeRepository::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('settings.repositories.retry', $other))
+        ->assertNotFound();
+
+    Queue::assertNotPushed(AnalyzeRepo::class);
+});

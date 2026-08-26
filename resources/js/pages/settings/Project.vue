@@ -16,7 +16,6 @@ const confirmingDelete = ref(false)
 const name = ref(props.project.name)
 const url = ref(props.project.url)
 const instructions = ref(props.project.prompt_instructions ?? '')
-const githubToken = ref('')
 const autonomy = ref(props.project.autonomy_level)
 const dailyLeadLimit = ref(props.project.daily_lead_limit)
 const leadLimit = ref(props.project.lead_limit)
@@ -69,7 +68,6 @@ const AUTONOMY = [
                     v-slot="{ errors, processing, recentlySuccessful }"
                     v-bind="projectRoutes.update.form()"
                     class="space-y-4"
-                    @success="githubToken = ''"
                 >
                     <UFormField
                         label="Name"
@@ -111,23 +109,6 @@ const AUTONOMY = [
                             name="prompt_instructions"
                             :rows="5"
                             :maxlength="2000"
-                            class="w-full"
-                        />
-                    </UFormField>
-
-                    <!-- Never sent back from the server: blank always means
-                         "unchanged" here, never "no token stored". -->
-                    <UFormField
-                        label="GitHub token"
-                        name="github_token"
-                        :error="errors.github_token"
-                        help="Leave blank to keep the one stored. Only needed to read a private repository — a fine-grained personal access token scoped to just that repo is safest."
-                    >
-                        <UInput
-                            v-model="githubToken"
-                            name="github_token"
-                            type="password"
-                            placeholder="github_pat_…"
                             class="w-full"
                         />
                     </UFormField>

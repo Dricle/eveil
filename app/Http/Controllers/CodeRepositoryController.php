@@ -37,6 +37,13 @@ class CodeRepositoryController extends Controller
         return to_route('settings.knowledge-base.edit');
     }
 
+    public function retry(int $codeRepository): RedirectResponse
+    {
+        AnalyzeRepo::dispatch(CodeRepository::query()->findOrFail($codeRepository));
+
+        return to_route('settings.knowledge-base.edit');
+    }
+
     public function destroy(int $codeRepository): RedirectResponse
     {
         $repository = CodeRepository::query()->findOrFail($codeRepository);

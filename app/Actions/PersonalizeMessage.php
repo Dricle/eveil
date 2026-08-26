@@ -62,9 +62,10 @@ class PersonalizeMessage
         $company = $lead->company;
         $campaign = $step->campaign;
 
-        // Read before the array below: the mail is written in the company's
-        // language, and English to a small local business kills the reply rate.
-        $language = $company !== null && $company->language !== null ? $company->language : $lead->language;
+        // The project's own language, same one the sequence was drafted in:
+        // never the lead's or the company's, which only says what language
+        // THEIR site happens to be in, not what language the sender writes in.
+        $language = $campaign->project->default_language;
 
         $context = [
             'product' => $campaign->project->knowledge_base,
@@ -90,7 +91,7 @@ class PersonalizeMessage
             // What convinced the qualifier this company was worth writing to,
             // in its own words. This is the opener's raw material.
             'why_this_company' => $this->fitReason($step, $lead),
-            'language' => $language ?? 'the language of the company',
+            'language' => $language ?? 'the language the product knowledge base is written in',
             'step_intent' => $step->config['intent'] ?? null,
         ];
 

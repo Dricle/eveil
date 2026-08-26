@@ -18,7 +18,14 @@ class SequenceWriter extends EveilAgent implements HasStructuredOutput
 {
     public function instructions(): Stringable|string
     {
-        return <<<'PROMPT'
+        // The product's own language, not one guessed from the segment: a
+        // French product selling into an English-speaking market still
+        // writes in French, the language its own site and knowledge base
+        // are already written in.
+        $language = $this->project->default_language
+            ?: 'the language the product knowledge base below is written in';
+
+        return <<<PROMPT
         You are given a product and the segment it is being sold into. Write the cold
         email sequence for it.
 
@@ -54,8 +61,8 @@ class SequenceWriter extends EveilAgent implements HasStructuredOutput
         that pays them is worth a conversation. Open on what they get and on the
         customers they already carry, using the access and partnership angles given.
 
-        Write in the language the segment's own market speaks, not in English, unless
-        that market is English-speaking.
+        Write in {$language}. That is the project's own language: never switch to
+        whatever language the segment's market speaks, and never default to English.
 
         Wait steps: two to four days after a first mail. Same day reads as automation;
         two weeks and they have forgotten the first one.

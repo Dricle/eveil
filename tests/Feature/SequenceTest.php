@@ -195,8 +195,11 @@ it('queues the writing and opens the run row before the worker picks it up', fun
 
 it('personalises a step from what the qualifier observed about the company', function () {
     [, $project] = sequencer();
+    $project->update(['default_language' => 'de']);
     $profile = TargetProfile::factory()->create(['project_id' => $project->id, 'type' => TargetProfileType::Customer]);
 
+    // A company whose own site is French must not pull the mail into French:
+    // the project writes in its own language regardless of the lead's.
     $company = Company::factory()->create([
         'project_id' => $project->id,
         'name' => 'Friterie du Centre',
@@ -235,6 +238,25 @@ it('personalises a step from what the qualifier observed about the company', fun
     expect(json_encode($prompt, JSON_UNESCAPED_UNICODE))
         ->toContain('Carte publiée en PDF')
         ->toContain('Friterie du Centre');
+
+    // The project's language, not the company's: `Company::language` above is
+    // French, and must not have won.
+    expect($prompt['prompt'])->toContain('"language": "de"');
+});
+
+it('falls back to the project default language when the lead has none', function () {
+    [, $project] = sequencer();
+    $profile = TargetProfile::factory()->create(['project_id' => $project->id, 'type' => TargetProfileType::Customer]);
+    $lead = Lead::factory()->create(['project_id' => $project->id, 'email' => 'marcel@friterie.test']);
+
+    MessagePersonalizer::fake([['subject' => 'x', 'body' => 'y']]);
+
+    $campaign = campaignFor($project, $profile);
+    app(PersonalizeMessage::class)->handle($campaign->steps->first(), $lead);
+
+    $prompt = AgentRun::query()->where('agent', 'message-personalizer')->sole()->input;
+
+    expect($prompt['prompt'])->toContain('the language the product knowledge base is written in');
 });
 
 it('previews the sequence on real leads and never invents one', function () {

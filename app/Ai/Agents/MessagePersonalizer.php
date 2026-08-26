@@ -43,8 +43,9 @@ class MessagePersonalizer extends EveilAgent implements HasStructuredOutput
         Keep the shape of the step you were given: same intent, same ask, same rough
         length. You are rewriting one mail for one reader, not writing a new sequence.
 
-        Write it in the company's own language, which you are given. Not the language
-        of the template.
+        Write it in the language you are given: the product's own language, not the
+        company's. A company whose own site happens to read in another language still
+        gets written to in the sender's, exactly as the sequence this step came from was.
 
         Keep whatever opt-out sentence the template ends on, in that same language.
         It is the only opt-out channel there is.
@@ -75,7 +76,7 @@ class MessagePersonalizer extends EveilAgent implements HasStructuredOutput
     {
         return [
             'subject' => $schema->string()
-                ->description('Subject line for this company, in their language.')
+                ->description('Subject line for this company, in the given language.')
                 ->required(),
 
             'body' => $schema->string()

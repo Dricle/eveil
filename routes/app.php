@@ -10,6 +10,8 @@ use App\Http\Controllers\Account\TwoFactorController;
 use App\Http\Controllers\AppSettings\AgentController;
 use App\Http\Controllers\AppSettings\BillingController;
 use App\Http\Controllers\AppSettings\CreditPriceController;
+use App\Http\Controllers\AppSettings\EmailExampleController;
+use App\Http\Controllers\AppSettings\EmailExampleThresholdController;
 use App\Http\Controllers\AppSettings\KnownHostController;
 use App\Http\Controllers\AppSettings\LimitController;
 use App\Http\Controllers\AppSettings\ProviderController;
@@ -346,6 +348,13 @@ Route::middleware(['auth', 'verified', 'project.set'])->group(function (): void 
         // tab hides itself off `edition` instead.
         Route::get('billing', [BillingController::class, 'edit'])->name('billing.edit');
         Route::put('billing', [BillingController::class, 'update'])->name('billing.update');
+
+        Route::get('email-examples', [EmailExampleController::class, 'index'])->name('email-examples.index');
+        Route::post('email-examples', [EmailExampleController::class, 'store'])->name('email-examples.store');
+        Route::delete('email-examples/{emailExample}', [EmailExampleController::class, 'destroy'])
+            ->name('email-examples.destroy');
+        Route::put('email-examples/thresholds', [EmailExampleThresholdController::class, 'update'])
+            ->name('email-examples.thresholds');
     });
 
     /*

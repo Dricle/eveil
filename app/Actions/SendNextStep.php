@@ -104,6 +104,7 @@ class SendNextStep
             'lead_id' => $lead->id,
             'campaign_lead_id' => $campaignLead->id,
             'email_account_id' => $account->id,
+            'step_variant_id' => $written['step_variant_id'],
             'direction' => MessageDirection::Outbound,
             'message_id' => $messageId,
             'in_reply_to' => $previous,
@@ -142,7 +143,7 @@ class SendNextStep
     }
 
     /**
-     * @param  array{subject: string, body: string}  $written
+     * @param  array{subject: string, body: string, step_variant_id: int}  $written
      */
     private function handleFailure(CampaignLead $campaignLead, SendFailure $failure, array $written): void
     {
@@ -153,6 +154,7 @@ class SendNextStep
             'lead_id' => $lead->id,
             'campaign_lead_id' => $campaignLead->id,
             'email_account_id' => $account->id,
+            'step_variant_id' => $written['step_variant_id'],
             'direction' => MessageDirection::Outbound,
             // Not sent, so it never gets a real one, but the column is unique
             // and the row is the record that this was attempted.

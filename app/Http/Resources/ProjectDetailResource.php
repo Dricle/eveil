@@ -32,6 +32,7 @@ class ProjectDetailResource extends ProjectResource
             'daily_lead_limit' => $this->daily_lead_limit,
             'lead_limit' => $this->lead_limit,
             'edited_by_user' => $this->knowledge_base_edited_by_user,
+            'has_github_token' => $this->hasGithubToken(),
             'last_analysis' => $this->latestAnalysis === null
                 ? null
                 : ProjectAnalysisResource::make($this->latestAnalysis),

@@ -109,6 +109,7 @@ export type TargetProfile = {
 /** What the project settings screens get, on top of what the switcher needs. */
 export type ProjectDetail = Project & {
     edited_by_user: boolean
+    has_github_token: boolean
     prompt_instructions: string | null
     /** How much of the run happens without being asked. */
     autonomy_level: 'supervised' | 'semi_auto' | 'autonomous'

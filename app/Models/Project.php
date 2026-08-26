@@ -247,6 +247,15 @@ class Project extends Model
     }
 
     /**
+     * Whether a token is stored, without exposing it: `github_token` is
+     * `#[Hidden]` so the front end never gets the value back to tell.
+     */
+    public function hasGithubToken(): bool
+    {
+        return $this->github_token !== null;
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array

@@ -6,7 +6,7 @@ import SettingsLayout from '@/layouts/SettingsLayout.vue'
 import knowledgeBase from '@/routes/settings/knowledge-base'
 import projectRoutes from '@/routes/settings/project'
 import repositories from '@/routes/settings/repositories'
-import type { ProjectDetail } from '@/types'
+import type { CodeRepositoryRow, ProjectDetail } from '@/types'
 
 const props = defineProps<{ project: ProjectDetail }>()
 
@@ -29,6 +29,31 @@ const busy = computed(() => analysing.value || analysingRepo.value)
 const poll = usePoll(3000, { only: ['project'] }, { autoStart: busy.value })
 
 watch(busy, isBusy => isBusy ? poll.start() : poll.stop())
+
+// The POST round-trips almost instantly, but the row only flips to
+// `running` once a queue worker actually picks the job up — kept "retrying"
+// past the request itself, until a poll shows a NEW analysis row for this
+// repo (by id, not just status: a repo that fails again just as fast would
+// otherwise look identical to one that never started retrying).
+const retryingRepoId = ref<number | null>(null)
+const retryingFromAnalysisId = ref<number | null>(null)
+
+watch(() => props.project.code_repositories, repos => {
+    const repo = repos.find(repo => repo.id === retryingRepoId.value)
+    if (repo && repo.last_analysis?.id !== retryingFromAnalysisId.value) {
+        retryingRepoId.value = null
+    }
+}, { deep: true })
+
+function retryRepo (repo: CodeRepositoryRow) {
+    retryingRepoId.value = repo.id
+    retryingFromAnalysisId.value = repo.last_analysis?.id ?? null
+    poll.start()
+    router.post(repositories.retry.url(repo.id), {}, {
+        preserveScroll: true,
+        onError: () => { retryingRepoId.value = null }
+    })
+}
 
 const TEXTS = [
     { name: 'what_it_does', label: 'What it does', help: 'What the product is, and the problem it removes.' },
@@ -168,7 +193,7 @@ watch(() => props.project, fill, { immediate: true, deep: true })
                             v-model="githubToken"
                             name="github_token"
                             type="password"
-                            placeholder="github_pat_…"
+                            :placeholder="project.has_github_token ? '••••••••••••' : 'github_pat_…'"
                             class="w-full"
                         />
                     </UFormField>
@@ -215,6 +240,9 @@ watch(() => props.project, fill, { immediate: true, deep: true })
                                     Reading… {{ repo.last_analysis.pages_read }} of up to
                                     {{ repo.last_analysis.pages_planned }} files
                                 </template>
+                                <template v-else-if="retryingRepoId === repo.id">
+                                    Retrying…
+                                </template>
                                 <template v-else-if="repo.last_analysis?.status === 'failed'">
                                     {{ repo.last_analysis.error ?? 'Could not be read.' }}
                                 </template>
@@ -239,7 +267,9 @@ watch(() => props.project, fill, { immediate: true, deep: true })
                                 icon="i-lucide-rotate-cw"
                                 size="sm"
                                 label="Retry"
-                                @click="router.post(repositories.retry.url(repo.id))"
+                                :loading="retryingRepoId === repo.id"
+                                :disabled="retryingRepoId === repo.id"
+                                @click="retryRepo(repo)"
                             />
                             <UButton
                                 type="button"

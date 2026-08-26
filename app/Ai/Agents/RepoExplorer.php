@@ -51,17 +51,25 @@ class RepoExplorer extends EveilAgent implements HasStructuredOutput, HasTools
     public function instructions(): Stringable|string
     {
         return <<<'PROMPT'
-        You are a senior engineer doing due diligence on a repository you have
-        never seen, the way you would before deciding whether to depend on it.
-        You decide which files to open: list a directory to see what is in it,
-        read whatever a README or manifest points you toward, and keep going
-        until you have actually seen enough to back every claim below. A
-        small repo might need a handful of files, a large one dozens — read
-        what the repo actually needs, not a fixed number.
+        You are doing due diligence on a repository you have never seen, for a
+        sales agent, not an engineer deciding whether to depend on it — what you
+        find will be used to sell the product, not to build against it. You
+        decide which files to open: list a directory to see what is in it, read
+        whatever a README or manifest points you toward, and keep going until
+        you have actually seen enough to back every claim below. A small repo
+        might need a handful of files, a large one dozens — read what the repo
+        actually needs, not a fixed number.
 
-        Be concrete. Name real dependencies, real commands, real file names.
-        "Modern tech stack" is useless; "Laravel 13, PHP 8.4, Postgres, Redis"
-        is what a manifest actually says.
+        Dependencies only matter when they say something a buyer would care
+        about: self-hostable, which databases or platforms it runs on, an
+        integration, a compliance-relevant library (billing, auth, search).
+        Skip the rest of the manifest.
+
+        The real find is what the code says that the marketing site doesn't: a
+        feature buried in a directory name, a changelog entry for something
+        never announced, an integration only visible in the dependency list.
+        Look for that on purpose — it's why this agent is worth its price over
+        the cheap fixed-file read.
 
         Work only from what you read. Where something is missing or thin, say
         so rather than inventing what a project like this "probably" has.
@@ -89,18 +97,19 @@ class RepoExplorer extends EveilAgent implements HasStructuredOutput, HasTools
     public function schema(JsonSchema $schema): array
     {
         return [
-            'tech_stack' => $schema->array()
-                ->items($schema->string())
-                ->description('Languages, frameworks and notable dependencies, as the manifest actually names them.')
-                ->required(),
-
             'capabilities' => $schema->array()
                 ->items($schema->string())
-                ->description('Concrete things the repo demonstrably does: named in the README, a changelog entry, a directory that only exists for one purpose. Never marketing language.')
+                ->description('What the product demonstrably does, phrased as a feature a buyer would recognise ("handles subscription billing", not "uses Laravel Cashier"). Named in the README, a changelog entry, a directory that only exists for one purpose. Never marketing language, never a bare dependency name.')
                 ->required(),
 
-            'notes' => $schema->string()
-                ->description('Whatever a positioning writer would want but the product\'s own site likely never says: self-hostable, which databases or platforms it supports, an integration only visible in the dependency list. Empty string when there is nothing like that.')
+            'hidden_features' => $schema->array()
+                ->items($schema->string())
+                ->description('Capabilities visible only in the code, that the product\'s own site likely never mentions: self-hostable, which databases or platforms it supports, an integration only visible in the dependency list, an admin/ops feature with no marketing page. This is the most valuable field for the sales agent reading this — look hard before leaving it empty.')
+                ->required(),
+
+            'tech_stack' => $schema->array()
+                ->items($schema->string())
+                ->description('Only the technologies that matter to a buyer\'s decision, not a full dependency dump: language/framework and version if the manifest states it, plus anything implying self-hosting, data residency, or platform compatibility. Leave out routine libraries.')
                 ->required(),
 
             'confidence' => $schema->integer()->min(0)->max(100)

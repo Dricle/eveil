@@ -205,11 +205,11 @@ class AnalyzeWebsite
         }
 
         $sections = collect($repositories)->map(function (array $repo): string {
-            $techStack = implode(', ', $repo['tech_stack'] ?? []);
             $capabilities = implode('; ', $repo['capabilities'] ?? []);
-            $notes = $repo['notes'] ?? '';
+            $hiddenFeatures = implode('; ', $repo['hidden_features'] ?? []);
+            $techStack = implode(', ', $repo['tech_stack'] ?? []);
 
-            return "### {$repo['name']}\nTech stack: {$techStack}\nCapabilities: {$capabilities}\nNotes: {$notes}";
+            return "### {$repo['name']}\nCapabilities: {$capabilities}\nHidden features: {$hiddenFeatures}\nTech stack: {$techStack}";
         });
 
         return "## Linked repositories\n\n".$sections->implode("\n\n");

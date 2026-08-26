@@ -14,12 +14,12 @@ use Illuminate\Support\Facades\Http;
 /**
  * @return array<string, mixed>
  */
-function repoExplorationFindings(string $notes = 'Self-hostable via Docker.'): array
+function repoExplorationFindings(string $hiddenFeature = 'Self-hostable via Docker.'): array
 {
     return [
-        'tech_stack' => ['PHP', 'Laravel', 'Vue'],
         'capabilities' => ['Self-hosted install script'],
-        'notes' => $notes,
+        'hidden_features' => [$hiddenFeature],
+        'tech_stack' => ['PHP', 'Laravel', 'Vue'],
         'confidence' => 90,
         'files_read' => ['README.md', 'composer.json'],
     ];

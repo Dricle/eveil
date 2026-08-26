@@ -25,12 +25,18 @@ class RepoAnalyst extends EveilAgent implements HasStructuredOutput
     {
         return <<<'PROMPT'
         You are given a repository's metadata and a handful of its files: a README, a
-        package manifest, a changelog, whichever exist. Extract what they actually say,
-        the way a technical co-founder reading the repo for the first time would.
+        package manifest, a changelog, whichever exist. You are reading this for a sales
+        agent, not an engineer vetting a dependency — they will use what you find to sell
+        the product, not to build against it.
 
-        Be concrete. Name real dependencies, real commands, real file names when they
-        matter. "Modern tech stack" is useless; "Laravel 13, PHP 8.5, Postgres, Redis" is
-        what the manifest actually says.
+        Dependencies only matter when they say something a buyer would care about:
+        self-hostable, which databases or platforms it runs on, an integration, a
+        compliance-relevant library (billing, auth, search). Skip the rest of the
+        manifest — nobody sells a deal on "uses Guzzle".
+
+        The real find is what the code says that the marketing site doesn't: a feature
+        buried in a directory name, a changelog entry for something never announced, an
+        integration only visible in the dependency list. Look for that on purpose.
 
         Work only from what is here. Where a file is missing or thin, say so rather than
         inventing what a project like this "probably" has.
@@ -43,18 +49,19 @@ class RepoAnalyst extends EveilAgent implements HasStructuredOutput
     public function schema(JsonSchema $schema): array
     {
         return [
-            'tech_stack' => $schema->array()
-                ->items($schema->string())
-                ->description('Languages, frameworks and notable dependencies, as the manifest actually names them.')
-                ->required(),
-
             'capabilities' => $schema->array()
                 ->items($schema->string())
-                ->description('Concrete things the repo demonstrably does: named in the README, a changelog entry, a directory that only exists for one purpose. Never marketing language.')
+                ->description('What the product demonstrably does, phrased as a feature a buyer would recognise ("handles subscription billing", not "uses Laravel Cashier"). Named in the README, a changelog entry, a directory that only exists for one purpose. Never marketing language, never a bare dependency name.')
                 ->required(),
 
-            'notes' => $schema->string()
-                ->description('Whatever a positioning writer would want but the product\'s own site likely never says: self-hostable, which databases or platforms it supports, an integration only visible in the dependency list. Empty string when there is nothing like that.')
+            'hidden_features' => $schema->array()
+                ->items($schema->string())
+                ->description('Capabilities visible only in the code, that the product\'s own site likely never mentions: self-hostable, which databases or platforms it supports, an integration only visible in the dependency list, an admin/ops feature with no marketing page. This is the most valuable field for the sales agent reading this — look hard before leaving it empty.')
+                ->required(),
+
+            'tech_stack' => $schema->array()
+                ->items($schema->string())
+                ->description('Only the technologies that matter to a buyer\'s decision, not a full dependency dump: language/framework and version if the manifest states it, plus anything implying self-hosting, data residency, or platform compatibility. Leave out routine libraries.')
                 ->required(),
 
             'confidence' => $schema->integer()->min(0)->max(100)

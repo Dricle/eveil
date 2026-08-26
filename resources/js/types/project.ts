@@ -32,9 +32,9 @@ export type KnowledgeBase = {
 export type RepoFindings = {
     code_repository_id: number
     name: string
-    tech_stack: string[]
     capabilities: string[]
-    notes: string
+    hidden_features: string[]
+    tech_stack: string[]
     confidence: number
 }
 
@@ -79,9 +79,9 @@ export type Analysis = {
 
 /** What `RepoAnalyst` and `RepoExplorer` both return, `files_read` deep-only. */
 export type RepoAnalysisSummary = {
-    tech_stack: string[]
     capabilities: string[]
-    notes: string
+    hidden_features: string[]
+    tech_stack: string[]
     confidence: number
     files_read?: string[]
 }

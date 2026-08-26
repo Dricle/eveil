@@ -13,12 +13,12 @@ use Illuminate\Support\Facades\Http;
 /**
  * @return array<string, mixed>
  */
-function repoFindings(string $notes = 'Self-hostable via Docker.'): array
+function repoFindings(string $hiddenFeature = 'Self-hostable via Docker.'): array
 {
     return [
-        'tech_stack' => ['PHP', 'Laravel', 'Vue'],
         'capabilities' => ['Self-hosted install script'],
-        'notes' => $notes,
+        'hidden_features' => [$hiddenFeature],
+        'tech_stack' => ['PHP', 'Laravel', 'Vue'],
         'confidence' => 85,
     ];
 }
@@ -65,7 +65,7 @@ it('reads a repo and folds its findings into the knowledge base', function () {
 
     expect($entry['name'])->toBe('acme/widgets')
         ->and($entry['tech_stack'])->toBe(['PHP', 'Laravel', 'Vue'])
-        ->and($entry['notes'])->toBe('Self-hostable via Docker.');
+        ->and($entry['hidden_features'])->toBe(['Self-hostable via Docker.']);
 });
 
 it('keeps each repo\'s own entry when a second repo is analysed', function () {
@@ -101,8 +101,8 @@ it('re-analysing one repo replaces only its own entry', function () {
     $entries = collect($project->knowledge_base['repositories'])->keyBy('name');
 
     expect($entries)->toHaveCount(2)
-        ->and($entries['acme/api']['notes'])->toBe('Second pass.')
-        ->and($entries['acme/web']['notes'])->toBe('Still here.');
+        ->and($entries['acme/api']['hidden_features'])->toBe(['Second pass.'])
+        ->and($entries['acme/web']['hidden_features'])->toBe(['Still here.']);
 });
 
 it('never overwrites a hand-edited knowledge base', function () {

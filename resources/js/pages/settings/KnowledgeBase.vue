@@ -471,7 +471,7 @@ watch(() => props.project, fill, { immediate: true, deep: true })
                 >
                     <div class="flex items-center justify-between">
                         <h3 class="font-medium">
-                            Tech stack
+                            Capabilities
                         </h3>
                         <UBadge
                             color="neutral"
@@ -480,30 +480,34 @@ watch(() => props.project, fill, { immediate: true, deep: true })
                             :label="`${resultSummary.confidence}/100 confidence`"
                         />
                     </div>
-                    <div class="flex flex-wrap gap-1.5">
-                        <UBadge
-                            v-for="item in resultSummary.tech_stack"
+                    <ul
+                        v-if="resultSummary.capabilities.length"
+                        class="list-disc space-y-1 pl-4"
+                    >
+                        <li
+                            v-for="item in resultSummary.capabilities"
                             :key="item"
-                            color="primary"
-                            variant="subtle"
-                            :label="item"
-                        />
-                        <span
-                            v-if="!resultSummary.tech_stack.length"
-                            class="text-muted"
-                        >Nothing named.</span>
-                    </div>
+                        >
+                            {{ item }}
+                        </li>
+                    </ul>
+                    <p
+                        v-else
+                        class="text-muted"
+                    >
+                        Nothing found.
+                    </p>
 
                     <div>
                         <h3 class="mb-1 font-medium">
-                            Capabilities
+                            Hidden features
                         </h3>
                         <ul
-                            v-if="resultSummary.capabilities.length"
+                            v-if="resultSummary.hidden_features.length"
                             class="list-disc space-y-1 pl-4"
                         >
                             <li
-                                v-for="item in resultSummary.capabilities"
+                                v-for="item in resultSummary.hidden_features"
                                 :key="item"
                             >
                                 {{ item }}
@@ -513,17 +517,27 @@ watch(() => props.project, fill, { immediate: true, deep: true })
                             v-else
                             class="text-muted"
                         >
-                            Nothing found.
+                            Nothing the site doesn't already say.
                         </p>
                     </div>
 
-                    <div v-if="resultSummary.notes">
+                    <div>
                         <h3 class="mb-1 font-medium">
-                            Notes
+                            Tech stack
                         </h3>
-                        <p class="text-muted">
-                            {{ resultSummary.notes }}
-                        </p>
+                        <div class="flex flex-wrap gap-1.5">
+                            <UBadge
+                                v-for="item in resultSummary.tech_stack"
+                                :key="item"
+                                color="neutral"
+                                variant="subtle"
+                                :label="item"
+                            />
+                            <span
+                                v-if="!resultSummary.tech_stack.length"
+                                class="text-muted"
+                            >Nothing named.</span>
+                        </div>
                     </div>
 
                     <div v-if="resultRepo?.last_analysis?.files.length">

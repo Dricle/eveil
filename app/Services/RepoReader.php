@@ -75,6 +75,61 @@ class RepoReader
     }
 
     /**
+     * Owner, repo and default branch out of a URL — the half of `read()`
+     * that `RepoExplorer`'s tools also need, since they fetch files one at a
+     * time instead of a fixed priority list chosen upfront.
+     *
+     * @return array{owner: string, repo: string, branch: string}|null
+     */
+    public function resolve(string $url): ?array
+    {
+        $parsed = CodeRepository::parseGithubUrl($url);
+
+        if ($parsed === null) {
+            return null;
+        }
+
+        [$owner, $repo] = $parsed;
+
+        $meta = $this->fetchJson("https://api.github.com/repos/{$owner}/{$repo}");
+
+        if ($meta === null) {
+            return null;
+        }
+
+        $branch = is_string($meta['default_branch'] ?? null) ? $meta['default_branch'] : 'main';
+
+        return ['owner' => $owner, 'repo' => $repo, 'branch' => $branch];
+    }
+
+    /**
+     * Every path in the repo, unfiltered: `read()`'s own priority-file
+     * allowlist has no place here, since the whole point of the explorer
+     * agent is to decide for itself what is worth opening.
+     *
+     * @return Collection<int, string>
+     */
+    public function paths(string $owner, string $repo, string $branch): Collection
+    {
+        $tree = $this->fetchJson("https://api.github.com/repos/{$owner}/{$repo}/git/trees/{$branch}?recursive=1");
+
+        return collect(is_array($tree['tree'] ?? null) ? $tree['tree'] : [])
+            ->map(fn (mixed $entry): mixed => is_array($entry) ? ($entry['path'] ?? null) : null)
+            ->filter(fn (mixed $path): bool => is_string($path))
+            ->values();
+    }
+
+    /**
+     * One file's text, fetched on demand for the explorer's read tool.
+     * Null covers missing, binary-rejected and over-budget alike: the tool
+     * only needs to tell the model "could not read this", not why.
+     */
+    public function file(string $owner, string $repo, string $branch, string $path): ?string
+    {
+        return $this->fetchRaw($owner, $repo, $branch, $path)['text'] ?? null;
+    }
+
+    /**
      * @param  Collection<int, string>  $paths
      * @return Collection<int, string>
      */

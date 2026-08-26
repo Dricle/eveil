@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\AnalyzeRepo;
+use App\Jobs\ExploreRepo;
 use App\Models\CodeRepository;
 use App\Models\Organization;
 use App\Models\Project;
@@ -82,4 +83,28 @@ it('does not let a project unlink another project\'s repo', function () {
         ->assertNotFound();
 
     expect(CodeRepository::query()->withoutGlobalScopes()->count())->toBe(1);
+});
+
+it('starts a deep, manual exploration of a linked repo', function () {
+    Queue::fake();
+    [$user, $project] = repoOwner();
+    $repository = CodeRepository::factory()->for($project)->create();
+
+    $this->actingAs($user)
+        ->post(route('settings.repositories.explore', $repository))
+        ->assertSessionHasNoErrors();
+
+    Queue::assertPushed(ExploreRepo::class, fn (ExploreRepo $job): bool => $job->codeRepository->is($repository));
+});
+
+it('does not let a project explore another project\'s repo', function () {
+    Queue::fake();
+    [$user] = repoOwner();
+    $other = CodeRepository::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('settings.repositories.explore', $other))
+        ->assertNotFound();
+
+    Queue::assertNotPushed(ExploreRepo::class);
 });

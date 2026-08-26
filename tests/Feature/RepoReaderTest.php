@@ -71,3 +71,33 @@ it('fails cleanly when GitHub answers 404', function () {
     expect($files)->toBeNull()
         ->and($reason)->not->toBeNull();
 });
+
+it('resolves a URL to owner, repo and default branch, for the explorer agent', function () {
+    fakeGithub();
+
+    expect(app(RepoReader::class)->resolve('https://github.com/acme/widgets'))
+        ->toBe(['owner' => 'acme', 'repo' => 'widgets', 'branch' => 'main']);
+});
+
+it('resolves nothing for a non-GitHub URL', function () {
+    expect(app(RepoReader::class)->resolve('https://gitlab.com/acme/widgets'))->toBeNull();
+});
+
+it('lists every path in the repo, unfiltered by the priority allowlist', function () {
+    fakeGithub(['README.md', 'package.json', 'src/index.js']);
+
+    expect(app(RepoReader::class)->paths('acme', 'widgets', 'main')->all())
+        ->toBe(['README.md', 'package.json', 'src/index.js']);
+});
+
+it('reads one file on demand for the explorer agent', function () {
+    fakeGithub();
+
+    expect(app(RepoReader::class)->file('acme', 'widgets', 'main', 'README.md'))->toBe('# Widgets');
+});
+
+it('returns null for a file that cannot be read', function () {
+    Http::fake(['https://raw.githubusercontent.com/acme/widgets/main/gone.md' => Http::response('', 404)]);
+
+    expect(app(RepoReader::class)->file('acme', 'widgets', 'main', 'gone.md'))->toBeNull();
+});

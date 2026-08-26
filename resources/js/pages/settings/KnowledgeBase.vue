@@ -130,6 +130,9 @@ watch(() => props.project, fill, { immediate: true, deep: true })
                     <p class="mt-1 text-sm text-muted">
                         Source often names capabilities the site never mentions, or
                         contradicts something it oversells. GitHub only, for now.
+                        "Deep analysis" lets the model roam the repo itself instead of
+                        reading a handful of fixed files — slower and more expensive,
+                        worth it for a repo the quick read left thin.
                     </p>
                 </template>
 
@@ -157,12 +160,18 @@ watch(() => props.project, fill, { immediate: true, deep: true })
                                 class="truncate font-medium hover:underline"
                             >{{ repo.name }}</a>
                             <p class="text-xs text-dimmed">
-                                <template v-if="repo.last_analysis?.running">
+                                <template v-if="repo.last_analysis?.running && repo.last_analysis.type === 'repo_deep'">
+                                    Exploring… {{ repo.last_analysis.pages_read }} file(s) read so far
+                                </template>
+                                <template v-else-if="repo.last_analysis?.running">
                                     Reading… {{ repo.last_analysis.pages_read }} of up to
                                     {{ repo.last_analysis.pages_planned }} files
                                 </template>
                                 <template v-else-if="repo.last_analysis?.status === 'failed'">
                                     {{ repo.last_analysis.error ?? 'Could not be read.' }}
+                                </template>
+                                <template v-else-if="repo.last_analysis?.type === 'repo_deep'">
+                                    Explored deeply, {{ repo.last_analysis.pages_read }} file(s) read.
                                 </template>
                                 <template v-else-if="repo.last_analysis">
                                     Read successfully.
@@ -173,14 +182,27 @@ watch(() => props.project, fill, { immediate: true, deep: true })
                             </p>
                         </div>
 
-                        <UButton
-                            type="button"
-                            color="error"
-                            variant="ghost"
-                            icon="i-lucide-trash-2"
-                            size="sm"
-                            @click="router.delete(repositories.destroy.url(repo.id))"
-                        />
+                        <div class="flex shrink-0 items-center gap-1">
+                            <UButton
+                                type="button"
+                                color="neutral"
+                                variant="ghost"
+                                icon="i-lucide-telescope"
+                                size="sm"
+                                label="Deep analysis"
+                                :loading="repo.last_analysis?.running === true"
+                                :disabled="repo.last_analysis?.running === true"
+                                @click="router.post(repositories.explore.url(repo.id))"
+                            />
+                            <UButton
+                                type="button"
+                                color="error"
+                                variant="ghost"
+                                icon="i-lucide-trash-2"
+                                size="sm"
+                                @click="router.delete(repositories.destroy.url(repo.id))"
+                            />
+                        </div>
                     </div>
                 </div>
 

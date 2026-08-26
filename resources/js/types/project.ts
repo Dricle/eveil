@@ -63,7 +63,7 @@ export type OpenQuestion = {
 
 export type Analysis = {
     id: number
-    type: 'website' | 'repo'
+    type: 'website' | 'repo' | 'repo_deep'
     status: string
     error: string | null
     failures: { url: string, reason: string }[]

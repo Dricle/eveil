@@ -599,6 +599,69 @@ it('waits a day on a soft bounce instead of throwing the lead away', function ()
         ->and($membership->refresh()->next_action_at->isFuture())->toBeTrue();
 });
 
+/**
+ * What Zoho actually sends back on a real Apple/iCloud rejection: a bare
+ * three-digit `Status:` instead of the RFC 3464 extended code, and the
+ * quoted original headers indented by one space. Both broke this parser on
+ * a real bounce — the second one fatally, since it made the DSN's own
+ * Message-Id look like the original that failed, matching nothing sent.
+ */
+function zohoBounceMail(): string
+{
+    return "* 22 FETCH (BODY[] {700}\r\n"
+        ."From: mailer-daemon@mail.zoho.eu\r\n"
+        ."To: clement@abcreche.test\r\n"
+        ."Message-Id: <report-1@zohomail.eu>\r\n"
+        ."Subject: Undelivered Mail Returned to Sender\r\n"
+        ."Content-Type: multipart/report; report-type=delivery-status; boundary=\"b2\"\r\n"
+        ."\r\n"
+        ."--b2\r\n"
+        ."Content-Type: text/plain\r\n"
+        ."\r\n"
+        ."This message was created automatically by mail delivery software.\r\n"
+        ."\r\n"
+        ."marcel@friterie.test, ERROR CODE :554 - 5.7.1 [CS01] Message rejected due to local policy.\r\n"
+        ."--b2\r\n"
+        ."Content-Type: message/delivery-status\r\n"
+        ."\r\n"
+        ."Final-Recipient: rfc822; marcel@friterie.test\r\n"
+        ."Status: 554\r\n"
+        ."Action: failed\r\n"
+        ."Diagnostic-Code: 5.7.1 [CS01] Message rejected due to local policy.\r\n"
+        ."--b2\r\n"
+        ."Content-Type: text/rfc822\r\n"
+        ."\r\n"
+        ." Message-ID:<ours-1@abcreche.test>\r\n"
+        ." Subject:vos commandes\r\n"
+        ."--b2--\r\n"
+        .")\r\n";
+}
+
+it('reads a Zoho-style bounce: a bare status code and an indented quoted original', function () {
+    Queue::fake();
+
+    [$mailbox, $membership, $sent] = awaitingReply();
+
+    $report = MailParser::deliveryStatus(zohoBounceMail());
+
+    expect($report)->not->toBeNull()
+        ->and($report->recipient)->toBe('marcel@friterie.test')
+        // The indentation used to hide this line entirely, leaving the
+        // report's OWN Message-Id as "the original" instead.
+        ->and($report->originalMessageId)->toBe('ours-1@abcreche.test')
+        // `Status: 554` has no dot in it — Zoho puts the extended code in
+        // Diagnostic-Code instead.
+        ->and($report->isHard)->toBeTrue();
+
+    fakeImap([inbound('', ['uid' => 22, 'messageId' => 'zoho-report-1@zohomail.eu', 'inReplyTo' => null, 'bounce' => $report])]);
+
+    app(FetchReplies::class)->handle($mailbox);
+
+    expect($sent->refresh()->status)->toBe(MessageStatus::Bounced)
+        ->and($membership->lead->refresh()->status)->toBe(OutreachStatus::Suppressed)
+        ->and($membership->refresh()->status)->toBe(CampaignLeadStatus::Stopped);
+});
+
 it('is not fooled into treating an ordinary reply as a bounce', function () {
     expect(MailParser::deliveryStatus("* 1 FETCH (BODY[] {90}\r\nFrom: marcel@friterie.test\r\nSubject: Re: vos commandes\r\n\r\nNon merci.\r\n)\r\n"))
         ->toBeNull();

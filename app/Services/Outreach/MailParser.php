@@ -148,21 +148,29 @@ class MailParser
         $headers = self::headers($raw);
 
         $isReport = str_contains(mb_strtolower($headers['content-type'] ?? ''), 'report-type=delivery-status')
-            || str_contains($message, 'Content-Type: message/delivery-status');
+            || str_contains(mb_strtolower($message), 'content-type: message/delivery-status');
 
         if (! $isReport) {
             return null;
         }
 
-        preg_match('/^Status:\s*([245]\.\d+\.\d+)/mi', $message, $status);
+        // Just the leading digit: Zoho (among others) writes the bare SMTP
+        // reply code here ("Status: 554") instead of the RFC 3464 extended
+        // one ("5.7.1"), but the leading digit means the same thing either
+        // way, and a dotted code's first digit is that same digit.
+        preg_match('/^Status:\s*([245])/mi', $message, $status);
         preg_match('/^Action:\s*(\w+)/mi', $message, $action);
         preg_match('/^Final-Recipient:\s*[^;]+;\s*(\S+)/mi', $message, $recipient);
         preg_match('/^Diagnostic-Code:\s*(.+)$/mi', $message, $diagnostic);
 
         // Our own Message-ID, carried in the returned copy of the original
         // headers. It is the only reliable way back to the mail that failed:
-        // the recipient alone cannot say WHICH send bounced.
-        preg_match_all('/^Message-ID:\s*<([^>]+)>/mi', $message, $ids);
+        // the recipient alone cannot say WHICH send bounced. `[ \t]*` because
+        // some providers (Zoho among them) indent the quoted original headers
+        // by one space, which an anchored `^Message-ID` would otherwise miss
+        // entirely — leaving only the report's OWN id to match, which points
+        // at nothing we ever sent.
+        preg_match_all('/^[ \t]*Message-ID:\s*<([^>]+)>/mi', $message, $ids);
 
         $address = mb_strtolower(mb_trim($recipient[1] ?? '', '<> '));
 
@@ -177,9 +185,11 @@ class MailParser
         return new BounceReport(
             recipient: $address,
             originalMessageId: $original,
-            isHard: str_starts_with($status[1] ?? '', '5')
-                || mb_strtolower($action[1] ?? '') === 'failed' && ! str_starts_with($status[1] ?? '5', '4'),
-            diagnostic: mb_trim($diagnostic[1] ?? ($status[1] ?? 'delivery failed')),
+            // A `Status:` digit is trusted when present, whichever format it
+            // came in. With none at all, `Action: failed` is the fallback
+            // signal a permanent failure happened anyway.
+            isHard: isset($status[1]) ? $status[1] === '5' : mb_strtolower($action[1] ?? '') === 'failed',
+            diagnostic: mb_trim($diagnostic[1] ?? 'delivery failed'),
         );
     }
 

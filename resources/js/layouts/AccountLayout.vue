@@ -40,7 +40,7 @@ const items = computed<NavigationMenuItem[]>(() =>
                 />
             </aside>
 
-            <div class="min-w-0 flex-1 space-y-4 p-4">
+            <div class="min-w-0 flex-1 space-y-4 overflow-y-auto p-4">
                 <h2 class="font-medium">
                     {{ title }}
                 </h2>

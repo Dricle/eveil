@@ -322,12 +322,12 @@ it('pauses a mailbox whose recent sends are bouncing, whatever the autonomy leve
     app(EnrolCampaign::class)->handle(sequence($project));
     CampaignLead::query()->update(['next_action_at' => now()->subMinute()]);
 
-    foreach (range(1, 10) as $i) {
+    foreach (range(1, 20) as $i) {
         Message::factory()->create([
             'email_account_id' => $mailbox->id,
             'lead_id' => Lead::query()->first()->id,
             'direction' => MessageDirection::Outbound,
-            'status' => $i <= 2 ? MessageStatus::Bounced : MessageStatus::Sent,
+            'status' => $i <= 4 ? MessageStatus::Bounced : MessageStatus::Sent,
             'sent_at' => now()->subHours(2),
         ]);
     }
@@ -339,6 +339,31 @@ it('pauses a mailbox whose recent sends are bouncing, whatever the autonomy leve
         ->and($mailbox->last_error)->toContain('bounced');
 
     Queue::assertNothingPushed();
+});
+
+it('does not trip the bounce breaker on a handful of sends, however bad the ratio', function () {
+    [, $project, $mailbox] = sender();
+
+    Queue::fake();
+    contactable($project);
+    app(EnrolCampaign::class)->handle(sequence($project));
+
+    $this->travelTo(now()->setTime(10, 0));
+    CampaignLead::query()->update(['next_action_at' => now()->subMinute()]);
+
+    // One send, one bounce: 100% of a sample too small to mean anything.
+    Message::factory()->create([
+        'email_account_id' => $mailbox->id,
+        'lead_id' => Lead::query()->first()->id,
+        'direction' => MessageDirection::Outbound,
+        'status' => MessageStatus::Bounced,
+        'sent_at' => now()->subHours(2),
+    ]);
+
+    expect(app(DispatchDueSends::class)->handle())->toBe(1)
+        ->and($mailbox->refresh()->status)->toBe(EmailAccountStatus::Active);
+
+    Queue::assertPushed(SendCampaignStep::class, 1);
 });
 
 it('ramps a new mailbox up instead of opening at the full limit', function () {

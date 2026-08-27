@@ -204,6 +204,13 @@ class EmailAccount extends Model
     }
 
     /**
+     * Below this many recent sends, one bounce is not a rate, it's a single
+     * bad address. A brand-new mailbox hitting one dead lead would otherwise
+     * read as 100% bounced and trip the breaker on its first mail out.
+     */
+    private const MIN_BOUNCE_SAMPLE = 20;
+
+    /**
      * The share of the last hundred sends that bounced. The circuit breaker's
      * input. A rolling window rather than a lifetime rate: a mailbox that had a
      * bad week in March is not the problem, one bouncing right now is.
@@ -217,7 +224,7 @@ class EmailAccount extends Model
             ->limit(100)
             ->get(['status']);
 
-        if ($recent->isEmpty()) {
+        if ($recent->count() < self::MIN_BOUNCE_SAMPLE) {
             return 0.0;
         }
 

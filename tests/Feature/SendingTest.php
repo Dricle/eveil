@@ -544,6 +544,31 @@ it('records what a connection test found, and clears the error when it works', f
         ->and($mailbox->last_error)->toContain('rejected');
 });
 
+it('reactivates a paused mailbox without re-testing the connection', function () {
+    [$user, , $mailbox] = sender();
+
+    $mailbox->update([
+        'status' => EmailAccountStatus::Paused,
+        'last_error' => 'Paused automatically: too many recent sends bounced.',
+    ]);
+
+    $this->actingAs($user)->post(route('settings.mailboxes.reactivate', $mailbox))
+        ->assertRedirect();
+
+    expect($mailbox->refresh()->status)->toBe(EmailAccountStatus::Active)
+        ->and($mailbox->last_error)->toBeNull();
+});
+
+it('never reactivates a mailbox belonging to another organization', function () {
+    [$user] = sender();
+
+    $theirs = EmailAccount::factory()->create(['status' => EmailAccountStatus::Paused]);
+
+    $this->actingAs($user)->post(route('settings.mailboxes.reactivate', $theirs))->assertNotFound();
+
+    expect($theirs->refresh()->status)->toBe(EmailAccountStatus::Paused);
+});
+
 it('puts people into the sequence when the campaign is activated, and only then', function () {
     [$user, $project] = sender();
 

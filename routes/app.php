@@ -41,6 +41,7 @@ use App\Http\Controllers\DiscoveryTaskReplayController;
 use App\Http\Controllers\InboxController;
 use App\Http\Controllers\LeadImportController;
 use App\Http\Controllers\MailboxController;
+use App\Http\Controllers\MailboxReactivateController;
 use App\Http\Controllers\MailboxTestController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\OnboardingSearchController;
@@ -137,6 +138,8 @@ Route::middleware(['auth', 'verified', 'project.set'])->group(function (): void 
             Route::delete('mailboxes/{mailbox}', [MailboxController::class, 'destroy'])->name('mailboxes.destroy');
             Route::post('mailboxes/{mailbox}/test', [MailboxTestController::class, 'store'])
                 ->name('mailboxes.test');
+            Route::post('mailboxes/{mailbox}/reactivate', [MailboxReactivateController::class, 'store'])
+                ->name('mailboxes.reactivate');
 
             /*
              * Cloud billing. The route exists in both editions (one repo,

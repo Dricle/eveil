@@ -23,6 +23,7 @@ const editing = ref<Mailbox | null>(null)
 const creating = ref(false)
 const preset = ref<string | undefined>()
 const testing = ref<number | null>(null)
+const reactivating = ref<number | null>(null)
 
 // Prefilled from the preset so nobody has to find their provider's host names,
 // which is where most of the abandonment happens.
@@ -99,6 +100,18 @@ function test (mailbox: Mailbox) {
     router.post(mailboxRoutes.test.url(mailbox.id), {}, {
         preserveScroll: true,
         onFinish: () => testing.value = null
+    })
+}
+
+// A pause is a decision the app made, not proof the mailbox is broken: a
+// circuit-breaker trip on one bad lead, a password that has since been fixed
+// elsewhere. Undoing it does not re-test the connection, that is what "Test"
+// is for.
+function reactivate (mailbox: Mailbox) {
+    reactivating.value = mailbox.id
+    router.post(mailboxRoutes.reactivate.url(mailbox.id), {}, {
+        preserveScroll: true,
+        onFinish: () => reactivating.value = null
     })
 }
 
@@ -194,6 +207,18 @@ function note () {
                         title="Sends a test message to this address"
                         :loading="testing === mailbox.id"
                         @click="test(mailbox)"
+                    />
+
+                    <UButton
+                        v-if="mailbox.status !== 'active'"
+                        icon="i-lucide-play"
+                        color="neutral"
+                        variant="ghost"
+                        size="xs"
+                        label="Reactivate"
+                        title="Resumes sending without re-testing the connection"
+                        :loading="reactivating === mailbox.id"
+                        @click="reactivate(mailbox)"
                     />
 
                     <UButton

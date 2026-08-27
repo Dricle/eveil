@@ -59,6 +59,24 @@ function retryRepo (repo: CodeRepositoryRow) {
     })
 }
 
+// Every read of a repo is the deep, tool-calling agent now, and it is
+// priced high enough (600 credits) that a stray click must not fire it:
+// linking and re-analysing both gate through one of these confirm modals.
+const confirmingLink = ref(false)
+
+const confirmingRetryRepoId = ref<number | null>(null)
+const confirmingRetryRepo = computed(() =>
+    props.project.code_repositories.find(repo => repo.id === confirmingRetryRepoId.value) ?? null)
+
+function confirmRetry () {
+    if (!confirmingRetryRepo.value) {
+        return
+    }
+
+    retryRepo(confirmingRetryRepo.value)
+    confirmingRetryRepoId.value = null
+}
+
 const TEXTS = [
     { name: 'what_it_does', label: 'What it does', help: 'What the product is, and the problem it removes.' },
     { name: 'who_it_is_for', label: 'Who it is for', help: 'The kind of company, and the kind of person who buys it.' },
@@ -164,9 +182,8 @@ watch(() => props.project, fill, { immediate: true, deep: true })
                     <p class="mt-1 text-sm text-muted">
                         Source often names capabilities the site never mentions, or
                         contradicts something it oversells. GitHub only, for now.
-                        "Deep analysis" lets the model roam the repo itself instead of
-                        reading a handful of fixed files: slower and more expensive,
-                        worth it for a repo the quick read left thin.
+                        The model roams the repo itself, deciding what to open —
+                        600 credits per link or re-run.
                     </p>
                 </template>
 
@@ -237,12 +254,8 @@ watch(() => props.project, fill, { immediate: true, deep: true })
                                 class="truncate font-medium hover:underline"
                             >{{ repo.name }}</a>
                             <p class="text-xs text-dimmed">
-                                <template v-if="repo.last_analysis?.running && repo.last_analysis.type === 'repo_deep'">
+                                <template v-if="repo.last_analysis?.running">
                                     Exploring… {{ repo.last_analysis.pages_read }} file(s) read so far
-                                </template>
-                                <template v-else-if="repo.last_analysis?.running">
-                                    Reading… {{ repo.last_analysis.pages_read }} of up to
-                                    {{ repo.last_analysis.pages_planned }} files
                                 </template>
                                 <template v-else-if="retryingRepoId === repo.id">
                                     Retrying…
@@ -250,11 +263,8 @@ watch(() => props.project, fill, { immediate: true, deep: true })
                                 <template v-else-if="repo.last_analysis?.status === 'failed'">
                                     {{ repo.last_analysis.error ?? 'Could not be read.' }}
                                 </template>
-                                <template v-else-if="repo.last_analysis?.type === 'repo_deep'">
-                                    Explored deeply, {{ repo.last_analysis.pages_read }} file(s) read.
-                                </template>
                                 <template v-else-if="repo.last_analysis">
-                                    Read successfully.
+                                    Explored, {{ repo.last_analysis.pages_read }} file(s) read.
                                 </template>
                                 <template v-else>
                                     Not read yet.
@@ -274,27 +284,16 @@ watch(() => props.project, fill, { immediate: true, deep: true })
                                 @click="resultRepoId = repo.id"
                             />
                             <UButton
-                                v-if="repo.last_analysis?.status === 'failed'"
+                                v-if="repo.last_analysis?.running !== true"
                                 type="button"
-                                color="error"
+                                :color="repo.last_analysis?.status === 'failed' ? 'error' : 'neutral'"
                                 variant="ghost"
                                 icon="i-lucide-rotate-cw"
                                 size="sm"
-                                label="Retry"
+                                :label="repo.last_analysis?.status === 'failed' ? 'Retry' : 'Re-analyze'"
                                 :loading="retryingRepoId === repo.id"
                                 :disabled="retryingRepoId === repo.id"
-                                @click="retryRepo(repo)"
-                            />
-                            <UButton
-                                type="button"
-                                color="neutral"
-                                variant="ghost"
-                                icon="i-lucide-telescope"
-                                size="sm"
-                                label="Deep analysis"
-                                :loading="repo.last_analysis?.running === true"
-                                :disabled="repo.last_analysis?.running === true"
-                                @click="router.post(repositories.explore.url(repo.id))"
+                                @click="confirmingRetryRepoId = repo.id"
                             />
                             <UButton
                                 type="button"
@@ -309,30 +308,12 @@ watch(() => props.project, fill, { immediate: true, deep: true })
                 </div>
 
                 <template #footer>
-                    <Form
-                        v-slot="{ errors, processing }"
-                        v-bind="repositories.store.form()"
-                        class="flex items-start gap-3"
-                        @success="repoUrl = ''"
-                    >
-                        <UFormField
-                            class="flex-1"
-                            name="url"
-                            :error="errors.url"
-                        >
-                            <UInput
-                                v-model="repoUrl"
-                                name="url"
-                                placeholder="https://github.com/owner/repo"
-                                class="w-full"
-                            />
-                        </UFormField>
-                        <UButton
-                            type="submit"
-                            :loading="processing"
-                            label="Link"
-                        />
-                    </Form>
+                    <UButton
+                        type="button"
+                        icon="i-lucide-plus"
+                        label="Link a repository"
+                        @click="confirmingLink = true"
+                    />
                 </template>
             </UCard>
 
@@ -458,9 +439,85 @@ watch(() => props.project, fill, { immediate: true, deep: true })
         </div>
 
         <UModal
+            :open="confirmingLink"
+            title="Link a repository"
+            :ui="{ content: 'max-w-md' }"
+            @update:open="open => { confirmingLink = open }"
+        >
+            <template #body>
+                <Form
+                    v-slot="{ errors, processing }"
+                    v-bind="repositories.store.form()"
+                    @success="() => { repoUrl = ''; confirmingLink = false }"
+                >
+                    <UFormField
+                        name="url"
+                        :error="errors.url"
+                        help="GitHub only, for now."
+                    >
+                        <UInput
+                            v-model="repoUrl"
+                            name="url"
+                            placeholder="https://github.com/owner/repo"
+                            class="w-full"
+                            autofocus
+                        />
+                    </UFormField>
+                    <p class="mt-3 text-sm text-muted">
+                        Linking starts a deep, tool-calling read of the whole repo —
+                        the model decides what to open. Costs 600 credits.
+                    </p>
+                    <div class="mt-4 flex justify-end gap-2">
+                        <UButton
+                            type="button"
+                            label="Cancel"
+                            color="neutral"
+                            variant="ghost"
+                            @click="confirmingLink = false"
+                        />
+                        <UButton
+                            type="submit"
+                            label="Link & spend 600 credits"
+                            :loading="processing"
+                        />
+                    </div>
+                </Form>
+            </template>
+        </UModal>
+
+        <UModal
+            :open="confirmingRetryRepoId !== null"
+            title="Re-analyze this repo?"
+            :ui="{ content: 'max-w-md' }"
+            @update:open="open => { if (!open) confirmingRetryRepoId = null }"
+        >
+            <template #body>
+                <p class="text-sm text-muted">
+                    Reading <strong>{{ confirmingRetryRepo?.name }}</strong> again runs
+                    the full deep exploration from scratch — 600 credits.
+                </p>
+            </template>
+
+            <template #footer>
+                <div class="flex w-full justify-end gap-2">
+                    <UButton
+                        label="Cancel"
+                        color="neutral"
+                        variant="ghost"
+                        @click="confirmingRetryRepoId = null"
+                    />
+                    <UButton
+                        label="Confirm & spend 600 credits"
+                        @click="confirmRetry"
+                    />
+                </div>
+            </template>
+        </UModal>
+
+        <UModal
             :open="resultRepo !== null"
             :title="resultRepo?.name"
-            :description="`${resultRepo?.last_analysis?.type === 'repo_deep' ? 'Deep analysis' : 'Quick read'} result`"
+            description="Exploration result"
             :ui="{ content: 'max-w-lg' }"
             @update:open="open => { if (!open) resultRepoId = null }"
         >

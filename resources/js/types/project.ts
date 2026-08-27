@@ -28,7 +28,7 @@ export type KnowledgeBase = {
     recommendations?: Recommendation[]
 }
 
-/** What `RepoAnalyst` found in one linked repo, folded into the knowledge base. */
+/** What `RepoExplorer` found in one linked repo, folded into the knowledge base. */
 export type RepoFindings = {
     code_repository_id: number
     name: string
@@ -63,7 +63,7 @@ export type OpenQuestion = {
 
 export type Analysis = {
     id: number
-    type: 'website' | 'repo' | 'repo_deep'
+    type: 'website' | 'repo'
     status: string
     error: string | null
     failures: { url: string, reason: string }[]
@@ -77,13 +77,13 @@ export type Analysis = {
     files: { url: string, title: string, chars: number }[]
 }
 
-/** What `RepoAnalyst` and `RepoExplorer` both return, `files_read` deep-only. */
+/** What `RepoExplorer` returns for one linked repo. */
 export type RepoAnalysisSummary = {
     capabilities: string[]
     hidden_features: string[]
     tech_stack: string[]
     confidence: number
-    files_read?: string[]
+    files_read: string[]
 }
 
 export type CodeRepositoryRow = {

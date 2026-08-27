@@ -26,7 +26,6 @@ use App\Http\Controllers\CampaignStatusController;
 use App\Http\Controllers\CampaignStepController;
 use App\Http\Controllers\CampaignStepOrderController;
 use App\Http\Controllers\CodeRepositoryController;
-use App\Http\Controllers\CodeRepositoryExplorationController;
 use App\Http\Controllers\CompanyApprovalController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\CompanyStatusController;
@@ -185,9 +184,11 @@ Route::middleware(['auth', 'verified', 'project.set'])->group(function (): void 
                 ->name('knowledge-base.answers');
 
             /*
-             * Embedded in the Knowledge Base screen, not a page of its own:
-             * linking a repo starts reading it the same way saving the
-             * project starts reading its site.
+             * Embedded in the Knowledge Base screen, not a page of its own.
+             * `store` and `retry` both start the deep, tool-calling read
+             * (`App\Jobs\ExploreRepo`, priced at `CreditPrice::current
+             * ('repo-explorer')`): the frontend confirms the cost before
+             * either request is sent.
              */
             Route::post('repositories', [CodeRepositoryController::class, 'store'])
                 ->name('repositories.store');
@@ -195,13 +196,6 @@ Route::middleware(['auth', 'verified', 'project.set'])->group(function (): void 
                 ->name('repositories.destroy');
             Route::post('repositories/{codeRepository}/retry', [CodeRepositoryController::class, 'retry'])
                 ->name('repositories.retry');
-
-            /*
-             * The deep, tool-calling read — manual and priced, never
-             * triggered by `repositories.store` above.
-             */
-            Route::post('repositories/{codeRepository}/explore', [CodeRepositoryExplorationController::class, 'store'])
-                ->name('repositories.explore');
         });
 
         /*

@@ -13,20 +13,17 @@ use Laravel\Ai\Responses\StructuredAgentResponse;
 use Throwable;
 
 /**
- * `AnalyzeRepo`'s expensive sibling: manual, tool-calling, no fixed file
- * list. Kept as its own action rather than a branch inside `AnalyzeRepo`
- * because the two disagree on almost everything that matters — what triggers
- * them, what they cost, and how the model gets its files — and a shared
- * branch would only make both harder to read.
+ * Reads a linked repo the only way it is read: manual, tool-calling, no
+ * fixed file list — the model decides what to open and keeps going until it
+ * has seen enough.
  */
 class ExploreRepo
 {
     /**
-     * Same budget role as `AnalyzeRepo::MAX_CHARS`: how much of the path
-     * list is dumped straight into the prompt. Capped for a large monorepo's
-     * sake, not the agent's own view of the repo — `ListRepoPaths` still
-     * holds every path regardless, this only bounds what is spent showing
-     * them all upfront.
+     * How much of the path list is dumped straight into the prompt. Capped
+     * for a large monorepo's sake, not the agent's own view of the repo —
+     * `ListRepoPaths` still holds every path regardless, this only bounds
+     * what is spent showing them all upfront.
      */
     private const MAX_PATH_LIST_CHARS = 20_000;
 
@@ -39,7 +36,7 @@ class ExploreRepo
         $analysis = ProjectAnalysis::create([
             'project_id' => $project->id,
             'code_repository_id' => $codeRepository->id,
-            'type' => AnalysisType::RepoDeep,
+            'type' => AnalysisType::Repo,
             'status' => AnalysisStatus::Running,
         ]);
 
@@ -85,7 +82,7 @@ class ExploreRepo
     }
 
     /**
-     * Same field names `AnalyzeRepo::filesRead()` writes, so
+     * Same field names `AnalyzeWebsite::pagesRead()` writes, so
      * `ProjectAnalysisResource`'s progress fields work here unchanged.
      *
      * @param  array<int, string>  $filesRead
@@ -98,8 +95,7 @@ class ExploreRepo
 
     /**
      * A hand-edited knowledge base outranks a re-analysis, same rule
-     * `AnalyzeRepo::applyToProject()` and `AnalyzeWebsite::applyToProject()`
-     * already enforce.
+     * `AnalyzeWebsite::applyToProject()` already enforces.
      *
      * @param  array<string, mixed>  $summary
      */

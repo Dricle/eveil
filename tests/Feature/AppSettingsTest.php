@@ -333,7 +333,6 @@ function limitPayload(array $overrides = []): array
         'crawl_delay_ms' => 500,
         'crawl_cache_ttl_days' => 7,
         'contacts_max_pages' => 4,
-        'repo_max_files' => 8,
         'verification_probe' => true,
         'verification_timeout' => 5,
         'searxng_per_query' => 20,

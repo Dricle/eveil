@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\CodeRepositoryRequest;
-use App\Jobs\AnalyzeRepo;
+use App\Jobs\ExploreRepo;
 use App\Models\CodeRepository;
 use App\Support\CurrentProject;
 use Illuminate\Http\RedirectResponse;
@@ -12,6 +12,10 @@ use Illuminate\Http\RedirectResponse;
  * Linking and unlinking a repo. No `edit`/`index` of its own: this lives
  * embedded in the Knowledge Base page, the same reason several other
  * single-purpose controllers here have no screen of their own.
+ *
+ * `store()` and `retry()` both start the deep, tool-calling read
+ * (`App\Jobs\ExploreRepo`) — there is no cheaper tier any more, so the
+ * frontend must confirm its cost before either request is sent.
  *
  * Ids are looked up here rather than type-hinted into the action:
  * `SubstituteBindings` resolves in the `web` group, before `project.set`, so
@@ -32,14 +36,14 @@ class CodeRepositoryController extends Controller
             'name' => implode('/', CodeRepository::parseGithubUrl($request->validated('url')) ?? []),
         ]);
 
-        AnalyzeRepo::dispatch($codeRepository);
+        ExploreRepo::dispatch($codeRepository);
 
         return to_route('settings.knowledge-base.edit');
     }
 
     public function retry(int $codeRepository): RedirectResponse
     {
-        AnalyzeRepo::dispatch(CodeRepository::query()->findOrFail($codeRepository));
+        ExploreRepo::dispatch(CodeRepository::query()->findOrFail($codeRepository));
 
         return to_route('settings.knowledge-base.edit');
     }

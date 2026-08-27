@@ -1,6 +1,5 @@
 <?php
 
-use App\Jobs\AnalyzeRepo;
 use App\Jobs\ExploreRepo;
 use App\Models\CodeRepository;
 use App\Models\Organization;
@@ -34,7 +33,7 @@ it('links a github repo and starts reading it', function () {
     expect($repository->url)->toBe('https://github.com/acme/widgets')
         ->and($repository->name)->toBe('acme/widgets');
 
-    Queue::assertPushed(AnalyzeRepo::class, fn (AnalyzeRepo $job): bool => $job->codeRepository->is($repository));
+    Queue::assertPushed(ExploreRepo::class, fn (ExploreRepo $job): bool => $job->codeRepository->is($repository));
 });
 
 it('refuses anything that is not a github.com URL', function () {
@@ -85,30 +84,6 @@ it('does not let a project unlink another project\'s repo', function () {
     expect(CodeRepository::query()->withoutGlobalScopes()->count())->toBe(1);
 });
 
-it('starts a deep, manual exploration of a linked repo', function () {
-    Queue::fake();
-    [$user, $project] = repoOwner();
-    $repository = CodeRepository::factory()->for($project)->create();
-
-    $this->actingAs($user)
-        ->post(route('settings.repositories.explore', $repository))
-        ->assertSessionHasNoErrors();
-
-    Queue::assertPushed(ExploreRepo::class, fn (ExploreRepo $job): bool => $job->codeRepository->is($repository));
-});
-
-it('does not let a project explore another project\'s repo', function () {
-    Queue::fake();
-    [$user] = repoOwner();
-    $other = CodeRepository::factory()->create();
-
-    $this->actingAs($user)
-        ->post(route('settings.repositories.explore', $other))
-        ->assertNotFound();
-
-    Queue::assertNotPushed(ExploreRepo::class);
-});
-
 it('retries reading a repo', function () {
     Queue::fake();
     [$user, $project] = repoOwner();
@@ -118,7 +93,7 @@ it('retries reading a repo', function () {
         ->post(route('settings.repositories.retry', $repository))
         ->assertSessionHasNoErrors();
 
-    Queue::assertPushed(AnalyzeRepo::class, fn (AnalyzeRepo $job): bool => $job->codeRepository->is($repository));
+    Queue::assertPushed(ExploreRepo::class, fn (ExploreRepo $job): bool => $job->codeRepository->is($repository));
 });
 
 it('does not let a project retry another project\'s repo', function () {
@@ -130,5 +105,5 @@ it('does not let a project retry another project\'s repo', function () {
         ->post(route('settings.repositories.retry', $other))
         ->assertNotFound();
 
-    Queue::assertNotPushed(AnalyzeRepo::class);
+    Queue::assertNotPushed(ExploreRepo::class);
 });

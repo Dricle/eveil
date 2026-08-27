@@ -31,8 +31,8 @@ class ProjectAnalysisResource extends JsonResource
             'finished_at' => $this->updated_at?->toIso8601String(),
             // What the model actually produced, so a screen can show the
             // finding behind an analysis instead of only its pass/fail state.
-            // Null until `Succeeded`: `AnalyzeWebsite`, `AnalyzeRepo` and
-            // `ExploreRepo` all only write it once the model has answered.
+            // Null until `Succeeded`: `AnalyzeWebsite` and `ExploreRepo` both
+            // only write it once the model has answered.
             'summary' => $this->summary,
             'files' => is_array($this->raw['pages'] ?? null) ? $this->raw['pages'] : [],
         ];

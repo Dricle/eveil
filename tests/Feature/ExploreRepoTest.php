@@ -25,11 +25,18 @@ function repoExplorationFindings(string $hiddenFeature = 'Self-hostable via Dock
     ];
 }
 
+function fakeGithubSuccess(): void
+{
+    Http::fake([
+        'https://api.github.com/repos/*' => Http::response(['default_branch' => 'main']),
+        'https://raw.githubusercontent.com/*' => Http::response('# Widgets'),
+    ]);
+}
+
 /**
- * Re-fetched from the database, same reasoning `analyzeRepo()` in
- * `AnalyzeRepoTest` already documents: `ExploreRepo::handle()` writes
- * through `$codeRepository->project`, a relation cached on whichever
- * instance is in hand.
+ * Re-fetched from the database, never the PHP object the test already
+ * holds: `ExploreRepo::handle()` writes through `$codeRepository->project`,
+ * a separately-cached relation on whichever instance happens to be in hand.
  */
 function exploreRepo(CodeRepository $codeRepository): ProjectAnalysis
 {
@@ -50,7 +57,7 @@ it('roams the repo and folds its findings into the knowledge base', function () 
     $analysis = exploreRepo($codeRepository);
 
     expect($analysis->status)->toBe(AnalysisStatus::Succeeded)
-        ->and($analysis->type)->toBe(AnalysisType::RepoDeep)
+        ->and($analysis->type)->toBe(AnalysisType::Repo)
         ->and($analysis->code_repository_id)->toBe($codeRepository->id)
         ->and($analysis->raw['pages'])->toHaveCount(2);
 
@@ -88,8 +95,7 @@ it('fails cleanly, not with an exception, when the repo cannot be read', functio
         ->and($analysis->error)->not->toBeNull();
 });
 
-it('is priced far above the one-shot repo read, since it can run many tool calls', function () {
+it('is priced above where the old one-shot repo read used to sit', function () {
     expect(RepoExplorer::slug())->toBe('repo-explorer')
-        ->and(CreditPrice::current('repo-explorer'))->toBe(600)
-        ->and(CreditPrice::current('repo-explorer'))->toBeGreaterThan(CreditPrice::current('repo-analyst'));
+        ->and(CreditPrice::current('repo-explorer'))->toBe(600);
 });

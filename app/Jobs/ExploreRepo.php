@@ -9,9 +9,10 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
 /**
- * The manual, expensive read of a repo — never dispatched by linking one,
- * only by the user asking for it. See `App\Jobs\AnalyzeRepo` for the free
- * one that does run automatically.
+ * The only way a linked repo is read: manual, expensive, tool-calling.
+ * Dispatched from `CodeRepositoryController::store()` and `::retry()`
+ * alike, both gated behind a frontend confirm modal since this is priced
+ * (`CreditPrice::current('repo-explorer')`).
  */
 class ExploreRepo implements ShouldQueue
 {

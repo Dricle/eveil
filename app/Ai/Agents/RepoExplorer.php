@@ -14,11 +14,11 @@ use Laravel\Ai\Contracts\HasTools;
 use Stringable;
 
 /**
- * `RepoAnalyst`'s expensive sibling: instead of a fixed set of priority
- * files chosen upfront, this one roams the repo itself, deciding what to
- * open and asking for more until it is done. Manual and priced accordingly
- * (`CreditPrice::current('repo-explorer')`) — nobody pays this by linking a
- * repo, only by asking for it.
+ * Reads a linked repo by roaming it itself, deciding what to open and
+ * asking for more until it is done, rather than a fixed set of priority
+ * files chosen upfront. Priced accordingly
+ * (`CreditPrice::current('repo-explorer')`) — the frontend confirms the
+ * cost before either linking a repo or retrying one triggers this.
  *
  * 40 steps is the real budget: each `ListRepoPaths`/`ReadRepoFile` call is
  * one, so this bounds the cost of one run the way `discovery.max_pages`
@@ -88,9 +88,8 @@ class RepoExplorer extends EveilAgent implements HasStructuredOutput, HasTools
     }
 
     /**
-     * Same fields `RepoAnalyst::schema()` returns, plus `files_read`: this
-     * agent's own record of what it actually opened, since nothing upstream
-     * chose that list for it.
+     * `files_read` is this agent's own record of what it actually opened,
+     * since nothing upstream chose that list for it.
      *
      * @return array<string, mixed>
      */

@@ -123,7 +123,7 @@ class AnalyzeWebsite
             'knowledge_base' => [
                 ...$summary,
                 // Not this run's to know about: repos are read on their own
-                // schedule (`AnalyzeRepo`), and a website re-analysis that
+                // schedule (`ExploreRepo`), and a website re-analysis that
                 // dropped them would silently undo that work.
                 'repositories' => $project->knowledge_base['repositories'] ?? [],
                 'gaps' => $this->mergeOpenQuestions($project, $summary['gaps'] ?? []),
@@ -192,7 +192,7 @@ class AnalyzeWebsite
     }
 
     /**
-     * Whatever `AnalyzeRepo` has already found, short enough to always fit:
+     * Whatever `ExploreRepo` has already found, short enough to always fit:
      * this is a digest of an already-structured analysis, not raw file
      * text, so it costs little of the model-input budget for what it adds.
      */

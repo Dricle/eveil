@@ -1,9 +1,23 @@
-# Eveil
+<p align="center">
+  <img src="public/favicon.svg" width="72" height="72" alt="Eveil">
+</p>
 
-Cold outreach that finds its own leads. You give it the address of your product;
-it reads the site, works out who buys it, goes looking for those companies,
-finds the people at them, writes the sequence, sends it from your own mailbox,
-and reads the replies.
+<h1 align="center">Eveil</h1>
+
+<p align="center">
+  Cold outreach that finds its own leads.
+</p>
+
+<p align="center">
+  <a href="#licence"><img src="https://img.shields.io/badge/licence-AGPL--3.0-0b7d92.svg" alt="Licence: AGPL-3.0"></a>
+  <img src="https://img.shields.io/badge/PHP-8.4-777bb4.svg" alt="PHP 8.4">
+  <img src="https://img.shields.io/badge/self--hosted-Docker-0db7ed.svg" alt="Self-hosted with Docker">
+  <img src="https://img.shields.io/badge/limits-none-0b7d92.svg" alt="No artificial limits">
+</p>
+
+You give it the address of your product; it reads the site, works out who
+buys it, goes looking for those companies, finds the people at them, writes
+the sequence, sends it from your own mailbox, and reads the replies.
 
 Self-hostable, AGPL-3.0, and the free edition has no artificial limits:
 unlimited mailboxes, unlimited leads, your data on your own machine.
@@ -13,6 +27,30 @@ unlimited mailboxes, unlimited leads, your data on your own machine.
 > organizations, roles, and pay-as-you-go billing for the cloud edition. Not
 > built yet: LinkedIn, a public API, the inbound half. See
 > [Issues](https://github.com/Dricle/eveil/issues) for exactly what's left.
+
+---
+
+## Features
+
+- **Reads your site, not a form you fill in.** Product, audience, and the
+  reason anybody switches, worked out from the site itself and shown to you
+  before anything gets written.
+- **Finds the companies and the people, on its own.** Segments, search terms,
+  fit scores with the sentence that justifies them — over the bundled search
+  engine, no paid data API required to start.
+- **Writes sequences that sound like you.** One AI-writing-style box per
+  project (tone, language, banned words) that every generated mail obeys.
+- **Sends from your own mailbox.** Plain SMTP, no relay, no shared sending
+  domain — what arrives is indistinguishable from something you typed.
+- **Reads and threads replies itself**, over IMAP, matched on the mail's own
+  `Message-ID` so a reply always attaches to the lead it answers.
+- **A bounce circuit breaker**, scoped per mailbox, that pauses sending before
+  a bad batch burns a domain's reputation — not per campaign, per address.
+- **Self-hosted and AGPL-3.0.** Four containers, five minutes, your data never
+  leaves your machine unless you choose the cloud edition.
+- **No dark patterns.** No open-tracking pixel, no mailbox warm-up, no OAuth
+  lock-in, no purchased contact database — see
+  [what it deliberately does not do](#what-it-deliberately-does-not-do).
 
 ---
 

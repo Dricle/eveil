@@ -168,7 +168,7 @@ function describe (row: CreditTransactionRow): string {
                     </h2>
                     <p class="mt-1 text-sm text-muted">
                         Recharge automatically instead of running dry mid-search. Charges the
-                        card on file — no confirmation prompt, since nobody is at the
+                        card on file, no confirmation prompt, since nobody is at the
                         keyboard when the wallet crosses the threshold.
                     </p>
                 </template>

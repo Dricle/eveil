@@ -22,8 +22,8 @@ the sequence, sends it from your own mailbox, and reads the replies.
 Self-hostable, AGPL-3.0, and the free edition has no artificial limits:
 unlimited mailboxes, unlimited leads, your data on your own machine.
 
-> **Status: v0 + cloud backbone.** The whole outbound loop works end to end —
-> site analysis, lead discovery, sequences, sending, replies — plus
+> **Status: v0 + cloud backbone.** The whole outbound loop works end to end:
+> site analysis, lead discovery, sequences, sending, replies, plus
 > organizations, roles, and pay-as-you-go billing for the cloud edition. Not
 > built yet: LinkedIn, a public API, the inbound half. See
 > [Issues](https://github.com/Dricle/eveil/issues) for exactly what's left.
@@ -36,20 +36,20 @@ unlimited mailboxes, unlimited leads, your data on your own machine.
   reason anybody switches, worked out from the site itself and shown to you
   before anything gets written.
 - **Finds the companies and the people, on its own.** Segments, search terms,
-  fit scores with the sentence that justifies them — over the bundled search
+  fit scores with the sentence that justifies them, over the bundled search
   engine, no paid data API required to start.
 - **Writes sequences that sound like you.** One AI-writing-style box per
   project (tone, language, banned words) that every generated mail obeys.
 - **Sends from your own mailbox.** Plain SMTP, no relay, no shared sending
-  domain — what arrives is indistinguishable from something you typed.
+  domain: what arrives is indistinguishable from something you typed.
 - **Reads and threads replies itself**, over IMAP, matched on the mail's own
   `Message-ID` so a reply always attaches to the lead it answers.
 - **A bounce circuit breaker**, scoped per mailbox, that pauses sending before
-  a bad batch burns a domain's reputation — not per campaign, per address.
+  a bad batch burns a domain's reputation, not per campaign, per address.
 - **Self-hosted and AGPL-3.0.** Four containers, five minutes, your data never
   leaves your machine unless you choose the cloud edition.
 - **No dark patterns.** No open-tracking pixel, no mailbox warm-up, no OAuth
-  lock-in, no purchased contact database — see
+  lock-in, no purchased contact database. See
   [what it deliberately does not do](#what-it-deliberately-does-not-do).
 
 ---
@@ -78,7 +78,7 @@ Leave `APP_KEY` and `CREDENTIALS_KEY` empty: they are generated on first boot.
 Fill them in only if you would rather manage them yourself; anything set there
 wins.
 
-Leave the `MAIL_*` block for later too — the app boots without it, but
+Leave the `MAIL_*` block for later too: the app boots without it, but
 password resets, member invitations and email verification need it filled in
 before they can actually send. See [Email (SMTP)](#email-smtp) below.
 
@@ -153,7 +153,7 @@ at. `APP_URL` is the single answer, and it is yours to give.
 
 The app sends its own mail for three things: password resets, member
 invitations and, if sign-ups are open, verifying a new account's address.
-**Not** the outreach sender — campaigns go out through the mailboxes
+**Not** the outreach sender: campaigns go out through the mailboxes
 connected inside the app, over their own SMTP, configured separately in
 Settings → Mailboxes.
 
@@ -170,7 +170,7 @@ MAIL_PASSWORD=
 MAIL_FROM_ADDRESS="eveil@yourdomain.com"
 ```
 
-Any SMTP-compatible provider works — Postmark, Mailgun, Amazon SES, Brevo,
+Any SMTP-compatible provider works: Postmark, Mailgun, Amazon SES, Brevo,
 Cloudflare, a Google Workspace or Microsoft 365 mailbox, or a mail server you
 already run: it is Laravel's own mail configuration underneath, nothing
 Eveil-specific to it. Whichever you pick, send yourself a password-reset mail

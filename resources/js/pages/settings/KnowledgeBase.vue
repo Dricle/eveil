@@ -182,7 +182,7 @@ watch(() => props.project, fill, { immediate: true, deep: true })
                     <p class="mt-1 text-sm text-muted">
                         Source often names capabilities the site never mentions, or
                         contradicts something it oversells. GitHub only, for now.
-                        The model roams the repo itself, deciding what to open —
+                        The model roams the repo itself, deciding what to open:
                         600 credits per link or re-run.
                     </p>
                 </template>
@@ -464,7 +464,7 @@ watch(() => props.project, fill, { immediate: true, deep: true })
                         />
                     </UFormField>
                     <p class="mt-3 text-sm text-muted">
-                        Linking starts a deep, tool-calling read of the whole repo —
+                        Linking starts a deep, tool-calling read of the whole repo:
                         the model decides what to open. Costs 600 credits.
                     </p>
                     <div class="mt-4 flex justify-end gap-2">
@@ -494,7 +494,7 @@ watch(() => props.project, fill, { immediate: true, deep: true })
             <template #body>
                 <p class="text-sm text-muted">
                     Reading <strong>{{ confirmingRetryRepo?.name }}</strong> again runs
-                    the full deep exploration from scratch — 600 credits.
+                    the full deep exploration from scratch, 600 credits.
                 </p>
             </template>
 

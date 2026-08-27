@@ -253,7 +253,7 @@ function switchAll (provider: string) {
                         v-if="line.credit_price === null"
                         class="flex-1 text-right text-sm text-warning"
                     >
-                        Not priced yet — every call is refused.
+                        Not priced yet: every call is refused.
                     </p>
                 </div>
             </div>

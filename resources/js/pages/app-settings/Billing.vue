@@ -40,7 +40,7 @@ watch(() => props.billing, (billing) => {
                     </h2>
                     <p class="mt-1 text-sm text-muted">
                         Pay-as-you-go: a customer tops up whatever amount they choose, and
-                        this is the whole pricing model — no plan tiers to keep in sync
+                        this is the whole pricing model, no plan tiers to keep in sync
                         with it.
                     </p>
                 </template>

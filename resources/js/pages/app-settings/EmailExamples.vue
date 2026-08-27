@@ -36,7 +36,7 @@ function sourceLabel (source: string): string {
                         Add an example
                     </h2>
                     <p class="mt-1 text-sm text-muted">
-                        Fed back into every agent that writes an outreach email — a random
+                        Fed back into every agent that writes an outreach email: a random
                         ten each time, as inspiration, never copied verbatim.
                     </p>
                 </template>
@@ -128,7 +128,7 @@ function sourceLabel (source: string): string {
                     <p class="mt-1 text-sm text-muted">
                         Checked daily. A step is promoted once it has been sent at least
                         this many times, with a positive-reply rate at or above the floor
-                        and an unsubscribe rate at or below the ceiling — never from one
+                        and an unsubscribe rate at or below the ceiling, never from one
                         lucky reply.
                     </p>
                 </template>

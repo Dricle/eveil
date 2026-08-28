@@ -38,9 +38,9 @@ class WebsiteAnalyst extends EveilAgent implements HasStructuredOutput
         often reveals something the site never mentions, or contradicts something it
         oversells; when it is available, read it as carefully as the pages.
 
-        Beyond the portrait, name acquisition levers this product is plainly missing — a
+        Beyond the portrait, name acquisition levers this product is plainly missing - a
         referral scheme, editorial content, a trade fair, an offer to schools in the
-        sector — never the generic playbook any assistant emits in thirty seconds. Every
+        sector - never the generic playbook any assistant emits in thirty seconds. Every
         one must cite what the portrait, the crawl or the repo digest actually shows is
         missing: "your site has no blog while the three competitors you name publish
         weekly" is a recommendation; "do content marketing" is not, and must not be

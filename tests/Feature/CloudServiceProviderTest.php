@@ -17,7 +17,7 @@ use App\Cloud\CloudServiceProvider;
  * The container binding is GLOBAL and outlives one test unless put back:
  * every other test in the whole suite calls an agent through
  * `SpendGuardInterface`, so leaving it on `CreditSpendGuard` after this file
- * runs fails dozens of unrelated tests with "no credits left" — always
+ * runs fails dozens of unrelated tests with "no credits left" - always
  * restore it, pass or fail.
  */
 it('binds the credit guard when cloud', function () {

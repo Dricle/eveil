@@ -65,7 +65,7 @@ class Message extends Model
     }
 
     /**
-     * Which template produced this send — null on an inbound message, and
+     * Which template produced this send - null on an inbound message, and
      * on anything sent before this column existed.
      *
      * @return BelongsTo<StepVariant, $this>

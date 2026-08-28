@@ -155,7 +155,7 @@ function when (value: string | null) {
                     <!-- Self-hosted sees tokens: no provider reports a price,
                          so a figure in euros would be our own arithmetic
                          against a number that drifts. Cloud sees credits
-                         spent instead — never a token count, never a model
+                         spent instead - never a token count, never a model
                          name. -->
                     <p
                         v-if="'tokens_in' in stats"

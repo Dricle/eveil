@@ -235,7 +235,7 @@ it('grants trial credits to a freshly registered organization on the cloud editi
 
     $organization = Organization::query()->sole();
 
-    // The FIRST organization every user gets, via `CreateAccount` — not the
+    // The FIRST organization every user gets, via `CreateAccount` - not the
     // "add another organization" path `OrganizationController::store()`
     // covers, which is the only one this was ever wired into before.
     expect($organization->credits_balance)->toBeGreaterThan(0)

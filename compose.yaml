@@ -1,7 +1,7 @@
 # Local development environment (Laravel Sail).
 # Default host ports are shifted off the usual 80/5432/6379 so this stack can
 # run alongside other local projects. The self-hosted deployment compose
-# promised by Epic 1 is a separate artifact — do not conflate the two.
+# promised by Epic 1 is a separate artifact - do not conflate the two.
 services:
     laravel.test:
         build:

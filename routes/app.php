@@ -363,7 +363,7 @@ Route::middleware(['auth', 'verified', 'project.set'])->group(function (): void 
 
         // Cloud only in practice (`billing.*` is never read on self-hosted),
         // but not edition-gated at the route: `.ai/rules/controllers.md`'s
-        // "404 for access, not a feature that doesn't apply here" — the nav
+        // "404 for access, not a feature that doesn't apply here" - the nav
         // tab hides itself off `edition` instead.
         Route::get('billing', [BillingController::class, 'edit'])->name('billing.edit');
         Route::put('billing', [BillingController::class, 'update'])->name('billing.update');

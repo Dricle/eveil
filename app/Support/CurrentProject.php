@@ -53,7 +53,7 @@ class CurrentProject
      * Which organization a NEW project should join: the current one if a
      * project is already selected, else the user's only one. Only the second
      * branch ever fires today (a fresh signup, nothing selected yet, exactly
-     * one organization to be in) — the first is what keeps this correct once
+     * one organization to be in) - the first is what keeps this correct once
      * a user can belong to several: `projects.create` is reachable without a
      * project selected, but a user who already has one somewhere should add
      * to THAT organization, not an arbitrary one of the others they are in.

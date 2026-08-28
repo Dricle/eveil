@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * Few-shot examples for every agent that writes an outreach email, shared
- * across every organization on purpose — same shape as `known_hosts` or the
+ * across every organization on purpose - same shape as `known_hosts` or the
  * disposable-domain list: data that is legitimately instance-wide even on
  * cloud, because a subject/body pair with no lead's name in it is not the
  * tenant's private data the way a lead or a reply is.

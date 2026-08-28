@@ -13,7 +13,7 @@ use Laravel\Cashier\Cashier;
 use Laravel\Cashier\Events\WebhookReceived;
 
 /**
- * Registered unconditionally in `bootstrap/providers.php` — loading the
+ * Registered unconditionally in `bootstrap/providers.php` - loading the
  * class costs nothing, and `app/Cloud/` is deliberately a conditional-
  * loading mechanism, not a legal boundary, so the class existing in the
  * self-hosted codebase is the point, not an accident.

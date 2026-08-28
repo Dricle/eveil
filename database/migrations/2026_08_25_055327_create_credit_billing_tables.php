@@ -25,7 +25,7 @@ return new class extends Migration
      * agent calls that happen inside a discovery run but aren't one of the
      * customer-facing actions the grid was first calibrated against, so
      * they're estimated at the same Haiku-extraction tier as
-     * `company-qualifier` — flag for correction once `agent_runs` has real
+     * `company-qualifier` - flag for correction once `agent_runs` has real
      * token counts for them.
      */
     private const GRID = [
@@ -37,7 +37,7 @@ return new class extends Migration
         'sequence-writer' => 100,
         'message-personalizer' => 3,
         'reply-handler' => 1,
-        // Estimated, not measured — see docblock above.
+        // Estimated, not measured - see docblock above.
         'listing-extractor' => 3,
         'result-triage' => 2,
         'contact-page-finder' => 2,
@@ -70,7 +70,7 @@ return new class extends Migration
 
         // A webhook Stripe retries must never grant credits twice. Partial
         // (nullable-excluding) unique index rather than Blueprint's
-        // `unique()`, which cannot express WHERE — a debit row never sets
+        // `unique()`, which cannot express WHERE - a debit row never sets
         // this column, so it must not collide with every other debit's null.
         DB::statement('
             create unique index credit_transactions_stripe_event_id_unique

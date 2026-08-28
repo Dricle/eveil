@@ -51,8 +51,8 @@ it('prefills the create screen with a pasted URL once, then forgets it', functio
         ->get(route('projects.create'))
         ->assertInertia(fn ($page) => $page->where('prefillUrl', 'https://acme.test'));
 
-    // Pulled, not just read: a second visit — the auto-submit failing
-    // validation and reloading the screen, say — must not resurrect it and
+    // Pulled, not just read: a second visit - the auto-submit failing
+    // validation and reloading the screen, say - must not resurrect it and
     // loop the auto-submit forever.
     $this->get(route('projects.create'))
         ->assertInertia(fn ($page) => $page->where('prefillUrl', null));

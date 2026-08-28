@@ -1,5 +1,5 @@
 <x-marketing-layout
-    :title="config('app.name') . ' — open-source outreach'"
+    :title="config('app.name') . ' - open-source outreach'"
     description="Give a URL and what you sell. Eveil finds the companies that need it and writes the outreach. Open source, self-hostable."
 >
     <div style="border-bottom:1px solid rgba(232,236,242,.08);padding:10px 24px;display:flex;justify-content:center;gap:12px;align-items:center;font-size:13px;color:rgba(232,236,242,.72)">

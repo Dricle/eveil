@@ -8,7 +8,7 @@ use Laravel\Cashier\Events\WebhookReceived;
 /**
  * The other half of `PaymentMethodController`'s setup-mode Checkout Session:
  * Stripe's webhook, not the browser's return trip, is what actually saves
- * the card — the user's tab can close before the redirect completes, and the
+ * the card - the user's tab can close before the redirect completes, and the
  * webhook still arrives.
  *
  * The session payload carries `setup_intent` as a bare ID, never expanded,

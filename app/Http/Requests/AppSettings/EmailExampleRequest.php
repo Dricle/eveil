@@ -7,7 +7,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
 /**
- * Either a pasted subject and body, or an uploaded `.eml` — never both, and
+ * Either a pasted subject and body, or an uploaded `.eml` - never both, and
  * never neither. Validated as a plain `file` with a size cap rather than
  * `mimes:eml`: browsers report inconsistent types for it (`message/rfc822`,
  * `application/octet-stream`, depending on OS) and it isn't in Laravel's

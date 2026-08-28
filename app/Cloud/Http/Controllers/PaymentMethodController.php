@@ -14,7 +14,7 @@ use Symfony\Component\HttpFoundation\Response;
  * when the wallet crosses the threshold.
  *
  * Stripe-hosted, not a form we render: a Checkout Session in `setup` mode
- * collects and saves a card with no charge attached, on Stripe's own page —
+ * collects and saves a card with no charge attached, on Stripe's own page -
  * same mechanism `StartCheckout` uses for a top-up, just with no line items.
  * `SavePaymentMethodOnSetup` is what actually stores it, off the
  * `checkout.session.completed` webhook once Stripe confirms it.
@@ -39,7 +39,7 @@ class PaymentMethodController extends Controller
         ]);
 
         // The link to here is marked `external` in the Vue template, so this
-        // request should never actually carry Inertia's headers — but a
+        // request should never actually carry Inertia's headers - but a
         // plain redirect to Stripe's page is not an Inertia response, so
         // wrap it the same way as `CheckoutController` in case a future
         // caller reaches this route through an Inertia visit anyway.

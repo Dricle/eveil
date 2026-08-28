@@ -25,7 +25,7 @@ class CheckoutController extends Controller
         // page is not one, and the client tries to render Stripe's HTML as
         // a page and fails. `Inertia::location()` answers with a 409 +
         // `X-Inertia-Location` instead, which tells the client to leave the
-        // SPA and do a real `window.location` visit — same fix as logout.
+        // SPA and do a real `window.location` visit - same fix as logout.
         return Inertia::location($checkout->redirect());
     }
 }

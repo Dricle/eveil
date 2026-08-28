@@ -14,7 +14,7 @@ use Illuminate\Http\RedirectResponse;
  * single-purpose controllers here have no screen of their own.
  *
  * `store()` and `retry()` both start the deep, tool-calling read
- * (`App\Jobs\ExploreRepo`) — there is no cheaper tier any more, so the
+ * (`App\Jobs\ExploreRepo`) - there is no cheaper tier any more, so the
  * frontend must confirm its cost before either request is sent.
  *
  * Ids are looked up here rather than type-hinted into the action:

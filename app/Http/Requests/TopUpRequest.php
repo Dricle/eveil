@@ -8,7 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
 
 /**
  * The floor is Stripe's own practical minimum for a card charge; the ceiling
- * is a fat-finger guard, not a business limit — nothing stops a customer
+ * is a fat-finger guard, not a business limit - nothing stops a customer
  * topping up twice.
  *
  * Owner or Admin only: any member starting a checkout would be any member

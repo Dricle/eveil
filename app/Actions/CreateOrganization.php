@@ -12,7 +12,7 @@ use App\Models\User;
  * user's first (via `CreateAccount`, at signup) or an additional one they
  * add later (`OrganizationController::store()`). Trial credits go with it
  * unconditionally: the two call sites drifted once already when this lived
- * as a copy-pasted conditional in each — see the "no trial credits at
+ * as a copy-pasted conditional in each - see the "no trial credits at
  * signup" bug this replaced.
  */
 class CreateOrganization

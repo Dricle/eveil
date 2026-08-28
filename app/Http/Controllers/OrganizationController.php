@@ -12,11 +12,11 @@ use Inertia\Response;
 
 /**
  * Creating an additional organization (the first is never created here,
- * `App\Actions\CreateAccount` makes it together with the account at signup —
+ * `App\Actions\CreateAccount` makes it together with the account at signup -
  * no checkout at creation, unlike some references: trial-first, a trial
  * balance is granted and checkout is a button in Billing settings once it
  * runs out, not a forced next step) and the current one's own General
- * settings screen — a rename, nothing else, same reasoning as
+ * settings screen - a rename, nothing else, same reasoning as
  * `ProjectController` handling both a project's creation and its settings.
  */
 class OrganizationController extends Controller

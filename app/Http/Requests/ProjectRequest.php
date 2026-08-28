@@ -18,7 +18,7 @@ use Illuminate\Validation\ValidationException;
 class ProjectRequest extends FormRequest
 {
     /**
-     * Only `store` can ever add a SECOND project to a trial organization —
+     * Only `store` can ever add a SECOND project to a trial organization -
      * `update` edits the one that already exists, so the trial's one-project
      * limit has nothing to say about it.
      */
@@ -50,7 +50,7 @@ class ProjectRequest extends FormRequest
             // once you have read what the agent produces without it.
             'prompt_instructions' => ['nullable', 'string', 'max:2000'],
             // Edit screen only. Never sent back to the browser, so a blank
-            // submission means "keep the one stored", not "remove it" —
+            // submission means "keep the one stored", not "remove it" -
             // `prepareForValidation()` below drops the key entirely rather
             // than let it validate to null and overwrite what is there.
             'github_token' => ['nullable', 'string', 'max:255'],

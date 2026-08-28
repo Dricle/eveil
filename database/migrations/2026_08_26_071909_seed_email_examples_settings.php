@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
  *
  * Three flat keys, not one `email_examples` blob: unlike `discovery`'s four
  * budgets ("spent against each other inside a single run"), these three have
- * no such coupling — each is an independent dial, same shape as
+ * no such coupling - each is an independent dial, same shape as
  * `crawl.max_pages`/`crawl.delay_ms`/`crawl.cache_ttl_days`.
  */
 return new class extends Migration

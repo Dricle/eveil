@@ -5,7 +5,7 @@ use App\Models\Organization;
 
 /**
  * The Stripe charge itself needs a real test-mode key to exercise end to
- * end (same gap as checkout — tracked as a GitHub issue), so nothing here
+ * end (same gap as checkout - tracked as a GitHub issue), so nothing here
  * reaches `Organization::charge()`. What is verified is everything AutoTopUp decides
  * BEFORE it would get there: a wrong guard means either an off-session
  * charge nobody asked for, or a recharge that silently never fires.

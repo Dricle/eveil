@@ -38,7 +38,7 @@ const items = computed<NavigationMenuItem[]>(() =>
         ...item,
         // `item.to` is absolute in prod (`AppServiceProvider` forces an
         // absolute root URL app-wide there) but `page.url` from Inertia is
-        // always relative — strip the origin before comparing, same fix as
+        // always relative - strip the origin before comparing, same fix as
         // `AppLayout.vue`'s sidebar.
         active: page.url.startsWith(item.to.replace(/^https?:\/\/[^/]+/, ''))
     }))

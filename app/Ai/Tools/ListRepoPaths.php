@@ -11,7 +11,7 @@ use Stringable;
 /**
  * How the explorer agent roams: the full path list is fetched once by
  * `RepoReader::paths()` and handed here, so navigating deeper never costs
- * another GitHub call — only `ReadRepoFile` does. A directory is listed
+ * another GitHub call - only `ReadRepoFile` does. A directory is listed
  * with a trailing slash, a file without, the same convention `ls` uses.
  */
 class ListRepoPaths implements Tool
@@ -25,7 +25,7 @@ class ListRepoPaths implements Tool
     {
         return <<<'TEXT'
         List the files and folders directly under one directory of the repo.
-        Pass an empty string to list the repo root. Folders end with "/" —
+        Pass an empty string to list the repo root. Folders end with "/" -
         call this tool again with a folder's own path to look inside it.
         TEXT;
     }

@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Which template actually produced this send. Without it, a sent message
  * can be traced back to the lead and the campaign, but not to which of a
- * step's variants was rewritten for them — the thing a "does this template
+ * step's variants was rewritten for them - the thing a "does this template
  * actually work" measurement needs.
  */
 return new class extends Migration

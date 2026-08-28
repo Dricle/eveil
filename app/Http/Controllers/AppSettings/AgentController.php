@@ -58,8 +58,8 @@ class AgentController extends Controller
                     // cost", the same shape as the grid itself.
                     'avg_tokens_in' => (int) ($spend[$slug]->avg_tokens_in ?? 0),
                     'avg_tokens_out' => (int) ($spend[$slug]->avg_tokens_out ?? 0),
-                    // Cloud's calibration target. Present on every edition —
-                    // the row is harmless where nothing reads it — so the
+                    // Cloud's calibration target. Present on every edition -
+                    // the row is harmless where nothing reads it - so the
                     // screen never needs an edition check to decide whether
                     // the column exists, only whether to show it.
                     'credit_price' => CreditPrice::current($slug),

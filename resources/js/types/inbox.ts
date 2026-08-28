@@ -53,7 +53,7 @@ export type Conversation = {
 export type Pipeline = Partial<Record<'pending' | 'running' | 'paused' | 'completed' | 'failed' | 'stopped', number>>
 
 /**
- * Tokens on self-hosted, credits spent on cloud — never both, and never a
+ * Tokens on self-hosted, credits spent on cloud - never both, and never a
  * conversion between them: a cloud customer must never see a token count.
  */
 export type DashboardStats = {

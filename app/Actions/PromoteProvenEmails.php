@@ -15,7 +15,7 @@ use Illuminate\Support\Collection;
  * Promotes a campaign step's own track record into the shared examples
  * bank, once it has earned it: real volume, a reply rate worth repeating,
  * and a clean enough record that it was not aggressive copy that got lucky
- * once. Reruns safely — a variant already promoted is never reconsidered,
+ * once. Reruns safely - a variant already promoted is never reconsidered,
  * the partial unique index on `email_examples.step_variant_id` is the
  * actual guard, this just avoids the wasted query.
  */
@@ -89,8 +89,8 @@ class PromoteProvenEmails
     }
 
     /**
-     * Attribution by the message actually being answered — `in_reply_to`
-     * matched against the exact `message_id`s this variant sent — never by
+     * Attribution by the message actually being answered - `in_reply_to`
+     * matched against the exact `message_id`s this variant sent - never by
      * "a reply happened somewhere in this lead's thread." A sequence's
      * fourth step must not borrow credit for what the first one earned.
      *

@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * `repo-analyst` shipped after the original credit-price grid
- * (`create_credit_billing_tables`), so it would otherwise run unpriced —
+ * (`create_credit_billing_tables`), so it would otherwise run unpriced -
  * which `CreditSpendGuard::refusal()` treats as a config bug and refuses to
  * run at all, never a free ride. Priced with `contact-extractor`, the
  * closest thing already in the grid: cheap-tier extraction over a similarly

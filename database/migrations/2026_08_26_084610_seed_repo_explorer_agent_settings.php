@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * `repo-explorer` shipped after `seed_default_settings`, so it would
- * otherwise fall back to `AgentSettings::DEFAULT` (Haiku, 60s) — too tight a
+ * otherwise fall back to `AgentSettings::DEFAULT` (Haiku, 60s) - too tight a
  * timeout for a run that can make dozens of sequential tool round trips
  * before it answers. Opus, same tier as the other generative agents, on a
  * 600s budget: longer than their 300s since this one's cost is the sum of

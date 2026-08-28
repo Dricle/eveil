@@ -44,7 +44,7 @@ The fix if it happens: run `yarn build` on the host, which regenerates them corr
 ## wayfinder:generate needs --with-form, even on the host
 `php artisan wayfinder:generate` on its own emits route modules WITHOUT `.form()`, on the host as much as in the container: the `formVariants: true` option lives in the vite plugin config, and the bare command never sees it. Every page doing `v-bind="someRoute.update.form()"` then fails `yarn types:check` with "Property 'form' does not exist", in files you never touched.
 
-Run `php artisan wayfinder:generate --with-form` when generating by hand, or just `yarn build` on the host, which passes it. Check with: `php -r 'echo substr_count(file_get_contents("resources/js/routes/settings/knowledge-base/index.ts"), ".form");'` — zero means regenerate.
+Run `php artisan wayfinder:generate --with-form` when generating by hand, or just `yarn build` on the host, which passes it. Check with: `php -r 'echo substr_count(file_get_contents("resources/js/routes/settings/knowledge-base/index.ts"), ".form");'` - zero means regenerate.
 
 ## Never leave a form field on `default-value`: bind it with v-model
 Nuxt UI reads `defaultValue` ONCE. `Textarea.vue` and `Input.vue` do `useVModel(props, 'modelValue', emits, { defaultValue: props.defaultValue })` without `passive`, so the value is captured at mount and never tracks the prop again. Vue then patches a form element's `value` against what the DOM currently holds rather than against the previous vnode, so **every re-render writes that frozen first value back over whatever the user typed**.

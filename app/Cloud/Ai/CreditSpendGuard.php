@@ -12,7 +12,7 @@ use App\Models\Project;
  * Cloud's answer to `SpendGuardInterface`: a real balance on the
  * organization, checked before the provider is called and debited only
  * after it answers. Every other call site in the app is unaware this
- * exists — `RecordsAgentRun` calls the interface, not this class.
+ * exists - `RecordsAgentRun` calls the interface, not this class.
  */
 class CreditSpendGuard implements SpendGuardInterface
 {

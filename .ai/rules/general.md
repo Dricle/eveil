@@ -80,25 +80,25 @@ Theme: Vue mode has no `app.config.ts`, so what the Nuxt UI theme builder puts t
 - Licence: AGPL-3.0. Anyone hosting a modified version must publish their code: blocks a competing cloud. Do not add code under an incompatible licence.
 - One repo, two editions. Cloud-only code lives under `app/Cloud/`, registered conditionally by a ServiceProvider on `APP_EDITION=self|cloud`. No second repo, no separate build.
 - Sending: user's own SMTP/IMAP only. No ESP relay (cold outreach through Postmark/SES gets the account banned).
-- Full reasoning behind every product/architecture decision — licensing, pricing, autonomy levels, deliverability, discovery's job-graph shape, and more — lives in `GUIDELINES.md` at repo root. Read it before proposing anything that touches those areas: the answer, and the reasoning behind it, is probably already there.
+- Full reasoning behind every product/architecture decision - licensing, pricing, autonomy levels, deliverability, discovery's job-graph shape, and more - lives in `GUIDELINES.md` at repo root. Read it before proposing anything that touches those areas: the answer, and the reasoning behind it, is probably already there.
 
 ## AGPL everywhere, free-outbound CLA, cloud dir holds billing only
 One `LICENSE`, AGPL-3.0, the whole repo: `app/Cloud/` included. No separately-licensed directory, no feature withheld from self-hosted.
 
 `app/Cloud/` is NOT a legal boundary, only a conditional-loading mechanism, and its scope is **billing and credit metering, nothing else**: Stripe, `credit_prices`, `credit_transactions`, trial guards. Everything else lives in core: organizations, roles, invitations and per-project access included, so **self-hosted gets multi-user**. Cloud adds only managed hosting, billing, the supplied AI key, and support. Do not put a feature behind `app/Cloud/` thinking it is protected; it isn't, and it would break the "core stays free with no artificial limits" promise.
 
-The credit balance itself is `organizations.credits_balance`, a plain column on the CORE `organizations` table (alongside `stripe_id`/`pm_type`/`auto_topup_*`) — not a `credit_wallets` table under `app/Cloud/`. It is a cloud-only VALUE, always zero and never written to on self-hosted, but the column lives with the rest of the model's billing fields rather than behind a one-to-one relation to a table holding a single integer.
+The credit balance itself is `organizations.credits_balance`, a plain column on the CORE `organizations` table (alongside `stripe_id`/`pm_type`/`auto_topup_*`) - not a `credit_wallets` table under `app/Cloud/`. It is a cloud-only VALUE, always zero and never written to on self-hosted, but the column lives with the rest of the model's billing fields rather than behind a one-to-one relation to a table holding a single integer.
 
 CLA is required, modelled on Postiz: a licence grant, never a copyright assignment (contributors keep their copyright), with the outbound restricted to licences that are both FSF-free and OSI-approved. So the project can relicense to another free licence but can never go proprietary, BSL, or fair-source: contractually ruling out the move that cost Redis, HashiCorp and MongoDB their communities.
 
 Strategic corollary: the moat is hosting, brand and execution speed. Not code. Postiz (AGPL-3.0, no `ee/`, cloud runs identical code, monetised on hosting alone) is the precedent being followed.
 
-Before going public: write `ICLA.md`, `CCLA.md`, `CONTRIBUTING.md`, wire a CLA-check bot, and have a lawyer review it. This is the one project decision that cannot be undone. Also before any public communication: pick a domain and run an EUIPO trademark search — the name stays "Eveil", `.com/.app/.io/.ai/.be` are taken, `.dev/.email/.so`, `geteveil.com` and `useeveil.com` are the candidates.
+Before going public: write `ICLA.md`, `CCLA.md`, `CONTRIBUTING.md`, wire a CLA-check bot, and have a lawyer review it. This is the one project decision that cannot be undone. Also before any public communication: pick a domain and run an EUIPO trademark search - the name stays "Eveil", `.com/.app/.io/.ai/.be` are taken, `.dev/.email/.so`, `geteveil.com` and `useeveil.com` are the candidates.
 
 ## GitHub Issues is the tracker; `GUIDELINES.md` is the reasoning
-[github.com/Dricle/eveil/issues](https://github.com/Dricle/eveil/issues) tracks what's left to build — one issue per feature, staged with milestones (`v1`, `v2: inbound`, `later`) and themed with labels, not a file in the repo. It replaced a root-level `TODO.md` once the two started drifting apart from the code; don't recreate that file or a third parallel list.
+[github.com/Dricle/eveil/issues](https://github.com/Dricle/eveil/issues) tracks what's left to build - one issue per feature, staged with milestones (`v1`, `v2: inbound`, `later`) and themed with labels, not a file in the repo. It replaced a root-level `TODO.md` once the two started drifting apart from the code; don't recreate that file or a third parallel list.
 
-`GUIDELINES.md` holds the durable "why" — product vision, positioning, and every settled architectural/business decision with its reasoning. It is not a task list and does not get a checkbox for each open issue; when a new open question gets settled, its reasoning goes into `GUIDELINES.md`, and any GitHub issue it resolves gets closed with a reference to the commit, not to a section number.
+`GUIDELINES.md` holds the durable "why" - product vision, positioning, and every settled architectural/business decision with its reasoning. It is not a task list and does not get a checkbox for each open issue; when a new open question gets settled, its reasoning goes into `GUIDELINES.md`, and any GitHub issue it resolves gets closed with a reference to the commit, not to a section number.
 
 ## Code comments never cite an issue number, and examples stay domain-agnostic
 Two rules for anything under `app/`, `config/`, `database/` or `tests/`.

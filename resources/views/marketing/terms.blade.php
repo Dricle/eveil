@@ -1,5 +1,5 @@
 <x-marketing-layout
-    :title="config('app.name') . ' — Terms of service'"
+    :title="config('app.name') . ' - Terms of service'"
     description="The terms governing the hosted eveil.cloud service: accounts, acceptable use, credits and licence."
 >
     <x-marketing-legal

@@ -603,7 +603,7 @@ it('waits a day on a soft bounce instead of throwing the lead away', function ()
  * What Zoho actually sends back on a real Apple/iCloud rejection: a bare
  * three-digit `Status:` instead of the RFC 3464 extended code, and the
  * quoted original headers indented by one space. Both broke this parser on
- * a real bounce — the second one fatally, since it made the DSN's own
+ * a real bounce - the second one fatally, since it made the DSN's own
  * Message-Id look like the original that failed, matching nothing sent.
  */
 function zohoBounceMail(): string
@@ -649,7 +649,7 @@ it('reads a Zoho-style bounce: a bare status code and an indented quoted origina
         // The indentation used to hide this line entirely, leaving the
         // report's OWN Message-Id as "the original" instead.
         ->and($report->originalMessageId)->toBe('ours-1@abcreche.test')
-        // `Status: 554` has no dot in it — Zoho puts the extended code in
+        // `Status: 554` has no dot in it - Zoho puts the extended code in
         // Diagnostic-Code instead.
         ->and($report->isHard)->toBeTrue();
 

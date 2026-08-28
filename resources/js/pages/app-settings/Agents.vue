@@ -51,7 +51,7 @@ function save (line: { slug: string, provider: string, model: string, timeout: n
 }
 
 function saveCreditPrice (line: { slug: string, creditPriceDraft: number }) {
-    // A new versioned row, never an update — the server enforces this,
+    // A new versioned row, never an update - the server enforces this,
     // the client just posts what was typed.
     router.post(agentRoutes.creditPrice.url(line.slug), {
         credits: line.creditPriceDraft

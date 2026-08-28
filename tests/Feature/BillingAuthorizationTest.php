@@ -11,7 +11,7 @@ use App\Models\User;
  * reach every one of them before this. Only the refusal is covered here:
  * confirming an owner/admin is correctly let through needs an actual Stripe
  * call, which needs a live test-mode key (same gap noted elsewhere, e.g.
- * `PaymentMethodWebhookTest`) — nothing here should ever touch the network.
+ * `PaymentMethodWebhookTest`) - nothing here should ever touch the network.
  */
 function memberWithRole(OrganizationRole $role): array
 {

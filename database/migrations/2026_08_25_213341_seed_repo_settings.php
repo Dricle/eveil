@@ -15,7 +15,7 @@ return new class extends Migration
 {
     /** @var array<string, mixed> */
     private const DEFAULTS = [
-        // A flat dotted key, like `crawl.max_pages` — not `discovery`'s
+        // A flat dotted key, like `crawl.max_pages` - not `discovery`'s
         // nested-object shape, since this is the only value in its group.
         'repo.max_files' => 8,
         'agents.repo-analyst' => ['provider' => 'anthropic', 'model' => 'claude-haiku-4-5', 'timeout' => 60],

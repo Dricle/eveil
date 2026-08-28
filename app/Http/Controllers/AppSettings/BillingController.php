@@ -13,7 +13,7 @@ use Inertia\Response;
  * Cloud-only, and the route stays reachable even so: self-hosted never links
  * here (`AppSettingsLayout` hides the tab off the shared `edition` prop), and
  * a superadmin who lands on the URL directly still sees the trial and rate
- * configuration rather than a 404 — `.ai/rules/controllers.md`'s "404 for
+ * configuration rather than a 404 - `.ai/rules/controllers.md`'s "404 for
  * access, not a feature that doesn't apply here".
  */
 class BillingController extends Controller

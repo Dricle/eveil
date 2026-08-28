@@ -9,7 +9,7 @@ use Illuminate\Foundation\Http\FormRequest;
 /**
  * No fields at all: this only exists to gate who may open the Stripe-hosted
  * `setup`-mode Checkout that saves a card on file. Owner or Admin, same tier
- * as starting a checkout or configuring auto top-up — a saved card is what
+ * as starting a checkout or configuring auto top-up - a saved card is what
  * makes that charge itself possible.
  */
 class PaymentMethodRequest extends FormRequest

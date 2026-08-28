@@ -99,7 +99,7 @@ class HandleInertiaRequests extends Middleware
     /**
      * The current organization's credit balance, for the persistent chip in
      * `AppLayout`'s header. Self-hosted never reads `credits_balance` at
-     * all — `app/Cloud` billing concepts stay entirely out of that edition's
+     * all - `app/Cloud` billing concepts stay entirely out of that edition's
      * pages.
      *
      * @return array{balance: int}|null

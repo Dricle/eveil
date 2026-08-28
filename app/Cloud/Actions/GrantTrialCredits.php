@@ -8,7 +8,7 @@ use App\Support\Settings;
 
 /**
  * What a brand new cloud organization starts with, seeded once. Never
- * called on self-hosted — there is nothing calling it there,
+ * called on self-hosted - there is nothing calling it there,
  * `OrganizationController::store()` only reaches for this on the cloud
  * edition.
  */

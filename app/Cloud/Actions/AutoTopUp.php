@@ -47,7 +47,7 @@ class AutoTopUp
         $credits = intdiv($amountCents * $this->settings->int('billing.credits_per_dollar'), 100);
 
         // `defaultPaymentMethod()` returns `Cashier\PaymentMethod|Stripe\Card
-        // |Stripe\BankAccount` — only Cashier's own wrapper lacks a declared
+        // |Stripe\BankAccount` - only Cashier's own wrapper lacks a declared
         // `id` (it proxies to Stripe via `__get`), so it is the one branch
         // that needs unwrapping to the raw Stripe object first.
         $paymentMethod = $organization->defaultPaymentMethod();

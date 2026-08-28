@@ -134,7 +134,7 @@ class Organization extends Model
      * must not both reach for the customer's card. One `UPDATE`, same
      * race-safety pattern as `debit()`.
      *
-     * The lock is time-based rather than cleared on completion — simpler,
+     * The lock is time-based rather than cleared on completion - simpler,
      * and correct here: a charge attempt (success or Stripe decline) is rare
      * enough that a flat cooldown before the next try costs nothing real.
      */
@@ -155,7 +155,7 @@ class Organization extends Model
      * write: two agent calls racing the same organization must never both
      * succeed against a balance that only covers one.
      *
-     * Returns false when the balance does not cover it — the caller's
+     * Returns false when the balance does not cover it - the caller's
      * `refusal()` check should already have caught that, so this is the
      * race-safety net, not the primary guard.
      */

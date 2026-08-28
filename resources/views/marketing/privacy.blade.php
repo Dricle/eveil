@@ -1,5 +1,5 @@
 <x-marketing-layout
-    :title="config('app.name') . ' — Privacy policy'"
+    :title="config('app.name') . ' - Privacy policy'"
     description="How Eveil's hosted edition handles account data, prospect data, mailbox credentials and AI processing."
 >
     <x-marketing-legal

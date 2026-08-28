@@ -61,7 +61,7 @@ case "$1" in
         # `App\Support\Settings` caches the whole `settings` table forever
         # (Redis, `rememberForever`), because it is read on every agent call
         # and changes maybe twice a year. A migration that changes what an
-        # EXISTING key holds — adds a field to `discovery`, say — writes
+        # EXISTING key holds - adds a field to `discovery`, say - writes
         # straight to the table and can't safely flush this itself: Redis is
         # not guaranteed reachable while migrations run. So it has to happen
         # here instead, once Redis is up (the app service depends on its

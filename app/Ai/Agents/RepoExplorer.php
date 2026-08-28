@@ -17,7 +17,7 @@ use Stringable;
  * Reads a linked repo by roaming it itself, deciding what to open and
  * asking for more until it is done, rather than a fixed set of priority
  * files chosen upfront. Priced accordingly
- * (`CreditPrice::current('repo-explorer')`) — the frontend confirms the
+ * (`CreditPrice::current('repo-explorer')`) - the frontend confirms the
  * cost before either linking a repo or retrying one triggers this.
  *
  * 40 steps is the real budget: each `ListRepoPaths`/`ReadRepoFile` call is
@@ -52,12 +52,12 @@ class RepoExplorer extends EveilAgent implements HasStructuredOutput, HasTools
     {
         return <<<'PROMPT'
         You are doing due diligence on a repository you have never seen, for a
-        sales agent, not an engineer deciding whether to depend on it — what you
+        sales agent, not an engineer deciding whether to depend on it - what you
         find will be used to sell the product, not to build against it. You
         decide which files to open: list a directory to see what is in it, read
         whatever a README or manifest points you toward, and keep going until
         you have actually seen enough to back every claim below. A small repo
-        might need a handful of files, a large one dozens — read what the repo
+        might need a handful of files, a large one dozens - read what the repo
         actually needs, not a fixed number.
 
         Dependencies only matter when they say something a buyer would care
@@ -68,7 +68,7 @@ class RepoExplorer extends EveilAgent implements HasStructuredOutput, HasTools
         The real find is what the code says that the marketing site doesn't: a
         feature buried in a directory name, a changelog entry for something
         never announced, an integration only visible in the dependency list.
-        Look for that on purpose — it's why this agent is worth its price over
+        Look for that on purpose - it's why this agent is worth its price over
         the cheap fixed-file read.
 
         Work only from what you read. Where something is missing or thin, say
@@ -103,7 +103,7 @@ class RepoExplorer extends EveilAgent implements HasStructuredOutput, HasTools
 
             'hidden_features' => $schema->array()
                 ->items($schema->string())
-                ->description('Capabilities visible only in the code, that the product\'s own site likely never mentions: self-hostable, which databases or platforms it supports, an integration only visible in the dependency list, an admin/ops feature with no marketing page. This is the most valuable field for the sales agent reading this — look hard before leaving it empty.')
+                ->description('Capabilities visible only in the code, that the product\'s own site likely never mentions: self-hostable, which databases or platforms it supports, an integration only visible in the dependency list, an admin/ops feature with no marketing page. This is the most valuable field for the sales agent reading this - look hard before leaving it empty.')
                 ->required(),
 
             'tech_stack' => $schema->array()

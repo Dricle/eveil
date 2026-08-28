@@ -16,8 +16,8 @@ use Illuminate\Support\Carbon;
  *
  * Shared instance-wide on purpose, not scoped to an organization or a
  * project: same reasoning as `KnownHost`. What is stored here is a campaign
- * step's own template (`StepVariant`), written before any lead exists —
- * never a sent message — so there is no name or company in it to begin
+ * step's own template (`StepVariant`), written before any lead exists -
+ * never a sent message - so there is no name or company in it to begin
  * with, only the pitch itself.
  *
  * @property int $id
@@ -60,7 +60,7 @@ class EmailExample extends Model
     /**
      * A random few-shot section for a writing agent's prompt. Empty on a
      * fresh install with nothing in the bank yet, so behaviour is unchanged
-     * until the first example — manual or promoted — actually exists.
+     * until the first example - manual or promoted - actually exists.
      */
     public static function promptDigest(int $limit = self::SAMPLE_SIZE): string
     {

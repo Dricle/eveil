@@ -14,14 +14,14 @@ use Throwable;
 
 /**
  * Reads a linked repo the only way it is read: manual, tool-calling, no
- * fixed file list — the model decides what to open and keeps going until it
+ * fixed file list - the model decides what to open and keeps going until it
  * has seen enough.
  */
 class ExploreRepo
 {
     /**
      * How much of the path list is dumped straight into the prompt. Capped
-     * for a large monorepo's sake, not the agent's own view of the repo —
+     * for a large monorepo's sake, not the agent's own view of the repo -
      * `ListRepoPaths` still holds every path regardless, this only bounds
      * what is spent showing them all upfront.
      */

@@ -1,5 +1,5 @@
 <x-marketing-layout
-    :title="config('app.name') . ' — Contact'"
+    :title="config('app.name') . ' - Contact'"
     description="Reach the Eveil team for support, privacy and erasure requests, or self-hosted bugs and issues."
 >
     <div style="max-width:1180px;margin:0 auto;padding:72px 24px 88px;display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:start">

@@ -21,12 +21,12 @@ const open = ref(true)
 
 // AppServiceProvider forces an absolute root URL for the whole app in prod
 // (needed so a password-reset email doesn't link to plain http), and
-// Wayfinder bakes that into every generated `xxx.url()` call at build time —
+// Wayfinder bakes that into every generated `xxx.url()` call at build time -
 // so these return absolute URLs in prod but relative ones in local dev.
 // `page.url` from Inertia is always relative. Nuxt UI's own built-in
 // active-link detection compares the two directly and would silently never
 // match in prod, so every item needs its href's origin stripped before
-// comparing — a plain `to`+`exact` pair on the item is not enough here.
+// comparing - a plain `to`+`exact` pair on the item is not enough here.
 function isCurrent (path: string): boolean {
     return page.url.startsWith(path.replace(/^https?:\/\/[^/]+/, ''))
 }
@@ -228,7 +228,7 @@ const userMenu = computed<DropdownMenuItem[][]>(() => [
 
                 <slot name="header" />
 
-                <!-- App-wide status, not page content — the header bar is
+                <!-- App-wide status, not page content - the header bar is
                      reserved for exactly this (`.ai/rules/js.md`). -->
                 <UButton
                     v-if="page.props.wallet"

@@ -24,7 +24,7 @@ declare module '@inertiajs/core' {
             organizations: Organization[]
             /** Self-hosted never renders billing UI: nothing gated on it does more than check this. */
             edition: 'self' | 'cloud'
-            /** Absent on self-hosted and while no project is selected — cloud, zero credits is `{ balance: 0 }`, not null. */
+            /** Absent on self-hosted and while no project is selected - cloud, zero credits is `{ balance: 0 }`, not null. */
             wallet: { balance: number } | null
             registerUrl: string | null
             status: string | null

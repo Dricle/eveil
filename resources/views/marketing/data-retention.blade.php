@@ -1,5 +1,5 @@
 <x-marketing-layout
-    :title="config('app.name') . ' — Data retention'"
+    :title="config('app.name') . ' - Data retention'"
     description="How long Eveil's hosted edition keeps prospect data, reply threads and account data, and how erasure works."
 >
     <x-marketing-legal

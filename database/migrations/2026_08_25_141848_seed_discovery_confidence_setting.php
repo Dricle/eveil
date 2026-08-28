@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\DB;
  * `TargetProfileDeriver` already asks the model to self-report a confidence
  * (0-100) per profile it proposes; nothing read that number before now. This
  * is the floor below which an agent-authored profile is not trusted to spend
- * discovery budget on its own — merged into the existing `discovery` setting
+ * discovery budget on its own - merged into the existing `discovery` setting
  * row rather than replacing it, since that key already carries the four
  * budget ceilings.
  */

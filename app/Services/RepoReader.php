@@ -10,10 +10,10 @@ use Throwable;
 /**
  * A repo's own files, for `RepoExplorer` to roam through. Project
  * self-knowledge, not a discovery source, which is why this lives beside
- * `SiteCrawler` rather than under `Discovery` — same reasoning
+ * `SiteCrawler` rather than under `Discovery` - same reasoning
  * `HtmlText`/`ParsedPage` live in `Support`.
  *
- * GitHub only. Unauthenticated by default — reading a handful of files from
+ * GitHub only. Unauthenticated by default - reading a handful of files from
  * a public repo needs no token, and the unauthenticated rate limit (~60
  * requests/hour/IP) is a real ceiling on how often this can run, not a
  * correctness concern, the same tone as the SearXNG note about watching for
@@ -25,7 +25,7 @@ use Throwable;
 class RepoReader
 {
     /**
-     * Owner, repo and default branch out of a URL — what `RepoExplorer`'s
+     * Owner, repo and default branch out of a URL - what `RepoExplorer`'s
      * tools need before they can fetch files one at a time.
      *
      * @return array{owner: string, repo: string, branch: string}|null

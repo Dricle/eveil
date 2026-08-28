@@ -14,7 +14,7 @@ use Inertia\Response;
 
 /**
  * The shared bank of proven emails, and the quality bar a campaign step's
- * own track record has to clear to join it automatically — see
+ * own track record has to clear to join it automatically - see
  * `App\Actions\PromoteProvenEmails`, the thing that actually promotes one.
  * This screen only manages the bank and its threshold, never promotes
  * anything itself.

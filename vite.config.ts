@@ -26,12 +26,12 @@ export default defineConfig({
             ]
         }),
         inertia(),
-        // Nuxt UI registers @tailwindcss/vite itself — adding it here too
+        // Nuxt UI registers @tailwindcss/vite itself - adding it here too
         // would run Tailwind twice. `router: 'inertia'` swaps its ULink
         // internals off vue-router, which this app does not have.
         ui({
             router: 'inertia',
-            // Vue (non-Nuxt) has no app.config.ts — the theme colors the Nuxt UI
+            // Vue (non-Nuxt) has no app.config.ts - the theme colors the Nuxt UI
             // builder puts there are passed to the plugin instead.
             ui: {
                 colors: {

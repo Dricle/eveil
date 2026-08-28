@@ -168,7 +168,7 @@ class MailParser
         // the recipient alone cannot say WHICH send bounced. `[ \t]*` because
         // some providers (Zoho among them) indent the quoted original headers
         // by one space, which an anchored `^Message-ID` would otherwise miss
-        // entirely — leaving only the report's OWN id to match, which points
+        // entirely - leaving only the report's OWN id to match, which points
         // at nothing we ever sent.
         preg_match_all('/^[ \t]*Message-ID:\s*<([^>]+)>/mi', $message, $ids);
 

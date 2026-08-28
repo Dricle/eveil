@@ -1,6 +1,6 @@
 ---
 name: ai-sdk-development
-description: TRIGGER when working with ai-sdk which is Laravel official first-party AI SDK. Activate when building, editing AI agents, chatbots, text generation, image generation, audio/TTS, transcription/STT, embeddings, RAG, vector stores, reranking, structured output, streaming, conversation memory, tools, queueing, broadcasting, and provider failover across OpenAI, Anthropic, Gemini, Azure, Groq, xAI, DeepSeek, Mistral, Ollama, ElevenLabs, Cohere, Jina, and VoyageAI. Invoke when the user references ai-sdk, the `Laravel\Ai\` namespace, or this project's AI features — not for other AI packages used directly.
+description: TRIGGER when working with ai-sdk which is Laravel official first-party AI SDK. Activate when building, editing AI agents, chatbots, text generation, image generation, audio/TTS, transcription/STT, embeddings, RAG, vector stores, reranking, structured output, streaming, conversation memory, tools, queueing, broadcasting, and provider failover across OpenAI, Anthropic, Gemini, Azure, Groq, xAI, DeepSeek, Mistral, Ollama, ElevenLabs, Cohere, Jina, and VoyageAI. Invoke when the user references ai-sdk, the `Laravel\Ai\` namespace, or this project's AI features - not for other AI packages used directly.
 license: MIT
 metadata:
   author: laravel
@@ -12,11 +12,11 @@ The Laravel AI SDK (`laravel/ai`) is the official AI package for Laravel, provid
 
 ## Searching the Documentation
 
-This package is new. Always search the documentation before implementing any feature. Never guess at APIs — the documentation is the single source of truth.
+This package is new. Always search the documentation before implementing any feature. Never guess at APIs - the documentation is the single source of truth.
 
 - Use broad, simple queries that match the documentation section headings below.
-- Do not add package names to queries — package information is shared automatically. Use `test agent fake`, not `laravel ai test agent fake`.
-- Run multiple queries at once — the most relevant results are returned first.
+- Do not add package names to queries - package information is shared automatically. Use `test agent fake`, not `laravel ai test agent fake`.
+- Run multiple queries at once - the most relevant results are returned first.
 
 ### Documentation Sections
 
@@ -450,9 +450,9 @@ Embeddings::for(['Hello'])->generate(
 );
 ```
 
-It uses OpenAI-standard shapes and supports text, streaming, tools, structured output, image attachments, text embeddings, and audio transcription. Embedding dimensions are optional; omit them to use the model's native dimensions. For extra request-body fields, implement `HasProviderOptions` — the returned array is merged into the body.
+It uses OpenAI-standard shapes and supports text, streaming, tools, structured output, image attachments, text embeddings, and audio transcription. Embedding dimensions are optional; omit them to use the model's native dimensions. For extra request-body fields, implement `HasProviderOptions` - the returned array is merged into the body.
 
-Transcription uploads standard multipart (`file` + `model` + optional `language`) and defaults to `response_format: json`. Because endpoints vary, provider options override the defaults — pass `response_format: 'verbose_json'` for segments, or use `diarize()` on servers that implement `diarized_json`:
+Transcription uploads standard multipart (`file` + `model` + optional `language`) and defaults to `response_format: json`. Because endpoints vary, provider options override the defaults - pass `response_format: 'verbose_json'` for segments, or use `diarize()` on servers that implement `diarized_json`:
 
 ```php
 Transcription::fromDisk('recordings', $path)
@@ -472,7 +472,7 @@ use Laravel\Ai\Image;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Promptable;
 
-// Wrong — these do not exist
+// Wrong - these do not exist
 use Illuminate\Ai\Image;
 use Laravel\AI\Agent;
 ```

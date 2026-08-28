@@ -6,7 +6,7 @@ use Laravel\Cashier\Events\WebhookReceived;
 
 /**
  * The success path (Stripe actually confirms a SetupIntent and hands back a
- * payment method) needs a real Stripe test-mode call — same gap noted for
+ * payment method) needs a real Stripe test-mode call - same gap noted for
  * checkout elsewhere (tracked as a GitHub issue). What is covered here is
  * every guard that decides whether to make that call at all, none of which
  * should ever touch the network on their own.

@@ -8,7 +8,7 @@ use Illuminate\Console\Command;
 /**
  * A variant that falls short of the volume floor today may clear it next
  * month, so this re-checks every campaign step daily rather than judging
- * each one once. Already-promoted variants are skipped cheaply — see
+ * each one once. Already-promoted variants are skipped cheaply - see
  * `PromoteProvenEmails`.
  */
 class PromoteProvenEmailsCommand extends Command

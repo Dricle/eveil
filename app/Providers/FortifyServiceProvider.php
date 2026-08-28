@@ -26,7 +26,7 @@ class FortifyServiceProvider extends ServiceProvider
     public function register(): void
     {
         // The default `redirect('/')` is a plain XHR redirect Inertia's
-        // client tries to render as an Inertia page; `/` isn't one — see
+        // client tries to render as an Inertia page; `/` isn't one - see
         // `LogoutResponse`'s own docblock.
         $this->app->singleton(LogoutResponseContract::class, LogoutResponse::class);
     }

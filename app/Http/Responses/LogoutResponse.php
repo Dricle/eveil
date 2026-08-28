@@ -10,7 +10,7 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * Fortify's own default is a plain `redirect('/')`. Inertia's client follows
  * that XHR redirect and tries to render whatever `/` returns AS an Inertia
- * page — the marketing homepage isn't one, so it lands mangled inside the
+ * page - the marketing homepage isn't one, so it lands mangled inside the
  * app's SPA shell instead of a real navigation. `Inertia::location()` sends
  * a 409 with `X-Inertia-Location`, which the client recognises as "leave the
  * SPA" and does a full `window.location` visit instead.

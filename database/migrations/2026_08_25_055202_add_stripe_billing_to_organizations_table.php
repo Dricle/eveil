@@ -23,12 +23,12 @@ return new class extends Migration
 
             // Pay-as-you-go, no subscription bucket to reset each period:
             // one balance, never expires. Absent on self-hosted, which never
-            // writes it — `UnmeteredSpend` never even looks.
+            // writes it - `UnmeteredSpend` never even looks.
             $table->unsignedInteger('credits_balance')->default(0);
 
             // Auto top-up: recharge `auto_topup_amount_cents` whenever the
             // balance drops to or below `auto_topup_threshold` credits.
-            // Either both are set or neither is — enforced by
+            // Either both are set or neither is - enforced by
             // `AutoTopUpRequest`, not a DB constraint.
             $table->unsignedInteger('auto_topup_threshold')->nullable();
             $table->unsignedInteger('auto_topup_amount_cents')->nullable();

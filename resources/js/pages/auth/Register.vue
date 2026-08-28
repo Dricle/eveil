@@ -5,8 +5,9 @@ import { login } from '@/routes'
 
 // The action comes from the server, not from Wayfinder: with sign-ups closed
 // the route does not exist and its generated module is not emitted.
-defineProps<{
+const props = defineProps<{
     action: string
+    url?: string | null
 }>()
 </script>
 
@@ -85,6 +86,13 @@ defineProps<{
                     class="w-full"
                 />
             </UFormField>
+
+            <input
+                v-if="props.url"
+                type="hidden"
+                name="url"
+                :value="props.url"
+            >
 
             <UButton
                 type="submit"

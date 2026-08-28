@@ -30,6 +30,11 @@ class ProjectController extends Controller
             // redirect: the brand new organization this project should join,
             // which nothing in the session can name yet.
             'organizationId' => $request->integer('organization_id') ?: null,
+            // One-shot: set by CreateNewUser when registration arrived with a
+            // URL from the marketing homepage's hero form, and `pull()` clears
+            // it so a later visit to this screen never resurrects a stale
+            // value from someone else's session on a shared machine.
+            'prefillUrl' => $request->session()->pull('pending_project_url'),
         ]);
     }
 

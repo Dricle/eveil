@@ -4,6 +4,7 @@ namespace App\Actions\Fortify;
 
 use App\Actions\CreateAccount;
 use App\Models\User;
+use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -37,11 +38,27 @@ class CreateNewUser implements CreatesNewUsers
             'password' => $this->passwordRules(),
         ])->validate();
 
-        return $this->createAccount->handle([
+        $user = $this->createAccount->handle([
             'name' => $input['name'],
             'email' => $input['email'],
             'password' => $input['password'],
             'organization' => $input['organization'],
         ]);
+
+        // Carried from the marketing homepage's hero form, through the
+        // register page, as a plain hidden field. Only a format check here:
+        // this is never trusted to skip the real validation (reachability
+        // included) that ProjectController::store runs when the pending
+        // project is actually created, past the email-verification gate.
+        // A malformed value must never fail the registration itself, so it
+        // is dropped rather than validated through the throwing Validator
+        // above.
+        $url = $input['url'] ?? null;
+
+        if (is_string($url) && str_starts_with($url, 'http') && filter_var($url, FILTER_VALIDATE_URL)) {
+            Session::put('pending_project_url', $url);
+        }
+
+        return $user;
     }
 }

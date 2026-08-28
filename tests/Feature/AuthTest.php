@@ -256,6 +256,36 @@ it('grants no credits at all on self-hosted registration', function () {
     expect(Organization::query()->sole()->credits_balance)->toBe(0);
 });
 
+it('stashes a URL pasted before registering, for the project-create screen to pick up', function () {
+    Notification::fake();
+
+    $this->post(route('register.store'), [
+        'name' => 'Ada',
+        'organization' => 'Acme Tools',
+        'email' => 'ada@example.test',
+        'password' => 'correct-horse-battery',
+        'password_confirmation' => 'correct-horse-battery',
+        'url' => 'https://acme.test',
+    ])->assertRedirect(route('dashboard'));
+
+    expect(session('pending_project_url'))->toBe('https://acme.test');
+});
+
+it('never stashes a malformed URL, and registration succeeds regardless', function () {
+    Notification::fake();
+
+    $this->post(route('register.store'), [
+        'name' => 'Ada',
+        'organization' => 'Acme Tools',
+        'email' => 'ada@example.test',
+        'password' => 'correct-horse-battery',
+        'password_confirmation' => 'correct-horse-battery',
+        'url' => 'not a url',
+    ])->assertRedirect(route('dashboard'))->assertSessionHasNoErrors();
+
+    expect(session('pending_project_url'))->toBeNull();
+});
+
 it('keeps a freshly registered, unverified user off the app until they verify', function () {
     Notification::fake();
 

@@ -14,6 +14,14 @@ export default defineConfig({
             fonts: [
                 bunny('Geist', {
                     weights: [400, 500, 600, 700]
+                }),
+                // Marketing site only (resources/views/marketing/**): Sora for
+                // headings, Geist Mono for the eyebrow/label/tabular-number look.
+                bunny('Sora', {
+                    weights: [400, 600, 700]
+                }),
+                bunny('Geist Mono', {
+                    weights: [400, 500]
                 })
             ]
         }),

@@ -71,8 +71,13 @@ class FortifyServiceProvider extends ServiceProvider
             ]);
         });
 
-        Fortify::registerView(fn () => Inertia::render('auth/Register', [
+        Fortify::registerView(fn (Request $request) => Inertia::render('auth/Register', [
             'action' => route('register.store'),
+            // Carried from the marketing homepage's "paste your URL" hero, so a
+            // visitor who already gave their product's address is not asked for
+            // it twice. Merely a display prefill: the value is re-validated
+            // (reachability included) when the project is actually created.
+            'url' => $request->string('url')->toString() ?: null,
         ]));
 
         Fortify::requestPasswordResetLinkView(fn () => Inertia::render('auth/ForgotPassword', [

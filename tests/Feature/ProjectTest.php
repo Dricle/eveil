@@ -45,6 +45,19 @@ it('opens straight into a project once one exists', function () {
         ->assertInertia(fn ($page) => $page->where('currentProject.name', 'Acme'));
 });
 
+it('prefills the create screen with a pasted URL once, then forgets it', function () {
+    $this->withSession(['pending_project_url' => 'https://acme.test'])
+        ->actingAs(member())
+        ->get(route('projects.create'))
+        ->assertInertia(fn ($page) => $page->where('prefillUrl', 'https://acme.test'));
+
+    // Pulled, not just read: a second visit — the auto-submit failing
+    // validation and reloading the screen, say — must not resurrect it and
+    // loop the auto-submit forever.
+    $this->get(route('projects.create'))
+        ->assertInertia(fn ($page) => $page->where('prefillUrl', null));
+});
+
 it('creates a project, starts its analysis and selects it', function () {
     reachable();
 

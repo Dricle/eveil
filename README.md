@@ -54,6 +54,31 @@ unlimited mailboxes, unlimited leads, your data on your own machine.
 
 ---
 
+## Self-hosted or cloud
+
+Two ways to run it, same code, no feature gate between them.
+
+**Self-hosted.** Free, forever, AGPL-3.0. No per-seat or per-mailbox fee.
+Bring your own AI provider key (Anthropic, OpenAI, whichever you already pay
+for) and your data never leaves your machine. Organizations, roles and
+multi-user access are core to both editions, not held back for cloud.
+
+**Cloud.** Managed hosting, and pay-as-you-go credits instead of an AI
+provider account: top up whatever amount you choose, spend it at one flat
+published rate, no plans and no subscription. A cloud project is also born
+smart: the search-host registry and the page cache discovery reads are shared
+instance-wide, so a fresh cloud project skips the cold start a fresh
+self-hosted install has to work through alone. Cloud does not unlock
+features; it removes setup, hosting and the AI-key requirement.
+
+1,000 credits is about $1 of AI cost, and SMTP sending, IMAP reading and
+email verification cost nothing: most competitors bill verification. A full
+100-lead campaign runs about 3,500 credits end to end. New accounts start
+with a trial grant, capped to one project and to leads discovered rather than
+just credits spent, with no CSV export before a first payment.
+
+---
+
 ## Installing
 
 You need Docker and about five minutes.

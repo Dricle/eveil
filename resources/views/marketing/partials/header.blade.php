@@ -20,6 +20,6 @@
             <a href="{{ route('home') }}#pricing" style="color:rgba(232,236,242,.72)">Pricing</a>
             <a href="https://github.com/Dricle/eveil" style="color:rgba(232,236,242,.72)">GitHub</a>
         </nav>
-        <a href="{{ route('home') }}#top" class="cta-btn" style="padding:9px 18px;border-radius:8px;font-family:'Sora',sans-serif;font-weight:600;font-size:14px">Start free</a>
+        <a href="{{ route('login') }}" class="ghost-btn" style="border:1px solid rgba(232,236,242,.18);padding:9px 18px;border-radius:8px;font-family:'Sora',sans-serif;font-weight:600;font-size:14px">Log in</a>
     </div>
 </header>

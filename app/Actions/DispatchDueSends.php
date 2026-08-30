@@ -5,11 +5,14 @@ namespace App\Actions;
 use App\Enums\CampaignLeadStatus;
 use App\Enums\CampaignStatus;
 use App\Enums\EmailAccountStatus;
+use App\Enums\OrganizationRole;
 use App\Jobs\SendCampaignStep;
 use App\Models\CampaignLead;
 use App\Models\EmailAccount;
+use App\Notifications\MailboxPaused;
 use App\Support\Settings;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Notification;
 
 /**
  * Deciding what may go out right now: the daily cap and the spread, which are
@@ -54,6 +57,8 @@ class DispatchDueSends
                         'last_error' => 'Paused automatically: too many recent sends bounced.',
                     ]);
 
+                    $this->notifyOwners($account);
+
                     return;
                 }
 
@@ -91,6 +96,19 @@ class DispatchDueSends
         $hour = (int) now()->format('G');
 
         return $hour >= (int) $sending['window_start'] && $hour < (int) $sending['window_end'];
+    }
+
+    /**
+     * The breaker trips silently otherwise: nothing else watches the mailboxes
+     * screen, so the owners are the only people who can reactivate it.
+     */
+    private function notifyOwners(EmailAccount $account): void
+    {
+        $owners = $account->organization->users()
+            ->wherePivot('role', OrganizationRole::Owner->value)
+            ->get();
+
+        Notification::send($owners, MailboxPaused::for($account));
     }
 
     /**

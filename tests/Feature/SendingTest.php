@@ -21,10 +21,12 @@ use App\Models\Message;
 use App\Models\Project;
 use App\Models\Suppression;
 use App\Models\User;
+use App\Notifications\MailboxPaused;
 use App\Services\Outreach\MailboxTester;
 use App\Services\Outreach\Sender;
 use App\Services\Outreach\SuppressionList;
 use App\Support\CurrentProject;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 
 /**
@@ -315,9 +317,10 @@ it('queues one mail per mailbox per tick, and nothing outside the sending window
 });
 
 it('pauses a mailbox whose recent sends are bouncing, whatever the autonomy level', function () {
-    [, $project, $mailbox] = sender();
+    [$user, $project, $mailbox] = sender();
 
     Queue::fake();
+    Notification::fake();
     contactable($project);
     app(EnrolCampaign::class)->handle(sequence($project));
     CampaignLead::query()->update(['next_action_at' => now()->subMinute()]);
@@ -339,6 +342,10 @@ it('pauses a mailbox whose recent sends are bouncing, whatever the autonomy leve
         ->and($mailbox->last_error)->toContain('bounced');
 
     Queue::assertNothingPushed();
+
+    // The breaker trips with nobody watching the screen: the owner is the
+    // only one who can reactivate it, so they are the one told it happened.
+    Notification::assertSentTo($user, MailboxPaused::class, fn (MailboxPaused $notification): bool => $notification->mailboxEmail === $mailbox->from_email);
 });
 
 it('does not trip the bounce breaker on a handful of sends, however bad the ratio', function () {

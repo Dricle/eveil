@@ -15,9 +15,12 @@
   <img src="https://img.shields.io/badge/limits-none-0b7d92.svg" alt="No artificial limits">
 </p>
 
-You give it the address of your product; it reads the site, works out who
-buys it, goes looking for those companies, finds the people at them, writes
-the sequence, sends it from your own mailbox, and reads the replies.
+Enter your product's website, Eveil reads it, works out who buys it, goes
+looking for those companies, finds the people at them, writes the email
+sequence, sends it from your own mailbox, and reads the replies.
+
+Your own AI CMO, running its own army of agents. B2B only for now; B2C
+(content generation to build an online presence) is planned.
 
 Self-hostable, AGPL-3.0, and the free edition has no artificial limits:
 unlimited mailboxes, unlimited leads, your data on your own machine.
@@ -25,7 +28,7 @@ unlimited mailboxes, unlimited leads, your data on your own machine.
 > **Status: v0 + cloud backbone.** The whole outbound loop works end to end:
 > site analysis, lead discovery, sequences, sending, replies, plus
 > organizations, roles, and pay-as-you-go billing for the cloud edition. Not
-> built yet: LinkedIn, a public API, the inbound half. See
+> built yet: Reddit, LinkedIn, a public API, the inbound half. See
 > [Issues](https://github.com/Dricle/eveil/issues) for exactly what's left.
 
 ---
@@ -62,12 +65,14 @@ Two ways to run it, same code, no feature gate between them.
 Bring your own AI provider key (Anthropic, OpenAI, whichever you already pay
 for) and your data never leaves your machine. Organizations, roles and
 multi-user access are core to both editions, not held back for cloud.
+Your install starts with limited knowledge of the web and grows smarter on
+its own from there.
 
-**Cloud.** Managed hosting, and pay-as-you-go credits instead of an AI
-provider account: top up whatever amount you choose, spend it at one flat
-published rate, no plans and no subscription. A cloud project is also born
-smart: the search-host registry and the page cache discovery reads are shared
-instance-wide, so a fresh cloud project skips the cold start a fresh
+**Cloud.** Managed hosting at eveil.cloud, with pay-as-you-go credits instead
+of an AI provider account: top up whatever amount you choose, spend it at one
+flat published rate, no plans and no subscription. It's smarter from day one,
+too: the search-host registry and the page-cache discovery it draws on grow
+with every customer, so a new account skips the cold start a fresh
 self-hosted install has to work through alone. Cloud does not unlock
 features; it removes setup, hosting and the AI-key requirement.
 

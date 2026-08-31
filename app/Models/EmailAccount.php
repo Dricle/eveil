@@ -47,10 +47,12 @@ use Illuminate\Support\Carbon;
  * @property string|null $imap_encryption
  * @property string|null $signature
  * @property int $daily_limit
+ * @property float|null $max_bounce_rate
  * @property Carbon|null $ramp_up_started_at
  * @property EmailAccountStatus $status
  * @property string|null $last_error
  * @property Carbon|null $last_checked_at
+ * @property Carbon|null $bounce_window_reset_at
  * @property int|null $last_inbound_uid
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -59,7 +61,8 @@ use Illuminate\Support\Carbon;
     'organization_id', 'name', 'from_name', 'from_email',
     'smtp_host', 'smtp_port', 'smtp_username', 'smtp_password', 'smtp_encryption',
     'imap_host', 'imap_port', 'imap_username', 'imap_password', 'imap_encryption',
-    'signature', 'daily_limit', 'ramp_up_started_at', 'status', 'last_error', 'last_checked_at', 'last_inbound_uid',
+    'signature', 'daily_limit', 'max_bounce_rate', 'ramp_up_started_at', 'status', 'last_error',
+    'last_checked_at', 'bounce_window_reset_at', 'last_inbound_uid',
 ])]
 #[Hidden(['smtp_password', 'imap_password'])]
 class EmailAccount extends Model
@@ -214,12 +217,21 @@ class EmailAccount extends Model
      * The share of the last hundred sends that bounced. The circuit breaker's
      * input. A rolling window rather than a lifetime rate: a mailbox that had a
      * bad week in March is not the problem, one bouncing right now is.
+     *
+     * Bounded below by `bounce_window_reset_at` when it is set: otherwise a
+     * mailbox somebody just reactivated replays the same all-time history on
+     * the very next dispatch tick and pauses itself again with no new bounce,
+     * before a single new mail could leave to dilute the rate.
      */
     public function recentBounceRate(): float
     {
         $recent = $this->messages()
             ->where('direction', MessageDirection::Outbound)
             ->whereNotNull('sent_at')
+            ->when(
+                $this->bounce_window_reset_at,
+                fn ($query) => $query->where('sent_at', '>=', $this->bounce_window_reset_at)
+            )
             ->latest('sent_at')
             ->limit(100)
             ->get(['status']);
@@ -234,6 +246,22 @@ class EmailAccount extends Model
     }
 
     /**
+     * The bounce rate that pauses this mailbox: the mailbox's own choice if
+     * it set one, the instance-wide default otherwise.
+     *
+     * Deliberately per MAILBOX, not per project: `recentBounceRate()` above
+     * is already scoped to the mailbox, and one mailbox can be granted to
+     * several projects, so a project-level override would let one project
+     * quietly loosen bounce protection on a mailbox another project depends
+     * on. The mailbox's own reputation is what is actually at stake, so its
+     * owner is who gets to accept the risk.
+     */
+    public function maxBounceRate(): float
+    {
+        return $this->max_bounce_rate ?? (float) app(Settings::class)->array('sending')['max_bounce_rate'];
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array
@@ -242,8 +270,10 @@ class EmailAccount extends Model
             'smtp_password' => EncryptedCredential::class,
             'imap_password' => EncryptedCredential::class,
             'status' => EmailAccountStatus::class,
+            'max_bounce_rate' => 'float',
             'ramp_up_started_at' => 'datetime',
             'last_checked_at' => 'datetime',
+            'bounce_window_reset_at' => 'datetime',
         ];
     }
 }

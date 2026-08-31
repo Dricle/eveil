@@ -34,6 +34,11 @@ class MailboxTestController extends Controller
                 // Not `Paused`: paused is a choice somebody made, error is the
                 // mailbox telling us it cannot work.
                 : EmailAccountStatus::Error,
+            // A passing test is also an operator deciding the mailbox is fine:
+            // same reset `MailboxReactivateController` does, for the same
+            // reason, a mailbox whose all-time bounce rate is still over
+            // threshold must not re-pause itself before a new mail goes out.
+            ...($problem === null ? ['bounce_window_reset_at' => now()] : []),
         ]);
 
         return $problem === null

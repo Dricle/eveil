@@ -35,8 +35,6 @@ class DispatchDueSends
      */
     public function handle(): int
     {
-        $sending = $this->settings->array('sending');
-
         // Outside working hours nothing leaves. A 04:00 mail from somebody's
         // own mailbox reads as a machine before it reads as anything else.
         if (! $this->windowIsOpen()) {
@@ -47,11 +45,11 @@ class DispatchDueSends
 
         EmailAccount::query()
             ->where('status', EmailAccountStatus::Active)
-            ->each(function (EmailAccount $account) use ($sending, &$queued): void {
+            ->each(function (EmailAccount $account) use (&$queued): void {
                 // The circuit breaker, ahead of any allowance arithmetic: a
                 // mailbox bouncing right now must stop whatever the project's
                 // autonomy level says.
-                if ($account->recentBounceRate() > (float) $sending['max_bounce_rate']) {
+                if ($account->recentBounceRate() > $account->maxBounceRate()) {
                     $account->update([
                         'status' => EmailAccountStatus::Paused,
                         'last_error' => 'Paused automatically: too many recent sends bounced.',

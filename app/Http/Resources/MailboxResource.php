@@ -39,6 +39,12 @@ class MailboxResource extends JsonResource
             'imap_encryption' => $this->imap_encryption,
             'signature' => $this->signature,
             'daily_limit' => $this->daily_limit,
+            'max_bounce_rate' => $this->max_bounce_rate,
+            // What the breaker actually compares against right now: the
+            // mailbox's own override, or the instance default it falls back
+            // to. The screen shows this rather than making the owner go read
+            // the instance setting to know what an empty field means.
+            'effective_max_bounce_rate' => $this->maxBounceRate(),
             'status' => $this->status->value,
             'last_error' => $this->last_error,
             'last_checked_at' => $this->last_checked_at?->toIso8601String(),

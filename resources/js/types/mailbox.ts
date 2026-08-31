@@ -18,6 +18,10 @@ export type Mailbox = {
     imap_encryption: string | null
     signature: string | null
     daily_limit: number
+    /** Null means this mailbox uses the instance default. */
+    max_bounce_rate: number | null
+    /** What the breaker actually compares against right now: the override above, or the instance default. */
+    effective_max_bounce_rate: number
     status: 'active' | 'paused' | 'error'
     last_error: string | null
     last_checked_at: string | null

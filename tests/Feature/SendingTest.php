@@ -348,6 +348,37 @@ it('pauses a mailbox whose recent sends are bouncing, whatever the autonomy leve
     Notification::assertSentTo($user, MailboxPaused::class, fn (MailboxPaused $notification): bool => $notification->mailboxEmail === $mailbox->from_email);
 });
 
+it('lets a mailbox override the instance-wide bounce ceiling, not just the superadmin', function () {
+    [, $project, $mailbox] = sender();
+
+    // The mailbox's own reputation is what's at stake, so its owner may
+    // accept more risk than the instance default: 20% bounced, but this
+    // mailbox is willing to run at up to 50%.
+    $mailbox->update(['max_bounce_rate' => 0.5]);
+
+    Queue::fake();
+    contactable($project);
+    app(EnrolCampaign::class)->handle(sequence($project));
+
+    $this->travelTo(now()->setTime(10, 0));
+    CampaignLead::query()->update(['next_action_at' => now()->subMinute()]);
+
+    foreach (range(1, 20) as $i) {
+        Message::factory()->create([
+            'email_account_id' => $mailbox->id,
+            'lead_id' => Lead::query()->first()->id,
+            'direction' => MessageDirection::Outbound,
+            'status' => $i <= 4 ? MessageStatus::Bounced : MessageStatus::Sent,
+            'sent_at' => now()->subHours(2),
+        ]);
+    }
+
+    expect(app(DispatchDueSends::class)->handle())->toBe(1)
+        ->and($mailbox->refresh()->status)->toBe(EmailAccountStatus::Active);
+
+    Queue::assertPushed(SendCampaignStep::class, 1);
+});
+
 it('does not trip the bounce breaker on a handful of sends, however bad the ratio', function () {
     [, $project, $mailbox] = sender();
 
@@ -366,6 +397,43 @@ it('does not trip the bounce breaker on a handful of sends, however bad the rati
         'status' => MessageStatus::Bounced,
         'sent_at' => now()->subHours(2),
     ]);
+
+    expect(app(DispatchDueSends::class)->handle())->toBe(1)
+        ->and($mailbox->refresh()->status)->toBe(EmailAccountStatus::Active);
+
+    Queue::assertPushed(SendCampaignStep::class, 1);
+});
+
+it('does not re-pause a reactivated mailbox on stale bounce history alone', function () {
+    [$user, $project, $mailbox] = sender();
+
+    Queue::fake();
+    contactable($project);
+    app(EnrolCampaign::class)->handle(sequence($project));
+
+    $this->travelTo(now()->setTime(10, 0));
+    CampaignLead::query()->update(['next_action_at' => now()->subMinute()]);
+
+    // Twenty old sends, two bounced: over threshold, so the breaker trips on
+    // this tick exactly like the test above proves it should.
+    foreach (range(1, 20) as $i) {
+        Message::factory()->create([
+            'email_account_id' => $mailbox->id,
+            'lead_id' => Lead::query()->first()->id,
+            'direction' => MessageDirection::Outbound,
+            'status' => $i <= 2 ? MessageStatus::Bounced : MessageStatus::Sent,
+            'sent_at' => now()->subDays(2),
+        ]);
+    }
+
+    expect(app(DispatchDueSends::class)->handle())->toBe(0)
+        ->and($mailbox->refresh()->status)->toBe(EmailAccountStatus::Paused);
+
+    // The whole point: reactivating is a real decision, not a no-op. Without
+    // resetting the window, this next tick replays the identical stale
+    // history and pauses the mailbox again with no new bounce at all.
+    $this->actingAs($user)->post(route('settings.mailboxes.reactivate', $mailbox))
+        ->assertRedirect();
 
     expect(app(DispatchDueSends::class)->handle())->toBe(1)
         ->and($mailbox->refresh()->status)->toBe(EmailAccountStatus::Active);
@@ -456,6 +524,36 @@ it('keeps the stored password when an edit leaves the field blank', function () 
         ->and($mailbox->smtp_password)->toBe('secret');
 });
 
+it('saves and clears a mailbox-level bounce ceiling override', function () {
+    [$user, , $mailbox] = sender();
+
+    $edit = fn (array $overrides) => $this->actingAs($user)->put(route('settings.mailboxes.update', $mailbox), [
+        'name' => $mailbox->name,
+        'from_name' => $mailbox->from_name,
+        'from_email' => $mailbox->from_email,
+        'smtp_host' => $mailbox->smtp_host,
+        'smtp_port' => $mailbox->smtp_port,
+        'smtp_username' => $mailbox->smtp_username,
+        'smtp_password' => '',
+        'imap_host' => $mailbox->imap_host,
+        'imap_port' => $mailbox->imap_port,
+        'imap_username' => $mailbox->imap_username,
+        'imap_password' => '',
+        'daily_limit' => 30,
+        ...$overrides,
+    ])->assertRedirect();
+
+    $edit(['max_bounce_rate' => 0.4]);
+
+    expect($mailbox->refresh()->max_bounce_rate)->toBe(0.4);
+
+    // Blank means "back to the instance default", not "keep whatever was
+    // there": unlike a password field, null here is a meaningful value.
+    $edit(['max_bounce_rate' => '']);
+
+    expect($mailbox->refresh()->max_bounce_rate)->toBeNull();
+});
+
 it('keeps the stored password when the blank edit arrives as JSON', function () {
     [$user, , $mailbox] = sender();
 
@@ -540,7 +638,11 @@ it('records what a connection test found, and clears the error when it works', f
     // one answers; nobody should have to guess that.
     expect($mailbox->refresh()->status)->toBe(EmailAccountStatus::Active)
         ->and($mailbox->last_error)->toBeNull()
-        ->and($mailbox->last_checked_at)->not->toBeNull();
+        ->and($mailbox->last_checked_at)->not->toBeNull()
+        // A passing test is the same "fine now" decision reactivating is: it
+        // must also reset the bounce window, or the mailbox pauses itself
+        // again on the next tick with no new bounce.
+        ->and($mailbox->bounce_window_reset_at)->not->toBeNull();
 
     $this->mock(MailboxTester::class)->shouldReceive('test')->once()->andReturn('SMTP: the server rejected this username and password.');
 

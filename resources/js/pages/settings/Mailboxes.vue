@@ -46,6 +46,7 @@ function blank () {
         imap_encryption: 'tls',
         signature: '',
         daily_limit: 30,
+        max_bounce_rate: null as number | null,
         projects: [] as number[]
     }
 }
@@ -236,6 +237,7 @@ function note () {
                 <p class="text-sm text-dimmed">
                     {{ mailbox.sent_today }} of {{ mailbox.allowance_today }} sent today<span v-if="mailbox.ramping_up"> · ramping up towards {{ mailbox.daily_limit }}</span>
                     <span v-if="mailbox.projects.length === 0"> · no project may send through it yet</span>
+                    <span> · pauses past {{ Math.round(mailbox.effective_max_bounce_rate * 100) }}% bounced<template v-if="mailbox.max_bounce_rate === null"> (instance default)</template></span>
                 </p>
 
                 <p
@@ -320,6 +322,23 @@ function note () {
                                 v-model="form.daily_limit"
                                 name="daily_limit"
                                 type="number"
+                                class="w-full"
+                            />
+                        </UFormField>
+
+                        <UFormField
+                            label="Bounce rate that pauses this mailbox"
+                            name="max_bounce_rate"
+                            :error="errors.max_bounce_rate"
+                        >
+                            <UInput
+                                v-model="form.max_bounce_rate"
+                                name="max_bounce_rate"
+                                type="number"
+                                min="0.01"
+                                max="1"
+                                step="0.01"
+                                placeholder="Instance default"
                                 class="w-full"
                             />
                         </UFormField>

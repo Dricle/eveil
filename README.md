@@ -37,7 +37,7 @@ unlimited mailboxes, unlimited leads, your data on your own machine.
 
 - **Reads your site, not a form you fill in.** Product, audience, and the
   reason anybody switches, worked out from the site itself and shown to you
-  before anything gets written.
+  before anything gets written. It can also read your github repo for a better understanding of your project.
 - **Finds the companies and the people, on its own.** Segments, search terms,
   fit scores with the sentence that justifies them, over the bundled search
   engine, no paid data API required to start.

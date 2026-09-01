@@ -148,7 +148,7 @@ function switchAll (provider: string) {
                         color="success"
                         variant="subtle"
                         icon="i-lucide-piggy-bank"
-                        label="Haiku is fine"
+                        label="Small model is fine"
                     />
 
                     <UBadge

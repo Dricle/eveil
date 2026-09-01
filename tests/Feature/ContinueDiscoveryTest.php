@@ -1,6 +1,8 @@
 <?php
 
 use App\Actions\ContinueDiscovery;
+use App\Enums\DiscoveryRunOrigin;
+use App\Enums\DiscoveryRunStatus;
 use App\Enums\TargetProfileSource;
 use App\Jobs\Discovery\PlanDiscovery;
 use App\Models\DiscoveryRun;
@@ -75,4 +77,41 @@ it('never gates an agent profile that reported no confidence at all', function (
     ]);
 
     expect(startedRuns($profile))->toBe(1);
+});
+
+it('starts the scheduled search even while a manual link submission is open for the profile', function () {
+    $profile = TargetProfile::factory()->create(['source' => TargetProfileSource::Human, 'is_active' => true]);
+
+    DiscoveryRun::factory()->create([
+        'project_id' => $profile->project_id,
+        'target_profile_id' => $profile->id,
+        'origin' => DiscoveryRunOrigin::Manual,
+        'status' => DiscoveryRunStatus::Running,
+    ]);
+
+    expect(startedRuns($profile))->toBe(1);
+});
+
+it('never lets a manual submission stand in for the profile\'s latest search', function () {
+    $profile = TargetProfile::factory()->create(['source' => TargetProfileSource::Human, 'is_active' => true]);
+
+    // A manual run diagnosed nothing (it cannot be), but if it were read as
+    // the profile's "latest run" its null diagnosis would read as "may widen"
+    // regardless of what the last real search actually found.
+    DiscoveryRun::factory()->create([
+        'project_id' => $profile->project_id,
+        'target_profile_id' => $profile->id,
+        'origin' => DiscoveryRunOrigin::Search,
+        'status' => DiscoveryRunStatus::Exhausted,
+        'diagnosis' => 'bad_target_profile',
+    ]);
+
+    DiscoveryRun::factory()->create([
+        'project_id' => $profile->project_id,
+        'target_profile_id' => $profile->id,
+        'origin' => DiscoveryRunOrigin::Manual,
+        'status' => DiscoveryRunStatus::Succeeded,
+    ]);
+
+    expect(startedRuns($profile))->toBe(0);
 });

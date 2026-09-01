@@ -35,6 +35,7 @@ use App\Http\Controllers\ContactStatusController;
 use App\Http\Controllers\ConversationReplyController;
 use App\Http\Controllers\CurrentProjectController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DiscoveryLinkController;
 use App\Http\Controllers\DiscoveryRunCancellationController;
 use App\Http\Controllers\DiscoveryRunController;
 use App\Http\Controllers\DiscoveryTaskReplayController;
@@ -241,6 +242,14 @@ Route::middleware(['auth', 'verified', 'project.set'])->group(function (): void 
         Route::put('companies/{company}/status', [CompanyStatusController::class, 'update'])
             ->name('companies.status');
         Route::get('companies/{company}', [CompanyController::class, 'show'])->name('companies.show');
+
+        /*
+         * A lead somebody already had. A button on Companies, never a section
+         * of its own: pasting links is one way companies arrive, not a place
+         * you go. Same reasoning as `contacts/import` below.
+         */
+        Route::post('companies/links', [DiscoveryLinkController::class, 'store'])
+            ->name('companies.links.store');
 
         /*
          * And the people at them. One search covers one company, or every kept

@@ -44,7 +44,7 @@ class ListingHarvester
 {
     public function __construct(private PageFetcher $fetcher, private HtmlText $html, private Settings $settings) {}
 
-    public function harvest(string $url, ?Project $project = null, ?int $maxPages = null): Harvest
+    public function harvest(string $url, ?Project $project = null, ?int $maxPages = null, string $source = 'directory'): Harvest
     {
         $maxPages ??= $this->settings->int('sources.directory.max_pages');
         $maxEntities = $this->settings->int('sources.directory.max_entities');
@@ -87,7 +87,7 @@ class ListingHarvester
             $pages[] = $next;
             $textLength += $this->html->parse($body, $next)->length();
 
-            [$found, $mode] = $this->extract($body, $next, $project);
+            [$found, $mode] = $this->extract($body, $next, $project, $source);
             $modes[] = $mode;
 
             foreach ($found as $candidate) {
@@ -110,25 +110,25 @@ class ListingHarvester
     /**
      * @return array{0: array<int, Candidate>, 1: string}
      */
-    private function extract(string $body, string $url, ?Project $project): array
+    private function extract(string $body, string $url, ?Project $project, string $source): array
     {
         $businesses = JsonLd::businesses($body, $url);
 
         if ($businesses !== []) {
-            return [array_map(fn (array $business): Candidate => $this->fromJsonLd($business, $url), $businesses), 'jsonld'];
+            return [array_map(fn (array $business): Candidate => $this->fromJsonLd($business, $url, $source), $businesses), 'jsonld'];
         }
 
         if ($project === null) {
             return [[], 'none'];
         }
 
-        return [$this->viaAgent($body, $url, $project), 'llm'];
+        return [$this->viaAgent($body, $url, $project, $source), 'llm'];
     }
 
     /**
      * @param  array{name: string, url: ?string, email: ?string, phone: ?string, address: ?string}  $business
      */
-    private function fromJsonLd(array $business, string $listingUrl): Candidate
+    private function fromJsonLd(array $business, string $listingUrl, string $source): Candidate
     {
         // JSON-LD `url` is whatever the directory chose to publish: sometimes
         // the business's own site, sometimes its page in the directory. Only
@@ -139,7 +139,7 @@ class ListingHarvester
         return new Candidate(
             name: $business['name'],
             website: $isOwnSite ? $url : null,
-            source: 'directory',
+            source: $source,
             sourceUrl: $isOwnSite ? $listingUrl : ($url ?? $listingUrl),
             facts: array_filter([
                 'email' => $business['email'],
@@ -153,7 +153,7 @@ class ListingHarvester
     /**
      * @return array<int, Candidate>
      */
-    private function viaAgent(string $body, string $url, Project $project): array
+    private function viaAgent(string $body, string $url, Project $project, string $source): array
     {
         $parsed = $this->html->parse($body, $url);
 
@@ -181,7 +181,7 @@ class ListingHarvester
         );
 
         return collect($businesses)
-            ->map(fn (array $business): ?Candidate => $this->fromAgent($business, $url))
+            ->map(fn (array $business): ?Candidate => $this->fromAgent($business, $url, $source))
             ->filter()
             ->values()
             ->all();
@@ -209,7 +209,7 @@ class ListingHarvester
     /**
      * @param  array<string, string>  $business
      */
-    private function fromAgent(array $business, string $listingUrl): ?Candidate
+    private function fromAgent(array $business, string $listingUrl, string $source): ?Candidate
     {
         $name = trim($business['name'] ?? '');
 
@@ -229,7 +229,7 @@ class ListingHarvester
         return new Candidate(
             name: $name,
             website: $website,
-            source: 'directory',
+            source: $source,
             sourceUrl: $website !== null ? $listingUrl : ($detail ?? $listingUrl),
             facts: array_filter([
                 'email' => trim($business['email'] ?? '') ?: null,

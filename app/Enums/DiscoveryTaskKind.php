@@ -2,6 +2,7 @@
 
 namespace App\Enums;
 
+use App\Jobs\Discovery\ClassifyLink;
 use App\Jobs\Discovery\DiscoveryJob;
 use App\Jobs\Discovery\HarvestListing;
 use App\Jobs\Discovery\PlanDiscovery;
@@ -26,6 +27,9 @@ enum DiscoveryTaskKind: string
     /** One candidate's own site fetched and scored against the profile. One model call. */
     case Qualify = 'qualify';
 
+    /** One user-submitted URL, sorted into a company site or a directory. One model call. */
+    case Classify = 'classify';
+
     /**
      * What runs this node: which is also what a replay dispatches, since the
      * row already carries everything the job needs to start again.
@@ -39,6 +43,7 @@ enum DiscoveryTaskKind: string
             self::Probe => RunProbe::class,
             self::Harvest => HarvestListing::class,
             self::Qualify => QualifyCandidate::class,
+            self::Classify => ClassifyLink::class,
         };
     }
 }

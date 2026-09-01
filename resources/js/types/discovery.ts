@@ -1,7 +1,7 @@
 /** One node of a run's graph: what it did, what it cost, how it failed. */
 export type DiscoveryTask = {
     id: number
-    kind: 'plan' | 'probe' | 'harvest' | 'qualify'
+    kind: 'plan' | 'probe' | 'harvest' | 'qualify' | 'classify'
     status: 'pending' | 'running' | 'succeeded' | 'failed' | 'skipped'
     subject: string
     result: Record<string, unknown> & { failures?: string[] }

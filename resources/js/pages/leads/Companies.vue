@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, usePoll } from '@inertiajs/vue3'
+import { Form, Head, router, usePoll } from '@inertiajs/vue3'
 import type { TableColumn } from '@nuxt/ui'
 import { computed, ref, watch } from 'vue'
 import LeadsLayout from '@/layouts/LeadsLayout.vue'
@@ -66,6 +66,14 @@ const PROFILE_OPTIONS = computed(() => [
     { label: 'Every profile', value: 0 },
     ...props.profiles.map(item => ({ label: item.name, value: item.id }))
 ])
+
+// A company arriving by paste still needs a profile to score it against: fit
+// score lives on the (company, profile) pair, never on the company alone. No
+// "every profile" option here, unlike the filter above.
+const addingLinks = ref(false)
+const linkProfile = ref<number | undefined>(props.profiles[0]?.id)
+const links = ref('')
+const PROFILE_SELECT_OPTIONS = computed(() => props.profiles.map(item => ({ label: item.name, value: item.id })))
 
 const SCORE_OPTIONS = [
     { label: 'Any score', value: 0 },
@@ -219,6 +227,18 @@ function searchLabel (company: Company) {
                         variant="subtle"
                         :label="`Find contacts (${unsearched})`"
                         @click="router.post(contactRoutes.search.url(), {}, { preserveScroll: true })"
+                    />
+
+                    <!-- A lead somebody already had. One way companies arrive,
+                         not a place you go, so it is a button here rather than
+                         a section of its own -- same reasoning as importing a
+                         list of contacts. -->
+                    <UButton
+                        icon="i-lucide-link"
+                        color="neutral"
+                        variant="subtle"
+                        label="Add links"
+                        @click="addingLinks = true"
                     />
 
                     <p class="flex-1 text-right text-sm text-muted">
@@ -411,5 +431,64 @@ function searchLabel (company: Company) {
                 />
             </div>
         </div>
+
+        <UModal
+            v-model:open="addingLinks"
+            title="Add links"
+            description="A company site, a directory page, anything you already found by hand. Each one is read and routed the same way a search result is."
+            :ui="{ content: 'max-w-xl' }"
+        >
+            <template #body>
+                <Form
+                    v-slot="{ errors, processing }"
+                    v-bind="companyRoutes.links.store.form()"
+                    class="space-y-4"
+                    @success="addingLinks = false; links = ''"
+                >
+                    <UFormField
+                        label="Score against"
+                        name="target_profile"
+                        :error="errors.target_profile"
+                    >
+                        <USelect
+                            v-model="linkProfile"
+                            name="target_profile"
+                            :items="PROFILE_SELECT_OPTIONS"
+                            class="w-full"
+                        />
+                    </UFormField>
+
+                    <UFormField
+                        label="Links"
+                        name="links"
+                        :error="errors.links"
+                        help="One per line, up to 50."
+                    >
+                        <UTextarea
+                            v-model="links"
+                            name="links"
+                            placeholder="https://example.com&#10;https://directory.example.com/plumbers/namur"
+                            :rows="6"
+                            class="w-full"
+                        />
+                    </UFormField>
+
+                    <div class="flex justify-end gap-2">
+                        <UButton
+                            color="neutral"
+                            variant="ghost"
+                            label="Cancel"
+                            :disabled="processing"
+                            @click="addingLinks = false"
+                        />
+                        <UButton
+                            type="submit"
+                            label="Add links"
+                            :loading="processing"
+                        />
+                    </div>
+                </Form>
+            </template>
+        </UModal>
     </LeadsLayout>
 </template>

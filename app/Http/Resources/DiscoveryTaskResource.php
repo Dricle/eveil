@@ -50,6 +50,7 @@ class DiscoveryTaskResource extends JsonResource
             DiscoveryTaskKind::Probe => (string) ($payload['probe']['query'] ?? $payload['probe']['area'] ?? $payload['source'] ?? ''),
             DiscoveryTaskKind::Harvest => (string) ($payload['host'] ?? ''),
             DiscoveryTaskKind::Qualify => (string) ($payload['domain'] ?? $payload['name'] ?? ''),
+            DiscoveryTaskKind::Classify => (string) ($payload['url'] ?? ''),
         };
     }
 }

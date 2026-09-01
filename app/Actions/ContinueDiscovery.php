@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Enums\DiscoveryRunOrigin;
 use App\Enums\TargetProfileSource;
 use App\Models\Project;
 use App\Models\TargetProfile;
@@ -39,10 +40,16 @@ class ContinueDiscovery
      * the one thing that also protects a future "propose a profile mid-run"
      * job, since whatever it sets `is_active` to, it still has to come through
      * here to actually spend budget.
+     *
+     * A manual run (a user pasting links they already had) never enters this
+     * decision: it must not block the cadence while it runs, and it carries no
+     * verdict on whether the profile is worth searching again.
      */
     private function ready(TargetProfile $profile): bool
     {
-        if ($profile->discoveryRuns()->open()->exists()) {
+        $searches = $profile->discoveryRuns()->where('origin', DiscoveryRunOrigin::Search);
+
+        if ((clone $searches)->open()->exists()) {
             return false;
         }
 
@@ -50,7 +57,7 @@ class ContinueDiscovery
             return false;
         }
 
-        $latest = $profile->discoveryRuns()->latest('id')->first();
+        $latest = (clone $searches)->latest('id')->first();
 
         return $latest === null || $latest->mayWiden();
     }

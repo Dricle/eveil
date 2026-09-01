@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\DiscoveryDiagnosis;
+use App\Enums\DiscoveryRunOrigin;
 use App\Enums\DiscoveryRunStatus;
 use App\Enums\DiscoveryTaskKind;
 use App\Models\Concerns\BelongsToProject;
@@ -25,6 +26,7 @@ use Illuminate\Support\Facades\DB;
  * @property int $id
  * @property int $project_id
  * @property int|null $target_profile_id
+ * @property DiscoveryRunOrigin $origin whether an AI search planned this run or a user pasted the links
  * @property DiscoveryRunStatus $status
  * @property array{max_companies: int, max_qualified: int, max_pages: int, max_queries: int} $budget
  * @property int $queries_used
@@ -40,7 +42,7 @@ use Illuminate\Support\Facades\DB;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['project_id', 'target_profile_id', 'status', 'budget', 'stats', 'relaxations', 'diagnosis', 'started_at', 'finished_at', 'error'])]
+#[Fillable(['project_id', 'target_profile_id', 'origin', 'status', 'budget', 'stats', 'relaxations', 'diagnosis', 'started_at', 'finished_at', 'error'])]
 class DiscoveryRun extends Model
 {
     /** @use HasFactory<DiscoveryRunFactory> */
@@ -165,6 +167,14 @@ class DiscoveryRun extends Model
      */
     private function diagnose(): ?DiscoveryDiagnosis
     {
+        // "Too narrow", "wrong source" and "wrong profile" are all verdicts on
+        // an AI SEARCH. A user pasting three links they already had is not a
+        // narrow market, and diagnosing it as one would also feed a wrong
+        // signal into `ContinueDiscovery`'s cadence for the profile.
+        if ($this->origin === DiscoveryRunOrigin::Manual) {
+            return null;
+        }
+
         if ($this->candidates_found === 0) {
             return DiscoveryDiagnosis::WrongSource;
         }
@@ -212,6 +222,7 @@ class DiscoveryRun extends Model
     protected function casts(): array
     {
         return [
+            'origin' => DiscoveryRunOrigin::class,
             'status' => DiscoveryRunStatus::class,
             'diagnosis' => DiscoveryDiagnosis::class,
             'budget' => 'array',

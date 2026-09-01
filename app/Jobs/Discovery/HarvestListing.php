@@ -29,7 +29,12 @@ class HarvestListing extends DiscoveryJob
             $this->skip("{$host}: skipped, {$known->harvest_status?->value} last time");
         }
 
-        $harvest = app(ListingHarvester::class)->harvest($url, $task->project, $run->budget['max_pages'] ?? null);
+        $harvest = app(ListingHarvester::class)->harvest(
+            $url,
+            $task->project,
+            $run->budget['max_pages'] ?? null,
+            (string) ($task->payload['source'] ?? 'directory'),
+        );
 
         app(HostRegistry::class)->recordHarvest($host, $harvest);
 

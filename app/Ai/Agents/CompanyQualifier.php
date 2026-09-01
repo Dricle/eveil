@@ -25,6 +25,11 @@ class CompanyQualifier extends EveilAgent implements HasStructuredOutput
         return true;
     }
 
+    public static function smallModelSufficient(): bool
+    {
+        return true;
+    }
+
     public function instructions(): Stringable|string
     {
         return <<<'PROMPT'

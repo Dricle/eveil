@@ -50,6 +50,7 @@ class AgentController extends Controller
                     'timeout' => $agents->timeout($slug),
                     'overridden' => $agents->isOverridden($slug),
                     'strict' => $class::requiresStrictStructure(),
+                    'smallModelOk' => $class::smallModelSufficient(),
                     'calls' => (int) ($spend[$slug]->calls ?? 0),
                     'tokens_in' => (int) ($spend[$slug]->tokens_in ?? 0),
                     'tokens_out' => (int) ($spend[$slug]->tokens_out ?? 0),

@@ -20,6 +20,11 @@ use Stringable;
  */
 class ContactPageFinder extends EveilAgent implements HasStructuredOutput
 {
+    public static function smallModelSufficient(): bool
+    {
+        return true;
+    }
+
     public function instructions(): Stringable|string
     {
         return <<<'PROMPT'

@@ -65,6 +65,21 @@ abstract class EveilAgent implements Agent, HasMiddleware
     }
 
     /**
+     * Whether this agent shipped calibrated to run on the cheap model rather
+     * than the generative one, per `seed_default_settings` /
+     * `seed_repo_explorer_agent_settings`. False by default: an agent nobody
+     * has measured this for is assumed to need the full model, not assumed
+     * safe to downgrade.
+     *
+     * Purely informational, read by the settings screen as a badge. It does
+     * not change what an agent runs on: `AgentSettings` still owns that.
+     */
+    public static function smallModelSufficient(): bool
+    {
+        return false;
+    }
+
+    /**
      * The project's own instructions for anything written in its name: tone,
      * language, words to avoid. Appended by the agents that WRITE, and by them
      * only: an extractor returns fields nobody reads as prose, and telling it

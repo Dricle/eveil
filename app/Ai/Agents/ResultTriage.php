@@ -29,6 +29,11 @@ use Stringable;
  */
 class ResultTriage extends EveilAgent implements HasStructuredOutput
 {
+    public static function smallModelSufficient(): bool
+    {
+        return true;
+    }
+
     public function instructions(): Stringable|string
     {
         return <<<'PROMPT'

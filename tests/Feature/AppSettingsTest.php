@@ -185,6 +185,15 @@ it('marks the agents a weak model would break rather than merely blunt', functio
             ->where('agents.11.strict', false));
 });
 
+it('marks the agents that shipped calibrated to run on the cheap model', function () {
+    $this->actingAs(superAdmin())->get(route('app-settings.agents.index'))
+        ->assertInertia(fn ($page) => $page
+            ->where('agents.0.slug', 'company-qualifier')
+            ->where('agents.0.smallModelOk', true)
+            ->where('agents.11.slug', 'website-analyst')
+            ->where('agents.11.smallModelOk', false));
+});
+
 it('suggests the models a provider names for itself, without fixing the choice', function () {
     $this->actingAs(superAdmin())->get(route('app-settings.agents.index'))
         ->assertInertia(fn ($page) => $page->where(

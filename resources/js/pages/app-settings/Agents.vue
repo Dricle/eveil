@@ -11,6 +11,7 @@ type AgentLine = {
     timeout: number
     overridden: boolean
     strict: boolean
+    smallModelOk: boolean
     calls: number
     tokens_in: number
     tokens_out: number
@@ -140,6 +141,14 @@ function switchAll (provider: string) {
                         variant="subtle"
                         icon="i-lucide-braces"
                         label="Needs reliable structured output"
+                    />
+
+                    <UBadge
+                        v-if="line.smallModelOk"
+                        color="success"
+                        variant="subtle"
+                        icon="i-lucide-piggy-bank"
+                        label="Haiku is fine"
                     />
 
                     <UBadge

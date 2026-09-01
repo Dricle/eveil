@@ -70,10 +70,6 @@ class AgentModelCommand extends Command
             $agents->model($agent) ?? "the provider's default",
         ));
 
-        // The credit grid is calibrated on a specific model mix, so
-        // in cloud this and `credit_prices` are one operation, never two.
-        $this->components->warn('In cloud, adjust credit_prices in the same move: the grid is calibrated on the model mix.');
-
         return self::SUCCESS;
     }
 

@@ -90,7 +90,7 @@ class AgentController extends Controller
         // The credit grid is calibrated on a specific model mix, so in cloud
         // this and the prices are one operation, never two.
         return to_route('app-settings.agents.index')
-            ->with('status', $agent.' saved. In cloud, adjust credit_prices in the same move.');
+            ->with('status', $agent.' saved.');
     }
 
     /**
@@ -114,7 +114,7 @@ class AgentController extends Controller
         return to_route('app-settings.agents.index')->with(
             'status',
             "{$moved} agents moved to {$provider}, each keeping its timeout and landing on that "
-            .'provider\'s equivalent model. Change any of them below. In cloud, adjust credit_prices in the same move.',
+            .'provider\'s equivalent model. Change any of them below.',
         );
     }
 

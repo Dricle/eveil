@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { router, usePage } from '@inertiajs/vue3'
-import type { DropdownMenuItem, NavigationMenuItem } from '@nuxt/ui'
+import type { DropdownMenuItem } from '@nuxt/ui'
 import { computed, ref } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import targets from '@/routes/targets'
@@ -19,13 +19,17 @@ const analyzed = computed(() => page.props.analyzed as boolean)
 const derivationError = computed(() => page.props.derivationError as string | null)
 
 // The profiles ARE the navigation here: each one is a place with its own
-// criteria and its own searches, not a row in a list.
-const items = computed<NavigationMenuItem[]>(() => profiles.value.map(profile => ({
-    label: profile.name,
-    icon: profile.type === 'partner' ? 'i-lucide-handshake' : 'i-lucide-crosshair',
-    to: targets.show.url(profile.id),
-    active: profile.id === props.current
-})))
+// criteria and its own searches, not a row in a list. Grouped by type because
+// a customer and a partner are read differently: one is a segment, the other
+// is a channel.
+const GROUPS = [
+    { type: 'customer' as const, label: 'Customer' },
+    { type: 'partner' as const, label: 'Partner' }
+]
+
+const groups = computed(() => GROUPS
+    .map(group => ({ ...group, profiles: profiles.value.filter(profile => profile.type === group.type) }))
+    .filter(group => group.profiles.length))
 
 const confirmingReplace = ref(false)
 
@@ -55,19 +59,91 @@ function derive (replace: boolean): void {
 }
 
 const derivedCount = computed(() => profiles.value.filter(profile => profile.source === 'agent').length)
+
+const subtitle = computed(() => {
+    const customer = profiles.value.filter(profile => profile.type === 'customer').length
+    const partner = profiles.value.filter(profile => profile.type === 'partner').length
+
+    return [
+        customer ? `${customer} customer` : null,
+        partner ? `${partner} partner` : null
+    ].filter(Boolean).join(' · ')
+})
 </script>
 
 <template>
     <AppLayout>
         <div class="flex h-full flex-1">
-            <aside class="flex w-64 shrink-0 flex-col gap-2 border-e border-default p-4">
-                <UNavigationMenu
-                    :items="items"
-                    orientation="vertical"
-                    :ui="{ link: 'p-1.5 overflow-hidden' }"
-                />
+            <aside class="flex w-72 shrink-0 flex-col overflow-y-auto border-e border-default">
+                <div class="p-3 pb-1">
+                    <h3 class="font-semibold text-highlighted">
+                        Target profiles
+                    </h3>
+                    <p
+                        v-if="subtitle"
+                        class="text-xs text-dimmed"
+                    >
+                        {{ subtitle }}
+                    </p>
+                </div>
 
-                <div class="mt-auto space-y-1">
+                <div class="flex flex-1 flex-col gap-1 overflow-y-auto p-3 pt-2">
+                    <template
+                        v-for="group in groups"
+                        :key="group.type"
+                    >
+                        <div class="px-2 pt-2 pb-1 font-mono text-[10px] font-medium tracking-wider text-dimmed uppercase">
+                            {{ group.label }}
+                        </div>
+
+                        <a
+                            v-for="profile in group.profiles"
+                            :key="profile.id"
+                            href="#"
+                            class="relative block rounded-lg p-2.5 text-sm"
+                            :class="profile.id === props.current
+                                ? 'bg-primary/10 ring ring-primary/25'
+                                : 'hover:bg-elevated'"
+                            @click.prevent="router.visit(targets.show.url(profile.id))"
+                        >
+                            <span
+                                v-if="profile.id === props.current"
+                                class="absolute inset-y-0 left-0 w-0.5 rounded-full bg-primary"
+                            />
+                            <p
+                                class="mb-1.5 line-clamp-2 font-medium"
+                                :class="profile.id === props.current ? 'text-highlighted' : 'text-toned'"
+                            >
+                                {{ profile.name }}
+                            </p>
+                            <span class="flex items-center gap-2 text-xs">
+                                <span
+                                    class="inline-flex items-center gap-1.5"
+                                    :class="profile.is_active ? 'text-success' : 'text-dimmed'"
+                                >
+                                    <span
+                                        class="size-1.5 rounded-full"
+                                        :class="profile.is_active ? 'bg-success' : 'bg-dimmed'"
+                                    />
+                                    {{ profile.is_active ? 'Searching' : 'Paused' }}
+                                </span>
+                                <span
+                                    v-if="profile.confidence !== null"
+                                    class="ms-auto font-mono text-dimmed"
+                                >{{ profile.confidence }}% fit</span>
+                            </span>
+                        </a>
+                    </template>
+
+                    <p
+                        v-if="!profiles.length"
+                        class="p-2 text-sm text-muted"
+                    >
+                        No profile yet.
+                    </p>
+                </div>
+
+                <div class="space-y-1 border-t border-default p-3">
                     <UButton
                         icon="i-lucide-plus"
                         color="neutral"

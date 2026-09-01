@@ -1,4 +1,5 @@
 import type { OutreachStatus } from '@/lib/status'
+import type { CampaignStatus } from '@/types/campaign'
 
 /**
  * What the agent decided about a reply. The label is what the inbox shows; the
@@ -49,32 +50,52 @@ export type Conversation = {
     messages: ConversationMessage[]
 }
 
-/** The funnel on the dashboard: how far the people in sequences have got. */
+/** The funnel on a campaign's delivery screen: how far its leads have got. */
 export type Pipeline = Partial<Record<'pending' | 'running' | 'paused' | 'completed' | 'failed' | 'stopped', number>>
 
 /**
  * Tokens on self-hosted, credits spent on cloud - never both, and never a
  * conversion between them: a cloud customer must never see a token count.
+ * Neither is shown on the dashboard itself; both stay on the wire for
+ * whatever reads the same prop next.
  */
 export type DashboardStats = {
-    companies: number
-    contacts: number
-    active_campaigns: number
+    companies_found: number
+    companies_kept: number
     sent: number
     replies: number
     positive: number
     positive_rate: number | null
     awaiting_human: number
-    tokens_in: number
-    tokens_out: number
-} | {
-    companies: number
-    contacts: number
-    active_campaigns: number
-    sent: number
-    replies: number
-    positive: number
-    positive_rate: number | null
-    awaiting_human: number
-    credits_spent: number
+} & ({ tokens_in: number, tokens_out: number } | { credits_spent: number })
+
+export type DashboardCampaign = {
+    id: number
+    name: string
+    status: CampaignStatus
+    steps_count: number
+    leads_count: number
+    sent_count: number
+    replies_count: number
+}
+
+export type DashboardReply = {
+    id: number
+    lead: { name: string, company: string | null }
+    body: string
+    classification: Classification | null
+    at: string | null
+}
+
+/** The one search currently spending budget, grouped into three real stages. */
+export type DashboardDiscoveryRun = {
+    id: number
+    target_profile_name: string | null
+    status: string
+    started_at: string | null
+    candidates_found: number
+    max_companies: number | null
+    queries_used: number
+    max_queries: number | null
+    stages: { label: string, done: number, total: number, state: 'waiting' | 'running' | 'done' }[]
 }

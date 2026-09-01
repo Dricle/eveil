@@ -25,7 +25,7 @@ declare module '@inertiajs/core' {
             /** Self-hosted never renders billing UI: nothing gated on it does more than check this. */
             edition: 'self' | 'cloud'
             /** Absent on self-hosted and while no project is selected - cloud, zero credits is `{ balance: 0 }`, not null. */
-            wallet: { balance: number } | null
+            wallet: { balance: number, auto_topup_threshold: number | null } | null
             registerUrl: string | null
             status: string | null
             /** What is missing before the instance can do anything. */

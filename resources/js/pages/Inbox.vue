@@ -69,6 +69,37 @@ function when (value: string | null) {
     return value === null ? '' : new Date(value).toLocaleString()
 }
 
+function time (value: string | null) {
+    return value === null ? '' : new Date(value).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+}
+
+function initial (conversation: Conversation) {
+    return (conversation.lead.name ?? conversation.lead.email ?? '?').charAt(0).toUpperCase()
+}
+
+// The list is already ordered newest first; grouping only has to split it
+// where the calendar day changes, not sort it.
+const groups = computed(() => {
+    const stamp = (conversation: Conversation) =>
+        props.filters.view === 'sent' ? conversation.sent_at : conversation.replied_at
+
+    const result: { label: string, conversations: Conversation[] }[] = []
+
+    for (const conversation of props.conversations.data) {
+        const value = stamp(conversation)
+        const label = value === null ? 'Undated' : new Date(value).toLocaleDateString(undefined, { day: 'numeric', month: 'long' })
+        const last = result[result.length - 1]
+
+        if (last && last.label === label) {
+            last.conversations.push(conversation)
+        } else {
+            result.push({ label, conversations: [conversation] })
+        }
+    }
+
+    return result
+})
+
 // A refused send still leaves a row, on purpose: the attempt is a fact worth
 // keeping. Showing it exactly like a delivered mail would tell somebody their
 // mail went out when it never left the building.
@@ -126,112 +157,131 @@ function delivery (conversation: Conversation) {
                 </template>
             </p>
 
-            <div
-                v-for="conversation in conversations.data"
-                :key="conversation.id"
-                class="rounded-lg ring ring-default"
-                :class="conversation.needs_attention ? 'ring-primary' : ''"
+            <template
+                v-for="group in groups"
+                :key="group.label"
             >
-                <button
-                    type="button"
-                    class="flex w-full flex-wrap items-center gap-3 p-4 text-left"
-                    @click="open = open === conversation.id ? null : conversation.id"
-                >
-                    <div class="min-w-0 flex-1">
-                        <p class="font-medium">
-                            {{ conversation.lead.name ?? conversation.lead.email }}
-                            <span
-                                v-if="conversation.lead.company"
-                                class="text-muted"
-                            >· {{ conversation.lead.company }}</span>
-                        </p>
-                        <p class="truncate text-sm text-muted">
-                            {{ conversation.messages[conversation.messages.length - 1]?.body }}
-                        </p>
-                    </div>
+                <div class="mb-2 font-mono text-[10px] font-medium tracking-wider text-dimmed uppercase">
+                    {{ group.label }}
+                </div>
 
-                    <UBadge
-                        v-if="verdict(conversation)"
-                        :color="verdict(conversation)!.color"
-                        variant="subtle"
-                        :label="verdict(conversation)!.label"
-                        :title="verdict(conversation)!.help"
-                    />
-
-                    <UBadge
-                        v-if="delivery(conversation)"
-                        :color="delivery(conversation)!.color"
-                        variant="subtle"
-                        icon="i-lucide-mail-x"
-                        :label="delivery(conversation)!.label"
-                        :title="delivery(conversation)!.help"
-                    />
-
-                    <UBadge
-                        color="neutral"
-                        variant="outline"
-                        :label="conversation.campaign.name"
-                    />
-
-                    <span class="text-sm text-dimmed">{{
-                        when(filters.view === 'sent' ? conversation.sent_at : conversation.replied_at)
-                    }}</span>
-                </button>
-
-                <div
-                    v-if="open === conversation.id"
-                    class="space-y-3 border-t border-default p-4"
-                >
+                <div class="mb-6 space-y-2">
                     <div
-                        v-for="message in conversation.messages"
-                        :key="message.id"
-                        class="rounded-lg p-3 text-sm"
-                        :class="message.direction === 'inbound' ? 'bg-elevated' : 'ring ring-default'"
+                        v-for="conversation in group.conversations"
+                        :key="conversation.id"
+                        class="overflow-hidden rounded-lg ring ring-default"
+                        :class="conversation.needs_attention ? 'ring-primary' : ''"
                     >
-                        <p class="mb-1 text-xs text-dimmed">
-                            {{ message.direction === 'inbound' ? 'Them' : 'You' }} · {{ when(message.at) }} · {{ message.subject }}
-                            <span
-                                v-if="message.direction === 'outbound' && message.status && message.status !== 'sent'"
-                                class="text-error"
-                            >· never left: {{ message.status }}</span>
-                        </p>
-                        <p class="whitespace-pre-wrap">
-                            {{ message.body }}
-                        </p>
-                    </div>
+                        <button
+                            type="button"
+                            class="flex w-full flex-wrap items-start gap-3 p-4 text-left"
+                            @click="open = open === conversation.id ? null : conversation.id"
+                        >
+                            <span class="grid size-8 shrink-0 place-items-center rounded-full bg-elevated text-xs font-semibold text-toned">
+                                {{ initial(conversation) }}
+                            </span>
 
-                    <!-- Answering by hand stops the sequence: somebody being
+                            <div class="min-w-0 flex-1">
+                                <div class="mb-0.5 flex items-baseline gap-2">
+                                    <span class="font-medium text-highlighted">{{ conversation.lead.name ?? conversation.lead.email }}</span>
+                                    <span
+                                        v-if="conversation.lead.company"
+                                        class="min-w-0 truncate text-sm text-dimmed"
+                                    >{{ conversation.lead.company }}</span>
+                                    <span class="ms-auto shrink-0 font-mono text-xs text-dimmed">{{
+                                        time(filters.view === 'sent' ? conversation.sent_at : conversation.replied_at)
+                                    }}</span>
+                                </div>
+                                <p class="mb-2 truncate text-sm text-muted">
+                                    {{ conversation.messages[conversation.messages.length - 1]?.body }}
+                                </p>
+
+                                <div class="flex flex-wrap items-center gap-1.5">
+                                    <UBadge
+                                        v-if="verdict(conversation)"
+                                        :color="verdict(conversation)!.color"
+                                        variant="subtle"
+                                        size="sm"
+                                        :label="verdict(conversation)!.label"
+                                        :title="verdict(conversation)!.help"
+                                    />
+
+                                    <UBadge
+                                        v-if="delivery(conversation)"
+                                        :color="delivery(conversation)!.color"
+                                        variant="subtle"
+                                        size="sm"
+                                        icon="i-lucide-mail-x"
+                                        :label="delivery(conversation)!.label"
+                                        :title="delivery(conversation)!.help"
+                                    />
+
+                                    <UBadge
+                                        color="neutral"
+                                        variant="outline"
+                                        size="sm"
+                                        :label="conversation.campaign.name"
+                                    />
+                                </div>
+                            </div>
+                        </button>
+
+                        <div
+                            v-if="open === conversation.id"
+                            class="space-y-3 border-t border-default p-4"
+                        >
+                            <div
+                                v-for="message in conversation.messages"
+                                :key="message.id"
+                                class="rounded-lg p-3 text-sm"
+                                :class="message.direction === 'inbound' ? 'bg-elevated' : 'ring ring-default'"
+                            >
+                                <p class="mb-1 text-xs text-dimmed">
+                                    {{ message.direction === 'inbound' ? 'Them' : 'You' }} · {{ when(message.at) }} · {{ message.subject }}
+                                    <span
+                                        v-if="message.direction === 'outbound' && message.status && message.status !== 'sent'"
+                                        class="text-error"
+                                    >· never left: {{ message.status }}</span>
+                                </p>
+                                <p class="whitespace-pre-wrap">
+                                    {{ message.body }}
+                                </p>
+                            </div>
+
+                            <!-- Answering by hand stops the sequence: somebody being
                          written to by a person must not also receive the
                          follow-up queued behind them. -->
-                    <Form
-                        v-slot="{ errors, processing }"
-                        v-bind="replyRoute.form(conversation.id)"
-                        class="space-y-2"
-                        :options="{ preserveScroll: true }"
-                    >
-                        <UFormField
-                            name="body"
-                            :error="errors.body"
-                            :help="filters.view === 'sent'
-                                ? 'Sent from the same mailbox, in the same thread. Writing by hand stops the sequence: nobody should get your mail and the queued follow-up as well.'
-                                : 'Sent from the same mailbox, in the same thread. Your signature is added if the mailbox has one.'"
-                        >
-                            <UTextarea
-                                name="body"
-                                :rows="4"
-                                placeholder="Write back…"
-                                class="w-full"
-                            />
-                        </UFormField>
+                            <Form
+                                v-slot="{ errors, processing }"
+                                v-bind="replyRoute.form(conversation.id)"
+                                class="space-y-2"
+                                :options="{ preserveScroll: true }"
+                            >
+                                <UFormField
+                                    name="body"
+                                    :error="errors.body"
+                                    :help="filters.view === 'sent'
+                                        ? 'Sent from the same mailbox, in the same thread. Writing by hand stops the sequence: nobody should get your mail and the queued follow-up as well.'
+                                        : 'Sent from the same mailbox, in the same thread. Your signature is added if the mailbox has one.'"
+                                >
+                                    <UTextarea
+                                        name="body"
+                                        :rows="4"
+                                        placeholder="Write back…"
+                                        class="w-full"
+                                    />
+                                </UFormField>
 
-                        <UButton
-                            type="submit"
-                            :loading="processing"
-                            :label="filters.view === 'sent' ? 'Send and stop the sequence' : 'Send reply'"
-                        />
-                    </Form>
+                                <UButton
+                                    type="submit"
+                                    :loading="processing"
+                                    :label="filters.view === 'sent' ? 'Send and stop the sequence' : 'Send reply'"
+                                />
+                            </Form>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            </template>
 
             <div
                 v-if="conversations.meta.last_page > 1"

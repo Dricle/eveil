@@ -11,6 +11,26 @@
 }
 
 /*
+ * Nuxt UI derives every `--ui-bg-*` / `--ui-border-*` token from the 'mist'
+ * neutral palette's own shade steps, which read lighter and flatter than the
+ * design: its dark-mode --ui-bg lands at 21.8% lightness against the design's
+ * 16.5%, and --ui-bg-elevated at 27.5% against a card fill of ~19.5%. Pinned
+ * here to the design's own oklch values instead of the nearest palette step,
+ * so every component built on `bg-default` / `bg-elevated` / `border-default`
+ * matches it without per-component overrides. Unlayered, so it wins over
+ * Nuxt UI's `@layer theme` block regardless of import order.
+ */
+.dark {
+    --ui-bg: oklch(16.5% 0.006 228);
+    --ui-bg-muted: oklch(19.5% 0.007 224);
+    --ui-bg-elevated: oklch(22.5% 0.007 224);
+    --ui-bg-accented: oklch(28% 0.011 219);
+    --ui-border: oklch(24% 0.009 219);
+    --ui-border-muted: oklch(30% 0.011 217);
+    --ui-border-accented: oklch(32% 0.012 217);
+}
+
+/*
  * A magnifier sweeping over the same patch of ground, for the screens that are
  * waiting on a search. A spinner says "busy", this says "looking", which is what
  * discovery actually is, and the difference is worth two keyframes.

@@ -102,7 +102,7 @@ class HandleInertiaRequests extends Middleware
      * all - `app/Cloud` billing concepts stay entirely out of that edition's
      * pages.
      *
-     * @return array{balance: int}|null
+     * @return array{balance: int, auto_topup_threshold: int|null}|null
      */
     private function currentWallet(): ?array
     {
@@ -116,7 +116,12 @@ class HandleInertiaRequests extends Middleware
             return null;
         }
 
-        return ['balance' => $project->organization()->credits_balance];
+        $organization = $project->organization();
+
+        return [
+            'balance' => $organization->credits_balance,
+            'auto_topup_threshold' => $organization->auto_topup_threshold,
+        ];
     }
 
     /**

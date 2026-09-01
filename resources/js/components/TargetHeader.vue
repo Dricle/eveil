@@ -31,31 +31,58 @@ const items = computed<NavigationMenuItem[]>(() => props.profile === null
 </script>
 
 <template>
-    <div class="space-y-2">
-        <div class="flex items-center gap-2">
-            <h2 class="min-w-0 truncate font-medium">
-                {{ profile?.name ?? 'New profile' }}
-            </h2>
+    <div class="space-y-3">
+        <div class="flex items-start justify-between gap-4">
+            <div class="min-w-0 flex-1">
+                <div class="mb-1.5 flex items-center gap-2">
+                    <UBadge
+                        :color="profile?.type === 'partner' ? 'primary' : 'neutral'"
+                        variant="subtle"
+                        :label="profile?.type === 'partner' ? 'Partner' : 'Customer'"
+                    />
+                    <UBadge
+                        v-if="profile && !profile.is_active"
+                        color="neutral"
+                        variant="subtle"
+                        label="Paused"
+                    />
+                    <span
+                        v-if="profile?.source === 'agent'"
+                        class="inline-flex items-center gap-1.5 text-xs text-dimmed"
+                    >
+                        <UIcon
+                            name="i-lucide-sparkles"
+                            class="size-3"
+                        />
+                        Derived by an agent
+                    </span>
+                    <UBadge
+                        v-else-if="profile?.source === 'human'"
+                        color="neutral"
+                        variant="subtle"
+                        icon="i-lucide-pencil"
+                        label="Edited by you"
+                    />
+                </div>
+                <h2 class="truncate text-lg font-semibold text-highlighted">
+                    {{ profile?.name ?? 'New profile' }}
+                </h2>
+            </div>
 
-            <UBadge
-                v-if="profile?.type === 'partner'"
-                color="primary"
-                variant="subtle"
-                label="Partner"
-            />
-            <UBadge
-                v-if="profile && !profile.is_active"
-                color="neutral"
-                variant="subtle"
-                label="Paused"
-            />
-            <UBadge
-                v-if="profile?.source === 'human'"
-                color="neutral"
-                variant="subtle"
-                icon="i-lucide-pencil"
-                label="Edited by you"
-            />
+            <div
+                v-if="profile?.confidence !== null && profile?.confidence !== undefined"
+                class="shrink-0 pt-0.5 text-right"
+            >
+                <div
+                    class="font-mono text-xl leading-none"
+                    :class="(profile?.confidence ?? 0) >= 70 ? 'text-success' : (profile?.confidence ?? 0) >= 40 ? 'text-warning' : 'text-dimmed'"
+                >
+                    {{ profile?.confidence }}%
+                </div>
+                <div class="mt-0.5 text-xs text-dimmed">
+                    confidence
+                </div>
+            </div>
         </div>
 
         <UNavigationMenu

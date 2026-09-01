@@ -74,60 +74,89 @@ const items = computed<NavigationMenuItem[]>(() => [
 
 // The project list is the switcher, not a nav entry: every screen below the
 // dashboard belongs to one project, so choosing it is context, not navigation.
-//
-// One popover for both levels rather than two separate switchers: the
-// current organization's projects, "new project", a separator, every OTHER
-// organization the user is in (switching to whichever project of theirs
-// sorts first, or straight to project creation if it has none yet), "new
-// organization" last.
+// Two dropdowns, not one: an organization and a project are different kinds
+// of choice, and the header reads left to right as org / project / section.
 const currentOrganizationId = computed(() => page.props.currentProject?.organization_id ?? null)
 
-const otherOrganizations = computed(() =>
-    page.props.organizations.filter(organization => organization.id !== currentOrganizationId.value))
+const currentOrganization = computed(() =>
+    page.props.organizations.find(organization => organization.id === currentOrganizationId.value) ?? null)
+
+const currentOrgProjects = computed(() =>
+    page.props.projects.filter(project => project.organization_id === currentOrganizationId.value))
 
 function firstProjectOf (organizationId: number) {
     return page.props.projects.find(project => project.organization_id === organizationId)
 }
 
-const projectMenu = computed<DropdownMenuItem[][]>(() => {
-    const currentOrgProjects = page.props.projects.filter(project => project.organization_id === currentOrganizationId.value)
+// Every project's domain, shortened to a host: `new URL` throws on whatever a
+// user typed before validation caught it, so a bad one just falls back to the
+// full string rather than blanking the row.
+function host (url: string): string {
+    try {
+        return new URL(url).host
+    } catch {
+        return url
+    }
+}
 
-    return [
-        currentOrgProjects.map(project => ({
-            label: project.name,
-            icon: project.id === page.props.currentProject?.id
-                ? 'i-lucide-check'
-                : 'i-lucide-folder',
-            onSelect: () => router.put(switchProject.url(project.id))
-        })),
-        [
-            {
-                label: 'New project',
-                icon: 'i-lucide-plus',
-                to: createProject.url()
-            }
-        ],
-        otherOrganizations.value.map((organization) => {
-            const project = firstProjectOf(organization.id)
+// Picking another organization has no "just switch context" route of its
+// own: it lands on whichever of its projects sorts first, or on creating one
+// when it has none yet. Picking a project in the SAME organization only ever
+// does the latter. Each row carries its own avatar initial and meta line
+// (`item-leading` / item `description`), rather than the plain icon+label a
+// bare `DropdownMenuItem` gives you, to read the way the design has it.
+const orgMenu = computed<DropdownMenuItem[][]>(() => [
+    page.props.organizations.map((organization) => {
+        const isCurrent = organization.id === currentOrganizationId.value
+        const project = firstProjectOf(organization.id)
+        const count = page.props.projects.filter(p => p.organization_id === organization.id).length
 
-            return {
-                label: organization.name,
-                icon: 'i-lucide-building-2',
-                to: project
-                    ? undefined
-                    : createProject.url({ query: { organization_id: organization.id } }),
-                onSelect: project ? () => router.put(switchProject.url(project.id)) : undefined
-            }
-        }),
-        [
-            {
-                label: 'New organization',
-                icon: 'i-lucide-plus',
-                to: createOrganization.url()
-            }
-        ]
+        return {
+            label: organization.name,
+            description: `${count} project${count === 1 ? '' : 's'}`,
+            initial: organization.name.charAt(0).toUpperCase(),
+            current: isCurrent,
+            class: isCurrent ? 'bg-primary/10' : '',
+            to: (!isCurrent && !project) ? createProject.url({ query: { organization_id: organization.id } }) : undefined,
+            onSelect: (!isCurrent && project) ? () => router.put(switchProject.url(project.id)) : undefined
+        }
+    }),
+    [
+        {
+            label: 'New organization',
+            icon: 'i-lucide-plus',
+            to: createOrganization.url()
+        }
     ]
-})
+])
+
+const projectMenu = computed<DropdownMenuItem[][]>(() => [
+    currentOrgProjects.value.map((project) => {
+        const isCurrent = project.id === page.props.currentProject?.id
+
+        return {
+            label: project.name,
+            description: project.analyzed ? host(project.url) : undefined,
+            initial: project.name.charAt(0).toUpperCase(),
+            current: isCurrent,
+            analyzing: !project.analyzed,
+            class: isCurrent ? 'bg-primary/10' : '',
+            onSelect: () => router.put(switchProject.url(project.id))
+        }
+    }),
+    [
+        {
+            label: 'New project',
+            icon: 'i-lucide-plus',
+            to: createProject.url()
+        }
+    ]
+])
+
+// The header's breadcrumb tail, so the org / project switcher reads all the
+// way out to where you are: "org / project / Targets", the way the design
+// has it, rather than stopping at the project.
+const currentSectionLabel = computed(() => items.value.find(item => item.active)?.label ?? null)
 
 // App settings are a scope of their own, whoever runs the install and never
 // somebody granted access through an organization, so the entry only exists
@@ -155,40 +184,63 @@ const userMenu = computed<DropdownMenuItem[][]>(() => [
         <USidebar
             v-model:open="open"
             collapsible="icon"
-            :ui="{ container: 'h-full' }"
+            :ui="{ container: 'h-full bg-[oklch(14.2%_0.005_229)]' }"
         >
             <template #header>
-                <UDropdownMenu
-                    :items="projectMenu"
-                    class="w-full"
-                >
-                    <UButton
-                        color="neutral"
-                        variant="ghost"
-                        block
-                        class="justify-start overflow-hidden"
+                <!-- The mark, not a switcher: an organization and a project
+                     are chosen in the header now, breadcrumb-style, so the
+                     sidebar opens on the one thing that never changes. -->
+                <div class="flex items-center gap-2 overflow-hidden px-1.5 py-1">
+                    <svg
+                        viewBox="0 0 64 64"
+                        class="size-[22px] shrink-0"
+                        aria-hidden="true"
                     >
-                        <UIcon
-                            name="i-lucide-folder"
-                            class="size-5 shrink-0"
+                        <rect
+                            width="64"
+                            height="64"
+                            rx="14"
+                            class="fill-primary"
                         />
-                        <span
-                            v-if="open"
-                            class="min-w-0 flex-1 text-left leading-tight"
-                        >
-                            <span class="block truncate font-semibold">{{ page.props.currentProject?.name ?? 'No project' }}</span>
-                            <span
-                                v-if="page.props.currentProject"
-                                class="block truncate text-xs text-muted"
-                            >{{ page.props.currentProject.organization_name }}</span>
-                        </span>
-                        <UIcon
-                            v-if="open"
-                            name="i-lucide-chevrons-up-down"
-                            class="size-4 shrink-0 text-muted"
-                        />
-                    </UButton>
-                </UDropdownMenu>
+                        <g fill="oklch(16.5% 0.006 228)">
+                            <path d="M20 40 A12 12 0 0 1 44 40 Z" />
+                            <rect
+                                x="9"
+                                y="39.5"
+                                width="46"
+                                height="5"
+                                rx="2.5"
+                            />
+                            <rect
+                                x="29.5"
+                                y="14"
+                                width="5"
+                                height="9"
+                                rx="2.5"
+                            />
+                            <rect
+                                x="19"
+                                y="15"
+                                width="5"
+                                height="9"
+                                rx="2.5"
+                                transform="rotate(-30 21.5 19.5)"
+                            />
+                            <rect
+                                x="40"
+                                y="15"
+                                width="5"
+                                height="9"
+                                rx="2.5"
+                                transform="rotate(30 42.5 19.5)"
+                            />
+                        </g>
+                    </svg>
+                    <span
+                        v-if="open"
+                        class="truncate text-[15px] font-semibold text-highlighted"
+                    >Eveil</span>
+                </div>
             </template>
 
             <UNavigationMenu
@@ -216,7 +268,7 @@ const userMenu = computed<DropdownMenuItem[][]>(() => [
 
         <div class="flex flex-1 flex-col overflow-hidden bg-default">
             <div
-                class="flex h-(--ui-header-height) shrink-0 items-center gap-2 border-b border-default px-4"
+                class="flex h-[52px] shrink-0 items-center gap-1 border-b border-default px-4"
             >
                 <UButton
                     icon="i-lucide-panel-left"
@@ -226,20 +278,122 @@ const userMenu = computed<DropdownMenuItem[][]>(() => [
                     @click="open = !open"
                 />
 
+                <!-- The org / project switcher, breadcrumb-style: two
+                     dropdowns and a trailing section label, so a screen
+                     always reads "where you are, all the way out". -->
+                <div class="flex min-w-0 flex-1 items-center gap-0.5 text-[13.5px]">
+                    <UDropdownMenu
+                        :items="orgMenu"
+                        :ui="{ content: 'w-72' }"
+                    >
+                        <UButton
+                            color="neutral"
+                            variant="ghost"
+                            size="sm"
+                            trailing-icon="i-lucide-chevron-down"
+                            class="min-w-0 max-w-48 gap-1.5 font-medium text-muted"
+                            :ui="{ trailingIcon: 'size-3 opacity-50', label: 'truncate' }"
+                        >
+                            <span class="grid size-[18px] shrink-0 place-items-center rounded-[5px] bg-accented text-[9.5px] font-semibold text-toned">
+                                {{ currentOrganization?.name.charAt(0).toUpperCase() }}
+                            </span>
+                            <span class="truncate">{{ currentOrganization?.name ?? 'No organization' }}</span>
+                        </UButton>
+
+                        <template #item-leading="{ item }">
+                            <span
+                                class="grid size-6 shrink-0 place-items-center rounded-md text-[11px] font-semibold"
+                                :class="item.current ? 'bg-accented text-toned' : 'bg-elevated text-muted'"
+                            >{{ item.initial }}</span>
+                        </template>
+                        <template #item-trailing="{ item }">
+                            <UIcon
+                                v-if="item.current"
+                                name="i-lucide-check"
+                                class="size-4 text-primary"
+                            />
+                        </template>
+                    </UDropdownMenu>
+
+                    <span class="text-dimmed">/</span>
+
+                    <UDropdownMenu
+                        :items="projectMenu"
+                        :ui="{ content: 'w-72' }"
+                    >
+                        <UButton
+                            color="neutral"
+                            variant="ghost"
+                            size="sm"
+                            trailing-icon="i-lucide-chevron-down"
+                            class="min-w-0 max-w-48 gap-1.5 font-medium text-highlighted"
+                            :ui="{ trailingIcon: 'size-3 opacity-50', label: 'truncate' }"
+                        >
+                            <span class="grid size-[18px] shrink-0 place-items-center rounded-[5px] bg-primary text-[9.5px] font-semibold text-inverted">
+                                {{ page.props.currentProject?.name.charAt(0).toUpperCase() }}
+                            </span>
+                            <span class="truncate">{{ page.props.currentProject?.name ?? 'No project' }}</span>
+                        </UButton>
+
+                        <template #item-leading="{ item }">
+                            <span
+                                class="grid size-6 shrink-0 place-items-center rounded-md text-[11px] font-semibold"
+                                :class="item.current ? 'bg-primary text-inverted' : 'bg-elevated text-muted'"
+                            >{{ item.initial }}</span>
+                        </template>
+                        <template #item-trailing="{ item }">
+                            <span
+                                v-if="item.analyzing"
+                                class="inline-flex items-center gap-1.5 text-xs text-warning"
+                            >
+                                <span class="size-1 rounded-full bg-warning" />
+                                Analyzing
+                            </span>
+                            <UIcon
+                                v-else-if="item.current"
+                                name="i-lucide-check"
+                                class="size-4 text-primary"
+                            />
+                        </template>
+                    </UDropdownMenu>
+
+                    <template v-if="currentSectionLabel">
+                        <span class="text-dimmed">/</span>
+                        <span class="shrink-0 px-1.5 text-muted">{{ currentSectionLabel }}</span>
+                    </template>
+                </div>
+
                 <slot name="header" />
 
                 <!-- App-wide status, not page content - the header bar is
-                     reserved for exactly this (`.ai/rules/js.md`). -->
-                <UButton
-                    v-if="page.props.wallet"
-                    :href="organizationBilling.edit.url()"
-                    :label="`${page.props.wallet.balance.toLocaleString()} credits`"
-                    icon="i-lucide-coins"
-                    color="neutral"
-                    variant="subtle"
-                    size="sm"
-                    class="ml-auto"
-                />
+                     reserved for exactly this (`.ai/rules/js.md`). A mailbox
+                     that stopped itself is easy to miss on a page that never
+                     mentions mailboxes, so it gets a permanent pill here on
+                     top of the full alert below. -->
+                <div class="ml-auto flex items-center gap-2">
+                    <UButton
+                        v-if="page.props.setup?.broken?.length"
+                        :to="mailboxes.index.url()"
+                        :label="page.props.setup.broken.length === 1
+                            ? '1 mailbox paused'
+                            : `${page.props.setup.broken.length} mailboxes paused`"
+                        icon="i-lucide-mail-warning"
+                        color="error"
+                        variant="subtle"
+                        size="sm"
+                        class="rounded-full"
+                    />
+
+                    <UButton
+                        v-if="page.props.wallet"
+                        :href="organizationBilling.edit.url()"
+                        :label="`${page.props.wallet.balance.toLocaleString()} credits`"
+                        icon="i-lucide-coins"
+                        color="neutral"
+                        variant="subtle"
+                        size="sm"
+                    />
+                </div>
             </div>
 
             <div class="flex-1 overflow-y-auto">

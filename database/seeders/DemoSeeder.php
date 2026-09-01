@@ -435,12 +435,17 @@ class DemoSeeder extends Seeder
             'status' => CampaignStatus::Active,
         ]);
 
+        // Written as if for one real company, per `SequenceWriter`'s own rule:
+        // never a merge tag, no {{first_name}}, no [COMPANY]. `sendSteps()`
+        // swaps this illustrative name and company for the actual recipient's
+        // when a mail is sent, the way `MessagePersonalizer` really rewrites
+        // the whole mail per lead rather than filling in a template.
         $this->steps($outreach, [
-            ['type' => CampaignStepType::Email, 'intent' => 'Introduce Cargo and name the exact problem: planning and billing living in two tools.', 'subject' => 'Quick one about how {{company}} bills clients', 'body' => "Hi {{first_name}},\n\nI noticed {{company}} runs client work through a task board, and I'm guessing hours still get tracked somewhere else.\n\nCargo puts both in one place: the board a project manager already uses becomes the timesheet a client gets billed from. No more reconciling a task board against a spreadsheet on a Friday afternoon.\n\nWorth a fifteen minute look?\n\nAlex"],
+            ['type' => CampaignStepType::Email, 'intent' => 'Introduce Cargo and name the exact problem: planning and billing living in two tools.', 'subject' => 'Quick one about how Foundry Digital bills clients', 'body' => "Hi Priya,\n\nI noticed Foundry Digital runs client work through a task board, and I'm guessing hours still get tracked somewhere else.\n\nCargo puts both in one place: the board a project manager already uses becomes the timesheet a client gets billed from. No more reconciling a task board against a spreadsheet on a Friday afternoon.\n\nWorth a fifteen minute look? If this isn't relevant, just ignore this or reply STOP and I won't write again.\n\nAlex"],
             ['type' => CampaignStepType::Wait, 'delay_hours' => 72],
-            ['type' => CampaignStepType::Email, 'intent' => 'Follow up with a concrete result from a similarly sized agency.', 'subject' => 'Re: Quick one about how {{company}} bills clients', 'body' => "Hi {{first_name}},\n\nFollowing up in case this got buried. One agency about {{company}}'s size cut their billing prep from a full day to twenty minutes after moving onto Cargo.\n\nHappy to show you the same setup on a short call this week.\n\nAlex"],
+            ['type' => CampaignStepType::Email, 'intent' => 'Follow up with a concrete result from a similarly sized agency.', 'subject' => 'Re: Quick one about how Foundry Digital bills clients', 'body' => "Hi Priya,\n\nFollowing up in case this got buried. One agency about Foundry Digital's size cut their billing prep from a full day to twenty minutes after moving onto Cargo.\n\nHappy to show you the same setup on a short call this week.\n\nAlex"],
             ['type' => CampaignStepType::Wait, 'delay_hours' => 96],
-            ['type' => CampaignStepType::Email, 'intent' => 'Last message in the sequence, low pressure, easy to ignore.', 'subject' => 'Closing the loop', 'body' => "Hi {{first_name}},\n\nI'll leave this here rather than keep following up. If billing and planning start feeling disconnected again, Cargo will be around.\n\nAll the best,\nAlex"],
+            ['type' => CampaignStepType::Email, 'intent' => 'Last message in the sequence, low pressure, easy to ignore.', 'subject' => 'Closing the loop', 'body' => "Hi Priya,\n\nI'll leave this here rather than keep following up. If billing and planning start feeling disconnected again, Cargo will be around.\n\nAll the best,\nAlex"],
         ]);
 
         $freelancerCampaign = Campaign::factory()->create([
@@ -451,9 +456,9 @@ class DemoSeeder extends Seeder
         ]);
 
         $this->steps($freelancerCampaign, [
-            ['type' => CampaignStepType::Email, 'intent' => 'Speak to a solo consultant, not a team: acknowledge most tools this size overcharge per seat.', 'subject' => 'A billing tool sized for one person', 'body' => "Hi {{first_name}},\n\nMost project tools price for a team, which is a strange thing to charge a solo consultant for.\n\nCargo tracks the hours and turns them into a client ready report, priced for exactly one seat.\n\nWorth a look?\n\nSam"],
+            ['type' => CampaignStepType::Email, 'intent' => 'Speak to a solo consultant, not a team: acknowledge most tools this size overcharge per seat.', 'subject' => 'A billing tool sized for one person', 'body' => "Hi Jonas,\n\nMost project tools price for a team, which is a strange thing to charge a solo consultant for.\n\nCargo tracks the hours and turns them into a client ready report, priced for exactly one seat.\n\nWorth a look? If this isn't relevant, just ignore this or reply STOP and I won't write again.\n\nSam"],
             ['type' => CampaignStepType::Wait, 'delay_hours' => 72],
-            ['type' => CampaignStepType::Email, 'intent' => 'Short, direct follow up.', 'subject' => 'Re: A billing tool sized for one person', 'body' => "Hi {{first_name}},\n\nStill happy to show you the fifteen minute version whenever suits.\n\nSam"],
+            ['type' => CampaignStepType::Email, 'intent' => 'Short, direct follow up.', 'subject' => 'Re: A billing tool sized for one person', 'body' => "Hi Jonas,\n\nStill happy to show you the fifteen minute version whenever suits.\n\nSam"],
         ]);
 
         $warm = Campaign::factory()->create([
@@ -464,7 +469,7 @@ class DemoSeeder extends Seeder
         ]);
 
         $this->steps($warm, [
-            ['type' => CampaignStepType::Email, 'intent' => 'Hand composed check in for leads who went quiet a while ago.', 'subject' => 'Checking back in', 'body' => "Hi {{first_name}},\n\nIt's been a while since we last spoke. Has anything changed on the billing side at {{company}}?\n\nAlex"],
+            ['type' => CampaignStepType::Email, 'intent' => 'Hand composed check in for leads who went quiet a while ago.', 'subject' => 'Checking back in', 'body' => "Hi Tomas,\n\nIt's been a while since we last spoke. Has anything changed on the billing side at Anchorpoint? If this isn't relevant, just ignore this or reply STOP and I won't write again.\n\nAlex"],
             ['type' => CampaignStepType::Wait, 'delay_hours' => 120],
         ]);
 
@@ -510,6 +515,12 @@ class DemoSeeder extends Seeder
         [$outreach, , $warm] = $campaigns;
         $mailbox = $mailboxes->first();
 
+        // The illustrative example each campaign's stored template was
+        // written for, per `SequenceWriter`'s no-merge-tag rule: what
+        // `sendSteps()` swaps for the real recipient.
+        $outreachExample = ['name' => 'Priya', 'company' => 'Foundry Digital'];
+        $warmExample = ['name' => 'Tomas', 'company' => 'Anchorpoint'];
+
         $pool = $leads->filter(fn (Lead $lead): bool => $lead->email !== null)->values();
 
         // An arrow function auto-captures by value, so shrinking `$pool` needs
@@ -526,13 +537,13 @@ class DemoSeeder extends Seeder
         // outcome most sends end in.
         foreach ($take(2) as $lead) {
             $membership = $this->membership($outreach, $lead, $mailbox, CampaignLeadStatus::Completed, position: 5);
-            $this->sendSteps($outreach, $membership, $mailbox, upTo: 3);
+            $this->sendSteps($outreach, $membership, $mailbox, upTo: 3, example: $outreachExample);
         }
 
         // Mid sequence, waiting on the next step.
         foreach ($take(2) as $lead) {
             $membership = $this->membership($outreach, $lead, $mailbox, CampaignLeadStatus::Running, position: 2, nextActionAt: now()->addHours(fake()->numberBetween(6, 48)));
-            $this->sendSteps($outreach, $membership, $mailbox, upTo: 1);
+            $this->sendSteps($outreach, $membership, $mailbox, upTo: 1, example: $outreachExample);
         }
 
         // Every reply outcome the agent can hand back, so the inbox and the
@@ -563,7 +574,7 @@ class DemoSeeder extends Seeder
             }
 
             $membership = $this->membership($outreach, $lead, $mailbox, $status, position: 1, pauseReason: $pauseReason);
-            $sent = $this->sendSteps($outreach, $membership, $mailbox, upTo: 1);
+            $sent = $this->sendSteps($outreach, $membership, $mailbox, upTo: 1, example: $outreachExample);
             $reply = $this->reply($lead, $membership, $mailbox, $sent, $classification, $replyBodies[$key]);
 
             // The real `ReplyOutcomes` methods stamp `paused_at` at the moment
@@ -594,7 +605,7 @@ class DemoSeeder extends Seeder
         // until somebody flips it back on.
         foreach ($take(2) as $lead) {
             $membership = $this->membership($warm, $lead, $mailbox, CampaignLeadStatus::Running, position: 1);
-            $this->sendSteps($warm, $membership, $mailbox, upTo: 1);
+            $this->sendSteps($warm, $membership, $mailbox, upTo: 1, example: $warmExample);
         }
     }
 
@@ -622,11 +633,18 @@ class DemoSeeder extends Seeder
      * Sends the outbound mail for however many email steps this membership has
      * reached, oldest first, so the thread reads the way it was actually sent.
      *
+     * The stored template is written for one illustrative example, per
+     * `SequenceWriter`'s own rule against merge tags. What actually leaves
+     * swaps that example for the real recipient, standing in for the full
+     * rewrite `MessagePersonalizer` does per lead at send time.
+     *
+     * @param  array{name?: string, company?: string}  $example
      * @return array<int, Message>
      */
-    private function sendSteps(Campaign $campaign, CampaignLead $membership, EmailAccount $mailbox, int $upTo): array
+    private function sendSteps(Campaign $campaign, CampaignLead $membership, EmailAccount $mailbox, int $upTo, array $example = []): array
     {
         $emailSteps = $campaign->steps->where('type', CampaignStepType::Email)->values()->take($upTo);
+        $lead = $membership->lead()->with('company')->first();
         $sent = [];
 
         foreach ($emailSteps as $index => $step) {
@@ -639,14 +657,32 @@ class DemoSeeder extends Seeder
                 'step_variant_id' => $variant->id,
                 'direction' => MessageDirection::Outbound,
                 'message_id' => Str::uuid().'@'.Str::after($mailbox->from_email, '@'),
-                'subject' => $variant->subject,
-                'body' => $variant->body,
+                'subject' => $this->personalize($variant->subject, $lead, $example),
+                'body' => $this->personalize($variant->body, $lead, $example),
                 'status' => MessageStatus::Sent,
                 'sent_at' => now()->subDays((count($emailSteps) - $index) * 3),
             ]);
         }
 
         return $sent;
+    }
+
+    /**
+     * @param  array{name?: string, company?: string}  $example
+     */
+    private function personalize(string $text, ?Lead $lead, array $example): string
+    {
+        $replacements = [];
+
+        if (isset($example['name']) && $lead?->first_name !== null) {
+            $replacements[$example['name']] = $lead->first_name;
+        }
+
+        if (isset($example['company']) && $lead?->company?->name !== null) {
+            $replacements[$example['company']] = $lead->company->name;
+        }
+
+        return $replacements === [] ? $text : strtr($text, $replacements);
     }
 
     /**

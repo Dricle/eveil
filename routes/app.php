@@ -357,6 +357,7 @@ Route::middleware(['auth', 'verified', 'project.set'])->group(function (): void 
          */
         Route::put('agents/provider', [AgentController::class, 'switchProvider'])
             ->name('agents.provider');
+        Route::put('agents', [AgentController::class, 'updateMany'])->name('agents.update-many');
         Route::put('agents/{agent}', [AgentController::class, 'update'])->name('agents.update');
         Route::delete('agents/{agent}', [AgentController::class, 'destroy'])->name('agents.destroy');
         Route::post('agents/{agent}/credit-price', [CreditPriceController::class, 'store'])->name('agents.credit-price');

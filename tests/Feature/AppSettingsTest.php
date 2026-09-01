@@ -109,6 +109,31 @@ it('changes what an agent runs on, from the screen', function () {
         ->and(app(AgentSettings::class)->timeout('website-analyst'))->toBe(200);
 });
 
+it('saves every changed agent line in one request', function () {
+    $this->actingAs(superAdmin())
+        ->put(route('app-settings.agents.update-many'), [
+            'agents' => [
+                ['slug' => 'website-analyst', 'provider' => 'anthropic', 'model' => 'claude-sonnet-5', 'timeout' => 200],
+                ['slug' => 'company-qualifier', 'provider' => 'anthropic', 'model' => 'claude-haiku-4-5', 'timeout' => 90],
+            ],
+        ])
+        ->assertRedirect(route('app-settings.agents.index'));
+
+    expect(app(AgentSettings::class)->model('website-analyst'))->toBe('claude-sonnet-5')
+        ->and(app(AgentSettings::class)->timeout('website-analyst'))->toBe(200)
+        ->and(app(AgentSettings::class)->timeout('company-qualifier'))->toBe(90);
+});
+
+it('refuses a bulk save naming a slug no class answers to', function () {
+    $this->actingAs(superAdmin())
+        ->put(route('app-settings.agents.update-many'), [
+            'agents' => [
+                ['slug' => 'agent-that-never-existed', 'provider' => 'anthropic', 'model' => 'claude-sonnet-5', 'timeout' => 60],
+            ],
+        ])
+        ->assertInvalid('agents.0.slug');
+});
+
 it('resets an agent to the conservative default', function () {
     app(AgentSettings::class)->save('website-analyst', ['model' => 'claude-sonnet-5']);
 

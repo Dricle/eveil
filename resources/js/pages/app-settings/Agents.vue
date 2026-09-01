@@ -43,12 +43,44 @@ const draft = ref(asDraft(props.agents))
 
 watch(() => props.agents, agents => draft.value = asDraft(agents))
 
-function save (line: { slug: string, provider: string, model: string, timeout: number }) {
-    router.put(agentRoutes.update.url(line.slug), {
-        provider: line.provider,
-        model: line.model || null,
-        timeout: line.timeout
-    }, { preserveScroll: true })
+// Keyed the same way as the draft, so a row's dirtiness is one lookup rather
+// than a re-scan of the original props on every keystroke.
+const original = computed(() => new Map(props.agents.map(agent => [agent.slug, agent])))
+
+function isDirty (line: { slug: string, provider: string, model: string, timeout: number }) {
+    const source = original.value.get(line.slug)
+
+    return source !== undefined && (
+        line.provider !== source.provider
+        || (line.model || null) !== source.model
+        || line.timeout !== source.timeout
+    )
+}
+
+const dirty = computed(() => draft.value.filter(isDirty))
+
+const saving = ref(false)
+
+// One request for every changed line, so a bulk remap costs one click and one
+// redirect instead of one per agent. `preserveScroll` keeps the page from
+// jumping back to the top while it saves.
+function saveAll () {
+    if (! dirty.value.length || saving.value) {
+        return
+    }
+
+    router.put(agentRoutes.updateMany.url(), {
+        agents: dirty.value.map(line => ({
+            slug: line.slug,
+            provider: line.provider,
+            model: line.model || null,
+            timeout: line.timeout
+        }))
+    }, {
+        preserveScroll: true,
+        onStart: () => { saving.value = true },
+        onFinish: () => { saving.value = false }
+    })
 }
 
 function saveCreditPrice (line: { slug: string, creditPriceDraft: number }) {
@@ -93,6 +125,27 @@ function switchAll (provider: string) {
                 schema. Changing a model here takes effect on the next call, with
                 no deploy.
             </p>
+
+            <!-- One request for every changed row: editing several agents
+                 before saving used to mean clicking Save once per row. -->
+            <div class="sticky top-0 z-10 flex items-center justify-between gap-3 rounded-lg bg-elevated p-4 ring ring-default">
+                <p class="text-sm text-muted">
+                    <template v-if="dirty.length">
+                        {{ dirty.length }} agent{{ dirty.length === 1 ? '' : 's' }} changed
+                    </template>
+                    <template v-else>
+                        No changes to save
+                    </template>
+                </p>
+
+                <UButton
+                    label="Save changes"
+                    icon="i-lucide-save"
+                    :loading="saving"
+                    :disabled="! dirty.length"
+                    @click="saveAll"
+                />
+            </div>
 
             <!-- One click for the whole mapping. Every agent keeps its timeout
                  and lands on the new provider's equivalent model: the one that
@@ -206,11 +259,6 @@ function switchAll (provider: string) {
                             class="w-28"
                         />
                     </UFormField>
-
-                    <UButton
-                        label="Save"
-                        @click="save(line)"
-                    />
 
                     <UButton
                         v-if="line.overridden"

@@ -9,6 +9,7 @@ use App\Ai\ProviderCredentials;
 use App\Cloud\Models\CreditPrice;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AppSettings\AgentSettingRequest;
+use App\Http\Requests\AppSettings\AgentSettingsBulkRequest;
 use App\Http\Requests\AppSettings\ProviderSwitchRequest;
 use App\Models\AgentRun;
 use Illuminate\Http\RedirectResponse;
@@ -91,6 +92,26 @@ class AgentController extends Controller
         // this and the prices are one operation, never two.
         return to_route('app-settings.agents.index')
             ->with('status', $agent.' saved.');
+    }
+
+    /**
+     * Every changed line on the screen, saved in one request: a bulk remap
+     * otherwise costs one click and one full-page redirect per agent.
+     */
+    public function updateMany(AgentSettingsBulkRequest $request, AgentSettings $agents): RedirectResponse
+    {
+        $lines = $request->validated('agents');
+
+        foreach ($lines as $line) {
+            $agents->save($line['slug'], [
+                'provider' => $line['provider'],
+                'model' => $line['model'],
+                'timeout' => $line['timeout'],
+            ]);
+        }
+
+        return to_route('app-settings.agents.index')
+            ->with('status', count($lines).' agent(s) saved.');
     }
 
     /**

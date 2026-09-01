@@ -3,9 +3,9 @@
 namespace App\Http\Resources;
 
 use App\Models\Campaign;
+use App\Support\AggregateDate;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Carbon;
 
 /**
  * @mixin Campaign
@@ -41,11 +41,7 @@ class CampaignResource extends JsonResource
             'leads_count' => (int) ($this->campaign_leads_count ?? 0),
             'sent_count' => (int) ($this->sent_leads_count ?? 0),
             'replies_count' => (int) ($this->replied_leads_count ?? 0),
-            // Parsed because an aggregate arrives as a raw database string
-            // while every other date here is a cast attribute.
-            'next_action_at' => is_string($this->next_action_at ?? null)
-                ? Carbon::parse($this->next_action_at)
-                : null,
+            'next_action_at' => AggregateDate::parse($this->next_action_at ?? null),
             'updated_at' => $this->updated_at,
         ];
     }

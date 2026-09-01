@@ -56,7 +56,7 @@ const blocker = computed(() => {
         return `Next mail due at ${moment(props.sending.next_action_at)}.`
     }
 
-    if (props.sending.mailboxes.every(box => box.remaining < 1)) {
+    if (props.sending.mailboxes.every(box => box.remaining_today < 1)) {
         return 'Due now, but every mailbox has used its allowance for today.'
     }
 
@@ -138,11 +138,11 @@ const blocker = computed(() => {
                         class="min-w-56 rounded-lg bg-elevated p-3"
                     >
                         <p class="truncate font-medium">
-                            {{ mailbox.email }}
+                            {{ mailbox.from_email }}
                         </p>
                         <p class="text-muted">
-                            {{ mailbox.sent_today }} sent today of {{ mailbox.allowance }},
-                            {{ mailbox.remaining }} left
+                            {{ mailbox.sent_today }} sent today of {{ mailbox.allowance_today }},
+                            {{ mailbox.remaining_today }} left
                         </p>
                         <p
                             v-if="mailbox.status !== 'active'"

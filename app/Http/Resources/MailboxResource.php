@@ -52,6 +52,9 @@ class MailboxResource extends JsonResource
             'remaining_today' => $remaining,
             'sent_today' => $this->allowanceForToday() - $remaining,
             'ramping_up' => $this->ramp_up_started_at !== null,
+            // When the gap since the last send expires, for a screen that has
+            // to say WHEN sending resumes, not just that it is paused.
+            'ready_at' => $this->readyAt()?->toIso8601String(),
             'projects' => $this->projects->pluck('id')->all(),
         ];
     }

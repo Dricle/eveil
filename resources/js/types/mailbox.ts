@@ -30,6 +30,8 @@ export type Mailbox = {
     remaining_today: number
     sent_today: number
     ramping_up: boolean
+    /** When the gap since the last send expires, or null when it already has. */
+    ready_at: string | null
     /** The projects granted this mailbox, as ids, because it is a checkbox list. */
     projects: number[]
 }

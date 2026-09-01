@@ -794,7 +794,7 @@ it('says when the next mail is owed and what is standing in its way', function (
             ->where('sending.window.start', 8)
             ->where('sending.mailboxes.0.id', $mailbox->id)
             ->where('sending.mailboxes.0.sent_today', 0)
-            ->where('sending.mailboxes.0.remaining', $mailbox->allowanceForToday())
+            ->where('sending.mailboxes.0.remaining_today', $mailbox->allowanceForToday())
             ->where('sending.mailboxes.0.ready_at', null)
             ->where('leadsTotal', 1)
             // Enrolled and not yet written to.

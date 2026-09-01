@@ -70,6 +70,16 @@ class AgentModelCommand extends Command
             $agents->model($agent) ?? "the provider's default",
         ));
 
+        // `credit_prices` is priced per agent, not per model: a call on
+        // Opus and the same call on Sonnet cost the customer the same
+        // credits until somebody adds a new row. The row is harmless where
+        // nothing reads it (self-hosted), so the warning fires on every
+        // edition rather than needing an edition check to decide whether it
+        // applies.
+        if ($this->option('model')) {
+            $this->components->warn("Changing the model does not change credit_prices: it stays calibrated on the old one until you price {$agent} again for {$agents->model($agent)}.");
+        }
+
         return self::SUCCESS;
     }
 

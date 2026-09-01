@@ -11,18 +11,20 @@ use App\Enums\CampaignLeadStatus;
 use App\Http\Requests\CampaignRequest;
 use App\Http\Resources\CampaignLeadResource;
 use App\Http\Resources\CampaignResource;
+use App\Http\Resources\MailboxResource;
 use App\Http\Resources\TargetProfileResource;
+use App\Http\Resources\TargetProfileSummaryResource;
 use App\Models\AgentRun;
 use App\Models\Campaign;
 use App\Models\CampaignLead;
 use App\Models\EmailAccount;
 use App\Models\TargetProfile;
+use App\Support\AggregateDate;
 use App\Support\CurrentProject;
 use App\Support\Settings;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -70,10 +72,7 @@ class CampaignController extends Controller
             // What is missing never appears on a list of what exists: a segment
             // with no sequence is one the searches keep filling with companies
             // nobody will ever be written to.
-            'uncovered' => $missing->missing()->map(fn (TargetProfile $profile): array => [
-                'id' => $profile->id,
-                'name' => $profile->name,
-            ])->all(),
+            'uncovered' => TargetProfileSummaryResource::collection($missing->missing()),
         ]);
     }
 
@@ -149,14 +148,6 @@ class CampaignController extends Controller
     private const LEADS_SHOWN = 50;
 
     /**
-     * A raw aggregate value as the date it is, or null.
-     */
-    private function asDate(mixed $value): ?Carbon
-    {
-        return is_string($value) && $value !== '' ? Carbon::parse($value) : null;
-    }
-
-    /**
      * The people in this sequence, the ones with something owed first, then the
      * rest by how recently anything moved.
      *
@@ -196,7 +187,7 @@ class CampaignController extends Controller
             // Parsed rather than passed through: an aggregate comes back as a
             // raw database string, and every other date on the page is a cast
             // attribute. Two formats reach the same date formatter otherwise.
-            'next_action_at' => $this->asDate($campaign->campaignLeads()
+            'next_action_at' => AggregateDate::parse($campaign->campaignLeads()
                 ->whereIn('status', CampaignLeadStatus::live())
                 ->min('next_action_at')),
             'window_open' => $dispatcher->windowIsOpen(),
@@ -204,16 +195,7 @@ class CampaignController extends Controller
                 'start' => (int) $this->settings->array('sending')['window_start'],
                 'end' => (int) $this->settings->array('sending')['window_end'],
             ],
-            'mailboxes' => $mailboxes->map(fn (EmailAccount $mailbox): array => [
-                'id' => $mailbox->id,
-                'name' => $mailbox->name,
-                'email' => $mailbox->from_email,
-                'status' => $mailbox->status,
-                'sent_today' => $mailbox->sentToday(),
-                'allowance' => $mailbox->allowanceForToday(),
-                'remaining' => $mailbox->remainingToday(),
-                'ready_at' => $mailbox->readyAt(),
-            ])->all(),
+            'mailboxes' => MailboxResource::collection($mailboxes),
         ];
     }
 

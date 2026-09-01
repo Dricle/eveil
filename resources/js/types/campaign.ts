@@ -1,3 +1,5 @@
+import type { Mailbox } from '@/types/mailbox'
+
 /** What a sequence is doing. Only the first three are ever set by hand. */
 export type CampaignStatus = 'draft' | 'active' | 'paused' | 'completed' | 'archived'
 
@@ -9,16 +11,7 @@ export type SendingState = {
     next_action_at: string | null
     window_open: boolean
     window: { start: number, end: number }
-    mailboxes: {
-        id: number
-        name: string
-        email: string
-        status: string
-        sent_today: number
-        allowance: number
-        remaining: number
-        ready_at: string | null
-    }[]
+    mailboxes: Pick<Mailbox, 'id' | 'name' | 'from_email' | 'status' | 'sent_today' | 'allowance_today' | 'remaining_today' | 'ready_at'>[]
 }
 
 /** One person's place in one sequence. */

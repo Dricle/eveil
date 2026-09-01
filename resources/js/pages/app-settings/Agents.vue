@@ -65,7 +65,7 @@ const saving = ref(false)
 // redirect instead of one per agent. `preserveScroll` keeps the page from
 // jumping back to the top while it saves.
 function saveAll () {
-    if (! dirty.value.length || saving.value) {
+    if (!dirty.value.length || saving.value) {
         return
     }
 

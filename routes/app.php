@@ -315,6 +315,12 @@ Route::middleware(['auth', 'verified', 'project.set'])->group(function (): void 
         Route::post('campaigns/{campaign}/steps/{step}/variants/generate', [StepVariantGenerationController::class, 'store'])
             ->name('campaigns.steps.variants.generate');
         /*
+         * Rewriting one existing version per an instruction, rather than
+         * adding another one to A/B test against it.
+         */
+        Route::post('campaigns/{campaign}/steps/{step}/variants/{variant}/regenerate', [StepVariantGenerationController::class, 'regenerate'])
+            ->name('campaigns.steps.variants.regenerate');
+        /*
          * The second page of one campaign, the way a target profile has its
          * searches: the mails and the run are read at different moments, and
          * one screen carrying both means scrolling past the run to edit a mail.

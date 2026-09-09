@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, router, usePoll } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
-import { store as generateVariant } from '@/actions/App/Http/Controllers/StepVariantGenerationController'
+import { regenerate as regenerateVariant, store as generateVariant } from '@/actions/App/Http/Controllers/StepVariantGenerationController'
 import CampaignHeader from '@/components/CampaignHeader.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import campaignRoutes from '@/routes/campaigns'
@@ -116,6 +116,39 @@ function generateVariantFromModal () {
     }, {
         preserveScroll: true,
         onSuccess: () => { variantPrompt.value = null }
+    })
+}
+
+// Which variant is being rewritten in place, and the instruction typed into
+// the modal. Left blank, the agent still rewrites it, just picking its own
+// angle rather than following a steer.
+const regeneratePrompt = ref<{ step: Step, variant: Variant, guidance: string } | null>(null)
+
+const regenerateModalOpen = computed({
+    get: () => regeneratePrompt.value !== null,
+    set: (open: boolean) => {
+        if (!open) {
+            regeneratePrompt.value = null
+        }
+    }
+})
+
+function openRegenerateModal (step: Step, variant: Variant) {
+    regeneratePrompt.value = { step, variant, guidance: '' }
+}
+
+function regenerateVariantFromModal () {
+    if (!regeneratePrompt.value) {
+        return
+    }
+
+    const { step, variant, guidance } = regeneratePrompt.value
+
+    router.post(regenerateVariant.url([props.campaign.id, step.id, variant.id]), {
+        guidance: guidance.trim() || null
+    }, {
+        preserveScroll: true,
+        onSuccess: () => { regeneratePrompt.value = null }
     })
 }
 
@@ -289,15 +322,27 @@ function preview (step: Step) {
                                     @update:model-value="value => variant.body = String(value)"
                                 />
 
-                                <UButton
-                                    color="neutral"
-                                    variant="subtle"
-                                    size="xs"
-                                    icon="i-lucide-save"
-                                    :loading="savingVariant === variant.id"
-                                    label="Save"
-                                    @click="saveVariant(step, variant)"
-                                />
+                                <div class="flex gap-2">
+                                    <UButton
+                                        color="neutral"
+                                        variant="subtle"
+                                        size="xs"
+                                        icon="i-lucide-save"
+                                        :loading="savingVariant === variant.id"
+                                        label="Save"
+                                        @click="saveVariant(step, variant)"
+                                    />
+                                    <UButton
+                                        color="neutral"
+                                        variant="ghost"
+                                        size="xs"
+                                        icon="i-lucide-sparkles"
+                                        :loading="writingVariant"
+                                        :disabled="writingVariant"
+                                        label="Regenerate"
+                                        @click="openRegenerateModal(step, variant)"
+                                    />
+                                </div>
                             </div>
 
                             <div class="flex items-center gap-2">
@@ -417,6 +462,42 @@ function preview (step: Step) {
                     icon="i-lucide-sparkles"
                     label="Generate"
                     @click="generateVariantFromModal"
+                />
+            </template>
+        </UModal>
+
+        <UModal
+            v-model:open="regenerateModalOpen"
+            title="Regenerate this mail"
+            description="Tell the agent what to change, or leave it blank and it rewrites the mail its own way."
+        >
+            <template #body>
+                <UFormField
+                    label="What should change?"
+                    help="e.g. make it shorter, lead with the price, sound more casual"
+                >
+                    <UTextarea
+                        v-if="regeneratePrompt"
+                        v-model="regeneratePrompt.guidance"
+                        :rows="3"
+                        placeholder="Optional"
+                        class="w-full"
+                        autofocus
+                    />
+                </UFormField>
+            </template>
+
+            <template #footer>
+                <UButton
+                    color="neutral"
+                    variant="ghost"
+                    label="Cancel"
+                    @click="regenerateModalOpen = false"
+                />
+                <UButton
+                    icon="i-lucide-sparkles"
+                    label="Regenerate"
+                    @click="regenerateVariantFromModal"
                 />
             </template>
         </UModal>

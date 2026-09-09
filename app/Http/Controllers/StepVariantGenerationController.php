@@ -39,4 +39,24 @@ class StepVariantGenerationController extends Controller
 
         return back();
     }
+
+    /**
+     * Rewriting one existing variant in place, per the user's instruction,
+     * rather than adding another one to A/B test against it.
+     */
+    public function regenerate(GenerateStepVariantRequest $request, int $campaign, int $step, int $variant): RedirectResponse
+    {
+        $project = $this->currentProject->getOrFail();
+        $campaign = Campaign::query()->findOrFail($campaign);
+        $step = $campaign->steps()->findOrFail($step);
+        $variant = $step->variants()->findOrFail($variant);
+
+        WriteStepVariant::dispatch($step, $request->validated('guidance'), AgentRun::create([
+            'project_id' => $project->id,
+            'agent' => VariantWriter::slug(),
+            'status' => AgentRunStatus::Pending,
+        ]), $variant);
+
+        return back();
+    }
 }

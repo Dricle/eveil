@@ -510,6 +510,71 @@ it('queues the variant writing with no guidance at all, just as well', function 
     Queue::assertPushed(WriteStepVariant::class, fn (WriteStepVariant $job) => $job->guidance === null);
 });
 
+it('rewrites an existing variant in place instead of adding a new one', function () {
+    [, $project] = sequencer();
+    $campaign = campaignFor($project);
+    $step = $campaign->steps->first();
+    $variant = $step->variants->sole();
+
+    VariantWriter::fake([['subject' => 'shorter', 'body' => 'Shorter body.']]);
+
+    $rewritten = app(WriteVariant::class)->handle($step, 'make it shorter', null, $variant);
+
+    expect($rewritten->id)->toBe($variant->id)
+        ->and($rewritten->subject)->toBe('shorter')
+        ->and($step->variants()->count())->toBe(1);
+
+    // The variant being rewritten is given as the draft to start from, not
+    // as a sibling the agent is told to differ from.
+    $prompt = (string) (AgentRun::query()->where('agent', 'variant-writer')->sole()->input['prompt'] ?? '');
+
+    expect($prompt)->toContain('version being rewritten')
+        ->toContain('vos commandes')
+        ->toContain('make it shorter');
+});
+
+it('does not tell the agent to differ from the variant it is rewriting', function () {
+    [, $project] = sequencer();
+    $campaign = campaignFor($project);
+    $step = $campaign->steps->first();
+    $variant = $step->variants->sole();
+    $sibling = $step->variants()->create(['subject' => 'a second angle', 'body' => 'Second body.', 'weight' => 1]);
+
+    VariantWriter::fake([['subject' => 'reworded', 'body' => 'Reworded body.']]);
+
+    app(WriteVariant::class)->handle($step, null, null, $variant);
+
+    $prompt = (string) (AgentRun::query()->where('agent', 'variant-writer')->sole()->input['prompt'] ?? '');
+
+    // The sibling is still listed to stay distinct from; the variant being
+    // rewritten only appears once, as the draft, not again as a competitor.
+    expect($prompt)->toContain('a second angle')
+        ->and(substr_count($prompt, 'Bonjour…'))->toBe(1);
+});
+
+it('queues a rewrite of one existing variant, targeting it rather than adding a new one', function () {
+    Queue::fake();
+
+    [$user, $project] = sequencer();
+    $campaign = campaignFor($project);
+    $step = $campaign->steps->first();
+    $variant = $step->variants->sole();
+
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->post(route('campaigns.steps.variants.regenerate', [$campaign, $step, $variant]), [
+            'guidance' => 'make it shorter',
+        ])
+        ->assertRedirect();
+
+    Queue::assertPushed(WriteStepVariant::class, fn (WriteStepVariant $job) => $job->guidance === 'make it shorter'
+        && $job->target?->is($variant));
+
+    expect(AgentRun::sole())
+        ->agent->toBe('variant-writer')
+        ->status->toBe(AgentRunStatus::Pending);
+});
+
 it('reports on the campaign page whether an alternate mail is still being written', function () {
     [$user, $project] = sequencer();
     $campaign = campaignFor($project);

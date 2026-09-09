@@ -36,7 +36,7 @@ function status (run: DiscoveryRun) {
     <TargetsLayout :current="profile.id">
         <Head :title="`Searches: ${profile.name}`" />
 
-        <div class="max-w-3xl space-y-4">
+        <div class="space-y-4">
             <TargetHeader
                 :profile="profile"
                 tab="searches"

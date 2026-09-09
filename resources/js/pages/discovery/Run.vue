@@ -68,7 +68,7 @@ function outcome (task: DiscoveryTask): string {
     <TargetsLayout :current="run.profile_id">
         <Head :title="`Search: ${run.profile ?? 'run'}`" />
 
-        <div class="max-w-3xl space-y-4">
+        <div class="space-y-4">
             <div class="flex items-start justify-between gap-4">
                 <div class="min-w-0">
                     <ULink

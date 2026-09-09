@@ -3,6 +3,7 @@
 namespace App\Services\Discovery;
 
 use App\Ai\Agents\CompanyQualifier;
+use App\Enums\AutonomyLevel;
 use App\Models\AgentRun;
 use App\Models\Company;
 use App\Models\CompanyTargetEvaluation;
@@ -146,6 +147,13 @@ class Qualifier
             'source_url' => $candidate->sourceUrl,
             'discovered_at' => now(),
         ])->save();
+
+        // The whole point of full autonomy: nobody has to click yes. Not tied
+        // to a campaign - a company earns this the moment it qualifies, with or
+        // without a sequence to enrol it into.
+        if ($company->approved_at === null && $targetProfile->project->autonomy_level === AutonomyLevel::Autonomous) {
+            $company->update(['approved_at' => now()]);
+        }
 
         CompanyTargetEvaluation::updateOrCreate(
             ['company_id' => $company->id, 'target_profile_id' => $targetProfile->id],

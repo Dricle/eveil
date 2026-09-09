@@ -3,6 +3,7 @@
 use App\Actions\RunDiscovery;
 use App\Ai\Agents\CompanyQualifier;
 use App\Ai\Agents\DiscoveryPlanner;
+use App\Enums\AutonomyLevel;
 use App\Enums\ContactSearchStatus;
 use App\Enums\DiscoveryRunStatus;
 use App\Enums\DiscoveryTaskKind;
@@ -242,6 +243,33 @@ it('goes looking for the people the moment a company is kept', function () {
 
     Queue::assertPushed(FindCompanyContacts::class, 1);
     Queue::assertPushed(fn (FindCompanyContacts $job): bool => $job->company->is($company));
+});
+
+it('approves a company the moment it qualifies, under full autonomy', function () {
+    $targetProfile = discoveryProfile();
+    $targetProfile->project->update(['autonomy_level' => AutonomyLevel::Autonomous]);
+
+    DiscoveryPlanner::fake([overpassPlan()]);
+    CompanyQualifier::fake([qualifierVerdict()]);
+    mapReturning('https://friterie-centre.be');
+
+    discover($targetProfile);
+
+    // No campaign involved: the approval is earned at qualification, not at
+    // enrolment, so it stands even with nothing to enrol it into yet.
+    expect(Company::sole()->approved_at)->not->toBeNull();
+});
+
+it('leaves a company unapproved outside full autonomy', function () {
+    $targetProfile = discoveryProfile();
+
+    DiscoveryPlanner::fake([overpassPlan()]);
+    CompanyQualifier::fake([qualifierVerdict()]);
+    mapReturning('https://friterie-centre.be');
+
+    discover($targetProfile);
+
+    expect(Company::sole()->approved_at)->toBeNull();
 });
 
 it('never queues the same company for contacts twice', function () {

@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\OutreachStatus;
 use App\Http\Resources\CompanyResource;
 use App\Http\Resources\CompanySheetResource;
 use App\Models\Company;
 use App\Models\TargetProfile;
 use App\Support\ProjectActivity;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -29,6 +31,12 @@ class CompanyController extends Controller
         $excluded = $request->boolean('excluded');
         $unapproved = $request->boolean('unapproved');
         $search = $request->string('search')->trim()->value();
+        // The status pills above the list: each one is a whole replacement for
+        // "which companies", not another switch stacked on `excluded`/
+        // `unapproved` above - so only one of these is ever active. `null`
+        // is "All", which stays exactly today's default (contactable, every
+        // status left in outreach).
+        $view = $request->string('view')->value() ?: null;
 
         /** @var array<string, string|null> $columns */
         $columns = $request->collect('filter')
@@ -44,14 +52,22 @@ class CompanyController extends Controller
             ->whereColumns($columns)
             ->when($profile, fn ($query) => $query->whereHas('evaluations', fn ($e) => $e->where('target_profile_id', $profile)))
             ->when($minScore, fn ($query) => $query->whereHas('evaluations', fn ($e) => $e->where('fit_score', '>=', $minScore)))
+            // "Set aside" is the one pill that reaches outside outreach
+            // entirely, so it is the one case `contactable()` is skipped
+            // rather than narrowed further.
+            ->when($view === 'set_aside', fn ($query) => $query->whereIn('status', OutreachStatus::excluded()))
             // A company the user has taken out. A client, a closed deal, a
             // rejection: is not part of the list they are working through,
             // unless they ask to see what they set aside.
-            ->when(! $excluded, fn ($query) => $query->contactable())
+            ->when($view !== 'set_aside' && ! $excluded, fn ($query) => $query->contactable())
             // The working queue: what is still waiting for a yes. Under
             // anything but full autonomy this is the only list that matters,
             // because nothing else moves until these are decided.
-            ->when($unapproved, fn ($query) => $query->whereNull('approved_at'))
+            ->when($unapproved || $view === 'awaiting', fn ($query) => $query->whereNull('approved_at'))
+            ->when($view === 'approved', fn ($query) => $query->approved())
+            ->when($view === 'no_contact', fn ($query) => $query->whereDoesntHave(
+                'leads', fn (Builder $leads) => $leads->whereNull('erased_at')
+            ))
             ->sorted($request->string('sort')->value(), $request->string('direction')->value())
             ->paginate(25)
             ->withQueryString();
@@ -66,6 +82,7 @@ class CompanyController extends Controller
                 'min_score' => $minScore,
                 'excluded' => $excluded,
                 'unapproved' => $unapproved,
+                'view' => $view,
                 'search' => $search ?: null,
                 'filter' => array_filter($columns, fn (?string $value): bool => $value !== null && $value !== ''),
                 'sort' => $request->string('sort')->value() ?: null,
@@ -77,6 +94,19 @@ class CompanyController extends Controller
             // How many are still waiting for a yes, which is the only number
             // that says whether the user has work to do here.
             'unapproved' => Company::query()->contactable()->whereNull('approved_at')->count(),
+            // The count behind each status pill. Unfiltered by search/profile
+            // like `total`/`unsearched`/`unapproved` above, on purpose: a pill
+            // says how big each bucket is, not how many match what is
+            // currently typed into the search box.
+            'counts' => [
+                'all' => Company::query()->contactable()->count(),
+                'awaiting' => Company::query()->contactable()->whereNull('approved_at')->count(),
+                'approved' => Company::query()->contactable()->approved()->count(),
+                'no_contact' => Company::query()->contactable()->whereDoesntHave(
+                    'leads', fn (Builder $leads) => $leads->whereNull('erased_at')
+                )->count(),
+                'set_aside' => Company::query()->whereIn('status', OutreachStatus::excluded())->count(),
+            ],
         ]);
     }
 

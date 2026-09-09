@@ -1,16 +1,14 @@
 <script setup lang="ts">
 import { Form, Head, router, usePoll } from '@inertiajs/vue3'
-import type { TableColumn } from '@nuxt/ui'
 import { computed, ref, watch } from 'vue'
 import LeadsLayout from '@/layouts/LeadsLayout.vue'
-import ApproveButton from '@/components/ApproveButton.vue'
 import SearchingBanner from '@/components/SearchingBanner.vue'
-import StatusSelect from '@/components/StatusSelect.vue'
-import { OUTREACH_STATUSES } from '@/lib/status'
 import { useTableQuery } from '@/lib/table'
 import companyRoutes from '@/routes/companies'
 import contactRoutes from '@/routes/contacts'
 import type { Activity, Company, Paginated } from '@/types'
+
+type View = 'all' | 'awaiting' | 'approved' | 'no_contact' | 'set_aside'
 
 // Written out rather than `defineProps<CompanyPage>()`: the compiler cannot
 // resolve a type alias imported through the `@/types` barrel, and it fails by
@@ -23,6 +21,7 @@ const props = defineProps<{
         min_score: number
         excluded: boolean
         unapproved: boolean
+        view: View | null
         search: string | null
         filter: Record<string, string>
         sort: string | null
@@ -31,6 +30,7 @@ const props = defineProps<{
     total: number
     unsearched: number
     unapproved: number
+    counts: { all: number, awaiting: number, approved: number, no_contact: number, set_aside: number }
     activity: Activity
 }>()
 
@@ -39,28 +39,26 @@ const props = defineProps<{
 // market rather than as one still being searched.
 const searching = computed(() => props.activity.searching)
 
-const poll = usePoll(4000, { only: ['companies', 'activity', 'total', 'unsearched', 'unapproved'] }, { autoStart: searching.value })
+const poll = usePoll(4000, { only: ['companies', 'activity', 'total', 'unsearched', 'unapproved', 'counts'] }, { autoStart: searching.value })
 
 watch(searching, busy => busy ? poll.start() : poll.stop())
 
 const profile = ref(props.filters.profile ?? 0)
 const minScore = ref(props.filters.min_score ?? 0)
-const excluded = ref(props.filters.excluded)
-const awaiting = ref(props.filters.unapproved)
+const view = ref<View>(props.filters.view ?? 'all')
 
 const table = useTableQuery(
     companyRoutes.index.url(),
     props.filters,
-    ['companies', 'filters', 'total'],
+    ['companies', 'filters', 'total', 'unsearched', 'unapproved', 'counts'],
     () => ({
         profile: profile.value || undefined,
         min_score: minScore.value || undefined,
-        excluded: excluded.value ? 1 : undefined,
-        unapproved: awaiting.value ? 1 : undefined
+        view: view.value === 'all' ? undefined : view.value
     })
 )
 
-watch([profile, minScore, excluded, awaiting], () => table.reload())
+watch([profile, minScore, view], () => table.reload())
 
 const PROFILE_OPTIONS = computed(() => [
     { label: 'Every profile', value: 0 },
@@ -82,43 +80,37 @@ const SCORE_OPTIONS = [
     { label: '85 and above', value: 85 }
 ]
 
-// The key doubles as the sort key the server accepts and as the slot name, so
-// a column sorts, filters and renders under one name on both sides.
-// `width` is a min/max pair per column, because the qualifier writes a whole
-// sentence into fields a table would like to keep to a word. "Size" comes back
-// as "commune of medium size running several municipal nurseries". Without a
-// floor those columns squeeze to one word per line; without a ceiling they take
-// the room the fit reason needs, which is the one column here worth reading.
-const COLUMNS = [
-    { key: 'name', label: 'Company', sortable: true, filterable: true, width: 'min-w-32 max-w-40' },
-    { key: 'status', label: 'Status', sortable: true, filterable: false, width: 'min-w-32' },
-    { key: 'approval', label: 'Approved', sortable: false, filterable: false, width: 'min-w-28' },
-    { key: 'domain', label: 'Domain', sortable: true, filterable: true, width: 'min-w-28 max-w-32' },
-    { key: 'industry', label: 'Industry', sortable: true, filterable: true, width: 'min-w-32 max-w-40' },
-    { key: 'size', label: 'Size', sortable: true, filterable: true, width: 'min-w-32 max-w-40' },
-    { key: 'location', label: 'Location', sortable: true, filterable: true, width: 'min-w-24 max-w-32' },
-    { key: 'fit_score', label: 'Fit', sortable: true, filterable: false, width: '' },
-    { key: 'reason', label: 'Why it fits', sortable: false, filterable: false, width: 'min-w-48' },
-    { key: 'contacts_count', label: 'Contacts', sortable: true, filterable: false, width: '' },
-    { key: 'discovered_at', label: 'Found', sortable: true, filterable: false, width: '' },
-    { key: 'details', label: '', sortable: false, filterable: false, width: '' }
+// The status pills above the list. Backed by `view` above: each one is a
+// whole replacement for "which companies", never another switch stacked on
+// top of another.
+const PILLS: { key: View, label: string }[] = [
+    { key: 'all', label: 'All' },
+    { key: 'awaiting', label: 'Awaiting approval' },
+    { key: 'approved', label: 'Approved' },
+    { key: 'no_contact', label: 'No contact yet' },
+    { key: 'set_aside', label: 'Set aside' }
 ]
 
-const columns: TableColumn<Company>[] = COLUMNS.map(column => ({
-    accessorKey: column.key,
-    header: column.label,
-    meta: { class: { td: column.width, th: column.width } }
-}))
-
-// Precomputed: a dynamic slot name may not contain quotes, so it cannot be
-// built inline in the template.
-const headerSlots = COLUMNS.map(column => ({ ...column, slot: `${column.key}-header` }))
-
-const FILTERABLE = COLUMNS.filter(column => column.filterable)
+// One column filter box per column, same set the old table exposed.
+const FILTERABLE = [
+    { key: 'name', label: 'Company' },
+    { key: 'domain', label: 'Domain' },
+    { key: 'industry', label: 'Industry' },
+    { key: 'size', label: 'Size' },
+    { key: 'location', label: 'Location' }
+]
 
 // Open when the person arrived with a column filter already applied, so a
 // narrowed list never looks unfiltered.
 const columnFilters = ref(Object.keys(props.filters.filter ?? {}).length > 0)
+
+// The literal class names Tailwind needs to see somewhere in source: a
+// `text-${color}` interpolation would never be picked up by the scanner.
+const SCORE_CLASSES: Record<'success' | 'warning' | 'neutral', { text: string, bar: string }> = {
+    success: { text: 'text-success', bar: 'bg-success' },
+    warning: { text: 'text-warning', bar: 'bg-warning' },
+    neutral: { text: 'text-muted', bar: 'bg-muted' }
+}
 
 function scoreColor (score: number | null) {
     if (score === null) {
@@ -132,18 +124,95 @@ function best (company: Company) {
     return company.evaluations[0] ?? null
 }
 
+function metaParts (company: Company): string[] {
+    return [company.industry, company.size, company.location].filter((value): value is string => !!value)
+}
+
 function day (value: string) {
     return new Date(value).toLocaleDateString()
 }
 
-// `row.original` reaches a slot untyped, so anything that indexes a lookup map
-// does it behind a typed parameter rather than in the template.
-// "Nobody" and "unreadable" are different findings about a company, and only
-// one of them is worth looking at again.
-function searchLabel (company: Company) {
-    const labels: Record<string, string> = { done: 'Nobody', failed: 'Unreadable' }
+/** What the contact line under a company reads, if anything. */
+function contactState (company: Company): 'found' | 'looking' | 'none' | 'unreadable' | null {
+    if (company.contacts_count > 0) {
+        return 'found'
+    }
 
-    return labels[company.contacts_status ?? ''] ?? 'Not yet'
+    if (company.contacts_status === 'queued') {
+        return 'looking'
+    }
+
+    if (company.contacts_status === 'done') {
+        return 'none'
+    }
+
+    if (company.contacts_status === 'failed') {
+        return 'unreadable'
+    }
+
+    // Never searched: nothing to report yet, so nothing is said.
+    return null
+}
+
+// Selection lives in the browser only, never in the URL: it is a scratch pad
+// for the bulk toolbar, and it is cleared the moment the list underneath it
+// changes shape.
+const selected = ref<number[]>([])
+
+watch(() => props.companies.data, clearSelection)
+
+function toggle (id: number) {
+    selected.value = selected.value.includes(id)
+        ? selected.value.filter(existing => existing !== id)
+        : [...selected.value, id]
+}
+
+function clearSelection () {
+    selected.value = []
+}
+
+function bulkApprove () {
+    router.put(
+        companyRoutes.approval.url(),
+        { companies: selected.value, approved: true },
+        { preserveScroll: true, onSuccess: clearSelection }
+    )
+}
+
+function bulkFindContacts () {
+    router.post(
+        contactRoutes.search.url(),
+        { companies: selected.value },
+        { preserveScroll: true, onSuccess: clearSelection }
+    )
+}
+
+function bulkSetAside () {
+    router.put(
+        companyRoutes.status.bulk.url(),
+        { companies: selected.value, status: 'rejected' },
+        { preserveScroll: true, onSuccess: clearSelection }
+    )
+}
+
+function approve (company: Company) {
+    router.put(
+        companyRoutes.approval.url(),
+        { companies: [company.id], approved: true },
+        { preserveScroll: true, preserveState: true }
+    )
+}
+
+function setAside (company: Company) {
+    router.put(companyRoutes.status.url(company.id), { status: 'rejected' }, { preserveScroll: true, preserveState: true })
+}
+
+function putBack (company: Company) {
+    router.put(companyRoutes.status.url(company.id), { status: 'new' }, { preserveScroll: true, preserveState: true })
+}
+
+function findContacts (company: Company) {
+    router.post(contactRoutes.search.url(), { company: company.id }, { preserveScroll: true })
 }
 </script>
 
@@ -155,8 +224,7 @@ function searchLabel (company: Company) {
             <SearchingBanner :activity="activity" />
 
             <!-- One bar holds everything that narrows the list: the free
-                 search, a box per column, and the filters that are not columns
-                 at all. -->
+                 search, the score/profile selects, and the column boxes. -->
             <div class="space-y-3 rounded-lg p-3 ring ring-default">
                 <div class="flex flex-wrap items-center gap-3">
                     <UInput
@@ -178,18 +246,6 @@ function searchLabel (company: Company) {
                         class="w-40"
                     />
 
-                    <USwitch
-                        v-model="excluded"
-                        label="Show set aside"
-                    />
-
-                    <!-- The working queue. Nothing moves until these are
-                         decided, so it is worth being one switch away. -->
-                    <USwitch
-                        v-model="awaiting"
-                        :label="unapproved ? `Awaiting approval (${unapproved})` : 'Awaiting approval'"
-                    />
-
                     <UButton
                         :icon="columnFilters ? 'i-lucide-chevron-up' : 'i-lucide-sliders-horizontal'"
                         color="neutral"
@@ -207,43 +263,27 @@ function searchLabel (company: Company) {
                         @click="table.clear()"
                     />
 
-                    <UButton
-                        v-if="companies.data.some(company => !company.approved)"
-                        icon="i-lucide-thumbs-up"
-                        color="primary"
-                        variant="subtle"
-                        :label="`Approve these ${companies.data.filter(company => !company.approved).length}`"
-                        @click="router.put(
-                            companyRoutes.approval.url(),
-                            { companies: companies.data.filter(company => !company.approved).map(company => company.id), approved: true },
-                            { preserveScroll: true }
-                        )"
-                    />
+                    <div class="ml-auto flex flex-wrap items-center gap-2">
+                        <UButton
+                            v-if="unsearched"
+                            icon="i-lucide-users"
+                            color="neutral"
+                            variant="subtle"
+                            :label="`Find contacts (${unsearched})`"
+                            @click="router.post(contactRoutes.search.url(), {}, { preserveScroll: true })"
+                        />
 
-                    <UButton
-                        v-if="unsearched"
-                        icon="i-lucide-users"
-                        color="neutral"
-                        variant="subtle"
-                        :label="`Find contacts (${unsearched})`"
-                        @click="router.post(contactRoutes.search.url(), {}, { preserveScroll: true })"
-                    />
-
-                    <!-- A lead somebody already had. One way companies arrive,
-                         not a place you go, so it is a button here rather than
-                         a section of its own -- same reasoning as importing a
-                         list of contacts. -->
-                    <UButton
-                        icon="i-lucide-link"
-                        color="neutral"
-                        variant="subtle"
-                        label="Add links"
-                        @click="addingLinks = true"
-                    />
-
-                    <p class="flex-1 text-right text-sm text-muted">
-                        {{ companies.meta.total }} of {{ total }} companies
-                    </p>
+                        <!-- A lead somebody already had. One way companies
+                             arrive, not a place you go -- same reasoning as
+                             importing a list of contacts. -->
+                        <UButton
+                            icon="i-lucide-link"
+                            color="neutral"
+                            variant="subtle"
+                            label="Add links"
+                            @click="addingLinks = true"
+                        />
+                    </div>
                 </div>
 
                 <div
@@ -266,164 +306,264 @@ function searchLabel (company: Company) {
                 </div>
             </div>
 
-            <UTable
-                :data="companies.data"
-                :columns="columns"
-                :ui="{ td: 'align-top whitespace-normal break-words' }"
-            >
-                <!-- Headers sort and nothing else; narrowing the list happens
-                     in one bar above it. -->
-                <template
-                    v-for="column in headerSlots"
-                    :key="column.key"
-                    #[column.slot]
-                >
-                    <UButton
-                        v-if="column.sortable"
-                        :label="column.label"
-                        :trailing-icon="table.sortIcon(column.key)"
-                        color="neutral"
-                        variant="ghost"
-                        size="xs"
-                        class="-mx-1.5"
-                        @click="table.toggleSort(column.key)"
-                    />
-                    <span
-                        v-else
-                        class="text-xs text-muted"
-                    >{{ column.label }}</span>
-                </template>
+            <!-- The status pills. One is always active, `view` above holds
+                 which. -->
+            <div class="flex flex-wrap items-center gap-2">
+                <UButton
+                    v-for="pill in PILLS"
+                    :key="pill.key"
+                    :label="`${pill.label} ${counts[pill.key]}`"
+                    size="sm"
+                    :color="view === pill.key ? 'primary' : 'neutral'"
+                    :variant="view === pill.key ? 'subtle' : 'outline'"
+                    class="rounded-full"
+                    @click="view = pill.key"
+                />
+                <p class="ml-auto text-xs text-dimmed">
+                    Sorted by fit
+                </p>
+            </div>
 
-                <template #name-cell="{ row }">
-                    <ULink
-                        :href="companyRoutes.show.url(row.original.id)"
-                        class="font-medium"
-                    >{{ row.original.name }}</ULink>
-                </template>
-
-                <template
-                    v-for="key in ['industry', 'size'] as const"
-                    :key="key"
-                    #[`${key}-cell`]="{ row }"
-                >
-                    <p
-                        class="line-clamp-3 text-sm"
-                        :title="row.original[key] ?? undefined"
-                    >
-                        {{ row.original[key] }}
-                    </p>
-                </template>
-
-                <template #domain-cell="{ row }">
-                    <ULink
-                        v-if="row.original.website"
-                        :href="row.original.website"
-                        target="_blank"
-                        rel="noopener"
-                    >{{ row.original.domain }}</ULink>
-                    <!-- Not missing data: this business publishes no site, and
-                         a directory is where it published an address instead. -->
-                    <span
-                        v-else-if="!row.original.domain"
-                        class="text-dimmed"
-                    >No site</span>
-                    <span v-else>{{ row.original.domain }}</span>
-                </template>
-
-                <template #fit_score-cell="{ row }">
-                    <UBadge
-                        :color="scoreColor(row.original.fit_score)"
-                        variant="subtle"
-                        :label="`${row.original.fit_score ?? 'n/a'}`"
-                    />
-                </template>
-
-                <!-- The reason is not a note to ourselves: it is the line the
-                     first email opens with, so it stays on the row. -->
-                <!-- The whole sentence, wrapped: it is the opening line of
-                     the email, so a clamped version is the one thing on this
-                     row nobody can judge. -->
-                <template #reason-cell="{ row }">
-                    <p
-                        v-if="best(row.original)"
-                        class="min-w-64 text-sm text-muted"
-                    >
-                        <span class="text-dimmed">{{ best(row.original)?.profile ?? 'Deleted profile' }} · </span>
-                        {{ best(row.original)?.fit_reason }}
-                    </p>
-                </template>
-
-                <!-- No per-row button to go looking: the search is dispatched
-                     the moment a company is kept, because forty companies is
-                     forty clicks nobody makes. This says where that search got
-                     to. -->
-                <template #contacts_count-cell="{ row }">
-                    <ULink
-                        v-if="row.original.contacts_count"
-                        :href="contactRoutes.index.url({ query: { company: row.original.id } })"
-                    >{{ row.original.contacts_count }}</ULink>
-
-                    <span
-                        v-else-if="row.original.contacts_status === 'queued'"
-                        class="flex items-center gap-1 text-sm text-muted"
-                    >
-                        <UIcon
-                            name="i-lucide-search"
-                            class="animate-sweep size-4 text-primary"
-                        />
-                        Looking
-                    </span>
-
-                    <span
-                        v-else
-                        class="text-sm text-dimmed"
-                    >{{ searchLabel(row.original) }}</span>
-                </template>
-
-                <template #discovered_at-cell="{ row }">
-                    <span class="text-sm text-muted">{{ day(row.original.discovered_at) }}</span>
-                </template>
-
-                <template #details-cell="{ row }">
-                    <UButton
-                        icon="i-lucide-arrow-right"
-                        color="neutral"
-                        variant="ghost"
-                        size="xs"
-                        label="Details"
-                        @click="router.get(companyRoutes.show.url(row.original.id))"
-                    />
-                </template>
-
-                <!-- A company somebody already sells to is the one row that
-                     must never be written to, and no score can know it. -->
-                <template #status-cell="{ row }">
-                    <StatusSelect
-                        :status="row.original.status"
-                        :options="OUTREACH_STATUSES"
-                        :url="companyRoutes.status.url(row.original.id)"
-                    />
-                </template>
-
-                <!-- The last human decision before mail leaves. Saying yes
-                     also starts the search for people at that company. -->
-                <template #approval-cell="{ row }">
-                    <ApproveButton :company="row.original" />
-                </template>
-
-                <template #empty>
-                    <p class="text-sm text-muted">
-                        Nothing here. Run a search from Targets, or loosen the
-                        filters above.
-                    </p>
-                </template>
-            </UTable>
-
+            <!-- The bulk toolbar, only once something is picked: acting on a
+                 selection is the whole point of the checkboxes below. -->
             <div
-                v-if="companies.meta.last_page > 1"
-                class="flex justify-center"
+                v-if="selected.length"
+                class="flex flex-wrap items-center gap-3 rounded-lg bg-primary/10 px-3.5 py-2.5 ring ring-primary/25"
             >
+                <span class="text-sm font-medium text-highlighted">{{ selected.length }} selected</span>
+                <div class="flex flex-wrap gap-1.5">
+                    <UButton
+                        label="Approve"
+                        size="xs"
+                        @click="bulkApprove"
+                    />
+                    <UButton
+                        label="Find contacts"
+                        size="xs"
+                        color="neutral"
+                        variant="outline"
+                        @click="bulkFindContacts"
+                    />
+                    <UButton
+                        label="Set aside"
+                        size="xs"
+                        color="neutral"
+                        variant="ghost"
+                        @click="bulkSetAside"
+                    />
+                </div>
+                <UButton
+                    label="Clear"
+                    size="xs"
+                    color="neutral"
+                    variant="link"
+                    class="ml-auto"
+                    @click="clearSelection"
+                />
+            </div>
+
+            <div class="grid gap-2">
+                <div
+                    v-for="company in companies.data"
+                    :key="company.id"
+                    class="grid grid-cols-[auto_1fr] items-start gap-3 rounded-lg p-3.5 ring transition-colors"
+                    :class="selected.includes(company.id) ? 'bg-elevated ring-primary/40' : 'bg-elevated/60 ring-default'"
+                >
+                    <UCheckbox
+                        :model-value="selected.includes(company.id)"
+                        class="mt-0.5"
+                        @update:model-value="toggle(company.id)"
+                    />
+
+                    <div class="min-w-0 space-y-1.5">
+                        <div class="flex flex-wrap items-baseline gap-2">
+                            <ULink
+                                :href="companyRoutes.show.url(company.id)"
+                                class="font-semibold text-highlighted"
+                            >{{ company.name }}</ULink>
+
+                            <ULink
+                                v-if="company.website"
+                                :href="company.website"
+                                target="_blank"
+                                rel="noopener"
+                                class="min-w-0 truncate font-mono text-xs text-dimmed"
+                            >{{ company.domain }}</ULink>
+                            <span
+                                v-else-if="company.domain"
+                                class="min-w-0 truncate font-mono text-xs text-dimmed"
+                            >{{ company.domain }}</span>
+
+                            <span
+                                v-if="company.fit_score !== null"
+                                class="ml-auto flex shrink-0 items-center gap-1.5"
+                            >
+                                <span
+                                    class="font-mono text-xs"
+                                    :class="SCORE_CLASSES[scoreColor(company.fit_score)].text"
+                                >{{ company.fit_score }}</span>
+                                <span class="block h-[3px] w-8 overflow-hidden rounded-full bg-accented">
+                                    <span
+                                        class="block h-full"
+                                        :class="SCORE_CLASSES[scoreColor(company.fit_score)].bar"
+                                        :style="{ width: `${company.fit_score}%` }"
+                                    />
+                                </span>
+                            </span>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-2 text-xs text-muted">
+                            <template
+                                v-for="(part, index) in metaParts(company)"
+                                :key="index"
+                            >
+                                <span
+                                    v-if="index > 0"
+                                    class="opacity-40"
+                                >·</span>
+                                <span>{{ part }}</span>
+                            </template>
+                            <span
+                                v-if="metaParts(company).length"
+                                class="opacity-40"
+                            >·</span>
+                            <span class="text-dimmed">Found {{ day(company.discovered_at) }}</span>
+                        </div>
+
+                        <!-- The reason is not a note to ourselves: it is the
+                             line the first email opens with. -->
+                        <p
+                            v-if="best(company)"
+                            class="max-w-[88ch] text-sm text-toned"
+                        >
+                            {{ best(company)?.fit_reason }}
+                        </p>
+
+                        <div class="flex flex-wrap items-center gap-2 pt-0.5">
+                            <UBadge
+                                v-if="company.excluded"
+                                color="neutral"
+                                variant="subtle"
+                                icon="i-lucide-minus"
+                                label="Set aside"
+                            />
+                            <UBadge
+                                v-else-if="company.approved"
+                                color="success"
+                                variant="subtle"
+                                icon="i-lucide-check"
+                                label="Approved"
+                            />
+                            <UBadge
+                                v-else
+                                color="warning"
+                                variant="subtle"
+                                icon="i-lucide-clock"
+                                label="Awaiting approval"
+                            />
+
+                            <UBadge
+                                v-if="best(company)"
+                                color="neutral"
+                                variant="outline"
+                                :label="best(company)?.profile ?? 'Deleted profile'"
+                                class="max-w-64 truncate"
+                            />
+
+                            <!-- No per-row button to go looking: the search is
+                                 dispatched the moment a company is kept,
+                                 because forty companies is forty clicks
+                                 nobody makes. This says where that search
+                                 got to. -->
+                            <span
+                                v-if="contactState(company) === 'looking'"
+                                class="flex items-center gap-1 text-xs text-muted"
+                            >
+                                <UIcon
+                                    name="i-lucide-search"
+                                    class="animate-sweep size-3.5 text-primary"
+                                />
+                                Looking
+                            </span>
+                            <ULink
+                                v-else-if="contactState(company) === 'found'"
+                                :href="contactRoutes.index.url({ query: { company: company.id } })"
+                                class="flex items-center gap-1 text-xs"
+                            >
+                                <UIcon
+                                    name="i-lucide-users"
+                                    class="size-3.5"
+                                />
+                                {{ company.contacts_count }} contact{{ company.contacts_count === 1 ? '' : 's' }}
+                            </ULink>
+                            <span
+                                v-else-if="contactState(company) === 'none'"
+                                class="text-xs text-warning"
+                            >No contact found yet</span>
+                            <span
+                                v-else-if="contactState(company) === 'unreadable'"
+                                class="text-xs text-dimmed"
+                            >Unreadable</span>
+
+                            <div class="ml-auto flex flex-wrap gap-1.5">
+                                <UButton
+                                    v-if="company.excluded"
+                                    label="Put back"
+                                    size="xs"
+                                    color="neutral"
+                                    variant="outline"
+                                    @click="putBack(company)"
+                                />
+                                <template v-else-if="!company.approved">
+                                    <UButton
+                                        label="Approve"
+                                        size="xs"
+                                        @click="approve(company)"
+                                    />
+                                    <UButton
+                                        label="Set aside"
+                                        size="xs"
+                                        color="neutral"
+                                        variant="ghost"
+                                        @click="setAside(company)"
+                                    />
+                                </template>
+                                <UButton
+                                    v-else-if="company.contacts_count > 0"
+                                    label="Details"
+                                    trailing-icon="i-lucide-arrow-right"
+                                    size="xs"
+                                    color="neutral"
+                                    variant="ghost"
+                                    @click="router.get(companyRoutes.show.url(company.id))"
+                                />
+                                <UButton
+                                    v-else-if="contactState(company) !== 'looking'"
+                                    label="Find contacts"
+                                    size="xs"
+                                    color="neutral"
+                                    variant="outline"
+                                    @click="findContacts(company)"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <p
+                    v-if="!companies.data.length"
+                    class="text-sm text-muted"
+                >
+                    Nothing here. Run a search from Targets, or loosen the
+                    filters above.
+                </p>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <span class="text-xs text-dimmed">Showing {{ companies.data.length }} of {{ companies.meta.total }} companies</span>
+
                 <UPagination
+                    v-if="companies.meta.last_page > 1"
                     :default-page="companies.meta.current_page"
                     :items-per-page="companies.meta.per_page"
                     :total="companies.meta.total"

@@ -27,6 +27,7 @@ use App\Http\Controllers\CampaignStepController;
 use App\Http\Controllers\CampaignStepOrderController;
 use App\Http\Controllers\CodeRepositoryController;
 use App\Http\Controllers\CompanyApprovalController;
+use App\Http\Controllers\CompanyBulkStatusController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\CompanyStatusController;
 use App\Http\Controllers\ContactController;
@@ -356,6 +357,13 @@ Route::middleware(['auth', 'verified', 'project.set'])->group(function (): void 
          */
         Route::put('companies/approval', [CompanyApprovalController::class, 'update'])
             ->name('companies.approval');
+
+        /*
+         * Where several companies stand, taken in one go from the bulk
+         * toolbar - same reasoning as `companies/approval` above.
+         */
+        Route::put('companies/status', [CompanyBulkStatusController::class, 'update'])
+            ->name('companies.status.bulk');
     });
 
     /*

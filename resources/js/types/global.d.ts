@@ -36,6 +36,8 @@ declare module '@inertiajs/core' {
                 broken: { id: number, email: string, status: string, error: string | null }[]
             }
             sidebarOpen: boolean
+            /** The badge on each sidebar entry. Null while no project is selected. */
+            navCounts: { targets: number, leads: number, inbox: number } | null
             [key: string]: unknown
         }
     }

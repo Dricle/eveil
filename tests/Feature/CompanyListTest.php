@@ -328,3 +328,72 @@ it('carries the approval state and the queue of what is still undecided', functi
             ->has('companies.data', 2)
             ->where('companies.data.0.approved', false));
 });
+
+it('drives the status pills, one bucket at a time, with a count behind each', function () {
+    [$user, $project] = lister();
+
+    // Scored so the default best-fit-first order is deterministic: id order
+    // alone would not be, once two rows tie on a null fit score.
+    $approved = scored($project, 'approved-nocontact.be', 80);
+    $approved->update(['approved_at' => now()]);
+
+    $awaiting = scored($project, 'awaiting.be', 70);
+
+    $withContact = scored($project, 'withcontact.be', 60);
+    $withContact->update(['approved_at' => now()]);
+    Lead::factory()->create(['project_id' => $project->id, 'company_id' => $withContact->id]);
+
+    $setAside = scored($project, 'setaside.be', 50);
+    $setAside->update(['status' => OutreachStatus::Client]);
+
+    // "All" stays exactly what it always was: contactable, every status left
+    // in outreach, set-aside companies excluded until asked for.
+    $this->actingAs($user)->get(route('companies.index'))
+        ->assertInertia(fn ($page) => $page
+            ->has('companies.data', 3)
+            ->where('counts.all', 3)
+            ->where('counts.awaiting', 1)
+            ->where('counts.approved', 2)
+            ->where('counts.no_contact', 2)
+            ->where('counts.set_aside', 1));
+
+    $this->actingAs($user)->get(route('companies.index', ['view' => 'approved']))
+        ->assertInertia(fn ($page) => $page
+            ->has('companies.data', 2)
+            ->where('companies.data.0.domain', 'approved-nocontact.be')
+            ->where('companies.data.1.domain', 'withcontact.be'));
+
+    // Cuts across approved/awaiting rather than replacing either: a company
+    // can be approved and still have nobody found at it.
+    $this->actingAs($user)->get(route('companies.index', ['view' => 'no_contact']))
+        ->assertInertia(fn ($page) => $page
+            ->has('companies.data', 2)
+            ->where('companies.data.0.domain', 'approved-nocontact.be')
+            ->where('companies.data.1.domain', 'awaiting.be'));
+
+    // The one pill that reaches outside outreach entirely.
+    $this->actingAs($user)->get(route('companies.index', ['view' => 'set_aside']))
+        ->assertInertia(fn ($page) => $page
+            ->has('companies.data', 1)
+            ->where('companies.data.0.domain', 'setaside.be'));
+});
+
+it('sets several companies aside at once from the bulk toolbar, scoped to the project', function () {
+    [$user, $project] = lister();
+
+    $companies = Company::factory()->count(2)->create(['project_id' => $project->id]);
+    $someoneElses = Company::factory()->create();
+
+    $this->actingAs($user)
+        ->putJson(route('companies.status.bulk'), [
+            'companies' => [...$companies->pluck('id')->all(), $someoneElses->id],
+            'status' => 'rejected',
+        ])
+        ->assertRedirect();
+
+    expect($companies->first()->refresh()->status)->toBe(OutreachStatus::Rejected)
+        ->and($companies->last()->refresh()->status)->toBe(OutreachStatus::Rejected)
+        // The ids come from a form; the project scope is what makes them
+        // safe, the same guarantee the single-row and approval routes give.
+        ->and($someoneElses->refresh()->status)->toBe(OutreachStatus::New);
+});

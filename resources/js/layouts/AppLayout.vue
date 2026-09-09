@@ -31,6 +31,13 @@ function isCurrent (path: string): boolean {
     return page.url.startsWith(path.replace(/^https?:\/\/[^/]+/, ''))
 }
 
+// Muted counts for Targets/Leads, a filled pill for Inbox: the same
+// distinction the design draws between "here is how many" and "these are
+// waiting on you". Absent entirely while no project is selected, or while a
+// count is zero - a "0" badge on every item on first load reads as broken,
+// not as empty.
+const navCounts = computed(() => page.props.navCounts)
+
 const items = computed<NavigationMenuItem[]>(() => [
     {
         label: 'Dashboard',
@@ -42,13 +49,19 @@ const items = computed<NavigationMenuItem[]>(() => [
         label: 'Targets',
         icon: 'i-lucide-crosshair',
         to: targets.index.url(),
-        active: isCurrent(targets.index.url()) || page.url.startsWith('/app/discovery-runs')
+        active: isCurrent(targets.index.url()) || page.url.startsWith('/app/discovery-runs'),
+        badge: navCounts.value?.targets
+            ? { label: navCounts.value.targets, color: 'neutral', variant: 'ghost' }
+            : undefined
     },
     {
         label: 'Leads',
         icon: 'i-lucide-building-2',
         to: companies.index.url(),
-        active: isCurrent(companies.index.url())
+        active: isCurrent(companies.index.url()),
+        badge: navCounts.value?.leads
+            ? { label: navCounts.value.leads, color: 'neutral', variant: 'ghost' }
+            : undefined
     },
     {
         label: 'Campaigns',
@@ -60,7 +73,10 @@ const items = computed<NavigationMenuItem[]>(() => [
         label: 'Inbox',
         icon: 'i-lucide-inbox',
         to: inbox.url(),
-        active: isCurrent(inbox.url())
+        active: isCurrent(inbox.url()),
+        badge: navCounts.value?.inbox
+            ? { label: navCounts.value.inbox, color: 'primary', variant: 'solid' }
+            : undefined
     },
     {
         label: 'Settings',

@@ -4,10 +4,14 @@ namespace App\Http\Middleware;
 
 use App\Ai\ProviderCredentials;
 use App\Enums\EmailAccountStatus;
+use App\Enums\MessageDirection;
 use App\Http\Resources\OrganizationResource;
 use App\Http\Resources\ProjectResource;
+use App\Models\CampaignLead;
+use App\Models\Company;
 use App\Models\EmailAccount;
 use App\Models\Project;
+use App\Models\TargetProfile;
 use App\Support\CurrentProject;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\ResourceCollection;
@@ -93,6 +97,36 @@ class HandleInertiaRequests extends Middleware
             // later. A closure for the same reason as the project above: the
             // route middleware that picks it has not run yet.
             'setup' => fn (): array => $this->missingSetup($request),
+            // The badge on each sidebar entry: on every page, not just the
+            // section it names, because the sidebar itself is on every page.
+            // A closure for the same reason as `currentProject` above: the
+            // route middleware that picks the project has not run yet here.
+            'navCounts' => fn (): ?array => $this->navCounts(),
+        ];
+    }
+
+    /**
+     * @return array{targets: int, leads: int, inbox: int}|null null while no
+     *                                                          project is selected, so the sidebar shows no badge rather than one for the wrong project
+     */
+    private function navCounts(): ?array
+    {
+        $project = app(CurrentProject::class);
+
+        if (! $project->isSet()) {
+            return null;
+        }
+
+        return [
+            'targets' => TargetProfile::query()->count(),
+            'leads' => Company::query()->contactable()->count(),
+            // Replies only, same definition `InboxController` uses for its
+            // default list: a lead written to and still silent is not
+            // something waiting on a person.
+            'inbox' => CampaignLead::query()
+                ->whereHas('messages', fn ($messages) => $messages->where('direction', MessageDirection::Inbound))
+                ->whereHas('campaign')
+                ->count(),
         ];
     }
 

@@ -138,6 +138,27 @@ it('refuses to search a company from another project', function () {
     Queue::assertNothingPushed();
 });
 
+it('searches a chosen selection from the bulk toolbar, already-searched rows included', function () {
+    Queue::fake();
+
+    [$user, $project] = contacter();
+
+    $picked = Company::factory()->create(['project_id' => $project->id, 'contacts_status' => ContactSearchStatus::Done]);
+    $alsoPicked = Company::factory()->create(['project_id' => $project->id]);
+    // Not picked, and would otherwise match "every kept company nobody has
+    // looked at yet": the selection is the whole point of the bulk button.
+    Company::factory()->create(['project_id' => $project->id]);
+
+    $this->actingAs($user)
+        ->post(route('contacts.search'), ['companies' => [$picked->id, $alsoPicked->id]])
+        ->assertRedirect();
+
+    expect($picked->refresh()->contacts_status)->toBe(ContactSearchStatus::Queued)
+        ->and($alsoPicked->refresh()->contacts_status)->toBe(ContactSearchStatus::Queued);
+
+    Queue::assertPushed(FindCompanyContacts::class, 2);
+});
+
 it('records that a search failed, so the row says so instead of looking untouched', function () {
     [, $project] = contacter();
     $company = Company::factory()->create(['project_id' => $project->id, 'contacts_status' => ContactSearchStatus::Queued]);

@@ -55,6 +55,10 @@ function saveStep (step: Step) {
 }
 
 function saveVariant (step: Step, variant: Variant) {
+    // The weight input can be blurred empty or at 0; the backend requires at
+    // least 1, so clamp here rather than let that 422 silently.
+    variant.weight = Math.max(1, Math.round(variant.weight) || 1)
+
     router.put(stepVariantRoutes.update.url([props.campaign.id, step.id, variant.id]), {
         subject: variant.subject,
         body: variant.body,
@@ -65,7 +69,11 @@ function saveVariant (step: Step, variant: Variant) {
 function addVariant (step: Step) {
     router.post(stepVariantRoutes.store.url([props.campaign.id, step.id]), {
         subject: 'autre approche',
-        body: '',
+        // An empty string is converted to null by the framework's global
+        // middleware, and `body` is required - a blank draft would 422 with
+        // no visible feedback on the page, which reads as the button doing
+        // nothing.
+        body: '…',
         weight: 1
     }, { preserveScroll: true })
 }
@@ -79,7 +87,9 @@ function add (type: 'email' | 'wait') {
         type,
         delay_hours: type === 'wait' ? 72 : null,
         subject: type === 'email' ? 'follow-up' : null,
-        body: type === 'email' ? '' : null
+        // Same empty-string-becomes-null trap as `addVariant`: `body` is
+        // required for an email step, so a blank draft here 422s silently.
+        body: type === 'email' ? '…' : null
     }, { preserveScroll: true })
 }
 

@@ -47,9 +47,6 @@ class MessagePersonalizer extends EveilAgent implements HasStructuredOutput
         company's. A company whose own site happens to read in another language still
         gets written to in the sender's, exactly as the sequence this step came from was.
 
-        Keep whatever opt-out sentence the template ends on, in that same language.
-        It is the only opt-out channel there is.
-
         Nothing that reveals tooling: no links other than to the sender's own product,
         no unsubscribe line, no footer, no signature (the mailbox adds the sender's
         own), no merge tags left in braces or brackets, and no mention of a list, a

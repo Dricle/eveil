@@ -41,11 +41,6 @@ class SequenceWriter extends EveilAgent implements HasStructuredOutput
         - HTML structure, styling, images, tables
         - a signature block: the mailbox adds the sender's own
 
-        Close the FIRST mail with a plain opt-out sentence in the body, along the lines
-        of "if this isn't relevant, just ignore this or reply STOP and I won't write
-        again", in the language of the mail. That sentence is the only opt-out channel
-        there is, so it is not optional. Do not repeat it in the follow-up.
-
         Write short. A first cold mail that runs past 120 words is not read. Say what
         you noticed about them, what it means for them, and ask one small question. No
         pitch deck in prose, no three-paragraph company introduction, no "hope this

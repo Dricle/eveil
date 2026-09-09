@@ -18,8 +18,9 @@ use Throwable;
  * no images, no CSS, no footer, no unsubscribe link, no `List-Unsubscribe`, no
  * `Precedence: bulk`, no `X-Mailer`, and no URL pointing anywhere near this
  * application. A link to a domain other than the sender's is both a spam marker
- * and an admission of automation. Opt-out is a SENTENCE the agent writes into
- * the body: the only opt-out channel there is.
+ * and an admission of automation. Opt-out is whatever the recipient replies
+ * back with, read by the reply agent and the phrase list under it: the only
+ * opt-out channel there is.
  *
  * Laravel's own `Mail` facade is not used: it sends through the configured
  * mailer, and every mail here goes through a DIFFERENT one. The mailbox the

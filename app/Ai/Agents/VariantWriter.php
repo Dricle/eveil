@@ -43,9 +43,6 @@ class VariantWriter extends EveilAgent implements HasStructuredOutput
         - a signature block: the mailbox adds the sender's own
         - merge tags in braces or brackets: leave the specifics to personalisation,
           which rewrites this per company later, exactly as it does for the original
-
-        Keep whatever opt-out sentence the original ends on, in the same language, if
-        it has one.
         PROMPT.$this->projectInstructions();
     }
 

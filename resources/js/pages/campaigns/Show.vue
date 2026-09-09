@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3'
-import { ref } from 'vue'
+import { Head, router, usePoll } from '@inertiajs/vue3'
+import { ref, watch } from 'vue'
+import { store as generateVariant } from '@/actions/App/Http/Controllers/StepVariantGenerationController'
 import CampaignHeader from '@/components/CampaignHeader.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import campaignRoutes from '@/routes/campaigns'
@@ -42,9 +43,22 @@ const props = defineProps<{
         steps: Step[]
     }
     sample?: Sample
+    writingVariant: boolean
+    writingVariantError: string | null
 }>()
 
 const previewing = ref<number | null>(null)
+
+// Writing an alternate mail takes a model call, so the page watches for it
+// rather than leaving the user staring at a button that looks like it did
+// nothing.
+const poll = usePoll(
+    3000,
+    { only: ['campaign', 'writingVariant', 'writingVariantError'] },
+    { autoStart: props.writingVariant },
+)
+
+watch(() => props.writingVariant, busy => busy ? poll.start() : poll.stop())
 
 function saveStep (step: Step) {
     router.put(stepRoutes.update.url([props.campaign.id, step.id]), {
@@ -67,15 +81,7 @@ function saveVariant (step: Step, variant: Variant) {
 }
 
 function addVariant (step: Step) {
-    router.post(stepVariantRoutes.store.url([props.campaign.id, step.id]), {
-        subject: 'autre approche',
-        // An empty string is converted to null by the framework's global
-        // middleware, and `body` is required - a blank draft would 422 with
-        // no visible feedback on the page, which reads as the button doing
-        // nothing.
-        body: '…',
-        weight: 1
-    }, { preserveScroll: true })
+    router.post(generateVariant.url([props.campaign.id, step.id]), {}, { preserveScroll: true })
 }
 
 function removeVariant (step: Step, variant: Variant) {
@@ -266,12 +272,23 @@ function preview (step: Step) {
                                     variant="ghost"
                                     size="xs"
                                     icon="i-lucide-split"
-                                    label="Add a variant to A/B test"
+                                    :loading="writingVariant"
+                                    :disabled="writingVariant"
+                                    :label="writingVariant ? 'Writing…' : 'Add a variant to A/B test'"
                                     @click="addVariant(step)"
                                 />
                             </div>
                         </template>
                     </div>
+
+                    <UAlert
+                        v-if="writingVariantError"
+                        color="error"
+                        variant="subtle"
+                        icon="i-lucide-triangle-alert"
+                        title="The last variant was not written"
+                        :description="writingVariantError"
+                    />
 
                     <div class="flex gap-2">
                         <UButton

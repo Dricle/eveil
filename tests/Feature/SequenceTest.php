@@ -3,11 +3,13 @@
 use App\Actions\PersonalizeMessage;
 use App\Actions\WriteMissingCampaigns;
 use App\Actions\WriteSequence;
+use App\Actions\WriteVariant;
 use App\Ai\Agents\CompanyQualifier;
 use App\Ai\Agents\ContactExtractor;
 use App\Ai\Agents\MessagePersonalizer;
 use App\Ai\Agents\SequenceWriter;
 use App\Ai\Agents\TargetProfileDeriver;
+use App\Ai\Agents\VariantWriter;
 use App\Ai\Agents\WebsiteAnalyst;
 use App\Enums\AgentRunStatus;
 use App\Enums\AutonomyLevel;
@@ -18,6 +20,7 @@ use App\Enums\OutreachStatus;
 use App\Enums\TargetProfileType;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Jobs\WriteCampaign;
+use App\Jobs\WriteStepVariant;
 use App\Models\AgentRun;
 use App\Models\Campaign;
 use App\Models\Company;
@@ -269,7 +272,7 @@ it('splits sends across variants roughly by weight', function () {
     $step = $campaign->steps->first();
     $heavy = $step->variants->sole();
     $heavy->update(['weight' => 9]);
-    $light = $step->variants()->create(['subject' => 'autre angle', 'body' => 'z', 'weight' => 1]);
+    $light = $step->variants()->create(['subject' => 'another angle', 'body' => 'z', 'weight' => 1]);
 
     $picks = collect(range(1, 200))
         ->map(fn () => app(PersonalizeMessage::class)->handle($step, $lead)['step_variant_id']);
@@ -423,6 +426,73 @@ it('refuses to remove the last variant on a step', function () {
         ->assertSessionHasErrors('variant');
 
     expect(StepVariant::query()->where('campaign_step_id', $step->id)->count())->toBe(1);
+});
+
+it('writes an alternate mail from the original, for the agent to A/B test against it', function () {
+    [, $project] = sequencer();
+    $campaign = campaignFor($project);
+    $step = $campaign->steps->first();
+
+    VariantWriter::fake([['subject' => 'a different angle', 'body' => 'Salut, on fait autrement…']]);
+
+    $variant = app(WriteVariant::class)->handle($step);
+
+    expect($variant->subject)->toBe('a different angle')
+        ->and($variant->weight)->toBe(1)
+        ->and($variant->language)->toBeNull()
+        ->and($step->variants()->count())->toBe(2);
+
+    // What the agent was actually given: the original mail it is meant to
+    // diverge from, not a blank page.
+    $prompt = (string) (AgentRun::query()->where('agent', 'variant-writer')->sole()->input['prompt'] ?? '');
+
+    expect($prompt)->toContain('vos commandes')->toContain('Bonjour…');
+});
+
+it('refuses to write an alternate for a step with no mail yet', function () {
+    [, $project] = sequencer();
+    $campaign = Campaign::factory()->create(['project_id' => $project->id, 'status' => CampaignStatus::Draft]);
+    $step = $campaign->steps()->create(['position' => 1, 'type' => CampaignStepType::Email, 'config' => []]);
+
+    expect(fn () => app(WriteVariant::class)->handle($step))->toThrow(RuntimeException::class);
+});
+
+it('queues the variant writing and opens the run row before the worker picks it up', function () {
+    Queue::fake();
+
+    [$user, $project] = sequencer();
+    $campaign = campaignFor($project);
+    $step = $campaign->steps->first();
+
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->post(route('campaigns.steps.variants.generate', [$campaign, $step]))
+        ->assertRedirect();
+
+    Queue::assertPushed(WriteStepVariant::class);
+
+    expect(AgentRun::sole())
+        ->agent->toBe('variant-writer')
+        ->status->toBe(AgentRunStatus::Pending);
+});
+
+it('reports on the campaign page whether an alternate mail is still being written', function () {
+    [$user, $project] = sequencer();
+    $campaign = campaignFor($project);
+
+    $this->actingAs($user)->withSession(['current_project_id' => $project->id]);
+
+    $this->get(route('campaigns.show', $campaign))
+        ->assertInertia(fn ($page) => $page->where('writingVariant', false));
+
+    AgentRun::factory()->create([
+        'project_id' => $project->id,
+        'agent' => 'variant-writer',
+        'status' => AgentRunStatus::Pending,
+    ]);
+
+    $this->get(route('campaigns.show', $campaign))
+        ->assertInertia(fn ($page) => $page->where('writingVariant', true));
 });
 
 it('refuses a wait step with no duration and a mail with no body', function () {

@@ -143,6 +143,7 @@ it('lists every agent it finds in the code, not a hand-kept list', function () {
         'result-triage',
         'sequence-writer',
         'target-profile-deriver',
+        'variant-writer',
         'website-analyst',
     ]);
 });

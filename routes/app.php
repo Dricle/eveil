@@ -51,6 +51,7 @@ use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectKnowledgeBaseController;
 use App\Http\Controllers\Settings\MemberController;
 use App\Http\Controllers\StepVariantController;
+use App\Http\Controllers\StepVariantGenerationController;
 use App\Http\Controllers\TargetProfileController;
 use App\Http\Controllers\TargetProfileDerivationController;
 use Illuminate\Support\Facades\Route;
@@ -307,6 +308,12 @@ Route::middleware(['auth', 'verified', 'project.set'])->group(function (): void 
         Route::resource('campaigns.steps.variants', StepVariantController::class)
             ->only(['store', 'update', 'destroy'])
             ->shallow(false);
+        /*
+         * The agent writes the second wording; the CRUD route above is the
+         * escape hatch for editing or replacing it by hand afterwards.
+         */
+        Route::post('campaigns/{campaign}/steps/{step}/variants/generate', [StepVariantGenerationController::class, 'store'])
+            ->name('campaigns.steps.variants.generate');
         /*
          * The second page of one campaign, the way a target profile has its
          * searches: the mails and the run are read at different moments, and

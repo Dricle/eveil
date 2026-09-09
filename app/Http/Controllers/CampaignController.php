@@ -6,6 +6,7 @@ use App\Actions\DispatchDueSends;
 use App\Actions\PreviewSequence;
 use App\Actions\WriteMissingCampaigns;
 use App\Ai\Agents\SequenceWriter;
+use App\Ai\Agents\VariantWriter;
 use App\Enums\AgentRunStatus;
 use App\Enums\CampaignLeadStatus;
 use App\Http\Requests\CampaignRequest;
@@ -106,12 +107,19 @@ class CampaignController extends Controller
             ->with(['targetProfile', 'steps.variants'])
             ->findOrFail($campaign);
 
+        // Which run last asked the agent for a second wording, if any is
+        // still coming: the same "is it still writing" a screen asks about
+        // sequence generation, one level down.
+        $writingVariant = AgentRun::query()->latestFor(VariantWriter::slug())->first();
+
         return Inertia::render('campaigns/Show', [
             'campaign' => CampaignResource::make($campaign),
             'sample' => Inertia::optional(fn () => $this->currentProject->run(
                 $campaign->project,
                 fn () => $preview->handle($campaign, $request->integer('preview_step')),
             )),
+            'writingVariant' => $writingVariant?->isInFlight() ?? false,
+            'writingVariantError' => $writingVariant?->status === AgentRunStatus::Failed ? $writingVariant->error : null,
         ]);
     }
 

@@ -12,6 +12,10 @@ use Illuminate\Validation\Rule;
  * A wait carries a duration and nothing else; an email carries a subject and a
  * body and no duration: the pause before it is the wait step in front of it,
  * which is what makes reordering mean anything.
+ *
+ * Subject and body are only accepted here on creation, to seed the step's
+ * first variant. Editing a mail afterwards, and adding a second one to test
+ * against it, goes through `StepVariantRequest` instead.
  */
 class CampaignStepRequest extends FormRequest
 {
@@ -21,12 +25,13 @@ class CampaignStepRequest extends FormRequest
     public function rules(): array
     {
         $isWait = $this->enum('type', CampaignStepType::class) === CampaignStepType::Wait;
+        $isCreate = $this->isMethod('post');
 
         return [
             'type' => ['required', Rule::enum(CampaignStepType::class)],
             'delay_hours' => [Rule::requiredIf($isWait), 'nullable', 'integer', 'min:1', 'max:2160'],
-            'subject' => [Rule::requiredIf(! $isWait), 'nullable', 'string', 'max:255'],
-            'body' => [Rule::requiredIf(! $isWait), 'nullable', 'string', 'max:20000'],
+            'subject' => [Rule::requiredIf($isCreate && ! $isWait), 'nullable', 'string', 'max:255'],
+            'body' => [Rule::requiredIf($isCreate && ! $isWait), 'nullable', 'string', 'max:20000'],
             'intent' => ['nullable', 'string', 'max:500'],
         ];
     }

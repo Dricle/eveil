@@ -4,7 +4,6 @@ namespace App\Actions;
 
 use App\Enums\EmailExampleSource;
 use App\Enums\MessageDirection;
-use App\Enums\ReplyClassification;
 use App\Models\EmailExample;
 use App\Models\Message;
 use App\Models\StepVariant;
@@ -32,25 +31,18 @@ class PromoteProvenEmails
         $promoted = 0;
 
         foreach ($this->candidates($minSends) as $variantId => $sent) {
-            $messageIds = Message::query()
-                ->where('step_variant_id', $variantId)
-                ->where('direction', MessageDirection::Outbound)
-                ->whereNotNull('sent_at')
-                ->pluck('message_id');
-
-            $positive = $this->repliesClassified($messageIds, ReplyClassification::Interested);
-            $unsubscribed = $this->repliesClassified($messageIds, ReplyClassification::Unsubscribe);
-
-            $positiveRate = $positive / $sent;
-            $unsubscribeRate = $unsubscribed / $sent;
-
-            if ($positiveRate < $minPositiveRate || $unsubscribeRate > $maxUnsubscribeRate) {
-                continue;
-            }
-
             $variant = StepVariant::query()->find($variantId);
 
             if ($variant === null) {
+                continue;
+            }
+
+            $stats = $variant->stats();
+
+            $positiveRate = $stats['positive'] / $stats['sent'];
+            $unsubscribeRate = $stats['unsubscribed'] / $stats['sent'];
+
+            if ($positiveRate < $minPositiveRate || $unsubscribeRate > $maxUnsubscribeRate) {
                 continue;
             }
 
@@ -86,26 +78,5 @@ class PromoteProvenEmails
             ->groupBy('step_variant_id')
             ->havingRaw('count(*) >= ?', [$minSends])
             ->pluck('sent', 'step_variant_id');
-    }
-
-    /**
-     * Attribution by the message actually being answered - `in_reply_to`
-     * matched against the exact `message_id`s this variant sent - never by
-     * "a reply happened somewhere in this lead's thread." A sequence's
-     * fourth step must not borrow credit for what the first one earned.
-     *
-     * @param  Collection<int, string>  $messageIds
-     */
-    private function repliesClassified(Collection $messageIds, ReplyClassification $classification): int
-    {
-        if ($messageIds->isEmpty()) {
-            return 0;
-        }
-
-        return Message::query()
-            ->where('direction', MessageDirection::Inbound)
-            ->whereIn('in_reply_to', $messageIds)
-            ->where('classification', $classification)
-            ->count();
     }
 }

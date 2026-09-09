@@ -8,6 +8,8 @@ use App\Models\CampaignStep;
 use App\Models\CompanyTargetEvaluation;
 use App\Models\EmailExample;
 use App\Models\Lead;
+use App\Models\StepVariant;
+use Illuminate\Support\Collection;
 use Laravel\Ai\Responses\StructuredAgentResponse;
 use RuntimeException;
 
@@ -32,7 +34,7 @@ class PersonalizeMessage
      */
     public function handle(CampaignStep $step, Lead $lead, ?AgentRun $run = null): array
     {
-        $variant = $step->variants()->orderBy('id')->first();
+        $variant = $this->pickVariant($step);
 
         if ($variant === null) {
             throw new RuntimeException('This step has no mail to personalise.');
@@ -55,6 +57,35 @@ class PersonalizeMessage
             // own track record ever be measured.
             'step_variant_id' => $variant->id,
         ];
+    }
+
+    /**
+     * A/B split: each variant's `weight` is its share of sends, so a step with
+     * one variant always picks it and a step with two equal weights splits
+     * roughly fifty-fifty over enough leads.
+     */
+    private function pickVariant(CampaignStep $step): ?StepVariant
+    {
+        /** @var Collection<int, StepVariant> $variants */
+        $variants = $step->variants()->get();
+
+        $total = $variants->sum('weight');
+
+        if ($variants->isEmpty() || $total <= 0) {
+            return $variants->first();
+        }
+
+        $pick = random_int(1, $total);
+
+        foreach ($variants as $variant) {
+            $pick -= $variant->weight;
+
+            if ($pick <= 0) {
+                return $variant;
+            }
+        }
+
+        return $variants->last();
     }
 
     private function prompt(CampaignStep $step, Lead $lead, string $subject, string $body): string

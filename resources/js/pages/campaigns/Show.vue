@@ -5,7 +5,18 @@ import CampaignHeader from '@/components/CampaignHeader.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import campaignRoutes from '@/routes/campaigns'
 import stepRoutes from '@/routes/campaigns/steps'
+import stepVariantRoutes from '@/routes/campaigns/steps/variants'
 import type { CampaignStatus } from '@/types'
+
+type VariantStats = { sent: number, positive: number, unsubscribed: number }
+
+type Variant = {
+    id: number
+    subject: string
+    body: string
+    weight: number
+    stats: VariantStats
+}
 
 type Step = {
     id: number
@@ -13,8 +24,7 @@ type Step = {
     type: string
     delay_hours: number | null
     intent: string | null
-    subject: string | null
-    body: string | null
+    variants: Variant[]
 }
 
 type Sample = {
@@ -36,14 +46,32 @@ const props = defineProps<{
 
 const previewing = ref<number | null>(null)
 
-function save (step: Step) {
+function saveStep (step: Step) {
     router.put(stepRoutes.update.url([props.campaign.id, step.id]), {
         type: step.type,
         delay_hours: step.delay_hours,
-        subject: step.subject,
-        body: step.body,
         intent: step.intent
     }, { preserveScroll: true })
+}
+
+function saveVariant (step: Step, variant: Variant) {
+    router.put(stepVariantRoutes.update.url([props.campaign.id, step.id, variant.id]), {
+        subject: variant.subject,
+        body: variant.body,
+        weight: variant.weight
+    }, { preserveScroll: true })
+}
+
+function addVariant (step: Step) {
+    router.post(stepVariantRoutes.store.url([props.campaign.id, step.id]), {
+        subject: 'autre approche',
+        body: '',
+        weight: 1
+    }, { preserveScroll: true })
+}
+
+function removeVariant (step: Step, variant: Variant) {
+    router.delete(stepVariantRoutes.destroy.url([props.campaign.id, step.id, variant.id]), { preserveScroll: true })
 }
 
 function add (type: 'email' | 'wait') {
@@ -150,37 +178,88 @@ function preview (step: Step) {
                                 v-model.number="step.delay_hours"
                                 type="number"
                                 class="w-32"
-                                @blur="save(step)"
+                                @blur="saveStep(step)"
                             />
                         </UFormField>
 
                         <template v-else>
-                            <UInput
-                                :model-value="step.subject ?? ''"
-                                placeholder="Subject"
-                                class="w-full"
-                                @update:model-value="value => step.subject = String(value)"
-                                @blur="save(step)"
-                            />
+                            <div
+                                v-for="(variant, variantIndex) in step.variants"
+                                :key="variant.id"
+                                class="space-y-2"
+                                :class="{ 'border-t border-default pt-3': variantIndex > 0 }"
+                            >
+                                <div
+                                    v-if="step.variants.length > 1"
+                                    class="flex items-center gap-2 text-xs text-muted"
+                                >
+                                    <span class="font-medium">{{ String.fromCharCode(65 + variantIndex) }}</span>
 
-                            <UTextarea
-                                :model-value="step.body ?? ''"
-                                :rows="8"
-                                autoresize
-                                class="w-full"
-                                @update:model-value="value => step.body = String(value)"
-                                @blur="save(step)"
-                            />
+                                    <span>{{ variant.stats.sent }} sent</span>
+                                    <span v-if="variant.stats.sent > 0">· {{ variant.stats.positive }} interested</span>
+                                    <span v-if="variant.stats.sent > 0">· {{ variant.stats.unsubscribed }} unsubscribed</span>
 
-                            <UButton
-                                color="neutral"
-                                variant="subtle"
-                                size="xs"
-                                icon="i-lucide-eye"
-                                :loading="previewing === step.id"
-                                label="Preview on real leads"
-                                @click="preview(step)"
-                            />
+                                    <UFormField
+                                        label="Weight"
+                                        class="ml-auto flex items-center gap-1"
+                                    >
+                                        <UInput
+                                            v-model.number="variant.weight"
+                                            type="number"
+                                            min="1"
+                                            class="w-16"
+                                            size="xs"
+                                            @blur="saveVariant(step, variant)"
+                                        />
+                                    </UFormField>
+
+                                    <UButton
+                                        color="error"
+                                        variant="ghost"
+                                        size="xs"
+                                        icon="i-lucide-x"
+                                        aria-label="Remove this variant"
+                                        @click="removeVariant(step, variant)"
+                                    />
+                                </div>
+
+                                <UInput
+                                    :model-value="variant.subject"
+                                    placeholder="Subject"
+                                    class="w-full"
+                                    @update:model-value="value => variant.subject = String(value)"
+                                    @blur="saveVariant(step, variant)"
+                                />
+
+                                <UTextarea
+                                    :model-value="variant.body"
+                                    :rows="8"
+                                    autoresize
+                                    class="w-full"
+                                    @update:model-value="value => variant.body = String(value)"
+                                    @blur="saveVariant(step, variant)"
+                                />
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <UButton
+                                    color="neutral"
+                                    variant="subtle"
+                                    size="xs"
+                                    icon="i-lucide-eye"
+                                    :loading="previewing === step.id"
+                                    label="Preview on real leads"
+                                    @click="preview(step)"
+                                />
+                                <UButton
+                                    color="neutral"
+                                    variant="ghost"
+                                    size="xs"
+                                    icon="i-lucide-split"
+                                    label="Add a variant to A/B test"
+                                    @click="addVariant(step)"
+                                />
+                            </div>
                         </template>
                     </div>
 

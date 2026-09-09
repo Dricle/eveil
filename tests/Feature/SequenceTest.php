@@ -259,6 +259,30 @@ it('falls back to the project default language when the lead has none', function
     expect($prompt['prompt'])->toContain('the language the product knowledge base is written in');
 });
 
+it('splits sends across variants roughly by weight', function () {
+    [, $project] = sequencer();
+    $lead = Lead::factory()->create(['project_id' => $project->id, 'email' => 'marcel@friterie.test']);
+
+    MessagePersonalizer::fake([['subject' => 'x', 'body' => 'y']]);
+
+    $campaign = campaignFor($project);
+    $step = $campaign->steps->first();
+    $heavy = $step->variants->sole();
+    $heavy->update(['weight' => 9]);
+    $light = $step->variants()->create(['subject' => 'autre angle', 'body' => 'z', 'weight' => 1]);
+
+    $picks = collect(range(1, 200))
+        ->map(fn () => app(PersonalizeMessage::class)->handle($step, $lead)['step_variant_id']);
+
+    $counts = $picks->countBy()->all();
+
+    // Random, so not exactly 90/10, but the heavy variant must dominate by a
+    // wide margin - a bug that always picks the first or last variant, or one
+    // that ignores weight and splits 50/50, would fail this just as loudly.
+    expect($counts[$heavy->id] ?? 0)->toBeGreaterThan(140)
+        ->and(array_keys($counts))->toEqualCanonicalizing([$heavy->id, $light->id]);
+});
+
 it('previews the sequence on real leads and never invents one', function () {
     [$user, $project] = sequencer();
 
@@ -345,7 +369,7 @@ it('lets the user compose and reorder the steps themselves', function () {
         ->toBe([CampaignStepType::Wait, CampaignStepType::Email]);
 });
 
-it('updates the mail in place rather than stacking a second variant behind it', function () {
+it('leaves the mail alone when only the step itself is edited', function () {
     [$user, $project] = sequencer();
     $campaign = campaignFor($project);
     $step = $campaign->steps->first();
@@ -354,13 +378,51 @@ it('updates the mail in place rather than stacking a second variant behind it', 
         ->withSession(['current_project_id' => $project->id])
         ->put(route('campaigns.steps.update', [$campaign, $step]), [
             'type' => 'email',
-            'subject' => 'corrigé',
-            'body' => 'Réécrit à la main.',
             'intent' => 'Open on their ordering.',
         ])->assertRedirect();
 
-    expect(StepVariant::query()->where('campaign_step_id', $step->id)->count())->toBe(1)
-        ->and(StepVariant::query()->where('campaign_step_id', $step->id)->sole()->subject)->toBe('corrigé');
+    expect(StepVariant::query()->where('campaign_step_id', $step->id)->sole()->subject)->toBe('vos commandes');
+});
+
+it('adds a second variant to A/B test against the first, and edits it on its own', function () {
+    [$user, $project] = sequencer();
+    $campaign = campaignFor($project);
+    $step = $campaign->steps->first();
+
+    $this->actingAs($user)->withSession(['current_project_id' => $project->id])
+        ->post(route('campaigns.steps.variants.store', [$campaign, $step]), [
+            'subject' => 'une autre approche',
+            'body' => 'Bonjour, autrement dit…',
+            'weight' => 3,
+        ])->assertRedirect();
+
+    expect(StepVariant::query()->where('campaign_step_id', $step->id)->count())->toBe(2);
+
+    $variant = StepVariant::query()->where('campaign_step_id', $step->id)->where('subject', 'une autre approche')->sole();
+
+    $this->actingAs($user)->withSession(['current_project_id' => $project->id])
+        ->put(route('campaigns.steps.variants.update', [$campaign, $step, $variant]), [
+            'subject' => 'corrigée',
+            'body' => $variant->body,
+            'weight' => 3,
+        ])->assertRedirect();
+
+    expect($variant->refresh()->subject)->toBe('corrigée')
+        // The first variant is untouched by editing the second.
+        ->and(StepVariant::query()->where('campaign_step_id', $step->id)->where('id', '!=', $variant->id)->sole()->subject)->toBe('vos commandes');
+});
+
+it('refuses to remove the last variant on a step', function () {
+    [$user, $project] = sequencer();
+    $campaign = campaignFor($project);
+    $step = $campaign->steps->first();
+    $variant = $step->variants->sole();
+
+    $this->actingAs($user)->withSession(['current_project_id' => $project->id])
+        ->delete(route('campaigns.steps.variants.destroy', [$campaign, $step, $variant]))
+        ->assertSessionHasErrors('variant');
+
+    expect(StepVariant::query()->where('campaign_step_id', $step->id)->count())->toBe(1);
 });
 
 it('refuses a wait step with no duration and a mail with no body', function () {
@@ -414,7 +476,8 @@ it('sends the props the pages actually read', function () {
         ->assertInertia(fn ($page) => $page
             ->where('campaign.name', $campaign->name)
             ->has('campaign.steps', 1)
-            ->where('campaign.steps.0.subject', 'vos commandes'));
+            ->has('campaign.steps.0.variants', 1)
+            ->where('campaign.steps.0.variants.0.subject', 'vos commandes'));
 });
 
 it('never previews a lead the user has taken out of outreach', function () {

@@ -50,6 +50,7 @@ use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectKnowledgeBaseController;
 use App\Http\Controllers\Settings\MemberController;
+use App\Http\Controllers\StepVariantController;
 use App\Http\Controllers\TargetProfileController;
 use App\Http\Controllers\TargetProfileDerivationController;
 use Illuminate\Support\Facades\Route;
@@ -297,6 +298,13 @@ Route::middleware(['auth', 'verified', 'project.set'])->group(function (): void 
         Route::post('campaigns/{campaign}/enrol', [CampaignEnrolmentController::class, 'store'])
             ->name('campaigns.enrol');
         Route::resource('campaigns.steps', CampaignStepController::class)
+            ->only(['store', 'update', 'destroy'])
+            ->shallow(false);
+        /*
+         * A step's mail is one variant among possibly several: this is the
+         * A/B test itself, a second wording added under the same step.
+         */
+        Route::resource('campaigns.steps.variants', StepVariantController::class)
             ->only(['store', 'update', 'destroy'])
             ->shallow(false);
         /*

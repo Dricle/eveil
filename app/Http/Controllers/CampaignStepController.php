@@ -42,15 +42,6 @@ class CampaignStepController extends Controller
 
         $step->update($request->columns());
 
-        if ($step->type === CampaignStepType::Email) {
-            // One variant per step until A/B exists, so the mail is updated in
-            // place rather than piling a second one up behind it.
-            $step->variants()->updateOrCreate([], [
-                'subject' => (string) $request->validated('subject'),
-                'body' => (string) $request->validated('body'),
-            ]);
-        }
-
         return back();
     }
 

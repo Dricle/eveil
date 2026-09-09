@@ -48,6 +48,7 @@ const props = defineProps<{
 }>()
 
 const previewing = ref<number | null>(null)
+const savingVariant = ref<number | null>(null)
 
 // Writing an alternate mail takes a model call, so the page watches for it
 // rather than leaving the user staring at a button that looks like it did
@@ -73,11 +74,16 @@ function saveVariant (step: Step, variant: Variant) {
     // least 1, so clamp here rather than let that 422 silently.
     variant.weight = Math.max(1, Math.round(variant.weight) || 1)
 
+    savingVariant.value = variant.id
+
     router.put(stepVariantRoutes.update.url([props.campaign.id, step.id, variant.id]), {
         subject: variant.subject,
         body: variant.body,
         weight: variant.weight
-    }, { preserveScroll: true })
+    }, {
+        preserveScroll: true,
+        onFinish: () => { savingVariant.value = null }
+    })
 }
 
 // Which step the "add a variant" modal is open for, and the optional steer
@@ -273,7 +279,6 @@ function preview (step: Step) {
                                     placeholder="Subject"
                                     class="w-full"
                                     @update:model-value="value => variant.subject = String(value)"
-                                    @blur="saveVariant(step, variant)"
                                 />
 
                                 <UTextarea
@@ -282,7 +287,16 @@ function preview (step: Step) {
                                     autoresize
                                     class="w-full"
                                     @update:model-value="value => variant.body = String(value)"
-                                    @blur="saveVariant(step, variant)"
+                                />
+
+                                <UButton
+                                    color="neutral"
+                                    variant="subtle"
+                                    size="xs"
+                                    icon="i-lucide-save"
+                                    :loading="savingVariant === variant.id"
+                                    label="Save"
+                                    @click="saveVariant(step, variant)"
                                 />
                             </div>
 

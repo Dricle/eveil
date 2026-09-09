@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router, usePoll } from '@inertiajs/vue3'
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { store as generateVariant } from '@/actions/App/Http/Controllers/StepVariantGenerationController'
 import CampaignHeader from '@/components/CampaignHeader.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
@@ -80,8 +80,37 @@ function saveVariant (step: Step, variant: Variant) {
     }, { preserveScroll: true })
 }
 
-function addVariant (step: Step) {
-    router.post(generateVariant.url([props.campaign.id, step.id]), {}, { preserveScroll: true })
+// Which step the "add a variant" modal is open for, and the optional steer
+// typed into it. A left-blank guidance still generates something: the agent
+// just picks its own angle rather than testing what the user had in mind.
+const variantPrompt = ref<{ step: Step, guidance: string } | null>(null)
+
+const variantModalOpen = computed({
+    get: () => variantPrompt.value !== null,
+    set: (open: boolean) => {
+        if (!open) {
+            variantPrompt.value = null
+        }
+    }
+})
+
+function openVariantModal (step: Step) {
+    variantPrompt.value = { step, guidance: '' }
+}
+
+function generateVariantFromModal () {
+    if (!variantPrompt.value) {
+        return
+    }
+
+    const { step, guidance } = variantPrompt.value
+
+    router.post(generateVariant.url([props.campaign.id, step.id]), {
+        guidance: guidance.trim() || null
+    }, {
+        preserveScroll: true,
+        onSuccess: () => { variantPrompt.value = null }
+    })
 }
 
 function removeVariant (step: Step, variant: Variant) {
@@ -275,7 +304,7 @@ function preview (step: Step) {
                                     :loading="writingVariant"
                                     :disabled="writingVariant"
                                     :label="writingVariant ? 'Writing…' : 'Add a variant to A/B test'"
-                                    @click="addVariant(step)"
+                                    @click="openVariantModal(step)"
                                 />
                             </div>
                         </template>
@@ -341,5 +370,41 @@ function preview (step: Step) {
                 </div>
             </div>
         </div>
+
+        <UModal
+            v-model:open="variantModalOpen"
+            title="Add a variant to A/B test"
+            description="Tell the agent what this version should test, or leave it blank and it picks its own angle."
+        >
+            <template #body>
+                <UFormField
+                    label="What should this version test?"
+                    help="e.g. a shorter version, a more casual tone, leading with price instead of the pitch"
+                >
+                    <UTextarea
+                        v-if="variantPrompt"
+                        v-model="variantPrompt.guidance"
+                        :rows="3"
+                        placeholder="Optional"
+                        class="w-full"
+                        autofocus
+                    />
+                </UFormField>
+            </template>
+
+            <template #footer>
+                <UButton
+                    color="neutral"
+                    variant="ghost"
+                    label="Cancel"
+                    @click="variantModalOpen = false"
+                />
+                <UButton
+                    icon="i-lucide-sparkles"
+                    label="Generate"
+                    @click="generateVariantFromModal"
+                />
+            </template>
+        </UModal>
     </AppLayout>
 </template>

@@ -449,6 +449,23 @@ it('writes an alternate mail from the original, for the agent to A/B test agains
     expect($prompt)->toContain('vos commandes')->toContain('Bonjour…');
 });
 
+it('gives the agent every existing version, not just the first, and the user\'s own steer', function () {
+    [, $project] = sequencer();
+    $campaign = campaignFor($project);
+    $step = $campaign->steps->first();
+    $step->variants()->create(['subject' => 'a second angle', 'body' => 'Second body.', 'weight' => 1]);
+
+    VariantWriter::fake([['subject' => 'a third angle', 'body' => 'Third body.']]);
+
+    app(WriteVariant::class)->handle($step, 'test a much shorter version');
+
+    $prompt = (string) (AgentRun::query()->where('agent', 'variant-writer')->sole()->input['prompt'] ?? '');
+
+    expect($prompt)->toContain('vos commandes')
+        ->toContain('a second angle')
+        ->toContain('test a much shorter version');
+});
+
 it('refuses to write an alternate for a step with no mail yet', function () {
     [, $project] = sequencer();
     $campaign = Campaign::factory()->create(['project_id' => $project->id, 'status' => CampaignStatus::Draft]);
@@ -466,14 +483,31 @@ it('queues the variant writing and opens the run row before the worker picks it 
 
     $this->actingAs($user)
         ->withSession(['current_project_id' => $project->id])
-        ->post(route('campaigns.steps.variants.generate', [$campaign, $step]))
+        ->post(route('campaigns.steps.variants.generate', [$campaign, $step]), [
+            'guidance' => 'try a shorter version',
+        ])
         ->assertRedirect();
 
-    Queue::assertPushed(WriteStepVariant::class);
+    Queue::assertPushed(WriteStepVariant::class, fn (WriteStepVariant $job) => $job->guidance === 'try a shorter version');
 
     expect(AgentRun::sole())
         ->agent->toBe('variant-writer')
         ->status->toBe(AgentRunStatus::Pending);
+});
+
+it('queues the variant writing with no guidance at all, just as well', function () {
+    Queue::fake();
+
+    [$user, $project] = sequencer();
+    $campaign = campaignFor($project);
+    $step = $campaign->steps->first();
+
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->post(route('campaigns.steps.variants.generate', [$campaign, $step]))
+        ->assertRedirect();
+
+    Queue::assertPushed(WriteStepVariant::class, fn (WriteStepVariant $job) => $job->guidance === null);
 });
 
 it('reports on the campaign page whether an alternate mail is still being written', function () {

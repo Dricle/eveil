@@ -22,7 +22,7 @@ class WriteStepVariant implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(public CampaignStep $step, public AgentRun $run)
+    public function __construct(public CampaignStep $step, public ?string $guidance, public AgentRun $run)
     {
         $this->onQueue('ai');
     }
@@ -31,7 +31,7 @@ class WriteStepVariant implements ShouldQueue
     {
         $currentProject->run(
             $this->step->campaign->project,
-            fn () => $write->handle($this->step, $this->run),
+            fn () => $write->handle($this->step, $this->guidance, $this->run),
         );
     }
 

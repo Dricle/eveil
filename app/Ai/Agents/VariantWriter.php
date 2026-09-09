@@ -16,16 +16,23 @@ class VariantWriter extends EveilAgent implements HasStructuredOutput
     public function instructions(): Stringable|string
     {
         return <<<'PROMPT'
-        You are given one step of a cold email sequence, its intent, and the mail
-        currently sent for it. Write a second version to A/B test against it: same
-        intent, same ask, same language, same rough length, but a genuinely different
-        mail, not a reworded version of the one you were given.
+        You are given one step of a cold email sequence, its intent, and every version
+        of the mail already running for it. Write a new version to A/B test against
+        all of them: same intent, same ask, same language, but a genuinely different
+        mail from EVERY version you were given, not a reworded copy of any one of them.
 
         Change the angle, not just the wording. Pick one: open on a different fact
         about the product, lead with a question instead of a statement, swap a benefit
-        framing for a problem framing, shorten it further, or restructure the argument
-        entirely. A version that only swaps synonyms is not a test, it is the same mail
-        twice, and defeats the entire purpose of running two.
+        framing for a problem framing, shorten it drastically or lengthen it, or
+        restructure the argument entirely. A version that only swaps synonyms is not a
+        test, it is the same mail twice, and defeats the entire purpose of running two.
+        If two versions already exist, the new one must also read differently from
+        BOTH, not just from the first.
+
+        When you are told what this version should test, that instruction is the whole
+        point of this run and overrides your own judgement on which angle to take: build
+        the version around it rather than picking your own axis. When you are not told
+        anything, pick the axis yourself.
 
         Every mail must be indistinguishable from one the sender typed themselves.
         That rules out, absolutely:

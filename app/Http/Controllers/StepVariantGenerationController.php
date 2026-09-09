@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Ai\Agents\VariantWriter;
 use App\Enums\AgentRunStatus;
+use App\Http\Requests\GenerateStepVariantRequest;
 use App\Jobs\WriteStepVariant;
 use App\Models\AgentRun;
 use App\Models\Campaign;
@@ -24,13 +25,13 @@ class StepVariantGenerationController extends Controller
 {
     public function __construct(private CurrentProject $currentProject) {}
 
-    public function store(int $campaign, int $step): RedirectResponse
+    public function store(GenerateStepVariantRequest $request, int $campaign, int $step): RedirectResponse
     {
         $project = $this->currentProject->getOrFail();
         $campaign = Campaign::query()->findOrFail($campaign);
         $step = $campaign->steps()->findOrFail($step);
 
-        WriteStepVariant::dispatch($step, AgentRun::create([
+        WriteStepVariant::dispatch($step, $request->validated('guidance'), AgentRun::create([
             'project_id' => $project->id,
             'agent' => VariantWriter::slug(),
             'status' => AgentRunStatus::Pending,

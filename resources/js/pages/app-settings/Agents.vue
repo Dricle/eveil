@@ -126,27 +126,6 @@ function switchAll (provider: string) {
                 no deploy.
             </p>
 
-            <!-- One request for every changed row: editing several agents
-                 before saving used to mean clicking Save once per row. -->
-            <div class="sticky top-0 z-10 flex items-center justify-between gap-3 rounded-lg bg-elevated p-4 ring ring-default">
-                <p class="text-sm text-muted">
-                    <template v-if="dirty.length">
-                        {{ dirty.length }} agent{{ dirty.length === 1 ? '' : 's' }} changed
-                    </template>
-                    <template v-else>
-                        No changes to save
-                    </template>
-                </p>
-
-                <UButton
-                    label="Save changes"
-                    icon="i-lucide-save"
-                    :loading="saving"
-                    :disabled="! dirty.length"
-                    @click="saveAll"
-                />
-            </div>
-
             <!-- One click for the whole mapping. Every agent keeps its timeout
                  and lands on the new provider's equivalent model: the one that
                  was on the smartest stays on the smartest, the one that was on
@@ -313,6 +292,26 @@ function switchAll (provider: string) {
                         Not priced yet: every call is refused.
                     </p>
                 </div>
+            </div>
+
+            <!-- One request for every changed row: editing several agents
+                 before saving used to mean clicking Save once per row. Only
+                 appears once something is actually dirty, so a page nobody
+                 touched shows no bar at all. -->
+            <div
+                v-if="dirty.length"
+                class="sticky bottom-0 flex items-center justify-between gap-3 bg-gradient-to-t from-default from-70% to-transparent pt-4"
+            >
+                <p class="text-sm text-muted">
+                    {{ dirty.length }} agent{{ dirty.length === 1 ? '' : 's' }} changed
+                </p>
+
+                <UButton
+                    label="Save changes"
+                    icon="i-lucide-save"
+                    :loading="saving"
+                    @click="saveAll"
+                />
             </div>
         </div>
     </AppSettingsLayout>

@@ -55,7 +55,7 @@ const previewing = ref<number | null>(null)
 const poll = usePoll(
     3000,
     { only: ['campaign', 'writingVariant', 'writingVariantError'] },
-    { autoStart: props.writingVariant },
+    { autoStart: props.writingVariant }
 )
 
 watch(() => props.writingVariant, busy => busy ? poll.start() : poll.stop())

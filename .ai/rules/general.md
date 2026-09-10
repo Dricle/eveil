@@ -125,3 +125,5 @@ Everything that is a product decision: per-agent model mapping, pricing, discove
 
 Trap: `config()->set('eveil.crawl.delay_ms', 0)` in a test is a silent no-op. The suite still passes while every fetch sleeps for real, turning a 5s run into 19s. Test overrides go through `app(Settings::class)->set(...)`.
 
+## User-facing features must sync to marketing site + README + docs
+Shipping capability a prospect would care about (new agent type, channel, integration - eg Reddit agents) is not done when code merges. Check whether it needs reflecting in: `resources/views/marketing/` (Blade site, sells it to visitors), root `README.md`, and `GUIDELINES.md` if it changes positioning/scope. Not every internal change qualifies - ask: would this show up in a competitor comparison or a "what can Eveil do" pitch? If yes, update copy/screenshots in same PR, don't defer to a follow-up ticket.

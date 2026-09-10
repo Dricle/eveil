@@ -33,6 +33,12 @@ unlimited mailboxes, unlimited leads, your data on your own machine.
 
 ---
 
+<p align="center">
+  <img src="public/screenshot.png" alt="Eveil dashboard" width="100%">
+</p>
+
+---
+
 ## Features
 
 - **Reads your site, not a form you fill in.** Product, audience, and the

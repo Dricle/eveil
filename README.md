@@ -34,7 +34,7 @@ unlimited mailboxes, unlimited leads, your data on your own machine.
 ---
 
 <p align="center">
-  <img src="public/screenshot.png" alt="Eveil dashboard" width="100%">
+  <img src="public/screenshot-selfhosted.png" alt="Eveil dashboard" width="100%">
 </p>
 
 ---

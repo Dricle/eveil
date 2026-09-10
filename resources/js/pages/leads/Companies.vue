@@ -171,6 +171,25 @@ function clearSelection () {
     selected.value = []
 }
 
+// "Select all" only ever reaches the page currently on screen -- the
+// underlying dataset can run to hundreds of rows across pages, and picking
+// all of them at once needs the bulk endpoints to accept a filter instead of
+// an id list, which they do not today.
+const pageIds = computed(() => props.companies.data.map(company => company.id))
+const allOnPage = computed(() => pageIds.value.length > 0 && pageIds.value.every(id => selected.value.includes(id)))
+const someOnPage = computed(() => pageIds.value.some(id => selected.value.includes(id)))
+const headerCheckboxState = computed<boolean | 'indeterminate'>(() => {
+    if (allOnPage.value) {
+        return true
+    }
+
+    return someOnPage.value ? 'indeterminate' : false
+})
+
+function toggleAll () {
+    selected.value = allOnPage.value ? [] : [...pageIds.value]
+}
+
 function bulkApprove () {
     router.put(
         companyRoutes.approval.url(),
@@ -324,14 +343,25 @@ function findContacts (company: Company) {
                 </p>
             </div>
 
-            <!-- The bulk toolbar, only once something is picked: acting on a
-                 selection is the whole point of the checkboxes below. -->
+            <!-- The header checkbox picks or clears the whole page; the bulk
+                 actions only appear once something is picked. -->
             <div
-                v-if="selected.length"
-                class="flex flex-wrap items-center gap-3 rounded-lg bg-primary/10 px-3.5 py-2.5 ring ring-primary/25"
+                v-if="companies.data.length"
+                class="flex flex-wrap items-center gap-3 rounded-lg px-3.5 py-2.5 ring transition-colors"
+                :class="selected.length ? 'bg-primary/10 ring-primary/25' : 'ring-default'"
             >
-                <span class="text-sm font-medium text-highlighted">{{ selected.length }} selected</span>
-                <div class="flex flex-wrap gap-1.5">
+                <UCheckbox
+                    :model-value="headerCheckboxState"
+                    aria-label="Select all leads on this page"
+                    @update:model-value="toggleAll"
+                />
+                <span class="text-sm font-medium text-highlighted">
+                    {{ selected.length ? `${selected.length} selected` : 'Select all' }}
+                </span>
+                <div
+                    v-if="selected.length"
+                    class="ml-auto flex flex-wrap items-center gap-1.5"
+                >
                     <UButton
                         label="Approve"
                         size="xs"
@@ -351,15 +381,14 @@ function findContacts (company: Company) {
                         variant="ghost"
                         @click="bulkSetAside"
                     />
+                    <UButton
+                        label="Clear"
+                        size="xs"
+                        color="neutral"
+                        variant="link"
+                        @click="clearSelection"
+                    />
                 </div>
-                <UButton
-                    label="Clear"
-                    size="xs"
-                    color="neutral"
-                    variant="link"
-                    class="ml-auto"
-                    @click="clearSelection"
-                />
             </div>
 
             <div class="grid gap-2">

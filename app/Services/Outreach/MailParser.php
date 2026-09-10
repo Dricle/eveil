@@ -2,17 +2,26 @@
 
 namespace App\Services\Outreach;
 
+use ZBateson\MailMimeParser\Message as MimeMessage;
+
 /**
  * Turning a raw RFC 5322 message into the four things answering it needs: who
  * sent it, what it says, which of our mails it answers, and whether a machine
  * sent it.
  *
- * Deliberately partial. A full MIME parser is a package, and none of what makes
- * one big: nested multiparts, attachments, inline images. Changes any decision
- * downstream: the agent reads prose, and a cold reply is prose. What matters is
- * that the text is intelligible and that quoted-printable does not leave
- * `=C3=A9` in the middle of a French sentence, because the agent would then be
- * deciding somebody's opt-out from mojibake.
+ * MIME body extraction (`body()`) goes through `zbateson/mail-mime-parser`
+ * rather than a hand-rolled split on the boundary: a hand-rolled version here
+ * missed a `multipart/related` wrapping a `multipart/alternative` (a signature
+ * with an inline logo), which matched neither `text/plain` nor `text/` and
+ * silently returned an empty body for every reply shaped that way. Pure PHP, no
+ * extension, so it costs nothing in the self-hosted image (same reasoning as
+ * `ImapClient` refusing `ext-imap`).
+ *
+ * Everything else here stays hand-rolled on purpose: headers, address
+ * extraction, reply attribution, auto-reply detection and bounce parsing are
+ * about OUR conventions (which header wins, which phrase means "a machine sent
+ * this"), not about MIME structure, and a general-purpose parser has no opinion
+ * on any of them.
  */
 class MailParser
 {
@@ -52,15 +61,11 @@ class MailParser
      */
     public static function body(string $raw): string
     {
-        $parts = preg_split("/\r?\n\r?\n/", self::stripFetchEnvelope($raw), 2);
-        $headers = self::headers($raw);
-        $body = $parts[1] ?? '';
+        $message = MimeMessage::from(self::stripFetchEnvelope($raw), false);
 
-        if (str_contains($headers['content-type'] ?? '', 'multipart/')) {
-            $body = self::firstTextPart($body, $headers['content-type']);
-        } else {
-            $body = self::decodeBody($body, $headers['content-transfer-encoding'] ?? '');
-        }
+        // `text/plain` first; an HTML-only reply still has to be readable, so
+        // the tags are stripped rather than left for the agent to read as prose.
+        $body = $message->getTextContent() ?? html_entity_decode(strip_tags((string) $message->getHtmlContent()));
 
         return mb_trim(self::withoutQuotedReply($body));
     }
@@ -195,55 +200,15 @@ class MailParser
 
     /**
      * IMAP wraps the message in `* n FETCH (BODY[] {size}` and closes with a
-     * line of its own; neither is part of the mail.
+     * line of its own; neither is part of the mail. Public: `ImapClient` keeps
+     * this stripped copy as `raw_source`, the untouched RFC 5322 message rather
+     * than a copy still carrying IMAP's own wrapper.
      */
-    private static function stripFetchEnvelope(string $raw): string
+    public static function stripFetchEnvelope(string $raw): string
     {
         $start = preg_replace('/^\* \d+ FETCH \(.*\{\d+\}\r?\n/s', '', $raw, 1) ?? $raw;
 
         return preg_replace("/\r?\n\)\r?\n.*$/s", '', $start) ?? $start;
-    }
-
-    /**
-     * The first `text/plain` part of a multipart body, falling back to the first
-     * part of any kind: an HTML-only reply still has to be readable.
-     */
-    private static function firstTextPart(string $body, string $contentType): string
-    {
-        if (! preg_match('/boundary="?([^";\r\n]+)"?/i', $contentType, $matches)) {
-            return $body;
-        }
-
-        $parts = explode('--'.$matches[1], $body);
-        $fallback = '';
-
-        foreach ($parts as $part) {
-            $partHeaders = self::headers($part);
-            $type = $partHeaders['content-type'] ?? '';
-            $decoded = self::decodeBody(
-                preg_split("/\r?\n\r?\n/", $part, 2)[1] ?? '',
-                $partHeaders['content-transfer-encoding'] ?? '',
-            );
-
-            if (str_contains($type, 'text/plain')) {
-                return $decoded;
-            }
-
-            if ($fallback === '' && str_contains($type, 'text/')) {
-                $fallback = html_entity_decode(strip_tags($decoded));
-            }
-        }
-
-        return $fallback;
-    }
-
-    private static function decodeBody(string $body, string $encoding): string
-    {
-        return match (mb_strtolower(mb_trim($encoding))) {
-            'base64' => (string) base64_decode(preg_replace('/\s+/', '', $body) ?? '', true),
-            'quoted-printable' => quoted_printable_decode($body),
-            default => $body,
-        };
     }
 
     /**

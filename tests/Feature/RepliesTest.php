@@ -95,6 +95,7 @@ function inbound(string $body, array $overrides = []): InboundMail
         from: $overrides['from'] ?? 'marcel@friterie.test',
         subject: $overrides['subject'] ?? 'Re: vos commandes',
         body: $body,
+        rawSource: $overrides['rawSource'] ?? $body,
         isAutoReply: $overrides['isAutoReply'] ?? false,
         bounce: $overrides['bounce'] ?? null,
     );
@@ -123,6 +124,23 @@ it('attributes a reply by header, records it, and pauses before deciding anythin
 
     Queue::assertPushed(HandleReply::class, 1);
     Queue::assertPushed(fn (HandleReply $job): bool => $job->queue === 'ai');
+});
+
+it('keeps the untouched raw message alongside the parsed body', function () {
+    // The safety net: a body a `MailParser` bug got wrong stays reparseable
+    // from `raw_source` instead of being gone for good.
+    Queue::fake();
+
+    [$mailbox] = awaitingReply();
+
+    fakeImap([inbound("C'est très intéressant.", ['rawSource' => 'raw multipart bytes, not the parsed text'])]);
+
+    app(FetchReplies::class)->handle($mailbox);
+
+    $reply = Message::query()->where('direction', MessageDirection::Inbound)->sole();
+
+    expect($reply->body)->toBe("C'est très intéressant.")
+        ->and($reply->raw_source)->toBe('raw multipart bytes, not the parsed text');
 });
 
 it('leaves alone anything that does not answer one of our own mails', function () {
@@ -402,6 +420,65 @@ it('parses a real reply out of what a mail server actually sends', function () {
         ->and(MailParser::looksAutomatic($headers))->toBeFalse()
         ->and(MailParser::looksAutomatic(['auto-submitted' => 'auto-replied']))->toBeTrue()
         ->and(MailParser::looksAutomatic(['x-auto-response-suppress' => 'All']))->toBeTrue();
+});
+
+it('reads the plain-text part out of a flat multipart/alternative reply', function () {
+    $raw = "* 12 FETCH (BODY[] {400}\r\n"
+        ."From: Marcel Dupont <marcel@friterie.test>\r\n"
+        ."Subject: Re: vos commandes\r\n"
+        ."In-Reply-To: <ours-1@abcreche.test>\r\n"
+        ."Message-ID: <theirs-2@friterie.test>\r\n"
+        ."Content-Type: multipart/alternative; boundary=\"b1\"\r\n"
+        ."\r\n"
+        ."--b1\r\n"
+        ."Content-Type: text/plain; charset=UTF-8\r\n"
+        ."\r\n"
+        ."C'est très intéressant.\r\n"
+        ."--b1\r\n"
+        ."Content-Type: text/html; charset=UTF-8\r\n"
+        ."\r\n"
+        ."<p>C'est très intéressant.</p>\r\n"
+        ."--b1--\r\n"
+        .")\r\n";
+
+    expect(MailParser::body($raw))->toBe("C'est très intéressant.");
+});
+
+it('reads the plain-text part out of a multipart/related reply wrapping a nested multipart/alternative', function () {
+    // What a signature with an inline logo actually looks like on the wire:
+    // multipart/related (the images) wrapping multipart/alternative (plain +
+    // html). Treating the nested part as opaque - matching neither
+    // `text/plain` nor `text/` - is what returned an empty body for every
+    // reply shaped this way.
+    $raw = "* 12 FETCH (BODY[] {700}\r\n"
+        ."From: Patrice Schellekens <patrice@viseeon.test>\r\n"
+        ."Subject: Re: des clients horeca\r\n"
+        ."In-Reply-To: <ours-1@dricle.be>\r\n"
+        ."Message-ID: <theirs-3@viseeon.test>\r\n"
+        ."Content-Type: multipart/related; boundary=\"outer\"\r\n"
+        ."\r\n"
+        ."--outer\r\n"
+        ."Content-Type: multipart/alternative; boundary=\"inner\"\r\n"
+        ."\r\n"
+        ."--inner\r\n"
+        ."Content-Type: text/plain; charset=UTF-8\r\n"
+        ."\r\n"
+        ."Bonjour, merci pour votre message.\r\n"
+        ."--inner\r\n"
+        ."Content-Type: text/html; charset=UTF-8\r\n"
+        ."\r\n"
+        ."<p>Bonjour, merci pour votre message.</p>\r\n"
+        ."--inner--\r\n"
+        ."--outer\r\n"
+        ."Content-Type: image/png\r\n"
+        ."Content-Transfer-Encoding: base64\r\n"
+        ."Content-ID: <logo>\r\n"
+        ."\r\n"
+        ."iVBORw0KGgo=\r\n"
+        ."--outer--\r\n"
+        .")\r\n";
+
+    expect(MailParser::body($raw))->toBe('Bonjour, merci pour votre message.');
 });
 
 it('shows only conversations somebody actually answered, ordered by what needs a person', function () {

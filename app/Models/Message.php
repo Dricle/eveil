@@ -27,6 +27,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $in_reply_to
  * @property string $subject
  * @property string $body
+ * @property string|null $raw_source the untouched RFC 5322 message, inbound only - lets a `MailParser` fix backfill what an earlier bug lost
  * @property ReplyClassification|null $classification
  * @property MessageStatus|null $status
  * @property Carbon|null $sent_at
@@ -34,7 +35,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['lead_id', 'campaign_lead_id', 'email_account_id', 'step_variant_id', 'direction', 'message_id', 'in_reply_to', 'subject', 'body', 'classification', 'status', 'sent_at', 'received_at'])]
+#[Fillable(['lead_id', 'campaign_lead_id', 'email_account_id', 'step_variant_id', 'direction', 'message_id', 'in_reply_to', 'subject', 'body', 'raw_source', 'classification', 'status', 'sent_at', 'received_at'])]
 class Message extends Model
 {
     /** @use HasFactory<MessageFactory> */

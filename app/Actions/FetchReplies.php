@@ -133,6 +133,7 @@ class FetchReplies
             'in_reply_to' => $mail->inReplyTo,
             'subject' => $mail->subject,
             'body' => $mail->body,
+            'raw_source' => $mail->rawSource,
             'received_at' => now(),
         ]);
 

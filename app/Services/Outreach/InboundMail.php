@@ -18,6 +18,8 @@ class InboundMail
         public readonly string $from,
         public readonly string $subject,
         public readonly string $body,
+        /** The untouched RFC 5322 message: the safety net a `MailParser` bug backfills from. */
+        public readonly string $rawSource,
         public readonly bool $isAutoReply,
         /** Set when the mail is a delivery failure rather than an answer. */
         public readonly ?BounceReport $bounce = null,

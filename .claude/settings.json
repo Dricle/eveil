@@ -1,0 +1,34 @@
+{
+    "hooks": {
+        "PreToolUse": [
+            {
+                "matcher": "Write|Edit",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "bash .claude/hooks/remind-rules.sh",
+                        "timeout": 10
+                    }
+                ]
+            }
+        ],
+        "PostToolUse": [
+            {
+                "matcher": "Write|Edit",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "bash .claude/hooks/pint-format.sh",
+                        "timeout": 30,
+                        "statusMessage": "Running Pint..."
+                    },
+                    {
+                        "type": "command",
+                        "command": "bash .claude/hooks/check-controller-private-methods.sh",
+                        "timeout": 10
+                    }
+                ]
+            }
+        ]
+    }
+}

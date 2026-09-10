@@ -24,8 +24,8 @@ class ReplyResource extends JsonResource
         return [
             'id' => $this->id,
             'lead' => [
-                'name' => mb_trim($this->lead->first_name.' '.$this->lead->last_name) ?: $this->lead->email,
-                'company' => $this->lead->company?->name,
+                'name' => mb_trim($this->lead?->first_name.' '.$this->lead?->last_name) ?: $this->lead?->email,
+                'company' => $this->lead?->company?->name,
             ],
             'body' => $this->body,
             'classification' => $this->classification?->value,

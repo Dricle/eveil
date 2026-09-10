@@ -21,14 +21,17 @@ function save (status?: OutreachStatus) {
 <template>
     <!-- `content` gets a floor of its own: the menu otherwise inherits the
          trigger's width, which is one table column, and "Already a client"
-         arrived as "Already …". -->
+         arrived as "Already …". `itemDescription` drops Nuxt UI's default
+         single-line `truncate`: the description IS the answer to "what does
+         this do", and a one-liner cut to "Stops outreach here and at the
+         whol…" defeats the entire point of putting it there. -->
     <USelect
         :model-value="status"
         :items="options"
         variant="ghost"
         size="xs"
         class="w-full"
-        :ui="{ content: 'min-w-48' }"
+        :ui="{ content: 'min-w-80', itemDescription: 'whitespace-normal text-muted' }"
         @update:model-value="save"
     />
 </template>

@@ -2,12 +2,11 @@
 
 namespace App\Http\Middleware;
 
+use App\Actions\InboxFolders;
 use App\Ai\ProviderCredentials;
 use App\Enums\EmailAccountStatus;
-use App\Enums\MessageDirection;
 use App\Http\Resources\OrganizationResource;
 use App\Http\Resources\ProjectResource;
-use App\Models\CampaignLead;
 use App\Models\Company;
 use App\Models\EmailAccount;
 use App\Models\Project;
@@ -120,13 +119,11 @@ class HandleInertiaRequests extends Middleware
         return [
             'targets' => TargetProfile::query()->count(),
             'leads' => Company::query()->contactable()->count(),
-            // Replies only, same definition `InboxController` uses for its
-            // default list: a lead written to and still silent is not
-            // something waiting on a person.
-            'inbox' => CampaignLead::query()
-                ->whereHas('messages', fn ($messages) => $messages->where('direction', MessageDirection::Inbound))
-                ->whereHas('campaign')
-                ->count(),
+            // Todos, not a running total of everyone who ever replied: the
+            // same `InboxFolders::todoCount()` every folder badge sums from,
+            // so the sidebar can never read a different number than the
+            // screen it links to.
+            'inbox' => app(InboxFolders::class)->todoCount(),
         ];
     }
 

@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\FetchReplies;
+use App\Actions\SetOutreachStatus;
 use App\Ai\Agents\ReplyHandler;
 use App\Ai\Tools\IgnoreReply;
 use App\Ai\Tools\MarkNeedsHuman;
@@ -15,6 +16,7 @@ use App\Enums\ReplyClassification;
 use App\Enums\SuppressionLayer;
 use App\Jobs\HandleReply;
 use App\Models\CampaignLead;
+use App\Models\Company;
 use App\Models\EmailAccount;
 use App\Models\Lead;
 use App\Models\Message;
@@ -414,9 +416,9 @@ it('parses a real reply out of what a mail server actually sends', function () {
         ->and($headers['subject'])->toBe('Re: vos commandes été')
         ->and(MailParser::address($headers['from']))->toBe('marcel@friterie.test')
         ->and(MailParser::firstReference($headers))->toBe('ours-1@abcreche.test')
-        // Quoted-printable decoded, and our own mail quoted back is dropped:
-        // leaving it doubles the prompt and invites the wrong answer.
-        ->and(MailParser::body($raw))->toBe("Bonjour, c'est très intéressant.")
+        // Quoted-printable decoded, and the quoted original kept: it is part
+        // of what was actually received, and context for whatever reads it.
+        ->and(MailParser::body($raw))->toBe("Bonjour, c'est très intéressant.\r\n\r\nLe 18 août 2026, Clement a écrit :\r\n> Bonjour, votre carte est sur Facebook")
         ->and(MailParser::looksAutomatic($headers))->toBeFalse()
         ->and(MailParser::looksAutomatic(['auto-submitted' => 'auto-replied']))->toBeTrue()
         ->and(MailParser::looksAutomatic(['x-auto-response-suppress' => 'All']))->toBeTrue();
@@ -519,6 +521,181 @@ it('shows only conversations somebody actually answered, ordered by what needs a
             ->has('conversations.data.0.messages', 2)
             ->where('conversations.data.0.messages.0.direction', 'outbound')
             ->where('conversations.data.0.messages.1.direction', 'inbound'));
+});
+
+it('stops asking for attention the moment the user decides where the lead stands', function () {
+    Queue::fake();
+
+    [$mailbox, $membership] = awaitingReply();
+    $user = User::query()->firstOrFail();
+    $project = $membership->campaign->project;
+
+    fakeImap([inbound('Oui, ça m\'intéresse.')]);
+    app(FetchReplies::class)->handle($mailbox);
+
+    $reply = Message::query()->where('direction', MessageDirection::Inbound)->sole();
+    (new MarkNeedsHuman($reply))->handle(new ToolRequest(['interested' => true, 'summary' => 'Wants pricing.']));
+
+    $this->actingAs($user)->withSession(['current_project_id' => $project->id]);
+
+    $this->get(route('inbox'))
+        ->assertInertia(fn ($page) => $page->where('conversations.data.0.needs_attention', true));
+
+    // The classification never changes - it is a record of what the reply
+    // said. Only the user's own verdict on the lead should silence it, or
+    // the modal keeps reopening on every visit no matter what they picked.
+    $this->put(route('contacts.status', $membership->lead_id), ['status' => 'lost'])
+        ->assertRedirect();
+
+    // Filed into its own folder now, not sitting in `replied` waiting on
+    // anyone: that is the whole point of a status also being where it lives.
+    $this->get(route('inbox'))
+        ->assertInertia(fn ($page) => $page->has('conversations.data', 0));
+
+    $this->get(route('inbox', ['folder' => 'lost']))
+        ->assertInertia(fn ($page) => $page->where('conversations.data.0.needs_attention', false));
+});
+
+it('marks a fresh reply as a todo immediately, before the agent has classified it', function () {
+    Queue::fake();
+
+    [$mailbox, $membership] = awaitingReply();
+    $user = User::query()->firstOrFail();
+    $project = $membership->campaign->project;
+
+    fakeImap([inbound('Oui, ça m\'intéresse.')]);
+    app(FetchReplies::class)->handle($mailbox);
+
+    // Nothing has classified it yet - `HandleReply` only dispatched, `Queue::fake()`
+    // never ran it - and it must already read as a todo. `HandleReply` runs on a
+    // queue, and waiting for its verdict before showing the reply at all would mean
+    // a fresh answer is invisible for however long the worker takes to get to it.
+    expect(Message::query()->where('direction', MessageDirection::Inbound)->sole()->classification)->toBeNull();
+
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->get(route('inbox'))
+        ->assertInertia(fn ($page) => $page->where('conversations.data.0.needs_attention', true));
+});
+
+it('counts the sidebar badge as todos, not every reply that ever arrived', function () {
+    Queue::fake();
+
+    [$mailbox, $membership] = awaitingReply();
+    $user = User::query()->firstOrFail();
+    $project = $membership->campaign->project;
+
+    fakeImap([inbound('Oui, ça m\'intéresse.')]);
+    app(FetchReplies::class)->handle($mailbox);
+
+    $reply = Message::query()->where('direction', MessageDirection::Inbound)->sole();
+    (new MarkNeedsHuman($reply))->handle(new ToolRequest(['interested' => true, 'summary' => 'Wants pricing.']));
+
+    $visit = fn () => $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->get(route('dashboard'));
+
+    $visit()->assertInertia(fn ($page) => $page->where('navCounts.inbox', 1));
+
+    // Resolved, not deleted: the reply still exists, but nobody has to act
+    // on it any more, and the badge is a todo count, not a history count.
+    $this->put(route('inbox.attention', $membership->id), ['resolved' => true])->assertRedirect();
+
+    $visit()->assertInertia(fn ($page) => $page->where('navCounts.inbox', 0));
+});
+
+it('lets the user mark a conversation done, and put it back, independent of status', function () {
+    Queue::fake();
+
+    [$mailbox, $membership] = awaitingReply();
+    $user = User::query()->firstOrFail();
+    $project = $membership->campaign->project;
+
+    fakeImap([inbound('Oui, ça m\'intéresse.')]);
+    app(FetchReplies::class)->handle($mailbox);
+
+    $reply = Message::query()->where('direction', MessageDirection::Inbound)->sole();
+    (new MarkNeedsHuman($reply))->handle(new ToolRequest(['interested' => true, 'summary' => 'Wants pricing.']));
+
+    $this->actingAs($user)->withSession(['current_project_id' => $project->id]);
+
+    $this->put(route('inbox.attention', $membership->id), ['resolved' => true])
+        ->assertRedirect();
+
+    $this->get(route('inbox'))
+        ->assertInertia(fn ($page) => $page
+            ->where('conversations.data.0.resolved', true)
+            ->where('conversations.data.0.needs_attention', false));
+
+    // The one path that can reopen a resolved conversation by hand: the
+    // status is unchanged, only the user's own verdict moved.
+    $this->put(route('inbox.attention', $membership->id), ['resolved' => false])
+        ->assertRedirect();
+
+    $this->get(route('inbox'))
+        ->assertInertia(fn ($page) => $page
+            ->where('conversations.data.0.resolved', false)
+            ->where('conversations.data.0.needs_attention', true));
+});
+
+it('never lets one project resolve another project\'s conversation', function () {
+    [, $membership] = awaitingReply();
+    $user = User::query()->firstOrFail();
+
+    // A second project of the SAME organization the user legitimately owns:
+    // the scope has something real to filter against, rather than a user
+    // with no project at all, who never reaches the controller in the first
+    // place (`project.require` redirects them before this route does).
+    $other = Project::factory()->for($user->organizations()->sole())->create();
+
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $other->id])
+        ->put(route('inbox.attention', $membership->id), ['resolved' => true])
+        ->assertNotFound();
+
+    expect($membership->fresh()->attention_resolved_at)->toBeNull();
+});
+
+it('reopens attention on a fresh reply even if the last one was resolved', function () {
+    Queue::fake();
+
+    [$mailbox, $membership] = awaitingReply();
+
+    fakeImap([inbound('Oui, ça m\'intéresse.')]);
+    app(FetchReplies::class)->handle($mailbox);
+
+    $membership->update(['attention_resolved_at' => now()]);
+
+    // A second, unrelated reply - not a re-send of the first one.
+    fakeImap([inbound('Une autre question.', ['uid' => 13, 'messageId' => 'theirs-2@friterie.test'])]);
+    app(FetchReplies::class)->handle($mailbox);
+
+    expect($membership->fresh()->attention_resolved_at)->toBeNull();
+});
+
+it('resolves attention across the whole company when the company itself is set aside', function () {
+    [$user, $project] = sender();
+    $company = Company::factory()->create(['project_id' => $project->id]);
+    $lead = Lead::factory()->create(['project_id' => $project->id, 'company_id' => $company->id]);
+    $campaign = sequence($project);
+
+    $membership = CampaignLead::query()->create([
+        'campaign_id' => $campaign->id,
+        'lead_id' => $lead->id,
+        'status' => CampaignLeadStatus::Paused,
+        'attention_resolved_at' => null,
+    ]);
+
+    // Through the real route: `SetOutreachStatus::forCompany()` alone does
+    // NOT resolve attention (see the class doc - it is shared with the
+    // automatic reply pipeline), only `CompanyStatusController` does, right
+    // after it, because that route is the only one a genuine user click hits.
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->put(route('companies.status', $company->id), ['status' => 'rejected'])
+        ->assertRedirect();
+
+    expect($membership->fresh()->attention_resolved_at)->not->toBeNull();
 });
 
 it('never shows another project\'s replies', function () {
@@ -776,30 +953,29 @@ it('matches a reply against the id sending actually writes, brackets or not', fu
         ->and($membership->fresh()->status)->toBe(CampaignLeadStatus::Paused);
 });
 
-it('shows what was sent as well as what came back, in two lists', function () {
+it('shows what was sent as well as what came back, in their own folders', function () {
     [$mailbox, $membership] = awaitingReply();
     $user = User::factory()->create();
     $membership->campaign->project->organization->users()->attach($user, ['role' => 'owner']);
 
-    $visit = fn (array $query = []) => test()->actingAs($user)
+    $visit = fn (?string $folder = null) => test()->actingAs($user)
         ->withSession(['current_project_id' => $membership->campaign->project_id])
-        ->get(route('inbox', $query));
-
-    $visitSent = fn (array $query = []) => test()->actingAs($user)
-        ->withSession(['current_project_id' => $membership->campaign->project_id])
-        ->get(route('inbox.sent', $query));
+        ->get(route('inbox', $folder === null ? [] : ['folder' => $folder]));
 
     // Written to and silent: a sequence still running, and never an inbox
-    // entry. That is what keeps the default list worth opening.
+    // entry. That is what keeps the default (`replied`) folder worth opening.
     $visit()->assertInertia(fn ($page) => $page
         ->has('conversations.data', 0)
-        ->where('counts.replies', 0)
-        ->where('counts.sent', 1));
+        ->where('folders.0.key', 'replied')
+        ->where('folders.0.total', 0)
+        ->where('folders.6.key', 'sent')
+        ->where('folders.6.total', 1));
 
-    // And the same person on the other route, because "did anything actually
-    // go out" could otherwise only be answered one contact sheet at a time.
-    $visitSent()->assertInertia(fn ($page) => $page
-        ->where('filters.view', 'sent')
+    // And the same person in the other folder, because "did anything
+    // actually go out" could otherwise only be answered one contact sheet at
+    // a time.
+    $visit('sent')->assertInertia(fn ($page) => $page
+        ->where('filters.folder', 'sent')
         ->has('conversations.data', 1)
         ->where('conversations.data.0.id', $membership->id)
         ->where('conversations.data.0.messages.0.direction', 'outbound'));
@@ -810,8 +986,42 @@ it('shows what was sent as well as what came back, in two lists', function () {
 
     $visit()->assertInertia(fn ($page) => $page
         ->has('conversations.data', 1)
-        ->where('counts.replies', 1)
-        ->where('counts.sent', 1));
+        ->where('folders.0.total', 1)
+        ->where('folders.6.total', 1));
+});
+
+it('never shows the sent folder for a status folder, or vice versa', function () {
+    [, $membership] = awaitingReply();
+    $user = User::factory()->create();
+    $membership->campaign->project->organization->users()->attach($user, ['role' => 'owner']);
+
+    test()->actingAs($user)
+        ->withSession(['current_project_id' => $membership->campaign->project_id])
+        ->get(route('inbox', ['folder' => 'not-a-real-folder']))
+        ->assertNotFound();
+});
+
+it('never loses an auto-reply: it answered, and stays visible even though nothing files it anywhere', function () {
+    [$mailbox, $membership] = awaitingReply();
+    $user = User::factory()->create();
+    $membership->campaign->project->organization->users()->attach($user, ['role' => 'owner']);
+
+    // The status an out-of-office finds the lead at in practice: a step
+    // already went out, and nothing bumps it to `replied` for a machine
+    // answer (`FetchReplies::record()` skips `pause()` for one on purpose).
+    // An exact match on `status = 'replied'` made this conversation match
+    // none of the seven folders at once - answered, and invisible.
+    $membership->lead->update(['status' => OutreachStatus::Contacted]);
+
+    fakeImap([inbound('Je suis absent jusqu\'au 30 août.', ['isAutoReply' => true])]);
+    app(FetchReplies::class)->handle($mailbox);
+
+    test()->actingAs($user)
+        ->withSession(['current_project_id' => $membership->campaign->project_id])
+        ->get(route('inbox'))
+        ->assertInertia(fn ($page) => $page
+            ->has('conversations.data', 1)
+            ->where('conversations.data.0.id', $membership->id));
 });
 
 it('does not let a refused send look like one that arrived', function () {
@@ -825,7 +1035,7 @@ it('does not let a refused send look like one that arrived', function () {
 
     test()->actingAs($user)
         ->withSession(['current_project_id' => $membership->campaign->project_id])
-        ->get(route('inbox.sent'))
+        ->get(route('inbox', ['folder' => 'sent']))
         ->assertInertia(fn ($page) => $page
             // Still listed: the attempt is a fact worth keeping, and hiding it
             // would tell somebody nothing happened when something did.

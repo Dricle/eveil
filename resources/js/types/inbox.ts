@@ -41,6 +41,8 @@ export type Conversation = {
         company: string | null
     }
     classification: Classification | null
+    /** Whether the user has toggled this one done, whatever `needs_attention` says. */
+    resolved: boolean
     needs_attention: boolean
     replied_at: string | null
     /** When the last outbound message was attempted. */
@@ -48,6 +50,13 @@ export type Conversation = {
     /** What became of it. Anything but `sent` means it never reached anybody. */
     delivery: 'queued' | 'sent' | 'failed' | 'bounced' | null
     messages: ConversationMessage[]
+}
+
+/** One entry in the inbox's folder strip: an `OutreachStatus` value, or `sent`. */
+export type Folder = {
+    key: string
+    total: number
+    needs_attention: number
 }
 
 /** The funnel on a campaign's delivery screen: how far its leads have got. */

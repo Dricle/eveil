@@ -3,8 +3,11 @@
 namespace App\Actions;
 
 use App\Enums\OutreachStatus;
+use App\Models\CampaignLead;
 use App\Models\Company;
 use App\Models\Lead;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Saying where somebody stands, on both ends of the same relationship.
@@ -23,6 +26,15 @@ use App\Models\Lead;
  *   colleagues, who never asked for anything.
  * - **Erased leads are never written to.** Their `Suppressed` outlives any
  *   verdict the user later puts on the company.
+ *
+ * `forLead()`/`forCompany()` write the status only, and nothing about
+ * `attention_resolved_at`. This class is shared with `ReplyOutcomes`, which
+ * calls `forLead($lead, OutreachStatus::Replied)` as part of the AUTOMATIC
+ * pause-and-classify flow on every inbound reply - resolving attention there
+ * would silently mark a conversation nobody has looked at as done, the moment
+ * it arrives. `resolveAttentionForLead()`/`resolveAttentionForCompany()` are
+ * separate on purpose: only a genuinely user-triggered status write (the
+ * three `*StatusController`s) calls them, right after the status call.
  */
 class SetOutreachStatus
 {
@@ -44,5 +56,31 @@ class SetOutreachStatus
         if ($company !== null && $status !== OutreachStatus::Suppressed) {
             $company->update(['status' => $status]);
         }
+    }
+
+    /**
+     * The user's own status choice also resolves attention: whatever a
+     * conversation was waiting on, they just decided it. Only rows still
+     * marked unresolved are touched, so this never overwrites a moment the
+     * user already set by hand, or a later reply that reopened it.
+     */
+    public function resolveAttentionForLead(Lead $lead): void
+    {
+        $this->resolveAttention($lead->campaignLeads());
+    }
+
+    public function resolveAttentionForCompany(Company $company): void
+    {
+        $leadIds = $company->leads()->whereNull('erased_at')->pluck('id');
+
+        $this->resolveAttention(CampaignLead::query()->whereIn('lead_id', $leadIds));
+    }
+
+    /**
+     * @param  Builder<CampaignLead>|HasMany<CampaignLead, *>  $campaignLeads
+     */
+    private function resolveAttention($campaignLeads): void
+    {
+        $campaignLeads->whereNull('attention_resolved_at')->update(['attention_resolved_at' => now()]);
     }
 }

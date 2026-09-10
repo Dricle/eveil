@@ -28,7 +28,10 @@ class CompanyBulkStatusController extends Controller
         Company::query()
             ->whereIn('id', $request->collect('companies')->all())
             ->get()
-            ->each(fn (Company $company) => $this->setStatus->forCompany($company, $status));
+            ->each(function (Company $company) use ($status): void {
+                $this->setStatus->forCompany($company, $status);
+                $this->setStatus->resolveAttentionForCompany($company);
+            });
 
         return back();
     }

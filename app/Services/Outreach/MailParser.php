@@ -54,10 +54,10 @@ class MailParser
     }
 
     /**
-     * The text of the mail, decoded, with the quoted original removed.
-     *
-     * The quote is dropped because it is our own mail coming back: leaving it in
-     * doubles every prompt and invites the agent to answer the wrong half.
+     * The text of the mail, decoded. The quoted original underneath the reply
+     * is kept rather than cut: it is part of the mail that was actually
+     * received, and it is context an agent reading the reply can use (which
+     * step it answers, what was actually asked) rather than noise to strip.
      */
     public static function body(string $raw): string
     {
@@ -67,7 +67,7 @@ class MailParser
         // the tags are stripped rather than left for the agent to read as prose.
         $body = $message->getTextContent() ?? html_entity_decode(strip_tags((string) $message->getHtmlContent()));
 
-        return mb_trim(self::withoutQuotedReply($body));
+        return mb_trim($body);
     }
 
     /**
@@ -220,40 +220,5 @@ class MailParser
         $decoded = mb_decode_mimeheader($value);
 
         return $decoded === '' ? $value : $decoded;
-    }
-
-    /**
-     * Everything from the first quote marker on. Conservative on purpose: when
-     * no marker is recognised the whole text is kept, because losing the
-     * recipient's own sentence is worse than sending our mail back to the model.
-     */
-    private static function withoutQuotedReply(string $body): string
-    {
-        // `\r?$` on every one of them: mail arrives CRLF-terminated, and a
-        // bare `$` never matches because the carriage return sits between the
-        // colon and the newline. Without it none of these fire and our own mail
-        // travels back to the model quoted underneath the reply.
-        $markers = [
-            '/^On .*wrote ?:\r?$/m',
-            '/^Le .*(a écrit|a ecrit) ?:\r?$/mu',
-            '/^Am .*schrieb.*:\r?$/mu',
-            '/^-{2,} ?Original Message ?-{2,}\r?$/mi',
-            '/^_{10,}\r?$/m',
-            '/^>.*$/m',
-        ];
-
-        // Byte offsets throughout, because that is what PREG_OFFSET_CAPTURE
-        // returns: feeding one to `mb_substr` as a character count cuts an
-        // accented sentence in the middle, which is how the reply arrived
-        // truncated to "Bo".
-        $cut = strlen($body);
-
-        foreach ($markers as $marker) {
-            if (preg_match($marker, $body, $matches, PREG_OFFSET_CAPTURE) === 1) {
-                $cut = min($cut, (int) $matches[0][1]);
-            }
-        }
-
-        return substr($body, 0, $cut);
     }
 }

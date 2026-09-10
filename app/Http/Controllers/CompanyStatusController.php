@@ -24,10 +24,10 @@ class CompanyStatusController extends Controller
 
     public function update(StatusRequest $request, int $company): RedirectResponse
     {
-        $this->setStatus->forCompany(
-            Company::query()->findOrFail($company),
-            OutreachStatus::from($request->string('status')->value()),
-        );
+        $company = Company::query()->findOrFail($company);
+
+        $this->setStatus->forCompany($company, OutreachStatus::from($request->string('status')->value()));
+        $this->setStatus->resolveAttentionForCompany($company);
 
         return back();
     }

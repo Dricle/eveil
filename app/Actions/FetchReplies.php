@@ -230,6 +230,10 @@ class FetchReplies
             'status' => CampaignLeadStatus::Paused,
             'paused_at' => now(),
             'pause_reason' => 'replied',
+            // A new answer is new attention, whatever the last one was
+            // resolved to: somebody who replied twice does not get the
+            // second reply hidden because the first one was dealt with.
+            'attention_resolved_at' => null,
         ]);
 
         $reply->lead->update(['status' => OutreachStatus::Replied]);

@@ -33,6 +33,7 @@ use App\Http\Controllers\CompanyStatusController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ContactSearchController;
 use App\Http\Controllers\ContactStatusController;
+use App\Http\Controllers\ConversationAttentionController;
 use App\Http\Controllers\ConversationReplyController;
 use App\Http\Controllers\CurrentProjectController;
 use App\Http\Controllers\DashboardController;
@@ -344,15 +345,23 @@ Route::middleware(['auth', 'verified', 'project.set'])->group(function (): void 
             ->only(['index', 'store', 'show', 'update', 'destroy']);
 
         /*
-         * Who answered. Only real conversations reach this screen: a lead that
-         * was written to and said nothing is a sequence still running, not an
-         * inbox entry. Answering by hand stops the sequence: somebody being
-         * written to by a person must not also get the queued follow-up.
+         * Who answered, filed one folder per status plus `sent` - see
+         * `InboxController`. Only real conversations reach any folder but
+         * `sent`: a lead that was written to and said nothing is a sequence
+         * still running, not an inbox entry. Answering by hand stops the
+         * sequence: somebody being written to by a person must not also get
+         * the queued follow-up.
+         *
+         * `{folder?}` is a route segment rather than a query param on
+         * purpose: a param a pagination link can silently drop switches the
+         * screen back to the default folder mid-click, which is exactly the
+         * bug a segment makes impossible.
          */
-        Route::get('inbox', [InboxController::class, 'index'])->name('inbox');
-        Route::get('inbox/sent', [InboxController::class, 'sent'])->name('inbox.sent');
+        Route::get('inbox/{folder?}', [InboxController::class, 'index'])->name('inbox');
         Route::post('inbox/{conversation}/reply', [ConversationReplyController::class, 'store'])
             ->name('inbox.reply');
+        Route::put('inbox/{conversation}/attention', [ConversationAttentionController::class, 'update'])
+            ->name('inbox.attention');
 
         /*
          * A list somebody already had. A button on Leads, never a section of

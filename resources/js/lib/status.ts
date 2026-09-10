@@ -14,18 +14,22 @@
  */
 export type OutreachStatus = 'new' | 'queued' | 'contacted' | 'replied' | 'won' | 'lost' | 'client' | 'rejected' | 'suppressed'
 
-export type StatusOption = { label: string, value: OutreachStatus, icon: string }
+export type StatusOption = { label: string, value: OutreachStatus, icon: string, description: string }
 
+// `description` renders under the label in the dropdown (USelect's
+// `descriptionKey` default) - the answer to "what does picking this
+// actually do", right where the choice is made, so nobody has to guess or
+// go find a doc for it.
 export const OUTREACH_STATUSES: StatusOption[] = [
-    { label: 'New', value: 'new', icon: 'i-lucide-circle-dashed' },
-    { label: 'Queued', value: 'queued', icon: 'i-lucide-clock' },
-    { label: 'Contacted', value: 'contacted', icon: 'i-lucide-send' },
-    { label: 'Replied', value: 'replied', icon: 'i-lucide-message-square' },
-    { label: 'Won', value: 'won', icon: 'i-lucide-trophy' },
-    { label: 'Lost', value: 'lost', icon: 'i-lucide-circle-slash' },
-    { label: 'Already a client', value: 'client', icon: 'i-lucide-handshake' },
-    { label: 'Not this one', value: 'rejected', icon: 'i-lucide-x' },
-    { label: 'Unsubscribed', value: 'suppressed', icon: 'i-lucide-ban' }
+    { label: 'New', value: 'new', icon: 'i-lucide-circle-dashed', description: 'Not written to yet. The default for anyone just found.' },
+    { label: 'Queued', value: 'queued', icon: 'i-lucide-clock', description: 'Waiting its turn in a running sequence.' },
+    { label: 'Contacted', value: 'contacted', icon: 'i-lucide-send', description: 'At least one mail has gone out.' },
+    { label: 'Replied', value: 'replied', icon: 'i-lucide-message-square', description: 'They wrote back. Set automatically the moment a reply arrives.' },
+    { label: 'Won', value: 'won', icon: 'i-lucide-trophy', description: 'Deal closed. Stops outreach here and at the whole company.' },
+    { label: 'Lost', value: 'lost', icon: 'i-lucide-circle-slash', description: 'Said no, or it fell through. Stops outreach here and at the whole company.' },
+    { label: 'Already a client', value: 'client', icon: 'i-lucide-handshake', description: 'Already buys from you. Stops outreach here and at the whole company - use for a client a search run should never cold-mail.' },
+    { label: 'Not this one', value: 'rejected', icon: 'i-lucide-x', description: 'Not a fit for this project. Stops outreach here and at the whole company.' },
+    { label: 'Unsubscribed', value: 'suppressed', icon: 'i-lucide-ban', description: 'Opted out. Stops outreach for this person only - never spreads to colleagues at the same company.' }
 ]
 
 /** The statuses that stop anything being sent. */

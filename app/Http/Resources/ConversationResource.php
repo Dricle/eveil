@@ -36,10 +36,20 @@ class ConversationResource extends JsonResource
                 'status' => $this->lead->status->value,
                 'company' => $this->lead->company?->name,
             ],
-            // What the agent made of the latest reply, which is what decides the
-            // order of this list and whether anybody has to act.
+            // What the agent made of the latest reply. A permanent record of
+            // what it WAS, so it stays on screen (in a neutral color once
+            // resolved) even after `needs_attention` clears - unlike that
+            // flag, this one never goes away or gets a color back.
             'classification' => $lastInbound?->classification?->value,
-            'needs_attention' => $lastInbound?->classification?->needsAttention() ?? false,
+            // Whether a person still has to look at this one. `resolved` is
+            // the actual stored state - set by the user's own toggle, by a
+            // status change (`SetOutreachStatus`), or cleared the moment a
+            // new reply arrives (`FetchReplies::pause()`). `needs_attention`
+            // is `CampaignLead::needsAttention()` - the SAME definition
+            // `InboxController` sums for a folder's badge count, so the two
+            // can never quietly disagree.
+            'resolved' => $this->attention_resolved_at !== null,
+            'needs_attention' => $this->needsAttention(),
             'replied_at' => $lastInbound?->received_at?->toIso8601String(),
             // What became of the last thing we sent. A send that was refused
             // still leaves a row, on purpose: the attempt is a fact worth

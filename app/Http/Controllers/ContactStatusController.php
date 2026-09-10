@@ -22,10 +22,10 @@ class ContactStatusController extends Controller
 
     public function update(StatusRequest $request, int $contact): RedirectResponse
     {
-        $this->setStatus->forLead(
-            Lead::query()->findOrFail($contact),
-            OutreachStatus::from($request->string('status')->value()),
-        );
+        $lead = Lead::query()->findOrFail($contact);
+
+        $this->setStatus->forLead($lead, OutreachStatus::from($request->string('status')->value()));
+        $this->setStatus->resolveAttentionForLead($lead);
 
         return back();
     }

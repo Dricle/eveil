@@ -18,8 +18,11 @@ class ConversationReplyController extends Controller
 {
     public function store(ReplyRequest $request, ReplyToConversation $reply, int $conversation): RedirectResponse
     {
+        // `CampaignLead` carries no `project_id` of its own: `whereHas('campaign')`
+        // is what confines this to the current project rather than any id on the
+        // instance, the same guard `ConversationAttentionController` uses.
         $reply->handle(
-            CampaignLead::query()->with(['lead', 'emailAccount', 'messages'])->findOrFail($conversation),
+            CampaignLead::query()->whereHas('campaign')->with(['lead', 'emailAccount', 'messages'])->findOrFail($conversation),
             $request->string('body')->value(),
         );
 

@@ -4,6 +4,7 @@ import { computed, watch } from 'vue'
 import TargetHeader from '@/components/TargetHeader.vue'
 import TargetsLayout from '@/layouts/TargetsLayout.vue'
 import discoveryRuns from '@/routes/discovery-runs'
+import targets from '@/routes/targets'
 import type { DiscoveryRun, TargetProfile } from '@/types'
 
 const props = defineProps<{
@@ -48,13 +49,23 @@ function status (run: DiscoveryRun) {
                     the directories they turn up.
                 </p>
 
-                <UButton
-                    icon="i-lucide-radar"
-                    color="neutral"
-                    variant="subtle"
-                    label="New search"
-                    @click="router.post(discoveryRuns.store.url(), { target_profile: profile.id })"
-                />
+                <div class="flex shrink-0 gap-2">
+                    <UButton
+                        :icon="profile.is_active ? 'i-lucide-pause' : 'i-lucide-play'"
+                        :color="profile.is_active ? 'warning' : 'primary'"
+                        variant="subtle"
+                        :label="profile.is_active ? 'Pause' : 'Resume'"
+                        @click="router.post(targets.activation.url(profile.id))"
+                    />
+
+                    <UButton
+                        icon="i-lucide-radar"
+                        color="neutral"
+                        variant="subtle"
+                        label="New search"
+                        @click="router.post(discoveryRuns.store.url(), { target_profile: profile.id })"
+                    />
+                </div>
             </div>
 
             <p

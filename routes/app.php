@@ -53,6 +53,7 @@ use App\Http\Controllers\ProjectKnowledgeBaseController;
 use App\Http\Controllers\Settings\MemberController;
 use App\Http\Controllers\StepVariantController;
 use App\Http\Controllers\StepVariantGenerationController;
+use App\Http\Controllers\TargetProfileActivationController;
 use App\Http\Controllers\TargetProfileController;
 use App\Http\Controllers\TargetProfileDerivationController;
 use Illuminate\Support\Facades\Route;
@@ -222,6 +223,8 @@ Route::middleware(['auth', 'verified', 'project.set'])->group(function (): void 
                 ->name('targets.searches');
             Route::resource('targets', TargetProfileController::class)
                 ->only(['index', 'create', 'store', 'show', 'update', 'destroy']);
+            Route::post('targets/{target}/activation', [TargetProfileActivationController::class, 'store'])
+                ->name('targets.activation');
 
             /*
              * One flag stops a run and one dispatch replays a single node,

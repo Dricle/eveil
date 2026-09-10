@@ -366,6 +366,43 @@ it('claims the queued run instead of opening a second one', function () {
         ->and(TargetProfile::query()->withoutGlobalScopes()->sole()->name)->toBe('Regional wholesalers');
 });
 
+it('toggles a profile active on and off, without touching its source or criteria', function () {
+    $user = targeter();
+    $project = Project::factory()->for($user->organizations()->sole())->create();
+
+    $profile = TargetProfile::factory()->create([
+        'project_id' => $project->id,
+        'is_active' => true,
+        'source' => TargetProfileSource::Agent,
+        'criteria' => ['sectors' => ['web agencies'], 'confidence' => 90],
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('targets.activation', $profile))
+        ->assertRedirect(route('targets.searches', $profile));
+
+    expect($profile->refresh()->is_active)->toBeFalse()
+        ->and($profile->source)->toBe(TargetProfileSource::Agent)
+        ->and($profile->criteria['sectors'])->toBe(['web agencies']);
+
+    $this->actingAs($user)->post(route('targets.activation', $profile));
+
+    expect($profile->refresh()->is_active)->toBeTrue();
+});
+
+it('does not let a project pause another project\'s profile', function () {
+    $user = targeter();
+    Project::factory()->for($user->organizations()->sole())->create();
+
+    $other = TargetProfile::factory()->create(['is_active' => true]);
+
+    $this->actingAs($user)
+        ->post(route('targets.activation', $other))
+        ->assertNotFound();
+
+    expect($other->fresh()->is_active)->toBeTrue();
+});
+
 it('keeps the two angles a partner profile is written to on', function () {
     $user = targeter();
     $project = Project::factory()->for($user->organizations()->sole())->create();

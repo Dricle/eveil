@@ -237,7 +237,6 @@ function note () {
                 <p class="text-sm text-dimmed">
                     {{ mailbox.sent_today }} of {{ mailbox.allowance_today }} sent today<span v-if="mailbox.ramping_up"> · ramping up towards {{ mailbox.daily_limit }}</span>
                     <span v-if="mailbox.projects.length === 0"> · no project may send through it yet</span>
-                    <span> · pauses past {{ Math.round(mailbox.effective_max_bounce_rate * 100) }}% bounced<template v-if="mailbox.max_bounce_rate === null"> (instance default)</template></span>
                 </p>
 
                 <p

@@ -45,7 +45,7 @@ class MailboxRequest extends FormRequest
             // mailbox's ordinary day; several hundred is a bulk sender, which
             // is the thing whose reputation we are trying not to inherit.
             'daily_limit' => ['required', 'integer', 'min:1', 'max:500'],
-            // Null keeps the instance default. The mailbox is what is
+            // Null keeps the default. The mailbox is what is
             // actually at stake, so its own owner may accept more risk than
             // the superadmin's instance-wide ceiling, never less by mistake:
             // there is no way to submit 0.

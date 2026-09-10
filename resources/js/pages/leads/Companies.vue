@@ -32,6 +32,7 @@ const props = defineProps<{
     unapproved: number
     counts: { all: number, awaiting: number, approved: number, no_contact: number, set_aside: number }
     activity: Activity
+    knownClients: { companies: number, leads: number } | null
 }>()
 
 // Anything in flight, not just a contact search: a discovery run fills this
@@ -72,6 +73,12 @@ const addingLinks = ref(false)
 const linkProfile = ref<number | undefined>(props.profiles[0]?.id)
 const links = ref('')
 const PROFILE_SELECT_OPTIONS = computed(() => props.profiles.map(item => ({ label: item.name, value: item.id })))
+
+// Clients the user already had, told to the app before a search run finds
+// them by hand. No profile select, unlike "Add links": marked `client`
+// straight away, never scored against anything.
+const addingKnownClients = ref(false)
+const knownClientEntries = ref('')
 
 const SCORE_OPTIONS = [
     { label: 'Any score', value: 0 },
@@ -242,6 +249,14 @@ function findContacts (company: Company) {
         <div class="space-y-4">
             <SearchingBanner :activity="activity" />
 
+            <UAlert
+                v-if="props.knownClients"
+                color="success"
+                variant="subtle"
+                icon="i-lucide-badge-check"
+                :title="`${props.knownClients.companies} compan${props.knownClients.companies === 1 ? 'y' : 'ies'} and ${props.knownClients.leads} contact${props.knownClients.leads === 1 ? '' : 's'} marked as client`"
+            />
+
             <!-- One bar holds everything that narrows the list: the free
                  search, the score/profile selects, and the column boxes. -->
             <div class="space-y-3 rounded-lg p-3 ring ring-default">
@@ -301,6 +316,16 @@ function findContacts (company: Company) {
                             variant="subtle"
                             label="Add links"
                             @click="addingLinks = true"
+                        />
+
+                        <!-- Clients the user already had, so a later search
+                             never writes them in as a fresh lead. -->
+                        <UButton
+                            icon="i-lucide-badge-check"
+                            color="neutral"
+                            variant="subtle"
+                            label="Mark existing clients"
+                            @click="addingKnownClients = true"
                         />
                     </div>
                 </div>
@@ -653,6 +678,52 @@ function findContacts (company: Company) {
                         <UButton
                             type="submit"
                             label="Add links"
+                            :loading="processing"
+                        />
+                    </div>
+                </Form>
+            </template>
+        </UModal>
+
+        <UModal
+            v-model:open="addingKnownClients"
+            title="Mark existing clients"
+            description="Emails or websites of clients you already have. Marked as client right away, so a search run never contacts them as a new lead."
+            :ui="{ content: 'max-w-xl' }"
+        >
+            <template #body>
+                <Form
+                    v-slot="{ errors, processing }"
+                    v-bind="companyRoutes.knownClients.store.form()"
+                    class="space-y-4"
+                    @success="addingKnownClients = false; knownClientEntries = ''"
+                >
+                    <UFormField
+                        label="Emails or websites"
+                        name="entries"
+                        :error="errors.entries"
+                        help="One per line, up to 500."
+                    >
+                        <UTextarea
+                            v-model="knownClientEntries"
+                            name="entries"
+                            placeholder="jean@example.com&#10;https://example.com"
+                            :rows="8"
+                            class="w-full"
+                        />
+                    </UFormField>
+
+                    <div class="flex justify-end gap-2">
+                        <UButton
+                            color="neutral"
+                            variant="ghost"
+                            label="Cancel"
+                            :disabled="processing"
+                            @click="addingKnownClients = false"
+                        />
+                        <UButton
+                            type="submit"
+                            label="Mark as clients"
                             :loading="processing"
                         />
                     </div>

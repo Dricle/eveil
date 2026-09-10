@@ -41,6 +41,7 @@ use App\Http\Controllers\DiscoveryRunCancellationController;
 use App\Http\Controllers\DiscoveryRunController;
 use App\Http\Controllers\DiscoveryTaskReplayController;
 use App\Http\Controllers\InboxController;
+use App\Http\Controllers\KnownClientController;
 use App\Http\Controllers\LeadImportController;
 use App\Http\Controllers\MailboxController;
 use App\Http\Controllers\MailboxReactivateController;
@@ -256,6 +257,14 @@ Route::middleware(['auth', 'verified', 'project.set'])->group(function (): void 
          */
         Route::post('companies/links', [DiscoveryLinkController::class, 'store'])
             ->name('companies.links.store');
+
+        /*
+         * A client the user already had before any search ran. Emails or
+         * websites, marked `client` on arrival so a later discovery run never
+         * writes the row `new` in the first place.
+         */
+        Route::post('companies/known-clients', [KnownClientController::class, 'store'])
+            ->name('companies.known-clients.store');
 
         /*
          * And the people at them. One search covers one company, or every kept

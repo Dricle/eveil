@@ -77,6 +77,9 @@ class CompanyController extends Controller
             'profiles' => TargetProfile::query()->orderBy('id')->get(['id', 'name']),
             // So a list that is still filling up does not read as an empty one.
             'activity' => $activity->summary(),
+            // Flashed by KnownClientController, so it appears once on the list
+            // it just changed.
+            'knownClients' => $request->session()->get('known_clients'),
             'filters' => [
                 'profile' => $profile,
                 'min_score' => $minScore,

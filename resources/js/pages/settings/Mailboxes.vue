@@ -337,7 +337,6 @@ function note () {
                                 min="0.01"
                                 max="1"
                                 step="0.01"
-                                placeholder="Instance default"
                                 class="w-full"
                             />
                         </UFormField>

@@ -97,6 +97,25 @@ it('finds companies on the map, qualifies them and stores the pair', function ()
         ->and($evaluation->company_id)->toBe($company->id);
 });
 
+it('stores model-written text longer than 255 characters without truncating it', function () {
+    activeTargetProfile();
+
+    $longIndustry = str_repeat('Une friterie familiale et artisanale à Charleroi. ', 20);
+
+    DiscoveryPlanner::fake([plan(overpass: [overpassProbe()])]);
+    CompanyQualifier::fake([[...verdict(), 'industry' => $longIndustry]]);
+
+    Http::fake([
+        '*/api/interpreter' => Http::response(['elements' => [osmElement('Friterie du Centre', 'https://friterie-centre.be')]]),
+        '*/robots.txt' => Http::response('', 404),
+        'https://friterie-centre.be/' => Http::response(page()),
+    ]);
+
+    $this->artisan('eveil:discover-companies')->assertSuccessful();
+
+    expect(Company::sole()->industry)->toBe($longIndustry);
+});
+
 it('records the plan the agent explained before executing', function () {
     activeTargetProfile();
     DiscoveryPlanner::fake([plan(overpass: [overpassProbe()])]);

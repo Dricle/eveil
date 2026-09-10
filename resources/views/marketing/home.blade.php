@@ -38,9 +38,7 @@
                     <span style="width:9px;height:9px;border-radius:999px;background:rgba(232,236,242,.18);display:block"></span>
                     <span style="font-family:'Geist Mono',monospace;font-size:11px;color:rgba(232,236,242,.4);margin-left:10px">discovery run / live</span>
                 </div>
-                <div style="aspect-ratio:16/8.4;display:flex;align-items:center;justify-content:center;background-image:repeating-linear-gradient(135deg, rgba(111,211,236,.07) 0 7px, transparent 7px 15px)">
-                    <span style="font-family:'Geist Mono',monospace;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:#6fd3ec;border:1px solid rgba(111,211,236,.3);border-radius:8px;padding:8px 13px;background:#0b0e14">screenshot / discovery run</span>
-                </div>
+                <img src="{{ asset('screenshot.png') }}" alt="Eveil dashboard" style="display:block;width:100%;height:auto">
             </figure>
             <figcaption style="margin:12px 0 0;font-size:13px;color:rgba(232,236,242,.42)">Live progress on a running discovery job, with cancel and per-task replay.</figcaption>
         </div>

@@ -37,14 +37,13 @@ class ImapClient
         $socket = $this->connect($account);
 
         try {
-            $this->command($socket, 'a1', 'LOGIN "'.$account->imap_username.'" "'.$account->imap_password.'"');
-            $this->command($socket, 'a2', 'SELECT INBOX');
+            $this->authenticate($socket, $account);
 
             // `UID SEARCH UID n:*` always returns at least one UID. The last
             // one: even when nothing is above it, so the result is filtered
             // rather than trusted.
             $from = ($lastUid ?? 0) + 1;
-            $found = $this->searchUids($socket, $from);
+            $found = $this->search($socket, 'a3', 'UID '.$from.':*');
             $fresh = array_values(array_filter($found, fn (int $uid): bool => $uid >= $from));
 
             sort($fresh);
@@ -68,6 +67,54 @@ class ImapClient
             @fwrite($socket, "a9 LOGOUT\r\n");
             @fclose($socket);
         }
+    }
+
+    /**
+     * One named mail, read again regardless of where `last_inbound_uid`
+     * stands: the recovery path for a reply a `MailParser` bug mangled the
+     * first time. `null` means the server no longer has it - deleted, or
+     * past the mailbox's own retention - not that nothing was ever received.
+     *
+     * PEEK here too: a recovery read must not be the thing that finally marks
+     * the user's own mail read in their own inbox.
+     *
+     * @throws ImapFailure
+     */
+    public function fetchByMessageId(EmailAccount $account, string $messageId): ?InboundMail
+    {
+        $socket = $this->connect($account);
+
+        try {
+            $this->authenticate($socket, $account);
+
+            $uids = $this->search($socket, 'a3', 'HEADER "Message-ID" "<'.mb_trim($messageId, '<> ').'>"');
+
+            if ($uids === []) {
+                return null;
+            }
+
+            // The most recent copy, on the rare chance the server holds more
+            // than one (a delivered-twice mail, a moved folder re-indexed).
+            return $this->fetchOne($socket, (int) end($uids));
+        } catch (ImapFailure $e) {
+            throw $e;
+        } catch (Throwable $e) {
+            throw new ImapFailure($e->getMessage());
+        } finally {
+            @fwrite($socket, "a9 LOGOUT\r\n");
+            @fclose($socket);
+        }
+    }
+
+    /**
+     * @param  resource  $socket
+     *
+     * @throws ImapFailure
+     */
+    private function authenticate($socket, EmailAccount $account): void
+    {
+        $this->command($socket, 'a1', 'LOGIN "'.$account->imap_username.'" "'.$account->imap_password.'"');
+        $this->command($socket, 'a2', 'SELECT INBOX');
     }
 
     /**
@@ -103,9 +150,9 @@ class ImapClient
      * @param  resource  $socket
      * @return array<int, int>
      */
-    private function searchUids($socket, int $from): array
+    private function search($socket, string $tag, string $criteria): array
     {
-        $reply = $this->command($socket, 'a3', 'UID SEARCH UID '.$from.':*');
+        $reply = $this->command($socket, $tag, 'UID SEARCH '.$criteria);
 
         preg_match('/^\* SEARCH([0-9 ]*)/m', $reply, $matches);
 

@@ -3,9 +3,11 @@
 use App\Ai\Agents\CompanyQualifier;
 use App\Ai\Agents\DiscoveryPlanner;
 use App\Ai\Agents\ResultTriage;
+use App\Enums\AgentRunStatus;
 use App\Enums\DiscoveryDiagnosis;
 use App\Enums\DiscoveryRunStatus;
 use App\Enums\HostKind;
+use App\Models\AgentRun;
 use App\Models\Company;
 use App\Models\CompanyTargetEvaluation;
 use App\Models\DiscoveryRun;
@@ -114,6 +116,26 @@ it('stores model-written text longer than 255 characters without truncating it',
     $this->artisan('eveil:discover-companies')->assertSuccessful();
 
     expect(Company::sole()->industry)->toBe($longIndustry);
+});
+
+it('strips a NUL byte from the model answer before it hits agent_runs.output', function () {
+    activeTargetProfile();
+
+    DiscoveryPlanner::fake([plan(overpass: [overpassProbe()])]);
+    CompanyQualifier::fake([[...verdict(), 'fit_reason' => "Communiqu\0e de presse."]]);
+
+    Http::fake([
+        '*/api/interpreter' => Http::response(['elements' => [osmElement('Friterie du Centre', 'https://friterie-centre.be')]]),
+        '*/robots.txt' => Http::response('', 404),
+        'https://friterie-centre.be/' => Http::response(page()),
+    ]);
+
+    $this->artisan('eveil:discover-companies')->assertSuccessful();
+
+    $run = AgentRun::where('agent', CompanyQualifier::slug())->sole();
+
+    expect($run->status)->toBe(AgentRunStatus::Succeeded)
+        ->and($run->output['structured']['fit_reason'])->toBe('Communique de presse.');
 });
 
 it('records the plan the agent explained before executing', function () {

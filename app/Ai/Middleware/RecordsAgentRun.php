@@ -46,7 +46,7 @@ class RecordsAgentRun
             // overwritten below with whoever actually did.
             'provider' => $prompt->provider->name(),
             'model' => $prompt->model,
-            'input' => ['prompt' => $prompt->prompt],
+            'input' => $this->storable(['prompt' => $prompt->prompt]),
         ];
 
         // A run queued from a screen already has its row, opened as `pending`
@@ -104,9 +104,9 @@ class RecordsAgentRun
                 // for it. Absent on a fake, so the request stands in.
                 'provider' => $response->meta->provider ?? $run->provider,
                 'model' => $response->meta->model ?? $run->model,
-                'output' => property_exists($response, 'structured')
+                'output' => $this->storable(property_exists($response, 'structured')
                     ? ['structured' => $response->structured]
-                    : ['text' => $response->text],
+                    : ['text' => $response->text]),
                 'tokens_in' => $this->inputTokens($response->usage),
                 'tokens_out' => $response->usage->completionTokens,
                 'duration_ms' => $this->elapsed($startedAt),
@@ -130,5 +130,26 @@ class RecordsAgentRun
     private function elapsed(float $startedAt): int
     {
         return (int) round((microtime(true) - $startedAt) * 1000);
+    }
+
+    /**
+     * Postgres JSONB rejects a NUL byte outright, and a model answer can
+     * carry one: a provider was seen returning it mid-word in place of an
+     * accented character. `PageFetcher::storable()` strips the same byte
+     * from crawled pages for the same reason.
+     *
+     * @param  array<array-key, mixed>  $value
+     * @return array<array-key, mixed>
+     */
+    private function storable(array $value): array
+    {
+        return array_map(
+            fn ($item) => match (true) {
+                is_string($item) => str_replace("\0", '', $item),
+                is_array($item) => $this->storable($item),
+                default => $item,
+            },
+            $value,
+        );
     }
 }

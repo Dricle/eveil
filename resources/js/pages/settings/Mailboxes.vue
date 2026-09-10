@@ -135,7 +135,7 @@ function note () {
     <SettingsLayout title="Mailboxes">
         <Head title="Mailboxes" />
 
-        <div class="max-w-3xl space-y-4">
+        <div class="space-y-4">
             <p class="text-sm text-muted">
                 Mail goes out through your own mailbox, over plain SMTP, and
                 replies are read back over IMAP. Nothing is relayed through a

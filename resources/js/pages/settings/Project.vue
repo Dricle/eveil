@@ -52,7 +52,7 @@ const AUTONOMY = [
     <SettingsLayout title="Project">
         <Head title="Project" />
 
-        <div class="max-w-2xl space-y-4">
+        <div class="space-y-4">
             <UCard>
                 <template #header>
                     <h2 class="font-medium">

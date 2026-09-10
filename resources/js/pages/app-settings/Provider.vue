@@ -21,7 +21,7 @@ const selected = ref(props.providers[0]?.name ?? 'anthropic')
     <AppSettingsLayout title="AI provider">
         <Head title="AI provider" />
 
-        <div class="max-w-3xl space-y-4">
+        <div class="space-y-4">
             <UCard>
                 <template #header>
                     <h2 class="font-medium">

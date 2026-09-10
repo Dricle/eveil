@@ -117,7 +117,7 @@ watch(() => props.project, fill, { immediate: true, deep: true })
     <SettingsLayout title="Project knowledge">
         <Head title="Project knowledge" />
 
-        <div class="max-w-2xl space-y-4">
+        <div class="space-y-4">
             <UAlert
                 v-if="project.last_analysis?.status === 'failed'"
                 color="error"

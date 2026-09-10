@@ -24,7 +24,7 @@ watch(() => props.sending, (sending) => {
         <Form
             v-slot="{ errors, processing, recentlySuccessful }"
             v-bind="sendingRoutes.update.form()"
-            class="max-w-2xl space-y-4"
+            class="space-y-4"
         >
             <UCard>
                 <template #header>

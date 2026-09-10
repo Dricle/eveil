@@ -75,7 +75,7 @@ const GROUPS: { title: string, hint: string, fields: { name: string, label: stri
         <Form
             v-slot="{ errors, processing, recentlySuccessful }"
             v-bind="limitRoutes.update.form()"
-            class="max-w-3xl space-y-4"
+            class="space-y-4"
         >
             <UCard
                 v-for="group in GROUPS"

@@ -46,7 +46,7 @@ function removeMember (member: Member) {
     <SettingsLayout title="Members">
         <Head title="Members" />
 
-        <div class="max-w-3xl space-y-6">
+        <div class="space-y-6">
             <p class="text-sm text-muted">
                 Owner and Admin see every project in this organization.
                 A Member sees only the projects ticked below for them, and a

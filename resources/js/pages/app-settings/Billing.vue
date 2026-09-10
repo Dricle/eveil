@@ -31,7 +31,7 @@ watch(() => props.billing, (billing) => {
         <Form
             v-slot="{ errors, processing, recentlySuccessful }"
             v-bind="billingRoutes.update.form()"
-            class="max-w-2xl space-y-4"
+            class="space-y-4"
         >
             <UCard>
                 <template #header>

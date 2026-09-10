@@ -56,7 +56,7 @@ function describe (row: CreditTransactionRow): string {
     <SettingsLayout title="Billing">
         <Head title="Billing" />
 
-        <div class="max-w-2xl space-y-6">
+        <div class="space-y-6">
             <UAlert
                 v-if="checkout === 'success'"
                 color="success"

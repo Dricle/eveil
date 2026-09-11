@@ -766,6 +766,10 @@ it('answers from the mailbox the sequence pinned, in the same thread, and stops 
         // a machine looks like.
         ->and($fake->sent[0]['in_reply_to'])->toBe('theirs-9@friterie.test')
         ->and($fake->sent[0]['subject'])->toBe('Re: vos commandes')
+        // Quoted underneath, the way a hand-typed reply would be: their own
+        // words, attributed to them, not left to arrive as a standalone mail.
+        ->and($fake->sent[0]['quote'])->toContain('marcel@friterie.test')
+        ->and($fake->sent[0]['quote'])->toContain('> Quels sont vos tarifs ?')
         // Somebody being written to by hand must not also receive the queued
         // automated follow-up.
         ->and($membership->refresh()->status)->toBe(CampaignLeadStatus::Stopped)

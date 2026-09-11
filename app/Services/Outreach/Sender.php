@@ -46,6 +46,7 @@ class Sender
         string $subject,
         string $body,
         ?string $inReplyTo = null,
+        ?string $quote = null,
     ): string {
         $messageId = $this->messageId($account);
 
@@ -55,13 +56,21 @@ class Sender
         $redirect = $this->redirect();
         $recipient = $redirect ?? (string) $lead->email;
 
+        $text = $this->withSignature($body, $account);
+
+        // The quoted message underneath, exactly where a human mail client
+        // puts it: below the signature, never between it and the new text.
+        if ($quote !== null) {
+            $text = mb_rtrim($text)."\n\n".$quote;
+        }
+
         $mail = (new Email)
             ->from(new Address($account->from_email, $account->from_name))
             ->to($recipient)
             ->subject($this->subjectFor($lead, $subject))
             // Plain text only. A multipart mail with an HTML half is how every
             // bulk sender writes, and none of the personalisation above needs it.
-            ->text($this->withSignature($body, $account));
+            ->text($text);
 
         $headers = $mail->getHeaders();
         $headers->addIdHeader('Message-ID', mb_trim($messageId, '<>'));

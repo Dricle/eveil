@@ -1,0 +1,11 @@
+{
+    "$schema": "node_modules/wrangler/config-schema.json",
+    "name": "eveil",
+    "compatibility_date": "2026-09-10",
+    "observability": {
+        "enabled": true
+    },
+    "assets": {
+        "directory": ".vitepress/dist"
+    }
+}

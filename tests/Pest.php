@@ -44,11 +44,13 @@ expect()->extend('toBeOne', function () {
 |
 */
 
+use App\Actions\EnrolCampaign;
 use App\Enums\CampaignStatus;
 use App\Enums\CampaignStepType;
 use App\Enums\EmailStatus;
 use App\Enums\OutreachStatus;
 use App\Models\Campaign;
+use App\Models\CampaignLead;
 use App\Models\EmailAccount;
 use App\Models\Lead;
 use App\Models\Organization;
@@ -75,6 +77,21 @@ function sender(): array
     app(CurrentProject::class)->set($project);
 
     return [$user, $project, $mailbox];
+}
+
+/**
+ * Enrols the campaign and pins every resulting lead to $mailbox.
+ *
+ * `EnrolCampaign` no longer picks a mailbox - `DispatchDueSends` pins one at
+ * first send, so leads spread across whatever the project has instead of all
+ * landing on one. Tests exercising `SendNextStep` directly, one layer below
+ * the dispatcher, need that pin done by hand first.
+ */
+function enrolPinned(Campaign $campaign, EmailAccount $mailbox): void
+{
+    app(EnrolCampaign::class)->handle($campaign);
+
+    CampaignLead::query()->update(['email_account_id' => $mailbox->id]);
 }
 
 function sequence(Project $project, int $waitHours = 72): Campaign

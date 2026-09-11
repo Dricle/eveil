@@ -21,8 +21,11 @@ use Illuminate\Database\QueryException;
  * Putting the people into a sequence, which is what activating a campaign
  * actually means.
  *
- * The mailbox is chosen once per lead and pinned for the whole sequence: a
- * follow-up from a different address is a different conversation as far as
+ * The mailbox is NOT chosen here. `email_account_id` starts null and gets
+ * pinned by `DispatchDueSends` at the first send, so leads spread across
+ * every mailbox attached to the project instead of piling onto whichever one
+ * this ran against first. Once pinned it stays pinned for the whole sequence:
+ * a follow-up from a different address is a different conversation as far as
  * threading is concerned, and the reply we are waiting for would arrive in a
  * mailbox nobody is reading for it.
  *
@@ -41,23 +44,25 @@ class EnrolCampaign
      */
     public function handle(Campaign $campaign): int
     {
-        $account = EmailAccount::query()
+        // Just a probe for "can this project send at all" and for the
+        // opt-out/toxic suppression check below, both account-independent.
+        // Real assignment happens per lead at first send.
+        $probe = EmailAccount::query()
             ->sendableFor($campaign->project)
-            ->orderBy('id')
             ->first();
 
         // No mailbox attached to this project, so there is nothing to send
         // from. Deliberately not an exception: the campaign stays active and
         // starts sending by itself once a mailbox is attached.
-        if ($account === null) {
+        if ($probe === null) {
             return 0;
         }
 
         $enrolled = 0;
 
         $this->eligible($campaign)
-            ->each(function (Lead $lead) use ($campaign, $account, &$enrolled): void {
-                if (! $lead->isSendable() || $this->suppressions->suppresses($lead, $account)) {
+            ->each(function (Lead $lead) use ($campaign, $probe, &$enrolled): void {
+                if (! $lead->isSendable() || $this->suppressions->suppresses($lead, $probe)) {
                     return;
                 }
 
@@ -65,7 +70,6 @@ class EnrolCampaign
                     CampaignLead::query()->create([
                         'campaign_id' => $campaign->id,
                         'lead_id' => $lead->id,
-                        'email_account_id' => $account->id,
                         'current_step_position' => 0,
                         'status' => CampaignLeadStatus::Pending,
                         // Spread from the outset rather than all at once: the

@@ -135,6 +135,20 @@ class CampaignLead extends Model
     }
 
     /**
+     * The order the delivery screen shows one campaign's people in: whoever
+     * is owed something first, then the rest by how recently anything moved.
+     *
+     * @param  Builder<CampaignLead>  $query
+     */
+    #[Scope]
+    protected function orderedForDeliveryScreen(Builder $query): void
+    {
+        $query->orderByRaw('next_action_at is null')
+            ->orderBy('next_action_at')
+            ->orderByDesc('id');
+    }
+
+    /**
      * Whether a person still has to look at this conversation. The single
      * definition `ConversationResource` (one row), `InboxFolders` (every
      * badge count, including the sidebar's) and this class all read, so none

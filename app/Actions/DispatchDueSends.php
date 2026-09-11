@@ -43,8 +43,13 @@ class DispatchDueSends
 
         $queued = 0;
 
+        // Random order: several accounts can serve the same unassigned lead
+        // (see `due()`), and whichever one asks first is the one it pins to.
+        // A fixed order would always feed the lowest-id mailbox first and
+        // starve the rest.
         EmailAccount::query()
             ->where('status', EmailAccountStatus::Active)
+            ->inRandomOrder()
             ->each(function (EmailAccount $account) use (&$queued): void {
                 // The circuit breaker, ahead of any allowance arithmetic: a
                 // mailbox bouncing right now must stop whatever the project's
@@ -110,13 +115,26 @@ class DispatchDueSends
     }
 
     /**
-     * The oldest thing owed by this mailbox. Oldest first so a follow-up
-     * promised for Tuesday is not overtaken by a lead enrolled this morning.
+     * The oldest thing owed by this mailbox, pinning it in if it isn't yet.
+     *
+     * `EnrolCampaign` leaves `email_account_id` null: this is where a lead
+     * actually gets a mailbox, at its first send, so leads spread across
+     * every mailbox the project has instead of all landing on whichever one
+     * enrolment happened to see first. Oldest first so a follow-up promised
+     * for Tuesday is not overtaken by a lead enrolled this morning.
      */
     private function due(EmailAccount $account): ?CampaignLead
     {
-        return CampaignLead::query()
-            ->where('email_account_id', $account->id)
+        $lead = CampaignLead::query()
+            ->where(fn (Builder $query) => $query
+                ->where('email_account_id', $account->id)
+                ->orWhere(fn (Builder $unassigned) => $unassigned
+                    ->whereNull('email_account_id')
+                    ->whereHas('campaign', fn (Builder $campaign) => $campaign
+                        ->withoutGlobalScopes()
+                        ->whereHas('project', fn (Builder $project) => $project
+                            ->withoutGlobalScopes()
+                            ->whereHas('emailAccounts', fn (Builder $accounts) => $accounts->whereKey($account->id))))))
             ->whereIn('status', [CampaignLeadStatus::Pending, CampaignLeadStatus::Running])
             ->whereNotNull('next_action_at')
             ->where('next_action_at', '<=', now())
@@ -125,5 +143,11 @@ class DispatchDueSends
                 ->where('status', CampaignStatus::Active))
             ->oldest('next_action_at')
             ->first();
+
+        if ($lead !== null && $lead->email_account_id === null) {
+            $lead->update(['email_account_id' => $account->id]);
+        }
+
+        return $lead;
     }
 }

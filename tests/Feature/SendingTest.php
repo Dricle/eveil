@@ -45,7 +45,7 @@ beforeEach(function () {
 });
 
 it('enrols only the people who may actually be written to', function () {
-    [, $project, $mailbox] = sender();
+    [, $project] = sender();
 
     $wanted = contactable($project);
     $client = contactable($project, 'patron@client.test');
@@ -70,9 +70,10 @@ it('enrols only the people who may actually be written to', function () {
 
     expect($enrolled->all())->toBe([$wanted->id])
         ->and($enrolled)->not->toContain($client->id, $noAddress->id, $invalid->id, $optedOut->id)
-        // Pinned at enrolment: a follow-up from another address is a different
-        // conversation as far as threading goes.
-        ->and(CampaignLead::query()->first()->email_account_id)->toBe($mailbox->id);
+        // Not pinned yet: `DispatchDueSends` picks the mailbox at first send,
+        // so leads spread across whatever the project has instead of all
+        // landing on whichever mailbox enrolment happened to see first.
+        ->and(CampaignLead::query()->first()->email_account_id)->toBeNull();
 });
 
 it('cannot enrol anybody when the project has no mailbox attached', function () {
@@ -87,13 +88,13 @@ it('cannot enrol anybody when the project has no mailbox attached', function () 
 });
 
 it('sends the first mail, records it, and marks the person contacted', function () {
-    [, $project] = sender();
+    [, $project, $mailbox] = sender();
 
     $fake = fakeSender();
     $lead = contactable($project);
     $campaign = sequence($project);
 
-    app(EnrolCampaign::class)->handle($campaign);
+    enrolPinned($campaign, $mailbox);
 
     app(SendNextStep::class)->handle(CampaignLead::query()->firstOrFail());
 
@@ -117,13 +118,13 @@ it('sends the first mail, records it, and marks the person contacted', function 
 });
 
 it('waits the step it was told to wait, then follows up in the same thread', function () {
-    [, $project] = sender();
+    [, $project, $mailbox] = sender();
 
     $fake = fakeSender();
     contactable($project);
     $campaign = sequence($project, waitHours: 72);
 
-    app(EnrolCampaign::class)->handle($campaign);
+    enrolPinned($campaign, $mailbox);
 
     $send = app(SendNextStep::class);
     $membership = CampaignLead::query()->firstOrFail();
@@ -160,7 +161,7 @@ it('refuses to send to somebody suppressed after they were enrolled', function (
     $lead = contactable($project);
     $campaign = sequence($project);
 
-    app(EnrolCampaign::class)->handle($campaign);
+    enrolPinned($campaign, $mailbox);
 
     // The case the whole design is about: a STOP arrives between enrolment and
     // the send, so a list checked "before the campaign" is not a list.
@@ -193,7 +194,7 @@ it('suppresses an address the server called dead, and never retries it', functio
 
     $lead = contactable($project);
     $campaign = sequence($project);
-    app(EnrolCampaign::class)->handle($campaign);
+    enrolPinned($campaign, $mailbox);
 
     app(SendNextStep::class)->handle(CampaignLead::query()->firstOrFail());
 
@@ -217,7 +218,7 @@ it('pauses the mailbox rather than the address when the login is refused', funct
     $fake->failWith = '535 5.7.8 Username and password not accepted';
 
     $lead = contactable($project);
-    app(EnrolCampaign::class)->handle(sequence($project));
+    enrolPinned(sequence($project), $mailbox);
 
     app(SendNextStep::class)->handle(CampaignLead::query()->firstOrFail());
 
@@ -237,7 +238,7 @@ it('retries later on a transient refusal without deciding anything', function ()
     $fake->failWith = '451 4.7.1 Greylisted, try again later';
 
     $lead = contactable($project);
-    app(EnrolCampaign::class)->handle(sequence($project));
+    enrolPinned(sequence($project), $mailbox);
 
     app(SendNextStep::class)->handle(CampaignLead::query()->firstOrFail());
 
@@ -850,7 +851,7 @@ it('shows where the people in one sequence have got to', function () {
 });
 
 it('sends every mail to one address when a test redirect is configured', function () {
-    [, $project] = sender();
+    [, $project, $mailbox] = sender();
 
     // What a developer sets to try the real loop against their own mailbox.
     config(['eveil.outreach.redirect_to' => 'mydnic@gmail.test']);
@@ -859,7 +860,7 @@ it('sends every mail to one address when a test redirect is configured', functio
     $lead = contactable($project, 'marcel@friterie.test');
     $campaign = sequence($project);
 
-    app(EnrolCampaign::class)->handle($campaign);
+    enrolPinned($campaign, $mailbox);
     app(SendNextStep::class)->handle(CampaignLead::query()->firstOrFail());
 
     // The Sender is faked here, so the redirect is asserted where it is decided
@@ -903,7 +904,7 @@ it('reads a refusal about the sender as a broken mailbox, never as a dead addres
 
     $lead = contactable($project, 'marylene@friterie.test');
     $campaign = sequence($project);
-    app(EnrolCampaign::class)->handle($campaign);
+    enrolPinned($campaign, $mailbox);
     $campaign->update(['status' => CampaignStatus::Active]);
 
     $fake = fakeSender();

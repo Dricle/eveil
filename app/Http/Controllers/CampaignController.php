@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\DescribeCampaignSending;
 use App\Actions\DispatchDueSends;
 use App\Actions\PreviewSequence;
 use App\Actions\WriteMissingCampaigns;
@@ -12,18 +13,12 @@ use App\Enums\CampaignLeadStatus;
 use App\Http\Requests\CampaignRequest;
 use App\Http\Resources\CampaignLeadResource;
 use App\Http\Resources\CampaignResource;
-use App\Http\Resources\MailboxResource;
 use App\Http\Resources\TargetProfileResource;
 use App\Http\Resources\TargetProfileSummaryResource;
 use App\Models\AgentRun;
 use App\Models\Campaign;
-use App\Models\CampaignLead;
-use App\Models\EmailAccount;
 use App\Models\TargetProfile;
-use App\Support\AggregateDate;
 use App\Support\CurrentProject;
-use App\Support\Settings;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -41,7 +36,6 @@ class CampaignController extends Controller
 {
     public function __construct(
         private CurrentProject $currentProject,
-        private Settings $settings,
     ) {}
 
     public function index(WriteMissingCampaigns $missing): Response
@@ -127,7 +121,7 @@ class CampaignController extends Controller
      * Who is in the sequence, where they have got to, and when the next mail
      * actually leaves.
      */
-    public function delivery(DispatchDueSends $dispatcher, int $campaign): Response
+    public function delivery(DispatchDueSends $dispatcher, DescribeCampaignSending $sending, int $campaign): Response
     {
         $campaign = Campaign::query()->with('targetProfile')->findOrFail($campaign);
 
@@ -143,68 +137,18 @@ class CampaignController extends Controller
             // When the next mail is owed, and what is standing in its way. An
             // active campaign that has sent nothing for an hour is the normal
             // case, not a bug, and the screen has to be able to say so.
-            'sending' => $this->sendingState($campaign, $dispatcher),
-            'leads' => CampaignLeadResource::collection($this->leads($campaign)),
+            'sending' => $sending->handle($campaign, $dispatcher),
+            // The ones with something owed first, then the rest by how recently
+            // anything moved. Capped at 50: enough to read a run at a glance,
+            // and the whole list belongs on Contacts, which is built for it.
+            'leads' => CampaignLeadResource::collection($campaign->campaignLeads()
+                ->with(['lead.company'])
+                ->withCount('sentMessages')
+                ->orderedForDeliveryScreen()
+                ->limit(50)
+                ->get()),
             'leadsTotal' => $campaign->campaignLeads()->count(),
         ]);
-    }
-
-    /**
-     * How many rows the sequence shows before it stops. Enough to read a run at
-     * a glance; the whole list belongs on Contacts, which is built for it.
-     */
-    private const LEADS_SHOWN = 50;
-
-    /**
-     * The people in this sequence, the ones with something owed first, then the
-     * rest by how recently anything moved.
-     *
-     * @return Collection<int, CampaignLead>
-     */
-    private function leads(Campaign $campaign): Collection
-    {
-        return $campaign->campaignLeads()
-            ->with(['lead.company'])
-            ->withCount('sentMessages')
-            ->orderByRaw('next_action_at is null')
-            ->orderBy('next_action_at')
-            ->orderByDesc('id')
-            ->limit(self::LEADS_SHOWN)
-            ->get();
-    }
-
-    /**
-     * Everything the answer to "when does the next one go out" is made of.
-     *
-     * The rules themselves are the scheduler's: the window comes from the
-     * action that enforces it, and the allowance and the gap from the mailbox.
-     * Restating any of them here is how a screen ends up promising a send the
-     * scheduler will not make.
-     *
-     * @return array<string, mixed>
-     */
-    private function sendingState(Campaign $campaign, DispatchDueSends $dispatcher): array
-    {
-        $mailboxes = EmailAccount::query()
-            ->whereIn('id', $campaign->campaignLeads()
-                ->whereIn('status', CampaignLeadStatus::live())
-                ->select('email_account_id'))
-            ->get();
-
-        return [
-            // Parsed rather than passed through: an aggregate comes back as a
-            // raw database string, and every other date on the page is a cast
-            // attribute. Two formats reach the same date formatter otherwise.
-            'next_action_at' => AggregateDate::parse($campaign->campaignLeads()
-                ->whereIn('status', CampaignLeadStatus::live())
-                ->min('next_action_at')),
-            'window_open' => $dispatcher->windowIsOpen(),
-            'window' => [
-                'start' => (int) $this->settings->array('sending')['window_start'],
-                'end' => (int) $this->settings->array('sending')['window_end'],
-            ],
-            'mailboxes' => MailboxResource::collection($mailboxes),
-        ];
     }
 
     public function update(CampaignRequest $request, int $campaign): RedirectResponse

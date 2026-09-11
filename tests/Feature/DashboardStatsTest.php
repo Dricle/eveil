@@ -2,6 +2,7 @@
 
 use App\Cloud\Models\CreditTransaction;
 use App\Models\AgentRun;
+use App\Models\Company;
 use App\Models\Organization;
 use App\Models\Project;
 use App\Models\User;
@@ -15,6 +16,27 @@ function dashboardUser(): array
 
     return [$organization, $project, $user];
 }
+
+it('counts only new leads at a company nobody has approved yet', function () {
+    [, $project, $user] = dashboardUser();
+
+    $approved = Company::factory()->create(['project_id' => $project->id, 'approved_at' => now()]);
+    $unapproved = Company::factory()->create(['project_id' => $project->id, 'approved_at' => null]);
+
+    // Blocked on a yes: the only one that should count.
+    contactable($project, 'waiting@friterie.test')->update(['company_id' => $unapproved->id]);
+
+    // Already approved: nothing left to decide, just not enrolled yet -
+    // a different problem with a different fix.
+    contactable($project, 'ready@friterie.test')->update(['company_id' => $approved->id]);
+
+    // No company at all: an import never needs approval
+    // (`EnrolCampaign::eligible()`).
+    contactable($project, 'solo@friterie.test');
+
+    $this->actingAs($user)->get(route('dashboard'))
+        ->assertInertia(fn ($page) => $page->where('newLeadsCount', 1));
+});
 
 it('shows tokens on self-hosted, never a credit figure', function () {
     config()->set('eveil.edition', 'self');

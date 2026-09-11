@@ -140,9 +140,9 @@ const topupPercent = computed(() => {
 
             <div class="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
                 <div class="grid min-w-0 gap-5">
-                    <!-- Found by discovery and not yet acted on: not sent to
-                         anyone until a person decides they belong in a
-                         sequence. -->
+                    <!-- Found by discovery, at a company nobody has approved
+                         yet: not sent to anyone until a person says yes to
+                         the company. -->
                     <div
                         v-if="newLeadsCount > 0"
                         class="flex flex-wrap items-start gap-3 rounded-lg bg-elevated p-4 ring ring-default"
@@ -160,7 +160,7 @@ const topupPercent = computed(() => {
                             </p>
                         </div>
                         <UButton
-                            :to="companies.index.url()"
+                            :to="companies.index.url({ query: { view: 'awaiting' } })"
                             color="neutral"
                             variant="subtle"
                             size="sm"

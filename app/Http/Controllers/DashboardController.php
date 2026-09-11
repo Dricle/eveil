@@ -18,6 +18,7 @@ use App\Models\DiscoveryRun;
 use App\Models\Lead;
 use App\Models\Message;
 use App\Support\CurrentProject;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -95,9 +96,19 @@ class DashboardController extends Controller
                 ->groupBy('status')
                 ->pluck('total', 'status'),
             'autonomyLevel' => $this->currentProject->getOrFail()->autonomy_level,
-            // Found by discovery, and not yet queued into a sequence: the
-            // person who reviews them decides whether they belong in one.
-            'newLeadsCount' => Lead::query()->contactable()->where('status', OutreachStatus::New)->count(),
+            // What is actually stuck on a yes from this person: a new lead
+            // whose company nobody has approved yet. A company-less lead (an
+            // import) never needs approval (`EnrolCampaign::eligible()`), and
+            // neither does one at an already-approved company - it is just
+            // waiting for enrolment, which is a different problem with a
+            // different fix. Counting every New lead here used to say
+            // "waiting for your approval" on an Autonomous project where nothing
+            // ever is, and sent the user to a companies screen with nothing
+            // pending on it.
+            'newLeadsCount' => Lead::query()->contactable()
+                ->where('status', OutreachStatus::New)
+                ->whereHas('company', fn (Builder $company) => $company->whereNull('approved_at'))
+                ->count(),
             'runningDiscoveryRun' => $this->summarizeRunningDiscovery->handle(),
             'campaigns' => CampaignResource::collection(
                 Campaign::query()

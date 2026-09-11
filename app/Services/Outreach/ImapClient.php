@@ -185,6 +185,7 @@ class ImapClient
             // `References` is the fallback because some clients drop
             // `In-Reply-To` on a reply-all or a forward-then-reply.
             inReplyTo: MailParser::firstReference($headers),
+            referenceIds: MailParser::referenceIds($headers),
             from: MailParser::address($headers['from'] ?? ''),
             subject: $headers['subject'] ?? '(no subject)',
             body: MailParser::body($raw),

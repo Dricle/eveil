@@ -94,6 +94,9 @@ function inbound(string $body, array $overrides = []): InboundMail
         // `array_key_exists`, not `??`: a mail that answers nothing passes an
         // explicit null, which `??` would replace with the default.
         inReplyTo: array_key_exists('inReplyTo', $overrides) ? $overrides['inReplyTo'] : 'ours-1@abcreche.test',
+        referenceIds: $overrides['referenceIds'] ?? array_filter([
+            array_key_exists('inReplyTo', $overrides) ? $overrides['inReplyTo'] : 'ours-1@abcreche.test',
+        ]),
         from: $overrides['from'] ?? 'marcel@friterie.test',
         subject: $overrides['subject'] ?? 'Re: vos commandes',
         body: $body,
@@ -126,6 +129,26 @@ it('attributes a reply by header, records it, and pauses before deciding anythin
 
     Queue::assertPushed(HandleReply::class, 1);
     Queue::assertPushed(fn (HandleReply $job): bool => $job->queue === 'ai');
+});
+
+it('attributes a reply two hops into a thread, whose In-Reply-To points at a mail we never sent', function () {
+    // A second reply on the thread: `In-Reply-To` is the intermediate mail
+    // (someone's manual answer in between, never recorded as a `Message`),
+    // but `References` still carries our original id further back.
+    Queue::fake();
+
+    [$mailbox, $membership] = awaitingReply();
+
+    fakeImap([inbound('Bon, on peut en discuter.', [
+        'inReplyTo' => 'in-between@friterie.test',
+        'referenceIds' => ['in-between@friterie.test', 'ours-1@abcreche.test'],
+    ])]);
+
+    expect(app(FetchReplies::class)->handle($mailbox))->toBe(1);
+
+    expect(Message::query()->where('direction', MessageDirection::Inbound)->sole()->campaign_lead_id)
+        ->toBe($membership->id)
+        ->and($membership->refresh()->status)->toBe(CampaignLeadStatus::Paused);
 });
 
 it('keeps the untouched raw message alongside the parsed body', function () {
@@ -416,6 +439,10 @@ it('parses a real reply out of what a mail server actually sends', function () {
         ->and($headers['subject'])->toBe('Re: vos commandes été')
         ->and(MailParser::address($headers['from']))->toBe('marcel@friterie.test')
         ->and(MailParser::firstReference($headers))->toBe('ours-1@abcreche.test')
+        // Nearest first: `In-Reply-To`, then `References` read newest to
+        // oldest, so a later hop finds an ancestor even when the immediate
+        // parent was never one of ours.
+        ->and(MailParser::referenceIds($headers))->toBe(['ours-1@abcreche.test', 'older@abcreche.test'])
         // Quoted-printable decoded, and the quoted original kept: it is part
         // of what was actually received, and context for whatever reads it.
         ->and(MailParser::body($raw))->toBe("Bonjour, c'est très intéressant.\r\n\r\nLe 18 août 2026, Clement a écrit :\r\n> Bonjour, votre carte est sur Facebook")

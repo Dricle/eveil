@@ -98,17 +98,20 @@ class FetchReplies
             return $this->recordBounce($account, $mail->bounce);
         }
 
-        if ($mail->inReplyTo === null) {
+        if ($mail->referenceIds === []) {
             return false;
         }
 
-        // Trimmed on the way in as well as on the way out: the brackets belong
-        // to the header syntax, most servers strip them and some do not, and
-        // one that does not would silently attribute nothing at all.
+        // Every id in the thread, not just the immediate parent: a reply two
+        // hops in has `In-Reply-To` pointing at a mail we never sent (a
+        // manual answer in between), while `References` still carries our
+        // original id. Trimmed on the way in as well as on the way out: the
+        // brackets belong to the header syntax, most servers strip them and
+        // some do not.
         $ours = Message::query()
             ->where('email_account_id', $account->id)
             ->where('direction', MessageDirection::Outbound)
-            ->where('message_id', mb_trim($mail->inReplyTo, '<>'))
+            ->whereIn('message_id', array_map(fn (string $id): string => mb_trim($id, '<>'), $mail->referenceIds))
             ->with(['lead', 'campaignLead'])
             ->first();
 

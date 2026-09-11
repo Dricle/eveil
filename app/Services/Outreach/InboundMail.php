@@ -11,10 +11,14 @@ namespace App\Services\Outreach;
  */
 class InboundMail
 {
+    /**
+     * @param  list<string>  $referenceIds  Every candidate parent id (In-Reply-To + References), nearest first. Used for attribution.
+     */
     public function __construct(
         public readonly int $uid,
         public readonly string $messageId,
         public readonly ?string $inReplyTo,
+        public readonly array $referenceIds,
         public readonly string $from,
         public readonly string $subject,
         public readonly string $body,

@@ -79,17 +79,33 @@ class MailParser
      */
     public static function firstReference(array $headers): ?string
     {
+        return self::referenceIds($headers)[0] ?? null;
+    }
+
+    /**
+     * Every id in `In-Reply-To` and `References`, nearest parent first.
+     *
+     * A reply two hops into a thread has an `In-Reply-To` pointing at the
+     * mail directly before it, which is not necessarily one we sent, while
+     * `References` still carries our original id further back. Attribution
+     * must check the whole thread, not just the immediate parent.
+     *
+     * @param  array<string, string>  $headers
+     * @return list<string>
+     */
+    public static function referenceIds(array $headers): array
+    {
+        $ids = [];
+
         foreach ([$headers['in-reply-to'] ?? '', $headers['references'] ?? ''] as $value) {
             preg_match_all('/<([^>]+)>/', $value, $matches);
 
-            $ids = $matches[1];
-
-            if ($ids !== []) {
-                return (string) end($ids);
-            }
+            // `References` lists oldest first; reversed so nearer ancestors
+            // are tried before the thread root.
+            $ids = [...$ids, ...array_reverse($matches[1])];
         }
 
-        return null;
+        return array_values(array_unique($ids));
     }
 
     /**

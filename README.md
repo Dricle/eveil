@@ -22,6 +22,13 @@ sequence, sends it from your own mailbox, and reads the replies.
 Your own AI CMO, running its own army of agents. B2B only for now; B2C
 (content generation to build an online presence) is planned.
 
+That's automation of the same work a human researcher would do by hand:
+searching the web for the right companies and people, then writing to them one
+by one from a real mailbox. It is not a purchased contact list, and it does
+not send through a shared pool of pre-warmed inboxes on your behalf — every
+lead is found live, and every mail leaves through the mailbox you connected.
+Slower to start than buying a list. Honest the whole way through.
+
 Self-hostable, AGPL-3.0, and the free edition has no artificial limits:
 unlimited mailboxes, unlimited leads, your data on your own machine.
 

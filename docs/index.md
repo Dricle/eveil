@@ -4,7 +4,7 @@ layout: home
 hero:
   name: Eveil
   text: Open-source multichannel outreach
-  tagline: The open-source alternative to lemlist. Paste a URL, Eveil finds you clients.
+  tagline: Paste a URL, Eveil finds you clients. No purchased lists, sent from your own mailbox.
   actions:
     - theme: brand
       text: Read the docs

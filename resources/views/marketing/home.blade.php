@@ -19,10 +19,15 @@
             </div>
             <h1 style="font-family:'Sora',sans-serif;font-weight:600;font-size:68px;line-height:1.04;letter-spacing:-.035em;margin:0 auto 22px;max-width:20ch;text-wrap:balance">
                 You don't have time to run marketing.<br>Now you don't need to.</h1>
-            <p style="font-size:18.5px;line-height:1.6;max-width:64ch;margin:0 auto 40px;color:rgba(232,236,242,.66);text-wrap:pretty">
+            <p style="font-size:18.5px;line-height:1.6;max-width:64ch;margin:0 auto 18px;color:rgba(232,236,242,.66);text-wrap:pretty">
                 Paste your product URL. Eveil reads the site, works out who buys it, finds those companies and the
                 people at them, writes the emails, sends it from your own mailbox, and reads the replies. You approve
                 as much or as little as you want.</p>
+
+            <p style="font-size:15px;line-height:1.6;max-width:58ch;margin:0 auto 40px;color:rgba(232,236,242,.48);text-wrap:pretty">
+                Not a purchased contact list, and not a pool of pre-warmed inboxes sending on your behalf. It
+                automates the same research and outreach a person would do by hand, from the mailbox you already
+                own.</p>
 
             <form action="{{ Route::has('register') ? route('register') : route('home') }}" method="get"
                   style="max-width:600px;margin:0 auto;background:linear-gradient(180deg,rgba(232,236,242,.055),rgba(232,236,242,.02));border:1px solid rgba(232,236,242,.12);border-radius:14px;padding:20px;text-align:left">

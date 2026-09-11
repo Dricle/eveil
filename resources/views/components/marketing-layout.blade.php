@@ -7,6 +7,7 @@
 
         <title>{{ $title }}</title>
         <meta name="description" content="{{ $description }}">
+        <meta property="og:image" content="{{ asset('og.png') }}">
 
         <link rel="icon" href="/favicon.ico" sizes="any">
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">

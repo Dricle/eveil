@@ -15,13 +15,13 @@
             <div
                 style="display:inline-flex;align-items:center;gap:9px;border:1px solid rgba(232,236,242,.14);background:rgba(232,236,242,.03);border-radius:999px;padding:6px 14px;font-family:'Geist Mono',monospace;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:rgba(232,236,242,.7);margin-bottom:30px">
                 <span style="width:6px;height:6px;border-radius:999px;background:#6fd3ec;display:block"></span>
-                <span>Hosted Eveil. Open source, AGPL-3.0</span>
+                <span>Open source, AGPL-3.0</span>
             </div>
             <h1 style="font-family:'Sora',sans-serif;font-weight:600;font-size:68px;line-height:1.04;letter-spacing:-.035em;margin:0 auto 22px;max-width:20ch;text-wrap:balance">
-                A CMO you don't hire, running a team of agents that sells your product.</h1>
+                You don't have time to run marketing.<br>Now you don't need to.</h1>
             <p style="font-size:18.5px;line-height:1.6;max-width:64ch;margin:0 auto 40px;color:rgba(232,236,242,.66);text-wrap:pretty">
                 Paste your product URL. Eveil reads the site, works out who buys it, finds those companies and the
-                people at them, writes the sequence, sends it from your own mailbox, and reads the replies. You approve
+                people at them, writes the emails, sends it from your own mailbox, and reads the replies. You approve
                 as much or as little as you want.</p>
 
             <form action="{{ Route::has('register') ? route('register') : route('home') }}" method="get"

@@ -33,7 +33,7 @@ class InboxController extends Controller
     {
         $folder ??= 'replied';
 
-        abort_unless(in_array($folder, InboxFolders::FOLDERS, true), 404);
+        abort_unless(in_array($folder, InboxFolders::folders(), true), 404);
 
         $conversations = $this->folders->query($request, $folder)
             ->latest('updated_at')

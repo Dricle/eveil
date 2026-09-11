@@ -3,6 +3,7 @@
 namespace App\Actions;
 
 use App\Enums\MessageDirection;
+use App\Enums\OutreachStatus;
 use App\Models\CampaignLead;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -16,17 +17,19 @@ use Illuminate\Http\Request;
 class InboxFolders
 {
     /**
-     * `new`/`queued`/`contacted` are real values a lead can sit at, but never
-     * ones a REPLY does: nothing reaches this screen without an inbound
-     * message, and none of those three describe a lead who sent one. Left
-     * out of the list entirely rather than shown permanently empty.
+     * One folder per status a reply can leave a lead at (`OutreachStatus::reachableByReply()`,
+     * `replied` first since it's declared first), plus `sent` - the one
+     * folder that is not a status at all.
      *
-     * `replied` first: it is the default folder, and the one a fresh answer
-     * lands in before anybody has decided what it is.
-     *
-     * @var list<string>
+     * @return list<string>
      */
-    public const FOLDERS = ['replied', 'won', 'lost', 'client', 'rejected', 'suppressed', 'sent'];
+    public static function folders(): array
+    {
+        return [
+            ...array_map(fn (OutreachStatus $status): string => $status->value, OutreachStatus::reachableByReply()),
+            'sent',
+        ];
+    }
 
     /**
      * @return Builder<CampaignLead>
@@ -53,7 +56,7 @@ class InboxFolders
      */
     public function summaries(Request $request): array
     {
-        return collect(self::FOLDERS)
+        return collect(self::folders())
             ->map(function (string $folder) use ($request): array {
                 $rows = $this->query($request, $folder)->get();
 

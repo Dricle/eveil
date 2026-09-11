@@ -999,8 +999,8 @@ it('shows what was sent as well as what came back, in their own folders', functi
         ->has('conversations.data', 0)
         ->where('folders.0.key', 'replied')
         ->where('folders.0.total', 0)
-        ->where('folders.6.key', 'sent')
-        ->where('folders.6.total', 1));
+        ->where('folders.7.key', 'sent')
+        ->where('folders.7.total', 1));
 
     // And the same person in the other folder, because "did anything
     // actually go out" could otherwise only be answered one contact sheet at
@@ -1018,7 +1018,35 @@ it('shows what was sent as well as what came back, in their own folders', functi
     $visit()->assertInertia(fn ($page) => $page
         ->has('conversations.data', 1)
         ->where('folders.0.total', 1)
-        ->where('folders.6.total', 1));
+        ->where('folders.7.total', 1));
+});
+
+it('files a reply into "in discussion" out of the replied catch-all', function () {
+    [$mailbox, $membership] = awaitingReply();
+    $user = User::factory()->create();
+    $project = $membership->campaign->project;
+    $project->organization->users()->attach($user, ['role' => 'owner']);
+
+    Queue::fake();
+    fakeImap([inbound('On en discute la semaine prochaine ?')]);
+    app(FetchReplies::class)->handle($mailbox);
+
+    $visit = fn (?string $folder = null) => test()->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->get(route('inbox', $folder === null ? [] : ['folder' => $folder]));
+
+    // Filed by hand, exactly like `won`/`lost`/etc: it leaves the generic
+    // "not yet decided" bucket even though it is not an excluded status.
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->put(route('contacts.status', $membership->lead), ['status' => 'in_discussion'])
+        ->assertRedirect();
+
+    $visit()->assertInertia(fn ($page) => $page->has('conversations.data', 0));
+
+    $visit('in_discussion')->assertInertia(fn ($page) => $page
+        ->has('conversations.data', 1)
+        ->where('conversations.data.0.id', $membership->id));
 });
 
 it('never shows the sent folder for a status folder, or vice versa', function () {
@@ -1041,7 +1069,7 @@ it('never loses an auto-reply: it answered, and stays visible even though nothin
     // already went out, and nothing bumps it to `replied` for a machine
     // answer (`FetchReplies::record()` skips `pause()` for one on purpose).
     // An exact match on `status = 'replied'` made this conversation match
-    // none of the seven folders at once - answered, and invisible.
+    // none of the eight folders at once - answered, and invisible.
     $membership->lead->update(['status' => OutreachStatus::Contacted]);
 
     fakeImap([inbound('Je suis absent jusqu\'au 30 août.', ['isAutoReply' => true])]);

@@ -47,4 +47,21 @@ enum OutreachStatus: string
     {
         return in_array($this, self::excluded(), strict: true);
     }
+
+    /**
+     * The statuses a REPLY can actually leave a lead at. `New`, `Queued` and
+     * `Contacted` are real values a lead can sit at, but never ones a reply
+     * does: nothing reaches the inbox without an inbound message, and none of
+     * those three describe a lead who sent one. `InboxFolders` builds its
+     * folder list from this, `Replied` first because it is declared first.
+     *
+     * @return array<int, self>
+     */
+    public static function reachableByReply(): array
+    {
+        return array_values(array_filter(
+            self::cases(),
+            fn (self $status): bool => ! in_array($status, [self::New, self::Queued, self::Contacted], strict: true),
+        ));
+    }
 }

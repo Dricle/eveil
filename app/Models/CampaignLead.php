@@ -98,15 +98,17 @@ class CampaignLead extends Model
      * file anywhere yet.
      *
      * `replied` is NOT an exact match on `status = 'replied'`: it is
-     * everything with a reply that has not been filed to one of the five
-     * terminal statuses (`OutreachStatus::excluded()`). An out-of-office
+     * everything with a reply that has not been filed anywhere yet - one of
+     * the five terminal statuses (`OutreachStatus::excluded()`) or the
+     * non-terminal `in_discussion`, which is as much a filing decision as the
+     * five even though it does not block future outreach. An out-of-office
      * deliberately never pauses the sequence (`FetchReplies::record()`), so
      * its lead's status stays whatever it already was - `contacted`, most
      * often - never `replied`. An exact match on `replied` made those
      * conversations vanish from every folder at once: they had answered,
-     * were not filed anywhere, and matched none of the seven folders. The
-     * front door has to catch anything not yet decided, whatever status it
-     * happens to be parked at, or a reply the classifier read as automatic
+     * were not filed anywhere, and matched none of the folders. The front
+     * door has to catch anything not yet decided, whatever status it happens
+     * to be parked at, or a reply the classifier read as automatic
      * disappears from the screen entirely.
      *
      * @param  Builder<CampaignLead>  $query
@@ -123,7 +125,8 @@ class CampaignLead extends Model
         $query->whereHas('messages', fn (Builder $messages) => $messages->where('direction', MessageDirection::Inbound));
 
         if ($folder === 'replied') {
-            $query->whereHas('lead', fn (Builder $lead) => $lead->whereNotIn('status', OutreachStatus::excluded()));
+            $filed = [...OutreachStatus::excluded(), OutreachStatus::InDiscussion];
+            $query->whereHas('lead', fn (Builder $lead) => $lead->whereNotIn('status', $filed));
 
             return;
         }

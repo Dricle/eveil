@@ -33,6 +33,7 @@ it('refetches an inbound reply and overwrites its wrong body with a freshly repa
         uid: 12,
         messageId: 'theirs-1@friterie.test',
         inReplyTo: 'ours-1@abcreche.test',
+        referenceIds: ['ours-1@abcreche.test'],
         from: 'marcel@friterie.test',
         subject: 'Re: vos commandes',
         body: "C'est très intéressant.",

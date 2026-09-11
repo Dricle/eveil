@@ -23,6 +23,7 @@ enum OutreachStatus: string
     case Queued = 'queued';
     case Contacted = 'contacted';
     case Replied = 'replied';
+    case InDiscussion = 'in_discussion';
     case Won = 'won';
     case Lost = 'lost';
     case Client = 'client';

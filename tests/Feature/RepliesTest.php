@@ -544,10 +544,10 @@ it('shows only conversations somebody actually answered, ordered by what needs a
             ->where('conversations.data.0.lead.email', 'marcel@friterie.test')
             ->where('conversations.data.0.classification', 'interested')
             ->where('conversations.data.0.needs_attention', true)
-            // The thread reads in order, both directions.
+            // The thread reads newest first, both directions.
             ->has('conversations.data.0.messages', 2)
-            ->where('conversations.data.0.messages.0.direction', 'outbound')
-            ->where('conversations.data.0.messages.1.direction', 'inbound'));
+            ->where('conversations.data.0.messages.0.direction', 'inbound')
+            ->where('conversations.data.0.messages.1.direction', 'outbound'));
 });
 
 it('stops asking for attention the moment the user decides where the lead stands', function () {

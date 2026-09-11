@@ -1,7 +1,5 @@
 # Getting started
 
-Eveil's primary path is: **paste a product URL → watch it work → approve**. Not a campaign builder you fill in field by field — that's the escape hatch, not the home screen.
-
 ## 1. Create a project
 
 A project is one product or site you're promoting. Everything below — leads, campaigns, email accounts — is scoped to a project.
@@ -16,4 +14,4 @@ Eveil finds and qualifies companies matching a target profile, extracts contacts
 
 ## 4. Connect a mailbox and send
 
-Outreach sends through a mailbox you connect (Settings → Email accounts), never through a shared relay. Replies land in Eveil's unified inbox.
+Outreach sends through a mailbox you connect (Settings → Email accounts), never through a shared relay. Replies land in Eveil's unified inbox — see [Statuses and the inbox](/product/statuses) for how conversations are filed once they arrive.

@@ -26,6 +26,11 @@
                         "type": "command",
                         "command": "bash .claude/hooks/check-controller-private-methods.sh",
                         "timeout": 10
+                    },
+                    {
+                        "type": "command",
+                        "command": "bash .claude/hooks/remind-docs.sh",
+                        "timeout": 10
                     }
                 ]
             }

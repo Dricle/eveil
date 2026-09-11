@@ -2,6 +2,11 @@
 
 Eveil self-hosted ships as a Docker Compose stack: nginx, PHP-FPM, queue workers and the scheduler under supervisord, plus Postgres, Redis, and a bundled SearXNG instance for discovery so a first run needs no third-party search API key.
 
+## Requirements
+
+- Docker and Docker Compose
+- Your own SMTP/IMAP email account(s) to send from — Eveil never relays through a shared ESP, since cold outreach through a shared sender gets accounts banned
+
 ## 1. Clone and configure
 
 ```bash
@@ -35,6 +40,9 @@ The app serves plain HTTP: put a reverse proxy with TLS (Caddy, nginx, Traefik) 
 
 Once the stack is up, visit your instance's URL. An empty instance redirects to `/app/setup`, which creates the first (super admin) account and its organization. There is no separate registration step for the first user.
 
+If `ADMIN_EMAIL` and `ADMIN_PASSWORD` are set in `.env`, the first account is created automatically at boot instead, and `/app/setup` never shows.
+
 ## Next steps
 
-See [Configuration](/guide/configuration) for connecting your sending mailbox(es) and other settings.
+- [Configuration](/self-hosted/configuration) — connecting your sending mailbox(es) and other settings.
+- [Commands](/self-hosted/commands) — the `eveil:*` Artisan commands and what runs on its own.

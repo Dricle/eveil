@@ -127,3 +127,17 @@ Trap: `config()->set('eveil.crawl.delay_ms', 0)` in a test is a silent no-op. Th
 
 ## User-facing features must sync to marketing site + README + docs
 Shipping capability a prospect would care about (new agent type, channel, integration - eg Reddit agents) is not done when code merges. Check whether it needs reflecting in: `resources/views/marketing/` (Blade site, sells it to visitors), root `README.md`, and `GUIDELINES.md` if it changes positioning/scope. Not every internal change qualifies - ask: would this show up in a competitor comparison or a "what can Eveil do" pitch? If yes, update copy/screenshots in same PR, don't defer to a follow-up ticket.
+
+## `docs/` (VitePress) documents behaviour, not code, and only when it changed
+`docs/` is three sections, in the order the nav shows them: **Introduction** (`docs/intro.md` - what Eveil is, self-hosted vs cloud) → **Product** (`docs/product/` - how the app works, for a cloud OR self-hosted user) → **Self-hosting** (`docs/self-hosted/` - install, `.env` config, `eveil:*` commands, updating, backup; the LAST section on purpose, since a cloud user never opens it).
+
+Deliberately no map here from a specific file to a specific page: pages get renamed, split and merged, and a rule pointing at a filename outlives that filename. Find the page instead - `grep -rl` the relevant term across `docs/product/` or `docs/self-hosted/`, or skim the section's pages - and update whichever one already covers it. If none does and the change genuinely needs one, add a page in the right section and wire it into `.vitepress/config.ts`'s sidebar rather than bolting it onto an unrelated page.
+
+Update the matching page in the SAME change, not a follow-up, whenever a change is one of these:
+- **A status/enum a user sees changes meaning or gains/loses a value** (`OutreachStatus`, `CampaignLeadStatus`, `ReplyClassification`, or their frontend labels in `resources/js/lib/status.ts` / `resources/js/types/inbox.ts`) → `docs/product/`.
+- **A workflow or screen changes** (what a step does, what a folder contains, what "approve" does) → `docs/product/`.
+- **A new `.env` variable, or an existing one's meaning/default changes** → `docs/self-hosted/`.
+- **A new `eveil:*` Artisan command, or an existing one's signature/behaviour changes** → `docs/self-hosted/`.
+- **Install, update, or backup/restore steps change** (`compose.deploy.yaml`, `deploy/Dockerfile`, `deploy/entrypoint.sh`) → `docs/self-hosted/`.
+
+Skip it for anything an end user or self-hoster would never notice: internal refactors, query shape, test-only changes, a rename with no visible effect. The test is the same one as the marketing-site rule above: would a user hit this while using the app, or a self-hoster hit it while running one? Docs describe what things ARE and MEAN from the outside - a status table with what each one does, never a code comment or a changelog entry. After editing, `cd docs && yarn build` catches a broken internal link before it ships (VitePress fails the build on one).

@@ -7,11 +7,11 @@ hero:
   tagline: The open-source alternative to lemlist. Paste a URL, Eveil finds you clients.
   actions:
     - theme: brand
-      text: Self-host it
-      link: /guide/introduction
+      text: Read the docs
+      link: /intro
     - theme: alt
       text: How to use it
-      link: /usage/getting-started
+      link: /product/getting-started
 
 features:
   - title: Email-first outreach

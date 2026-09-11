@@ -376,7 +376,7 @@
                             Bring your own key: Anthropic, OpenAI, whichever you already pay for.
                         </td>
                         <td style="padding:15px 18px;border-top:1px solid rgba(232,236,242,.08);color:rgba(232,236,242,.75);background:rgba(111,211,236,.045)">
-                            Included, metered in credits. Never a token count, never a model name.
+                            Included, metered in credits.
                         </td>
                     </tr>
                     <tr>
@@ -406,11 +406,10 @@
                             start
                         </td>
                         <td style="padding:15px 18px;border-top:1px solid rgba(232,236,242,.08);color:rgba(232,236,242,.62)">
-                            Its own host registry and page cache, built from its own runs only.
+                            Learns on its own, in isolation. An instance gets smarter over time as data comes in — what kind of mail works best, which new websites are worth discovering, and so on.
                         </td>
                         <td style="padding:15px 18px;border-top:1px solid rgba(232,236,242,.08);color:rgba(232,236,242,.75);background:rgba(111,211,236,.045)">
-                            Born smart. One shared registry and cache fed by every customer, so a new project skips work
-                            someone else's run already paid for.
+                            Already smart. You benefit from a knowledge base that's already big and keeps growing.
                         </td>
                     </tr>
                     <tr>

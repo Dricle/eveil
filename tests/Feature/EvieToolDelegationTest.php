@@ -3,20 +3,32 @@
 use App\Ai\Tools\AddCompanyNote;
 use App\Ai\Tools\AddLeadNote;
 use App\Ai\Tools\CreateSequence;
+use App\Ai\Tools\CreateTargetProfile;
 use App\Ai\Tools\DeleteCompanyNote;
 use App\Ai\Tools\DeleteLeadNote;
+use App\Ai\Tools\DeleteTargetProfile;
+use App\Ai\Tools\FindNewTargetProfiles;
 use App\Ai\Tools\GetCampaign;
 use App\Ai\Tools\GetCompany;
 use App\Ai\Tools\GetContact;
 use App\Ai\Tools\GetDiscoveryRunStatus;
+use App\Ai\Tools\GetKnowledgeBase;
+use App\Ai\Tools\GetTargetProfile;
 use App\Ai\Tools\ListCampaigns;
 use App\Ai\Tools\ListCompanies;
 use App\Ai\Tools\ListTargetProfiles;
 use App\Ai\Tools\StartDiscovery;
+use App\Ai\Tools\UpdateKnowledgeBase;
 use App\Ai\Tools\UpdateSequence;
+use App\Ai\Tools\UpdateTargetProfile;
+use App\Enums\AgentRunStatus;
 use App\Enums\CampaignStatus;
 use App\Enums\DiscoveryRunStatus;
+use App\Enums\TargetProfileSource;
+use App\Enums\TargetProfileType;
+use App\Jobs\DeriveTargets;
 use App\Jobs\Discovery\PlanDiscovery;
+use App\Models\AgentRun;
 use App\Models\Campaign;
 use App\Models\CampaignStep;
 use App\Models\Company;
@@ -423,4 +435,181 @@ it('refuses add_company_note and delete_company_note for a company from another 
     expect($addResult)->toContain('No company with that id')
         ->and($deleteResult)->toContain('No company with that id')
         ->and(CompanyNote::query()->count())->toBe(1);
+});
+
+it('reads the knowledge base and its open questions', function () {
+    $project = Project::factory()->create([
+        'knowledge_base' => [
+            'what_it_does' => 'Routes vans.',
+            'key_features' => ['Route planning'],
+            'gaps' => [['key' => 'pricing', 'question' => 'How is it priced?', 'answer' => null]],
+        ],
+    ]);
+
+    $result = (new GetKnowledgeBase($project))->handle(new Request);
+
+    expect($result)->toContain('Routes vans.')
+        ->toContain('Route planning')
+        ->toContain('How is it priced?');
+});
+
+it('says there is no knowledge base yet rather than an empty one', function () {
+    $project = Project::factory()->create(['knowledge_base' => null]);
+
+    $result = (new GetKnowledgeBase($project))->handle(new Request);
+
+    expect($result)->toBe('This project has no knowledge base yet.');
+});
+
+it('updates only the knowledge base fields given, and marks it hand-edited', function () {
+    $project = Project::factory()->create([
+        'knowledge_base' => ['what_it_does' => 'Routes vans.', 'positioning' => 'Cheaper than a fleet manager.'],
+        'knowledge_base_edited_by_user' => false,
+    ]);
+
+    $result = (new UpdateKnowledgeBase($project))->handle(new Request([
+        'key_features' => ['Route planning', 'Live tracking'],
+    ]));
+
+    $project->refresh();
+
+    expect($result)->toBe('Knowledge base updated.')
+        // Untouched fields survive the merge.
+        ->and($project->knowledge_base['positioning'])->toBe('Cheaper than a fleet manager.')
+        ->and($project->knowledge_base['key_features'])->toBe(['Route planning', 'Live tracking'])
+        ->and($project->knowledge_base_edited_by_user)->toBeTrue();
+});
+
+it('refuses to update the knowledge base with nothing to change', function () {
+    $project = Project::factory()->create(['knowledge_base' => ['what_it_does' => 'Routes vans.']]);
+
+    $result = (new UpdateKnowledgeBase($project))->handle(new Request);
+
+    expect($result)->toBe('Nothing to update: give at least one field.')
+        ->and($project->fresh()->knowledge_base_edited_by_user)->toBeFalse();
+});
+
+it('starts a target profile derivation that keeps the profiles already there', function () {
+    Queue::fake();
+
+    $project = Project::factory()->create(['knowledge_base' => ['what_it_does' => 'Routes vans.']]);
+
+    $result = (new FindNewTargetProfiles($project))->handle(new Request);
+
+    Queue::assertPushed(DeriveTargets::class, fn (DeriveTargets $job): bool => $job->project->is($project)
+        && $job->replace === false);
+
+    $run = AgentRun::query()->withoutGlobalScopes()->sole();
+
+    expect($run->status)->toBe(AgentRunStatus::Pending)
+        ->and($result)->toContain('Existing profiles are kept');
+});
+
+it('reads one target profile\'s full criteria', function () {
+    $project = Project::factory()->create();
+    $profile = TargetProfile::factory()->create([
+        'project_id' => $project->id,
+        'name' => 'Dental clinics',
+        'criteria' => ['sectors' => ['dental'], 'geography' => ['BE']],
+    ]);
+
+    $result = (new GetTargetProfile($project))->handle(new Request(['target_profile_id' => $profile->id]));
+
+    expect($result)->toContain('Dental clinics')->toContain('dental')->toContain('BE');
+});
+
+it('refuses get_target_profile for a profile from another project', function () {
+    $project = Project::factory()->create();
+    $foreign = TargetProfile::factory()->create();
+
+    $result = (new GetTargetProfile($project))->handle(new Request(['target_profile_id' => $foreign->id]));
+
+    expect($result)->toContain('No target profile with that id');
+});
+
+it('creates a target profile by hand, active by default', function () {
+    $project = Project::factory()->create();
+
+    $result = (new CreateTargetProfile($project))->handle(new Request([
+        'name' => 'Dental clinics',
+        'type' => 'customer',
+        'sectors' => ['dental'],
+        'geography' => ['BE'],
+    ]));
+
+    $profile = TargetProfile::sole();
+
+    expect($profile->project_id)->toBe($project->id)
+        ->and($profile->name)->toBe('Dental clinics')
+        ->and($profile->type)->toBe(TargetProfileType::Customer)
+        ->and($profile->is_active)->toBeTrue()
+        ->and($profile->source)->toBe(TargetProfileSource::Human)
+        ->and($profile->criteria)->toBe(['sectors' => ['dental'], 'geography' => ['BE']])
+        ->and($result)->toContain((string) $profile->id);
+});
+
+it('creates a target profile inactive when asked', function () {
+    $project = Project::factory()->create();
+
+    (new CreateTargetProfile($project))->handle(new Request([
+        'name' => 'Dental clinics',
+        'type' => 'partner',
+        'is_active' => false,
+    ]));
+
+    expect(TargetProfile::sole()->is_active)->toBeFalse();
+});
+
+it('updates only the target profile fields given, replaces a list field, and marks it human-owned', function () {
+    $project = Project::factory()->create();
+    $profile = TargetProfile::factory()->create([
+        'project_id' => $project->id,
+        'name' => 'Dental clinics',
+        'source' => TargetProfileSource::Agent,
+        'criteria' => ['sectors' => ['dental'], 'geography' => ['BE'], 'rationale' => 'Existing rationale.'],
+    ]);
+
+    $result = (new UpdateTargetProfile($project))->handle(new Request([
+        'target_profile_id' => $profile->id,
+        'geography' => ['BE', 'NL'],
+    ]));
+
+    $profile->refresh();
+
+    expect($result)->toContain('Dental clinics')
+        ->and($profile->criteria['geography'])->toBe(['BE', 'NL'])
+        // Untouched criteria fields survive the merge.
+        ->and($profile->criteria['sectors'])->toBe(['dental'])
+        ->and($profile->criteria['rationale'])->toBe('Existing rationale.')
+        ->and($profile->source)->toBe(TargetProfileSource::Human);
+});
+
+it('refuses update_target_profile for a profile from another project', function () {
+    $project = Project::factory()->create();
+    $foreign = TargetProfile::factory()->create();
+
+    $result = (new UpdateTargetProfile($project))->handle(new Request(['target_profile_id' => $foreign->id, 'name' => 'Sneaky']));
+
+    expect($result)->toContain('No target profile with that id')
+        ->and($foreign->fresh()->name)->not->toBe('Sneaky');
+});
+
+it('deletes a target profile', function () {
+    $project = Project::factory()->create();
+    $profile = TargetProfile::factory()->create(['project_id' => $project->id, 'name' => 'Dental clinics']);
+
+    $result = (new DeleteTargetProfile($project))->handle(new Request(['target_profile_id' => $profile->id]));
+
+    expect($result)->toBe('Target profile "Dental clinics" deleted.')
+        ->and(TargetProfile::query()->count())->toBe(0);
+});
+
+it('refuses delete_target_profile for a profile from another project', function () {
+    $project = Project::factory()->create();
+    $foreign = TargetProfile::factory()->create();
+
+    $result = (new DeleteTargetProfile($project))->handle(new Request(['target_profile_id' => $foreign->id]));
+
+    expect($result)->toContain('No target profile with that id')
+        ->and(TargetProfile::query()->count())->toBe(1);
 });

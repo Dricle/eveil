@@ -56,6 +56,10 @@ unlimited mailboxes, unlimited leads, your data on your own machine.
   engine, no paid data API required to start.
 - **Writes sequences that sound like you.** One AI-writing-style box per
   project (tone, language, banned words) that every generated mail obeys.
+- **Ask Evie instead of clicking through screens.** A chat panel that plans and
+  calls the same agents the app's triggered flows use - "find me 50 dental
+  clinics in Lyon" - and pauses for your approval before anything that spends
+  credits actually runs.
 - **Sends from your own mailbox.** Plain SMTP, no relay, no shared sending
   domain: what arrives is indistinguishable from something you typed.
 - **Reads and threads replies itself**, over IMAP, matched on the mail's own

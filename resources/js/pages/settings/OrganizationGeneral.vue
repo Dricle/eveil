@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3'
 import { ref, watch } from 'vue'
+import AppLayout from '@/layouts/AppLayout.vue'
 import SettingsLayout from '@/layouts/SettingsLayout.vue'
 import organizationRoutes from '@/routes/settings/organization/general'
 import type { Organization } from '@/types'
+
+defineOptions({ layout: [AppLayout, [SettingsLayout, { title: 'Organization' }]] })
 
 const props = defineProps<{ organization: Organization }>()
 
@@ -19,48 +22,46 @@ watch(() => props.organization, (organization) => {
 </script>
 
 <template>
-    <SettingsLayout title="Organization">
-        <Head title="Organization" />
+    <Head title="Organization" />
 
-        <div class="space-y-4">
-            <UCard>
-                <template #header>
-                    <h2 class="font-medium">
-                        General
-                    </h2>
-                </template>
+    <div class="space-y-4">
+        <UCard>
+            <template #header>
+                <h2 class="font-medium">
+                    General
+                </h2>
+            </template>
 
-                <Form
-                    v-slot="{ errors, processing, recentlySuccessful }"
-                    v-bind="organizationRoutes.update.form()"
-                    class="space-y-4"
+            <Form
+                v-slot="{ errors, processing, recentlySuccessful }"
+                v-bind="organizationRoutes.update.form()"
+                class="space-y-4"
+            >
+                <UFormField
+                    label="Name"
+                    name="name"
+                    :error="errors.name"
                 >
-                    <UFormField
-                        label="Name"
+                    <UInput
+                        v-model="name"
                         name="name"
-                        :error="errors.name"
-                    >
-                        <UInput
-                            v-model="name"
-                            name="name"
-                            required
-                            class="w-full"
-                        />
-                    </UFormField>
+                        required
+                        class="w-full"
+                    />
+                </UFormField>
 
-                    <div class="flex items-center gap-3">
-                        <UButton
-                            type="submit"
-                            :loading="processing"
-                            label="Save"
-                        />
-                        <span
-                            v-if="recentlySuccessful"
-                            class="text-sm text-muted"
-                        >Saved.</span>
-                    </div>
-                </Form>
-            </UCard>
-        </div>
-    </SettingsLayout>
+                <div class="flex items-center gap-3">
+                    <UButton
+                        type="submit"
+                        :loading="processing"
+                        label="Save"
+                    />
+                    <span
+                        v-if="recentlySuccessful"
+                        class="text-sm text-muted"
+                    >Saved.</span>
+                </div>
+            </Form>
+        </UCard>
+    </div>
 </template>

@@ -4,10 +4,12 @@ namespace App\Http\Middleware;
 
 use App\Actions\InboxFolders;
 use App\Ai\ProviderCredentials;
+use App\Enums\DiscoveryRunStatus;
 use App\Enums\EmailAccountStatus;
 use App\Http\Resources\OrganizationResource;
 use App\Http\Resources\ProjectResource;
 use App\Models\Company;
+use App\Models\DiscoveryRun;
 use App\Models\EmailAccount;
 use App\Models\Project;
 use App\Models\TargetProfile;
@@ -101,6 +103,11 @@ class HandleInertiaRequests extends Middleware
             // A closure for the same reason as `currentProject` above: the
             // route middleware that picks the project has not run yet here.
             'navCounts' => fn (): ?array => $this->navCounts(),
+            // What the chat panel polls for while a discovery run it (or
+            // anything else) triggered is still going: a closure for the
+            // same reason as `currentProject` above, and `usePoll`'d the
+            // same way every other in-flight job already is in this app.
+            'chatJobs' => fn (): ?array => $this->chatJobs(),
         ];
     }
 
@@ -125,6 +132,45 @@ class HandleInertiaRequests extends Middleware
             // screen it links to.
             'inbox' => app(InboxFolders::class)->todoCount(),
         ];
+    }
+
+    /**
+     * Every discovery run still going for the current project, so the chat
+     * panel can show a live status chip without Evie narrating "it's done"
+     * itself: no origin filter, so it also covers a run started from the
+     * Targets screen while the panel happens to be open - the user cares
+     * "is anything running in my project", not who asked for it.
+     *
+     * Bounded to the last hour, same reasoning as `AgentRun::isInFlight()`'s
+     * 15-minute cutoff: a row a crashed worker never finished must not spin
+     * a chip forever.
+     *
+     * @return array<int, array{type: string, id: int, status: string}>|null
+     */
+    private function chatJobs(): ?array
+    {
+        $project = app(CurrentProject::class);
+
+        if (! $project->isSet()) {
+            return null;
+        }
+
+        return DiscoveryRun::query()
+            ->where('project_id', $project->id())
+            ->whereNotIn('status', [
+                DiscoveryRunStatus::Succeeded,
+                DiscoveryRunStatus::Exhausted,
+                DiscoveryRunStatus::Aborted,
+                DiscoveryRunStatus::Failed,
+            ])
+            ->where('started_at', '>=', now()->subHour())
+            ->get(['id', 'status'])
+            ->map(fn (DiscoveryRun $run): array => [
+                'type' => 'discovery_run',
+                'id' => $run->id,
+                'status' => $run->status->value,
+            ])
+            ->all();
     }
 
     /**

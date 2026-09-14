@@ -16,6 +16,7 @@
         "@laravel/vite-plugin-wayfinder": "^0.1.7",
         "@nuxt/eslint-config": "^1.17.0",
         "@stylistic/eslint-plugin": "^5.10.0",
+        "@tailwindcss/typography": "^0.5.20",
         "@types/node": "^22.20.1",
         "@vue/eslint-config-typescript": "^14.9.0",
         "eslint": "^10.9.0",
@@ -26,19 +27,24 @@
         "vue-tsc": "^3.3.11"
     },
     "dependencies": {
+        "@ai-sdk/vue": "^4.0.99",
         "@inertiajs/vite": "^3.7.0",
         "@inertiajs/vue3": "^3.7.0",
         "@nuxt/ui": "^4.11.0",
         "@tailwindcss/vite": "^4.3.3",
         "@vitejs/plugin-vue": "^6.0.8",
+        "ai": "^7",
         "clsx": "^2.1.1",
         "concurrently": "^9.2.4",
+        "dompurify": "^3.4.15",
         "laravel-vite-plugin": "^3.2.0",
+        "marked": "^18.0.13",
         "tailwind-merge": "^3.6.0",
         "tailwindcss": "^4.3.3",
         "typescript": "^5.9.3",
         "vite": "^8.2.2",
-        "vue": "^3.5.41"
+        "vue": "^3.5.41",
+        "zod": "^4.6.2"
     },
     "optionalDependencies": {
         "@rollup/rollup-linux-x64-gnu": "4.62.5",

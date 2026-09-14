@@ -136,6 +136,7 @@ it('lists every agent it finds in the code, not a hand-kept list', function () {
         'contact-extractor',
         'contact-page-finder',
         'discovery-planner',
+        'evie',
         'listing-extractor',
         'message-personalizer',
         'reply-handler',

@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3'
 import { ref, watch } from 'vue'
+import AppLayout from '@/layouts/AppLayout.vue'
 import AppSettingsLayout from '@/layouts/AppSettingsLayout.vue'
 import limitRoutes from '@/routes/app-settings/limits'
+
+defineOptions({ layout: [AppLayout, [AppSettingsLayout, { title: 'Limits' }]] })
 
 const props = defineProps<{
     limits: Record<string, number | boolean>
@@ -69,71 +72,69 @@ const GROUPS: { title: string, hint: string, fields: { name: string, label: stri
 </script>
 
 <template>
-    <AppSettingsLayout title="Limits">
-        <Head title="Limits" />
+    <Head title="Limits" />
 
-        <Form
-            v-slot="{ errors, processing, recentlySuccessful }"
-            v-bind="limitRoutes.update.form()"
-            class="space-y-4"
+    <Form
+        v-slot="{ errors, processing, recentlySuccessful }"
+        v-bind="limitRoutes.update.form()"
+        class="space-y-4"
+    >
+        <UCard
+            v-for="group in GROUPS"
+            :key="group.title"
         >
-            <UCard
-                v-for="group in GROUPS"
-                :key="group.title"
-            >
-                <template #header>
-                    <h2 class="font-medium">
-                        {{ group.title }}
-                    </h2>
-                    <p class="mt-1 text-sm text-muted">
-                        {{ group.hint }}
-                    </p>
-                </template>
+            <template #header>
+                <h2 class="font-medium">
+                    {{ group.title }}
+                </h2>
+                <p class="mt-1 text-sm text-muted">
+                    {{ group.hint }}
+                </p>
+            </template>
 
-                <div class="grid gap-4 sm:grid-cols-2">
-                    <UFormField
-                        v-for="field in group.fields"
-                        :key="field.name"
-                        :label="field.label"
+            <div class="grid gap-4 sm:grid-cols-2">
+                <UFormField
+                    v-for="field in group.fields"
+                    :key="field.name"
+                    :label="field.label"
+                    :name="field.name"
+                    :error="errors[field.name]"
+                >
+                    <UInput
+                        v-model="draft[field.name]"
                         :name="field.name"
-                        :error="errors[field.name]"
-                    >
-                        <UInput
-                            v-model="draft[field.name]"
-                            :name="field.name"
-                            type="number"
-                            required
-                            class="w-full"
-                        />
-                    </UFormField>
+                        type="number"
+                        required
+                        class="w-full"
+                    />
+                </UFormField>
 
-                    <UFormField
-                        v-if="group.title === 'Email verification'"
-                        label="SMTP probe"
+                <UFormField
+                    v-if="group.title === 'Email verification'"
+                    label="SMTP probe"
+                    name="verification_probe"
+                    :error="errors.verification_probe"
+                >
+                    <UCheckbox
+                        v-model="probe"
                         name="verification_probe"
-                        :error="errors.verification_probe"
-                    >
-                        <UCheckbox
-                            v-model="probe"
-                            name="verification_probe"
-                            value="1"
-                            label="Probe the mail server before trusting an address"
-                        />
-                    </UFormField>
-                </div>
-            </UCard>
-
-            <div class="flex items-center gap-3">
-                <UButton
-                    type="submit"
-                    :loading="processing"
-                    label="Save"
-                />
-                <span
-                    v-if="recentlySuccessful"
-                    class="text-sm text-muted"
-                >Saved.</span>
+                        value="1"
+                        label="Probe the mail server before trusting an address"
+                    />
+                </UFormField>
             </div>
-        </Form>
-    </AppSettingsLayout>
+        </UCard>
+
+        <div class="flex items-center gap-3">
+            <UButton
+                type="submit"
+                :loading="processing"
+                label="Save"
+            />
+            <span
+                v-if="recentlySuccessful"
+                class="text-sm text-muted"
+            >Saved.</span>
+        </div>
+    </Form>
 </template>

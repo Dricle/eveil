@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3'
 import { ref, watch } from 'vue'
+import AppLayout from '@/layouts/AppLayout.vue'
 import AppSettingsLayout from '@/layouts/AppSettingsLayout.vue'
 import hostRoutes from '@/routes/app-settings/hosts'
 import type { Paginated } from '@/types'
+
+defineOptions({ layout: [AppLayout, [AppSettingsLayout, { title: 'Host registry' }]] })
 
 type Host = {
     id: number
@@ -52,109 +55,107 @@ function correct (host: Host, kind: string) {
 </script>
 
 <template>
-    <AppSettingsLayout title="Host registry">
-        <Head title="Host registry" />
+    <Head title="Host registry" />
 
-        <div class="max-w-4xl space-y-4">
-            <p class="text-sm text-muted">
-                What this install has worked out about hosts on the open web,
-                shared by every project. A wrong verdict is cached with exactly
-                the same confidence as a right one. A real prospect filed as
-                "neither" is invisible everywhere at once. Correcting one locks
-                it, and a locked verdict is never rewritten by a model.
-            </p>
+    <div class="max-w-4xl space-y-4">
+        <p class="text-sm text-muted">
+            What this install has worked out about hosts on the open web,
+            shared by every project. A wrong verdict is cached with exactly
+            the same confidence as a right one. A real prospect filed as
+            "neither" is invisible everywhere at once. Correcting one locks
+            it, and a locked verdict is never rewritten by a model.
+        </p>
 
+        <div class="flex flex-wrap items-center gap-3">
+            <UInput
+                v-model="search"
+                icon="i-lucide-search"
+                placeholder="Search a host"
+                class="w-64"
+            />
+
+            <USelect
+                v-model="kind"
+                :items="[{ label: 'Every kind', value: 'all' }, ...kinds.map(value => ({ label: value, value }))]"
+                class="w-56"
+            />
+        </div>
+
+        <p
+            v-if="!hosts.data.length"
+            class="text-sm text-muted"
+        >
+            Nothing learned yet. Hosts land here the first time a search
+            returns them.
+        </p>
+
+        <div
+            v-for="host in hosts.data"
+            :key="host.id"
+            class="space-y-2 rounded-lg p-4 ring ring-default"
+        >
             <div class="flex flex-wrap items-center gap-3">
-                <UInput
-                    v-model="search"
-                    icon="i-lucide-search"
-                    placeholder="Search a host"
-                    class="w-64"
-                />
+                <div class="min-w-0 flex-1">
+                    <p class="flex items-center gap-2 font-medium">
+                        <span class="truncate">{{ host.host }}</span>
+
+                        <UBadge
+                            v-if="host.is_locked"
+                            color="primary"
+                            variant="subtle"
+                            icon="i-lucide-lock"
+                            label="Set by a human"
+                        />
+                    </p>
+
+                    <p class="truncate text-sm text-muted">
+                        {{ KIND_LABELS[host.kind] ?? host.kind }}
+                        <span v-if="host.reason">: {{ host.reason }}</span>
+                    </p>
+                </div>
+
+                <span
+                    v-if="host.harvest_status"
+                    class="text-sm text-dimmed"
+                >
+                    {{ host.harvest_status }} ·
+                    {{ host.businesses_found }} found over
+                    {{ host.pages_harvested }} pages
+                </span>
 
                 <USelect
-                    v-model="kind"
-                    :items="[{ label: 'Every kind', value: 'all' }, ...kinds.map(value => ({ label: value, value }))]"
-                    class="w-56"
+                    :model-value="host.kind"
+                    :items="kinds"
+                    class="w-36"
+                    @update:model-value="value => correct(host, value)"
                 />
-            </div>
 
-            <p
-                v-if="!hosts.data.length"
-                class="text-sm text-muted"
-            >
-                Nothing learned yet. Hosts land here the first time a search
-                returns them.
-            </p>
-
-            <div
-                v-for="host in hosts.data"
-                :key="host.id"
-                class="space-y-2 rounded-lg p-4 ring ring-default"
-            >
-                <div class="flex flex-wrap items-center gap-3">
-                    <div class="min-w-0 flex-1">
-                        <p class="flex items-center gap-2 font-medium">
-                            <span class="truncate">{{ host.host }}</span>
-
-                            <UBadge
-                                v-if="host.is_locked"
-                                color="primary"
-                                variant="subtle"
-                                icon="i-lucide-lock"
-                                label="Set by a human"
-                            />
-                        </p>
-
-                        <p class="truncate text-sm text-muted">
-                            {{ KIND_LABELS[host.kind] ?? host.kind }}
-                            <span v-if="host.reason">: {{ host.reason }}</span>
-                        </p>
-                    </div>
-
-                    <span
-                        v-if="host.harvest_status"
-                        class="text-sm text-dimmed"
-                    >
-                        {{ host.harvest_status }} ·
-                        {{ host.businesses_found }} found over
-                        {{ host.pages_harvested }} pages
-                    </span>
-
-                    <USelect
-                        :model-value="host.kind"
-                        :items="kinds"
-                        class="w-36"
-                        @update:model-value="value => correct(host, value)"
-                    />
-
-                    <UButton
-                        v-if="host.is_locked"
-                        color="neutral"
-                        variant="ghost"
-                        size="xs"
-                        icon="i-lucide-unlock"
-                        aria-label="Let the model judge this host again"
-                        @click="router.put(hostRoutes.update.url(host.id), {
-                            kind: host.kind,
-                            reason: host.reason,
-                            is_locked: false
-                        }, { preserveScroll: true })"
-                    />
-                </div>
-            </div>
-
-            <div
-                v-if="hosts.meta.last_page > 1"
-                class="flex justify-center"
-            >
-                <UPagination
-                    :default-page="hosts.meta.current_page"
-                    :items-per-page="hosts.meta.per_page"
-                    :total="hosts.meta.total"
-                    @update:page="page => router.get(hostRoutes.index.url(), { ...filters, page }, { preserveState: true })"
+                <UButton
+                    v-if="host.is_locked"
+                    color="neutral"
+                    variant="ghost"
+                    size="xs"
+                    icon="i-lucide-unlock"
+                    aria-label="Let the model judge this host again"
+                    @click="router.put(hostRoutes.update.url(host.id), {
+                        kind: host.kind,
+                        reason: host.reason,
+                        is_locked: false
+                    }, { preserveScroll: true })"
                 />
             </div>
         </div>
-    </AppSettingsLayout>
+
+        <div
+            v-if="hosts.meta.last_page > 1"
+            class="flex justify-center"
+        >
+            <UPagination
+                :default-page="hosts.meta.current_page"
+                :items-per-page="hosts.meta.per_page"
+                :total="hosts.meta.total"
+                @update:page="page => router.get(hostRoutes.index.url(), { ...filters, page }, { preserveState: true })"
+            />
+        </div>
+    </div>
 </template>

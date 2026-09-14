@@ -9,6 +9,8 @@ import stepRoutes from '@/routes/campaigns/steps'
 import stepVariantRoutes from '@/routes/campaigns/steps/variants'
 import type { CampaignStatus } from '@/types'
 
+defineOptions({ layout: AppLayout })
+
 type VariantStats = { sent: number, positive: number, unsubscribed: number }
 
 type Variant = {
@@ -196,310 +198,308 @@ function preview (step: Step) {
 </script>
 
 <template>
-    <AppLayout>
-        <Head :title="campaign.name" />
+    <Head :title="campaign.name" />
 
-        <div class="space-y-6 p-6">
-            <CampaignHeader
-                :campaign="campaign"
-                tab="sequence"
-            />
+    <div class="space-y-6 p-6">
+        <CampaignHeader
+            :campaign="campaign"
+            tab="sequence"
+        />
 
-            <div class="grid gap-6 lg:grid-cols-2">
-                <div class="space-y-3">
-                    <div
-                        v-for="(step, index) in campaign.steps"
-                        :key="step.id"
-                        class="space-y-3 rounded-lg p-4 ring ring-default"
+        <div class="grid gap-6 lg:grid-cols-2">
+            <div class="space-y-3">
+                <div
+                    v-for="(step, index) in campaign.steps"
+                    :key="step.id"
+                    class="space-y-3 rounded-lg p-4 ring ring-default"
+                >
+                    <div class="flex items-center gap-2">
+                        <UBadge
+                            color="neutral"
+                            variant="subtle"
+                            :icon="step.type === 'wait' ? 'i-lucide-clock' : 'i-lucide-mail'"
+                            :label="step.type"
+                        />
+
+                        <span
+                            v-if="step.intent"
+                            class="min-w-0 flex-1 truncate text-sm text-muted"
+                        >{{ step.intent }}</span>
+
+                        <UButton
+                            color="neutral"
+                            variant="ghost"
+                            size="xs"
+                            icon="i-lucide-arrow-up"
+                            aria-label="Move earlier"
+                            :disabled="index === 0"
+                            @click="move(index, -1)"
+                        />
+                        <UButton
+                            color="neutral"
+                            variant="ghost"
+                            size="xs"
+                            icon="i-lucide-arrow-down"
+                            aria-label="Move later"
+                            :disabled="index === campaign.steps.length - 1"
+                            @click="move(index, 1)"
+                        />
+                        <UButton
+                            color="error"
+                            variant="ghost"
+                            size="xs"
+                            icon="i-lucide-x"
+                            aria-label="Remove this step"
+                            @click="router.delete(stepRoutes.destroy.url([campaign.id, step.id]), { preserveScroll: true })"
+                        />
+                    </div>
+
+                    <UFormField
+                        v-if="step.type === 'wait'"
+                        label="Wait"
+                        help="Hours before the next step. Same day reads as automation."
                     >
-                        <div class="flex items-center gap-2">
-                            <UBadge
-                                color="neutral"
-                                variant="subtle"
-                                :icon="step.type === 'wait' ? 'i-lucide-clock' : 'i-lucide-mail'"
-                                :label="step.type"
-                            />
+                        <UInput
+                            v-model.number="step.delay_hours"
+                            type="number"
+                            class="w-32"
+                            @blur="saveStep(step)"
+                        />
+                    </UFormField>
 
-                            <span
-                                v-if="step.intent"
-                                class="min-w-0 flex-1 truncate text-sm text-muted"
-                            >{{ step.intent }}</span>
-
-                            <UButton
-                                color="neutral"
-                                variant="ghost"
-                                size="xs"
-                                icon="i-lucide-arrow-up"
-                                aria-label="Move earlier"
-                                :disabled="index === 0"
-                                @click="move(index, -1)"
-                            />
-                            <UButton
-                                color="neutral"
-                                variant="ghost"
-                                size="xs"
-                                icon="i-lucide-arrow-down"
-                                aria-label="Move later"
-                                :disabled="index === campaign.steps.length - 1"
-                                @click="move(index, 1)"
-                            />
-                            <UButton
-                                color="error"
-                                variant="ghost"
-                                size="xs"
-                                icon="i-lucide-x"
-                                aria-label="Remove this step"
-                                @click="router.delete(stepRoutes.destroy.url([campaign.id, step.id]), { preserveScroll: true })"
-                            />
-                        </div>
-
-                        <UFormField
-                            v-if="step.type === 'wait'"
-                            label="Wait"
-                            help="Hours before the next step. Same day reads as automation."
+                    <template v-else>
+                        <div
+                            v-for="(variant, variantIndex) in step.variants"
+                            :key="variant.id"
+                            class="space-y-2"
+                            :class="{ 'border-t border-default pt-3': variantIndex > 0 }"
                         >
-                            <UInput
-                                v-model.number="step.delay_hours"
-                                type="number"
-                                class="w-32"
-                                @blur="saveStep(step)"
-                            />
-                        </UFormField>
-
-                        <template v-else>
                             <div
-                                v-for="(variant, variantIndex) in step.variants"
-                                :key="variant.id"
-                                class="space-y-2"
-                                :class="{ 'border-t border-default pt-3': variantIndex > 0 }"
+                                v-if="step.variants.length > 1"
+                                class="flex items-center gap-2 text-xs text-muted"
                             >
-                                <div
-                                    v-if="step.variants.length > 1"
-                                    class="flex items-center gap-2 text-xs text-muted"
+                                <span class="font-medium">{{ String.fromCharCode(65 + variantIndex) }}</span>
+
+                                <span>{{ variant.stats.sent }} sent</span>
+                                <span v-if="variant.stats.sent > 0">· {{ variant.stats.positive }} interested</span>
+                                <span v-if="variant.stats.sent > 0">· {{ variant.stats.unsubscribed }} unsubscribed</span>
+
+                                <UFormField
+                                    label="Weight"
+                                    class="ml-auto flex items-center gap-1"
                                 >
-                                    <span class="font-medium">{{ String.fromCharCode(65 + variantIndex) }}</span>
-
-                                    <span>{{ variant.stats.sent }} sent</span>
-                                    <span v-if="variant.stats.sent > 0">· {{ variant.stats.positive }} interested</span>
-                                    <span v-if="variant.stats.sent > 0">· {{ variant.stats.unsubscribed }} unsubscribed</span>
-
-                                    <UFormField
-                                        label="Weight"
-                                        class="ml-auto flex items-center gap-1"
-                                    >
-                                        <UInput
-                                            v-model.number="variant.weight"
-                                            type="number"
-                                            min="1"
-                                            class="w-16"
-                                            size="xs"
-                                            @blur="saveVariant(step, variant)"
-                                        />
-                                    </UFormField>
-
-                                    <UButton
-                                        color="error"
-                                        variant="ghost"
+                                    <UInput
+                                        v-model.number="variant.weight"
+                                        type="number"
+                                        min="1"
+                                        class="w-16"
                                         size="xs"
-                                        icon="i-lucide-x"
-                                        aria-label="Remove this variant"
-                                        @click="removeVariant(step, variant)"
+                                        @blur="saveVariant(step, variant)"
                                     />
-                                </div>
+                                </UFormField>
 
-                                <UInput
-                                    :model-value="variant.subject"
-                                    placeholder="Subject"
-                                    class="w-full"
-                                    @update:model-value="value => variant.subject = String(value)"
+                                <UButton
+                                    color="error"
+                                    variant="ghost"
+                                    size="xs"
+                                    icon="i-lucide-x"
+                                    aria-label="Remove this variant"
+                                    @click="removeVariant(step, variant)"
                                 />
-
-                                <UTextarea
-                                    :model-value="variant.body"
-                                    :rows="8"
-                                    autoresize
-                                    class="w-full"
-                                    @update:model-value="value => variant.body = String(value)"
-                                />
-
-                                <div class="flex gap-2">
-                                    <UButton
-                                        color="neutral"
-                                        variant="subtle"
-                                        size="xs"
-                                        icon="i-lucide-save"
-                                        :loading="savingVariant === variant.id"
-                                        label="Save"
-                                        @click="saveVariant(step, variant)"
-                                    />
-                                    <UButton
-                                        color="neutral"
-                                        variant="ghost"
-                                        size="xs"
-                                        icon="i-lucide-sparkles"
-                                        :loading="writingVariant"
-                                        :disabled="writingVariant"
-                                        label="Regenerate"
-                                        @click="openRegenerateModal(step, variant)"
-                                    />
-                                </div>
                             </div>
 
-                            <div class="flex items-center gap-2">
+                            <UInput
+                                :model-value="variant.subject"
+                                placeholder="Subject"
+                                class="w-full"
+                                @update:model-value="value => variant.subject = String(value)"
+                            />
+
+                            <UTextarea
+                                :model-value="variant.body"
+                                :rows="8"
+                                autoresize
+                                class="w-full"
+                                @update:model-value="value => variant.body = String(value)"
+                            />
+
+                            <div class="flex gap-2">
                                 <UButton
                                     color="neutral"
                                     variant="subtle"
                                     size="xs"
-                                    icon="i-lucide-eye"
-                                    :loading="previewing === step.id"
-                                    label="Preview on real leads"
-                                    @click="preview(step)"
+                                    icon="i-lucide-save"
+                                    :loading="savingVariant === variant.id"
+                                    label="Save"
+                                    @click="saveVariant(step, variant)"
                                 />
                                 <UButton
                                     color="neutral"
                                     variant="ghost"
                                     size="xs"
-                                    icon="i-lucide-split"
+                                    icon="i-lucide-sparkles"
                                     :loading="writingVariant"
                                     :disabled="writingVariant"
-                                    :label="writingVariant ? 'Writing…' : 'Add a variant to A/B test'"
-                                    @click="openVariantModal(step)"
+                                    label="Regenerate"
+                                    @click="openRegenerateModal(step, variant)"
                                 />
                             </div>
-                        </template>
-                    </div>
+                        </div>
 
-                    <UAlert
-                        v-if="writingVariantError"
-                        color="error"
-                        variant="subtle"
-                        icon="i-lucide-triangle-alert"
-                        title="The last variant was not written"
-                        :description="writingVariantError"
-                    />
-
-                    <div class="flex gap-2">
-                        <UButton
-                            color="neutral"
-                            variant="subtle"
-                            icon="i-lucide-mail-plus"
-                            label="Add a mail"
-                            @click="add('email')"
-                        />
-                        <UButton
-                            color="neutral"
-                            variant="subtle"
-                            icon="i-lucide-clock"
-                            label="Add a wait"
-                            @click="add('wait')"
-                        />
-                    </div>
+                        <div class="flex items-center gap-2">
+                            <UButton
+                                color="neutral"
+                                variant="subtle"
+                                size="xs"
+                                icon="i-lucide-eye"
+                                :loading="previewing === step.id"
+                                label="Preview on real leads"
+                                @click="preview(step)"
+                            />
+                            <UButton
+                                color="neutral"
+                                variant="ghost"
+                                size="xs"
+                                icon="i-lucide-split"
+                                :loading="writingVariant"
+                                :disabled="writingVariant"
+                                :label="writingVariant ? 'Writing…' : 'Add a variant to A/B test'"
+                                @click="openVariantModal(step)"
+                            />
+                        </div>
+                    </template>
                 </div>
 
-                <div class="space-y-3">
-                    <p class="text-sm text-muted">
-                        What actually goes out, written for leads you have already found.
-                        The opener comes from what the qualifier observed about them,
-                        nobody researches a prospect by hand here.
-                    </p>
+                <UAlert
+                    v-if="writingVariantError"
+                    color="error"
+                    variant="subtle"
+                    icon="i-lucide-triangle-alert"
+                    title="The last variant was not written"
+                    :description="writingVariantError"
+                />
 
-                    <p
-                        v-if="sample && !sample.messages.length"
-                        class="text-sm text-dimmed"
-                    >
-                        No lead with an address yet, so there is nothing to write to.
-                    </p>
+                <div class="flex gap-2">
+                    <UButton
+                        color="neutral"
+                        variant="subtle"
+                        icon="i-lucide-mail-plus"
+                        label="Add a mail"
+                        @click="add('email')"
+                    />
+                    <UButton
+                        color="neutral"
+                        variant="subtle"
+                        icon="i-lucide-clock"
+                        label="Add a wait"
+                        @click="add('wait')"
+                    />
+                </div>
+            </div>
 
-                    <div
-                        v-for="(message, index) in sample?.messages ?? []"
-                        :key="index"
-                        class="space-y-2 rounded-lg p-4 ring ring-default"
-                    >
-                        <p class="text-sm font-medium">
-                            {{ message.company ?? message.lead }}
-                            <span class="text-dimmed">· {{ message.lead }}</span>
-                        </p>
-                        <p class="text-sm font-medium">
-                            {{ message.subject }}
-                        </p>
-                        <p class="whitespace-pre-wrap text-sm text-muted">
-                            {{ message.body }}
-                        </p>
-                    </div>
+            <div class="space-y-3">
+                <p class="text-sm text-muted">
+                    What actually goes out, written for leads you have already found.
+                    The opener comes from what the qualifier observed about them,
+                    nobody researches a prospect by hand here.
+                </p>
+
+                <p
+                    v-if="sample && !sample.messages.length"
+                    class="text-sm text-dimmed"
+                >
+                    No lead with an address yet, so there is nothing to write to.
+                </p>
+
+                <div
+                    v-for="(message, index) in sample?.messages ?? []"
+                    :key="index"
+                    class="space-y-2 rounded-lg p-4 ring ring-default"
+                >
+                    <p class="text-sm font-medium">
+                        {{ message.company ?? message.lead }}
+                        <span class="text-dimmed">· {{ message.lead }}</span>
+                    </p>
+                    <p class="text-sm font-medium">
+                        {{ message.subject }}
+                    </p>
+                    <p class="whitespace-pre-wrap text-sm text-muted">
+                        {{ message.body }}
+                    </p>
                 </div>
             </div>
         </div>
+    </div>
 
-        <UModal
-            v-model:open="variantModalOpen"
-            title="Add a variant to A/B test"
-            description="Tell the agent what this version should test, or leave it blank and it picks its own angle."
-        >
-            <template #body>
-                <UFormField
-                    label="What should this version test?"
-                    help="e.g. a shorter version, a more casual tone, leading with price instead of the pitch"
-                >
-                    <UTextarea
-                        v-if="variantPrompt"
-                        v-model="variantPrompt.guidance"
-                        :rows="3"
-                        placeholder="Optional"
-                        class="w-full"
-                        autofocus
-                    />
-                </UFormField>
-            </template>
+    <UModal
+        v-model:open="variantModalOpen"
+        title="Add a variant to A/B test"
+        description="Tell the agent what this version should test, or leave it blank and it picks its own angle."
+    >
+        <template #body>
+            <UFormField
+                label="What should this version test?"
+                help="e.g. a shorter version, a more casual tone, leading with price instead of the pitch"
+            >
+                <UTextarea
+                    v-if="variantPrompt"
+                    v-model="variantPrompt.guidance"
+                    :rows="3"
+                    placeholder="Optional"
+                    class="w-full"
+                    autofocus
+                />
+            </UFormField>
+        </template>
 
-            <template #footer>
-                <UButton
-                    color="neutral"
-                    variant="ghost"
-                    label="Cancel"
-                    @click="variantModalOpen = false"
-                />
-                <UButton
-                    icon="i-lucide-sparkles"
-                    label="Generate"
-                    @click="generateVariantFromModal"
-                />
-            </template>
-        </UModal>
+        <template #footer>
+            <UButton
+                color="neutral"
+                variant="ghost"
+                label="Cancel"
+                @click="variantModalOpen = false"
+            />
+            <UButton
+                icon="i-lucide-sparkles"
+                label="Generate"
+                @click="generateVariantFromModal"
+            />
+        </template>
+    </UModal>
 
-        <UModal
-            v-model:open="regenerateModalOpen"
-            title="Regenerate this mail"
-            description="Tell the agent what to change, or leave it blank and it rewrites the mail its own way."
-        >
-            <template #body>
-                <UFormField
-                    label="What should change?"
-                    help="e.g. make it shorter, lead with the price, sound more casual"
-                >
-                    <UTextarea
-                        v-if="regeneratePrompt"
-                        v-model="regeneratePrompt.guidance"
-                        :rows="3"
-                        placeholder="Optional"
-                        class="w-full"
-                        autofocus
-                    />
-                </UFormField>
-            </template>
+    <UModal
+        v-model:open="regenerateModalOpen"
+        title="Regenerate this mail"
+        description="Tell the agent what to change, or leave it blank and it rewrites the mail its own way."
+    >
+        <template #body>
+            <UFormField
+                label="What should change?"
+                help="e.g. make it shorter, lead with the price, sound more casual"
+            >
+                <UTextarea
+                    v-if="regeneratePrompt"
+                    v-model="regeneratePrompt.guidance"
+                    :rows="3"
+                    placeholder="Optional"
+                    class="w-full"
+                    autofocus
+                />
+            </UFormField>
+        </template>
 
-            <template #footer>
-                <UButton
-                    color="neutral"
-                    variant="ghost"
-                    label="Cancel"
-                    @click="regenerateModalOpen = false"
-                />
-                <UButton
-                    icon="i-lucide-sparkles"
-                    label="Regenerate"
-                    @click="regenerateVariantFromModal"
-                />
-            </template>
-        </UModal>
-    </AppLayout>
+        <template #footer>
+            <UButton
+                color="neutral"
+                variant="ghost"
+                label="Cancel"
+                @click="regenerateModalOpen = false"
+            />
+            <UButton
+                icon="i-lucide-sparkles"
+                label="Regenerate"
+                @click="regenerateVariantFromModal"
+            />
+        </template>
+    </UModal>
 </template>

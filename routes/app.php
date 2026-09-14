@@ -41,6 +41,7 @@ use App\Http\Controllers\DiscoveryLinkController;
 use App\Http\Controllers\DiscoveryRunCancellationController;
 use App\Http\Controllers\DiscoveryRunController;
 use App\Http\Controllers\DiscoveryTaskReplayController;
+use App\Http\Controllers\EvieChatController;
 use App\Http\Controllers\InboxController;
 use App\Http\Controllers\KnownClientController;
 use App\Http\Controllers\LeadImportController;
@@ -111,6 +112,17 @@ Route::middleware(['auth', 'verified', 'project.set'])->group(function (): void 
         Route::get('onboarding', [OnboardingController::class, 'show'])->name('onboarding');
         Route::post('onboarding/searches', [OnboardingSearchController::class, 'store'])
             ->name('onboarding.searches');
+
+        /*
+         * The persistent chat panel: app-wide, not tied to any one page's
+         * props, so it is a plain JSON/SSE endpoint rather than an Inertia
+         * render. GET restores the transcript on mount/project switch, POST
+         * streams one turn (or resumes a paused one with approval decisions),
+         * DELETE is what "clear" sends to start a fresh conversation.
+         */
+        Route::get('chat', [EvieChatController::class, 'index'])->name('chat.show');
+        Route::post('chat', [EvieChatController::class, 'store'])->name('chat.store');
+        Route::delete('chat', [EvieChatController::class, 'destroy'])->name('chat.destroy');
 
         /*
          * The current project comes from the session, so none of these carry it

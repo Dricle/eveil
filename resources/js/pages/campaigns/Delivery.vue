@@ -5,6 +5,8 @@ import CampaignHeader from '@/components/CampaignHeader.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import type { CampaignLead, CampaignStatus, Pipeline, SendingState } from '@/types'
 
+defineOptions({ layout: AppLayout })
+
 const props = defineProps<{
     campaign: {
         id: number
@@ -71,144 +73,142 @@ const blocker = computed(() => {
 </script>
 
 <template>
-    <AppLayout>
-        <Head :title="campaign.name" />
+    <Head :title="campaign.name" />
 
-        <div class="space-y-6 p-6">
-            <CampaignHeader
-                :campaign="campaign"
-                tab="delivery"
-            />
+    <div class="space-y-6 p-6">
+        <CampaignHeader
+            :campaign="campaign"
+            tab="delivery"
+        />
 
-            <!-- Activating the campaign is what puts people into it, so this is
-                 where the answer to "did anything actually happen" belongs. -->
+        <!-- Activating the campaign is what puts people into it, so this is
+             where the answer to "did anything actually happen" belongs. -->
+        <div
+            v-if="Object.keys(pipeline).length"
+            class="flex flex-wrap gap-4 rounded-lg p-4 text-sm ring ring-default"
+        >
             <div
-                v-if="Object.keys(pipeline).length"
-                class="flex flex-wrap gap-4 rounded-lg p-4 text-sm ring ring-default"
+                v-for="stage in STAGES"
+                :key="stage.key"
+                class="min-w-24"
             >
-                <div
-                    v-for="stage in STAGES"
-                    :key="stage.key"
-                    class="min-w-24"
-                >
-                    <p class="text-dimmed">
-                        {{ stage.label }}
+                <p class="text-dimmed">
+                    {{ stage.label }}
+                </p>
+                <p class="text-lg">
+                    {{ pipeline[stage.key] ?? 0 }}
+                </p>
+            </div>
+        </div>
+
+        <p
+            v-else-if="campaign.status === 'draft'"
+            class="rounded-lg p-4 text-sm text-muted ring ring-default"
+        >
+            Nobody is in this sequence yet. Starting it enrols the leads
+            this project can still write to, and pins a mailbox to each one
+            for the whole sequence.
+        </p>
+
+        <!-- "Active" and "sending right now" are not the same thing, and
+             the gap between them is where this screen used to say nothing. -->
+        <div class="space-y-3 rounded-lg p-4 ring ring-default">
+            <div class="flex items-start gap-3">
+                <UIcon
+                    :name="campaign.status === 'active' ? 'i-lucide-send' : 'i-lucide-pause'"
+                    class="mt-0.5 size-5 shrink-0 text-dimmed"
+                />
+                <div class="min-w-0">
+                    <p class="text-sm">
+                        {{ blocker }}
                     </p>
-                    <p class="text-lg">
-                        {{ pipeline[stage.key] ?? 0 }}
+                    <p class="text-sm text-dimmed">
+                        Sending is paced: one mail per mailbox per tick, never outside
+                        {{ sending.window.start }}:00 to {{ sending.window.end }}:00.
                     </p>
                 </div>
             </div>
 
-            <p
-                v-else-if="campaign.status === 'draft'"
-                class="rounded-lg p-4 text-sm text-muted ring ring-default"
-            >
-                Nobody is in this sequence yet. Starting it enrols the leads
-                this project can still write to, and pins a mailbox to each one
-                for the whole sequence.
-            </p>
-
-            <!-- "Active" and "sending right now" are not the same thing, and
-                 the gap between them is where this screen used to say nothing. -->
-            <div class="space-y-3 rounded-lg p-4 ring ring-default">
-                <div class="flex items-start gap-3">
-                    <UIcon
-                        :name="campaign.status === 'active' ? 'i-lucide-send' : 'i-lucide-pause'"
-                        class="mt-0.5 size-5 shrink-0 text-dimmed"
-                    />
-                    <div class="min-w-0">
-                        <p class="text-sm">
-                            {{ blocker }}
-                        </p>
-                        <p class="text-sm text-dimmed">
-                            Sending is paced: one mail per mailbox per tick, never outside
-                            {{ sending.window.start }}:00 to {{ sending.window.end }}:00.
-                        </p>
-                    </div>
-                </div>
-
-                <div
-                    v-if="sending.mailboxes.length"
-                    class="flex flex-wrap gap-4 text-sm"
-                >
-                    <div
-                        v-for="mailbox in sending.mailboxes"
-                        :key="mailbox.id"
-                        class="min-w-56 rounded-lg bg-elevated p-3"
-                    >
-                        <p class="truncate font-medium">
-                            {{ mailbox.from_email }}
-                        </p>
-                        <p class="text-muted">
-                            {{ mailbox.sent_today }} sent today of {{ mailbox.allowance_today }},
-                            {{ mailbox.remaining_today }} left
-                        </p>
-                        <p
-                            v-if="mailbox.status !== 'active'"
-                            class="text-warning"
-                        >
-                            Mailbox {{ mailbox.status }}: nothing leaves it until that is fixed.
-                        </p>
-                        <p
-                            v-else-if="mailbox.ready_at"
-                            class="text-dimmed"
-                        >
-                            Next send from this address after {{ moment(mailbox.ready_at) }}.
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Who is where, ordered by what is owed first. The whole list
-                 belongs on Contacts; this is the run at a glance. -->
             <div
-                v-if="leads.length"
-                class="space-y-2 rounded-lg p-4 ring ring-default"
+                v-if="sending.mailboxes.length"
+                class="flex flex-wrap gap-4 text-sm"
             >
-                <div class="flex flex-wrap items-baseline gap-2">
-                    <p class="font-medium">
-                        In this sequence
+                <div
+                    v-for="mailbox in sending.mailboxes"
+                    :key="mailbox.id"
+                    class="min-w-56 rounded-lg bg-elevated p-3"
+                >
+                    <p class="truncate font-medium">
+                        {{ mailbox.from_email }}
+                    </p>
+                    <p class="text-muted">
+                        {{ mailbox.sent_today }} sent today of {{ mailbox.allowance_today }},
+                        {{ mailbox.remaining_today }} left
                     </p>
                     <p
-                        v-if="leadsTotal > leads.length"
-                        class="text-sm text-dimmed"
+                        v-if="mailbox.status !== 'active'"
+                        class="text-warning"
                     >
-                        Showing {{ leads.length }} of {{ leadsTotal }}. The rest are on Contacts.
+                        Mailbox {{ mailbox.status }}: nothing leaves it until that is fixed.
                     </p>
-                </div>
-
-                <div
-                    v-for="lead in leads"
-                    :key="lead.id"
-                    class="flex flex-wrap items-center gap-3 border-t border-default py-2 text-sm first:border-0"
-                >
-                    <span class="min-w-48 flex-1 truncate">
-                        {{ lead.name ?? lead.email }}
-                        <span
-                            v-if="lead.company"
-                            class="text-dimmed"
-                        >· {{ lead.company }}</span>
-                    </span>
-
-                    <UBadge
-                        color="neutral"
-                        variant="subtle"
-                        :label="lead.status"
-                    />
-
-                    <span class="text-muted">
-                        {{ lead.last_step === 0 ? 'not started' : `step ${lead.last_step} done` }}
-                    </span>
-                    <span class="text-muted">{{ lead.sent ?? 0 }} sent</span>
-
-                    <span class="min-w-44 text-dimmed">
-                        <template v-if="lead.pause_reason">{{ lead.pause_reason }}</template>
-                        <template v-else-if="lead.next_action_at">due {{ moment(lead.next_action_at) }}</template>
-                        <template v-else>nothing owed</template>
-                    </span>
+                    <p
+                        v-else-if="mailbox.ready_at"
+                        class="text-dimmed"
+                    >
+                        Next send from this address after {{ moment(mailbox.ready_at) }}.
+                    </p>
                 </div>
             </div>
         </div>
-    </AppLayout>
+
+        <!-- Who is where, ordered by what is owed first. The whole list
+             belongs on Contacts; this is the run at a glance. -->
+        <div
+            v-if="leads.length"
+            class="space-y-2 rounded-lg p-4 ring ring-default"
+        >
+            <div class="flex flex-wrap items-baseline gap-2">
+                <p class="font-medium">
+                    In this sequence
+                </p>
+                <p
+                    v-if="leadsTotal > leads.length"
+                    class="text-sm text-dimmed"
+                >
+                    Showing {{ leads.length }} of {{ leadsTotal }}. The rest are on Contacts.
+                </p>
+            </div>
+
+            <div
+                v-for="lead in leads"
+                :key="lead.id"
+                class="flex flex-wrap items-center gap-3 border-t border-default py-2 text-sm first:border-0"
+            >
+                <span class="min-w-48 flex-1 truncate">
+                    {{ lead.name ?? lead.email }}
+                    <span
+                        v-if="lead.company"
+                        class="text-dimmed"
+                    >· {{ lead.company }}</span>
+                </span>
+
+                <UBadge
+                    color="neutral"
+                    variant="subtle"
+                    :label="lead.status"
+                />
+
+                <span class="text-muted">
+                    {{ lead.last_step === 0 ? 'not started' : `step ${lead.last_step} done` }}
+                </span>
+                <span class="text-muted">{{ lead.sent ?? 0 }} sent</span>
+
+                <span class="min-w-44 text-dimmed">
+                    <template v-if="lead.pause_reason">{{ lead.pause_reason }}</template>
+                    <template v-else-if="lead.next_action_at">due {{ moment(lead.next_action_at) }}</template>
+                    <template v-else>nothing owed</template>
+                </span>
+            </div>
+        </div>
+    </div>
 </template>

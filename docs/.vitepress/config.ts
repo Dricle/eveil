@@ -18,6 +18,7 @@ export default defineConfig({
                     items: [
                         { text: 'Getting started', link: '/product/getting-started' },
                         { text: 'Statuses and the inbox', link: '/product/statuses' },
+                        { text: 'Chatting with Evie', link: '/product/evie' },
                     ],
                 },
             ],

@@ -1,83 +1,84 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3'
 import AccountLayout from '@/layouts/AccountLayout.vue'
+import AppLayout from '@/layouts/AppLayout.vue'
 import { update } from '@/routes/user-password'
+
+defineOptions({ layout: [AppLayout, [AccountLayout, { title: 'Password' }]] })
 </script>
 
 <template>
-    <AccountLayout title="Password">
-        <Head title="Password" />
+    <Head title="Password" />
 
-        <UCard>
-            <template #header>
-                <h2 class="font-medium">
-                    Password
-                </h2>
-                <p class="mt-1 text-sm text-neutral-500">
-                    Changing it does not sign your other sessions out.
-                </p>
-            </template>
+    <UCard>
+        <template #header>
+            <h2 class="font-medium">
+                Password
+            </h2>
+            <p class="mt-1 text-sm text-neutral-500">
+                Changing it does not sign your other sessions out.
+            </p>
+        </template>
 
-            <Form
-                v-slot="{ errors, processing, recentlySuccessful }"
-                v-bind="update.form()"
-                error-bag="updatePassword"
-                reset-on-success
-                class="space-y-4"
+        <Form
+            v-slot="{ errors, processing, recentlySuccessful }"
+            v-bind="update.form()"
+            error-bag="updatePassword"
+            reset-on-success
+            class="space-y-4"
+        >
+            <UFormField
+                label="Current password"
+                name="current_password"
+                :error="errors.current_password"
             >
-                <UFormField
-                    label="Current password"
+                <UInput
                     name="current_password"
-                    :error="errors.current_password"
-                >
-                    <UInput
-                        name="current_password"
-                        type="password"
-                        autocomplete="current-password"
-                        required
-                        class="w-full"
-                    />
-                </UFormField>
+                    type="password"
+                    autocomplete="current-password"
+                    required
+                    class="w-full"
+                />
+            </UFormField>
 
-                <UFormField
-                    label="New password"
+            <UFormField
+                label="New password"
+                name="password"
+                :error="errors.password"
+            >
+                <UInput
                     name="password"
-                    :error="errors.password"
-                >
-                    <UInput
-                        name="password"
-                        type="password"
-                        autocomplete="new-password"
-                        required
-                        class="w-full"
-                    />
-                </UFormField>
+                    type="password"
+                    autocomplete="new-password"
+                    required
+                    class="w-full"
+                />
+            </UFormField>
 
-                <UFormField
-                    label="Confirm new password"
+            <UFormField
+                label="Confirm new password"
+                name="password_confirmation"
+            >
+                <UInput
                     name="password_confirmation"
-                >
-                    <UInput
-                        name="password_confirmation"
-                        type="password"
-                        autocomplete="new-password"
-                        required
-                        class="w-full"
-                    />
-                </UFormField>
+                    type="password"
+                    autocomplete="new-password"
+                    required
+                    class="w-full"
+                />
+            </UFormField>
 
-                <div class="flex items-center gap-3">
-                    <UButton
-                        type="submit"
-                        :loading="processing"
-                        label="Change password"
-                    />
-                    <span
-                        v-if="recentlySuccessful"
-                        class="text-sm text-neutral-500"
-                    >Changed.</span>
-                </div>
-            </Form>
-        </UCard>
-    </AccountLayout>
+            <div class="flex items-center gap-3">
+                <UButton
+                    type="submit"
+                    :loading="processing"
+                    label="Change password"
+                />
+                <span
+                    v-if="recentlySuccessful"
+                    class="text-sm text-neutral-500"
+                >Changed.</span>
+            </div>
+        </Form>
+    </UCard>
 </template>

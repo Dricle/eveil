@@ -2,7 +2,6 @@
 import { usePage } from '@inertiajs/vue3'
 import type { NavigationMenuItem } from '@nuxt/ui'
 import { computed } from 'vue'
-import AppLayout from '@/layouts/AppLayout.vue'
 import { deleteMethod, password, profile, twoFactor } from '@/routes/account'
 
 defineProps<{
@@ -30,23 +29,21 @@ const items = computed<NavigationMenuItem[]>(() =>
 </script>
 
 <template>
-    <AppLayout>
-        <div class="flex h-full flex-1">
-            <aside class="w-64 shrink-0 border-e border-default p-4">
-                <UNavigationMenu
-                    :items="items"
-                    orientation="vertical"
-                    :ui="{ link: 'p-1.5 overflow-hidden' }"
-                />
-            </aside>
+    <div class="flex h-full flex-1">
+        <aside class="w-64 shrink-0 border-e border-default p-4">
+            <UNavigationMenu
+                :items="items"
+                orientation="vertical"
+                :ui="{ link: 'p-1.5 overflow-hidden' }"
+            />
+        </aside>
 
-            <div class="min-w-0 flex-1 space-y-4 overflow-y-auto p-4">
-                <h2 class="font-medium">
-                    {{ title }}
-                </h2>
+        <div class="min-w-0 flex-1 space-y-4 overflow-y-auto p-4">
+            <h2 class="font-medium">
+                {{ title }}
+            </h2>
 
-                <slot />
-            </div>
+            <slot />
         </div>
-    </AppLayout>
+    </div>
 </template>

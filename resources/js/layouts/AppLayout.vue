@@ -2,6 +2,8 @@
 import { router, usePage } from '@inertiajs/vue3'
 import type { DropdownMenuItem, NavigationMenuItem } from '@nuxt/ui'
 import { computed, ref } from 'vue'
+import ChatPanel from '@/components/chat/ChatPanel.vue'
+import ChatToggleButton from '@/components/chat/ChatToggleButton.vue'
 import { dashboard, inbox, logout } from '@/routes'
 import campaigns from '@/routes/campaigns'
 import companies from '@/routes/companies'
@@ -18,6 +20,11 @@ import targets from '@/routes/targets'
 const page = usePage()
 
 const open = ref(true)
+
+// A plain local ref, not a shared module: AppLayout is a single persistent
+// instance now (the layout-stack migration), so this survives every
+// navigation on its own, the same way `open` above does for the sidebar.
+const chatOpen = ref(false)
 
 // AppServiceProvider forces an absolute root URL for the whole app in prod
 // (needed so a password-reset email doesn't link to plain http), and
@@ -282,7 +289,7 @@ const userMenu = computed<DropdownMenuItem[][]>(() => [
             </template>
         </USidebar>
 
-        <div class="flex flex-1 flex-col overflow-hidden bg-default">
+        <div class="flex min-w-0 flex-1 flex-col overflow-hidden bg-default">
             <div
                 class="flex h-[52px] shrink-0 items-center gap-1 border-b border-default px-4"
             >
@@ -387,6 +394,8 @@ const userMenu = computed<DropdownMenuItem[][]>(() => [
                      mentions mailboxes, so it gets a permanent pill here on
                      top of the full alert below. -->
                 <div class="ml-auto flex items-center gap-2">
+                    <ChatToggleButton v-model:open="chatOpen" />
+
                     <UButton
                         v-if="page.props.setup?.broken?.length"
                         :to="mailboxes.index.url()"
@@ -466,5 +475,7 @@ const userMenu = computed<DropdownMenuItem[][]>(() => [
                 <slot />
             </div>
         </div>
+
+        <ChatPanel :open="chatOpen" />
     </div>
 </template>

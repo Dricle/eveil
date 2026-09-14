@@ -48,8 +48,8 @@ class GetCampaign implements Tool
                 'delay_hours' => $step->delay_hours,
                 'intent' => $step->config['intent'] ?? '',
                 ...$step->type === CampaignStepType::Email ? [
-                    'subject' => $step->variants->first()?->subject ?? '',
-                    'body' => $step->variants->first()?->body ?? '',
+                    'subject' => $step->variants->first()->subject,
+                    'body' => $step->variants->first()->body,
                 ] : [],
             ])->all(),
         ]);

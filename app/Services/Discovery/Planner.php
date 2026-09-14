@@ -116,11 +116,28 @@ class Planner
             .$summaries->implode("\n");
     }
 
+    /**
+     * @param  array<string, mixed>  $tags
+     */
+    private function describeTags(array $tags): string
+    {
+        $pairs = [];
+
+        foreach ($tags as $key => $value) {
+            $pairs[] = "{$key}={$value}";
+        }
+
+        return implode(',', $pairs);
+    }
+
+    /**
+     * @param  array{source?: string, probe?: array<string, mixed>}|null  $payload
+     */
     private function describeProbe(?array $payload): ?string
     {
         return match ($payload['source'] ?? null) {
             'overpass' => 'map: '.($payload['probe']['area'] ?? '?').' ('
-                .collect($payload['probe']['tags'] ?? [])->map(fn ($value, $key) => "{$key}={$value}")->implode(',')
+                .$this->describeTags($payload['probe']['tags'] ?? [])
                 .')',
             'web_search' => 'web: "'.($payload['probe']['query'] ?? '').'"',
             default => null,

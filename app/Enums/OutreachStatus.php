@@ -49,11 +49,14 @@ enum OutreachStatus: string
     }
 
     /**
-     * The statuses a REPLY can actually leave a lead at. `New`, `Queued` and
-     * `Contacted` are real values a lead can sit at, but never ones a reply
-     * does: nothing reaches the inbox without an inbound message, and none of
-     * those three describe a lead who sent one. `InboxFolders` builds its
-     * folder list from this, `Replied` first because it is declared first.
+     * The statuses a lead can sit at while having actually received a
+     * reply. Only `New` and `Queued` are excluded: nothing reaches the inbox
+     * without an inbound message, and neither describes a lead anything has
+     * been sent to yet. `Contacted` stays IN this list on purpose - it is
+     * exactly where an auto-reply (out of office) leaves a lead, because
+     * `FetchReplies::record()` never bumps status for one. `InboxFolders`
+     * builds its folder list from this, `Contacted` first because it is
+     * declared first.
      *
      * @return array<int, self>
      */
@@ -61,7 +64,7 @@ enum OutreachStatus: string
     {
         return array_values(array_filter(
             self::cases(),
-            fn (self $status): bool => ! in_array($status, [self::New, self::Queued, self::Contacted], strict: true),
+            fn (self $status): bool => ! in_array($status, [self::New, self::Queued], strict: true),
         ));
     }
 }

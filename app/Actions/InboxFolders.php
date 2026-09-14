@@ -17,8 +17,8 @@ use Illuminate\Http\Request;
 class InboxFolders
 {
     /**
-     * One folder per status a reply can leave a lead at (`OutreachStatus::reachableByReply()`,
-     * `replied` first since it's declared first), plus `sent` - the one
+     * One folder per status a lead can hold a reply at (`OutreachStatus::reachableByReply()`,
+     * `contacted` first since it's declared first), plus `sent` - the one
      * folder that is not a status at all.
      *
      * @return list<string>

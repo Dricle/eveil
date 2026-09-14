@@ -91,25 +91,19 @@ class CampaignLead extends Model
     }
 
     /**
-     * One folder of the inbox screen: every status a lead can be filed
-     * under, plus `sent` for everything mailed out regardless of status.
-     * Every folder but `sent` requires an inbound message - a lead written
-     * to and never answered is a sequence still running, not something to
-     * file anywhere yet.
+     * One folder of the inbox screen: an exact match on the lead's actual
+     * status, whatever it is, plus `sent` for everything mailed out
+     * regardless of status. Every folder but `sent` requires an inbound
+     * message - a lead written to and never answered is a sequence still
+     * running, not something to file anywhere yet.
      *
-     * `replied` is NOT an exact match on `status = 'replied'`: it is
-     * everything with a reply that has not been filed anywhere yet - one of
-     * the five terminal statuses (`OutreachStatus::excluded()`) or the
-     * non-terminal `in_discussion`, which is as much a filing decision as the
-     * five even though it does not block future outreach. An out-of-office
-     * deliberately never pauses the sequence (`FetchReplies::record()`), so
-     * its lead's status stays whatever it already was - `contacted`, most
-     * often - never `replied`. An exact match on `replied` made those
-     * conversations vanish from every folder at once: they had answered,
-     * were not filed anywhere, and matched none of the folders. The front
-     * door has to catch anything not yet decided, whatever status it happens
-     * to be parked at, or a reply the classifier read as automatic
-     * disappears from the screen entirely.
+     * `contacted` is a real folder here on purpose, not a status filtered out
+     * of some catch-all: an out-of-office deliberately never pauses the
+     * sequence (`FetchReplies::record()`), so its lead's status stays
+     * whatever it already was - `contacted`, most often - never `replied`.
+     * An exact match everywhere means that reply shows up exactly where its
+     * lead actually stands instead of needing a special case to avoid
+     * disappearing off the screen entirely.
      *
      * @param  Builder<CampaignLead>  $query
      */
@@ -122,16 +116,8 @@ class CampaignLead extends Model
             return;
         }
 
-        $query->whereHas('messages', fn (Builder $messages) => $messages->where('direction', MessageDirection::Inbound));
-
-        if ($folder === 'replied') {
-            $filed = [...OutreachStatus::excluded(), OutreachStatus::InDiscussion];
-            $query->whereHas('lead', fn (Builder $lead) => $lead->whereNotIn('status', $filed));
-
-            return;
-        }
-
-        $query->whereHas('lead', fn (Builder $lead) => $lead->where('status', OutreachStatus::from($folder)));
+        $query->whereHas('messages', fn (Builder $messages) => $messages->where('direction', MessageDirection::Inbound))
+            ->whereHas('lead', fn (Builder $lead) => $lead->where('status', OutreachStatus::from($folder)));
     }
 
     /**
@@ -146,6 +132,26 @@ class CampaignLead extends Model
         $query->orderByRaw('next_action_at is null')
             ->orderBy('next_action_at')
             ->orderByDesc('id');
+    }
+
+    /**
+     * The order the inbox shows conversations in: newest activity first,
+     * like Gmail. `updated_at` is the wrong column for this - it moves on a
+     * status change or an `attention_resolved_at` toggle, neither of which is
+     * a new message - so this reads the actual last message time instead,
+     * the same `sent_at ?? received_at ?? created_at` fallback
+     * `ConversationResource` uses per message.
+     *
+     * @param  Builder<CampaignLead>  $query
+     */
+    #[Scope]
+    protected function orderedByLastActivity(Builder $query): void
+    {
+        $query->orderByDesc(
+            Message::query()
+                ->selectRaw('MAX(COALESCE(sent_at, received_at, created_at))')
+                ->whereColumn('campaign_lead_id', 'campaign_leads.id')
+        );
     }
 
     /**

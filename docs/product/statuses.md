@@ -21,9 +21,11 @@ The five statuses that say "stops outreach" — **Won**, **Lost**, **Already a c
 
 ## The inbox's folders
 
-The inbox files every conversation that has at least one reply into a folder — one per status above (minus New/Queued/Contacted, which no reply ever leaves a lead at), plus a **Sent** folder that isn't a status at all: it's everything that went out, answered or not, useful for checking a mail actually left.
+The inbox files every conversation that has at least one reply into a folder — one per status the lead actually sits at (minus New/Queued, which nothing has been sent to yet), plus a **Sent** folder that isn't a status at all: it's everything that went out, answered or not, useful for checking a mail actually left.
 
 **Replied** is the front door: every fresh answer lands there first, before anyone has decided what it is. Filing a conversation as **In discussion**, **Won**, **Lost**, or anything else moves it out of **Replied** and into its own folder — that's what keeps **Replied** from filling up with every conversation that was ever answered.
+
+**Contacted** is a folder too, and it's where an **Auto-reply** (below) sits: an out-of-office answers, but the sequence never treats it as a real reply, so the lead's status stays exactly where it already was — almost always **Contacted** — instead of jumping to **Replied**.
 
 A conversation that "needs attention" (an unread positive reply, a question, or a reply not yet classified) is flagged across every folder, not just **Replied** — nothing stops a lead from replying again after already being filed somewhere.
 

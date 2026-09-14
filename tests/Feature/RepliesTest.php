@@ -725,6 +725,64 @@ it('resolves attention across the whole company when the company itself is set a
     expect($membership->fresh()->attention_resolved_at)->not->toBeNull();
 });
 
+it('orders conversations by the last message, not by whatever last touched the row', function () {
+    Queue::fake();
+
+    [$mailbox, $older] = awaitingReply();
+    $user = User::query()->firstOrFail();
+    $project = $older->campaign->project;
+
+    $newerLead = contactable($project, 'newer@friterie.test');
+    $newer = CampaignLead::query()->create([
+        'campaign_id' => $older->campaign_id,
+        'lead_id' => $newerLead->id,
+        'email_account_id' => $mailbox->id,
+        'current_step_position' => 1,
+        'status' => CampaignLeadStatus::Running,
+    ]);
+    Message::query()->create([
+        'lead_id' => $newerLead->id,
+        'campaign_lead_id' => $newer->id,
+        'email_account_id' => $mailbox->id,
+        'direction' => MessageDirection::Outbound,
+        'message_id' => 'ours-2@abcreche.test',
+        'subject' => 'vos commandes',
+        'body' => 'Bonjour,',
+        'status' => MessageStatus::Sent,
+        'sent_at' => now()->subDay(),
+    ]);
+
+    fakeImap([inbound('Merci, ça m\'intéresse.')]);
+    app(FetchReplies::class)->handle($mailbox);
+
+    fakeImap([inbound('Oui, envoyez vos tarifs.', [
+        'inReplyTo' => 'ours-2@abcreche.test',
+        'referenceIds' => ['ours-2@abcreche.test'],
+        'from' => 'newer@friterie.test',
+        'messageId' => 'theirs-newer@friterie.test',
+        'uid' => 13,
+    ])]);
+    app(FetchReplies::class)->handle($mailbox);
+
+    Message::query()->where('campaign_lead_id', $older->id)->where('direction', MessageDirection::Inbound)
+        ->update(['received_at' => now()->subHours(2)]);
+    Message::query()->where('campaign_lead_id', $newer->id)->where('direction', MessageDirection::Inbound)
+        ->update(['received_at' => now()->subHour()]);
+
+    // Exactly what a status change or an `attention_resolved_at` toggle does
+    // to `updated_at`, on the conversation whose reply is actually the older
+    // one: it must not put a stale conversation back on top.
+    $older->refresh()->touch();
+
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->get(route('inbox'))
+        ->assertInertia(fn ($page) => $page
+            ->has('conversations.data', 2)
+            ->where('conversations.data.0.lead.email', 'newer@friterie.test')
+            ->where('conversations.data.1.lead.email', 'marcel@friterie.test'));
+});
+
 it('never shows another project\'s replies', function () {
     Queue::fake();
 
@@ -995,12 +1053,16 @@ it('shows what was sent as well as what came back, in their own folders', functi
 
     // Written to and silent: a sequence still running, and never an inbox
     // entry. That is what keeps the default (`replied`) folder worth opening.
+    // `contacted` is declared first (`OutreachStatus::reachableByReply()`),
+    // `sent` last.
     $visit()->assertInertia(fn ($page) => $page
         ->has('conversations.data', 0)
-        ->where('folders.0.key', 'replied')
+        ->where('folders.0.key', 'contacted')
         ->where('folders.0.total', 0)
-        ->where('folders.7.key', 'sent')
-        ->where('folders.7.total', 1));
+        ->where('folders.1.key', 'replied')
+        ->where('folders.1.total', 0)
+        ->where('folders.8.key', 'sent')
+        ->where('folders.8.total', 1));
 
     // And the same person in the other folder, because "did anything
     // actually go out" could otherwise only be answered one contact sheet at
@@ -1017,8 +1079,8 @@ it('shows what was sent as well as what came back, in their own folders', functi
 
     $visit()->assertInertia(fn ($page) => $page
         ->has('conversations.data', 1)
-        ->where('folders.0.total', 1)
-        ->where('folders.7.total', 1));
+        ->where('folders.1.total', 1)
+        ->where('folders.8.total', 1));
 });
 
 it('files a reply into "in discussion" out of the replied catch-all', function () {
@@ -1060,7 +1122,7 @@ it('never shows the sent folder for a status folder, or vice versa', function ()
         ->assertNotFound();
 });
 
-it('never loses an auto-reply: it answered, and stays visible even though nothing files it anywhere', function () {
+it('never loses an auto-reply: it answered, and files under the status it actually left the lead at', function () {
     [$mailbox, $membership] = awaitingReply();
     $user = User::factory()->create();
     $membership->campaign->project->organization->users()->attach($user, ['role' => 'owner']);
@@ -1068,19 +1130,22 @@ it('never loses an auto-reply: it answered, and stays visible even though nothin
     // The status an out-of-office finds the lead at in practice: a step
     // already went out, and nothing bumps it to `replied` for a machine
     // answer (`FetchReplies::record()` skips `pause()` for one on purpose).
-    // An exact match on `status = 'replied'` made this conversation match
-    // none of the eight folders at once - answered, and invisible.
     $membership->lead->update(['status' => OutreachStatus::Contacted]);
 
     fakeImap([inbound('Je suis absent jusqu\'au 30 août.', ['isAutoReply' => true])]);
     app(FetchReplies::class)->handle($mailbox);
 
-    test()->actingAs($user)
+    $visit = fn (?string $folder = null) => test()->actingAs($user)
         ->withSession(['current_project_id' => $membership->campaign->project_id])
-        ->get(route('inbox'))
-        ->assertInertia(fn ($page) => $page
-            ->has('conversations.data', 1)
-            ->where('conversations.data.0.id', $membership->id));
+        ->get(route('inbox', $folder === null ? [] : ['folder' => $folder]));
+
+    // `contacted` is a real folder, not the generic "replied" bucket: the
+    // lead's status never moved, so the reply is exactly where it stands.
+    $visit()->assertInertia(fn ($page) => $page->has('conversations.data', 0));
+
+    $visit('contacted')->assertInertia(fn ($page) => $page
+        ->has('conversations.data', 1)
+        ->where('conversations.data.0.id', $membership->id));
 });
 
 it('does not let a refused send look like one that arrived', function () {

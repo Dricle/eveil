@@ -23,7 +23,7 @@ export type StatusOption = { label: string, value: OutreachStatus, icon: string,
 export const OUTREACH_STATUSES: StatusOption[] = [
     { label: 'New', value: 'new', icon: 'i-lucide-circle-dashed', description: 'Not written to yet. The default for anyone just found.' },
     { label: 'Queued', value: 'queued', icon: 'i-lucide-clock', description: 'Waiting its turn in a running sequence.' },
-    { label: 'Contacted', value: 'contacted', icon: 'i-lucide-send', description: 'At least one mail has gone out.' },
+    { label: 'Contacted', value: 'contacted', icon: 'i-lucide-mail-check', description: 'At least one mail has gone out.' },
     { label: 'Replied', value: 'replied', icon: 'i-lucide-message-square', description: 'They wrote back. Set automatically the moment a reply arrives.' },
     { label: 'In discussion', value: 'in_discussion', icon: 'i-lucide-messages-square', description: 'An active back-and-forth, not decided yet. Set it by hand while you talk it through.' },
     { label: 'Won', value: 'won', icon: 'i-lucide-trophy', description: 'Deal closed. Stops outreach here and at the whole company.' },

@@ -36,7 +36,7 @@ class InboxController extends Controller
         abort_unless(in_array($folder, InboxFolders::folders(), true), 404);
 
         $conversations = $this->folders->query($request, $folder)
-            ->latest('updated_at')
+            ->orderedByLastActivity()
             ->paginate(20)
             ->withQueryString();
 

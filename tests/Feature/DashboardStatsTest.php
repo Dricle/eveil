@@ -1,8 +1,11 @@
 <?php
 
 use App\Cloud\Models\CreditTransaction;
+use App\Enums\MessageDirection;
 use App\Models\AgentRun;
 use App\Models\Company;
+use App\Models\Lead;
+use App\Models\Message;
 use App\Models\Organization;
 use App\Models\Project;
 use App\Models\User;
@@ -102,4 +105,29 @@ it('scopes cloud credit spend to the current project only', function () {
         ->withSession(['current_project_id' => $project->id])
         ->get(route('dashboard'))
         ->assertInertia(fn ($page) => $page->where('stats.credits_spent', 50));
+});
+
+it('never counts another project\'s mail in sent, replies or the reply feed', function () {
+    [$organization, $project, $user] = dashboardUser();
+    $otherProject = Project::factory()->for($organization)->create();
+
+    $ownLead = Lead::factory()->create(['project_id' => $project->id, 'first_name' => 'Marcel', 'last_name' => 'Dupont']);
+    $otherLead = Lead::factory()->create(['project_id' => $otherProject->id, 'first_name' => 'Sofia', 'last_name' => 'Renard']);
+
+    Message::factory()->create(['lead_id' => $ownLead->id, 'direction' => MessageDirection::Outbound]);
+    Message::factory()->create(['lead_id' => $ownLead->id, 'direction' => MessageDirection::Inbound]);
+
+    // Belongs to the other project's own lead: none of this must be visible
+    // from here, however many rows it adds.
+    Message::factory()->count(5)->create(['lead_id' => $otherLead->id, 'direction' => MessageDirection::Outbound]);
+    Message::factory()->count(5)->create(['lead_id' => $otherLead->id, 'direction' => MessageDirection::Inbound]);
+
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->get(route('dashboard'))
+        ->assertInertia(fn ($page) => $page
+            ->where('stats.sent', 1)
+            ->where('stats.replies', 1)
+            ->has('latestReplies', 1)
+            ->where('latestReplies.0.lead.name', 'Marcel Dupont'));
 });

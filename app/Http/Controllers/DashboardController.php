@@ -41,9 +41,13 @@ class DashboardController extends Controller
 
     public function index(Request $request): Response
     {
-        $sent = Message::query()->where('direction', MessageDirection::Outbound)->whereNotNull('sent_at')->count();
-        $replies = Message::query()->where('direction', MessageDirection::Inbound)->count();
+        // `Message` carries no `project_id` of its own, same as `CampaignLead`
+        // below: `whereHas('lead')` is what confines it to the current
+        // project rather than every message on the instance.
+        $sent = Message::query()->whereHas('lead')->where('direction', MessageDirection::Outbound)->whereNotNull('sent_at')->count();
+        $replies = Message::query()->whereHas('lead')->where('direction', MessageDirection::Inbound)->count();
         $positive = Message::query()
+            ->whereHas('lead')
             ->where('direction', MessageDirection::Inbound)
             ->where('classification', ReplyClassification::Interested)
             ->count();
@@ -131,6 +135,7 @@ class DashboardController extends Controller
             ),
             'latestReplies' => ReplyResource::collection(
                 Message::query()
+                    ->whereHas('lead')
                     ->where('direction', MessageDirection::Inbound)
                     ->with(['lead.company'])
                     ->latest('received_at')

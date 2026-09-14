@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3'
+import ActivityTimeline from '@/components/ActivityTimeline.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import LeadsLayout from '@/layouts/LeadsLayout.vue'
 import StatusSelect from '@/components/StatusSelect.vue'
@@ -8,7 +9,6 @@ import { OUTREACH_STATUSES } from '@/lib/status'
 import companyRoutes from '@/routes/companies'
 import contactRoutes from '@/routes/contacts'
 import type { ContactSheet } from '@/types'
-import { CLASSIFICATIONS } from '@/types/inbox'
 
 defineOptions({ layout: [AppLayout, LeadsLayout] })
 
@@ -34,7 +34,7 @@ function day (value: string | null) {
 <template>
     <Head :title="contact.name ?? contact.email ?? 'Contact'" />
 
-    <div class="max-w-4xl space-y-4">
+    <div class="space-y-4">
         <UButton
             icon="i-lucide-arrow-left"
             color="neutral"
@@ -213,43 +213,15 @@ function day (value: string | null) {
 
         <div class="space-y-3 rounded-lg p-4 ring ring-default">
             <h3 class="font-medium">
-                Everything either way
+                Timeline
             </h3>
 
-            <p
-                v-if="!contact.messages.length"
-                class="text-sm text-muted"
-            >
-                Nothing has been sent yet.
-            </p>
-
-            <div
-                v-for="message in contact.messages"
-                :key="message.id"
-                class="rounded-lg p-3 text-sm"
-                :class="message.direction === 'inbound' ? 'bg-elevated' : 'ring ring-default'"
-            >
-                <p class="mb-1 flex flex-wrap items-center gap-2 text-xs text-dimmed">
-                    <span>{{ message.direction === 'inbound' ? 'Them' : 'You' }} · {{ when(message.at) }} · {{ message.subject }}</span>
-                    <UBadge
-                        v-if="message.classification"
-                        color="neutral"
-                        variant="subtle"
-                        size="sm"
-                        :label="CLASSIFICATIONS[message.classification].label"
-                    />
-                    <UBadge
-                        v-if="message.status === 'bounced'"
-                        color="error"
-                        variant="subtle"
-                        size="sm"
-                        label="Bounced"
-                    />
-                </p>
-                <p class="whitespace-pre-wrap">
-                    {{ message.body }}
-                </p>
-            </div>
+            <ActivityTimeline
+                :notes="contact.notes"
+                :messages="contact.messages"
+                :store-url="contactRoutes.notes.store.url(contact.id)"
+                :destroy-url="note => contactRoutes.notes.destroy.url({ contact: contact.id, note: note.id })"
+            />
         </div>
     </div>
 </template>

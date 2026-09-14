@@ -29,6 +29,7 @@ use App\Http\Controllers\CodeRepositoryController;
 use App\Http\Controllers\CompanyApprovalController;
 use App\Http\Controllers\CompanyBulkStatusController;
 use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\CompanyNoteController;
 use App\Http\Controllers\CompanyStatusController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ContactSearchController;
@@ -45,6 +46,7 @@ use App\Http\Controllers\EvieChatController;
 use App\Http\Controllers\InboxController;
 use App\Http\Controllers\KnownClientController;
 use App\Http\Controllers\LeadImportController;
+use App\Http\Controllers\LeadNoteController;
 use App\Http\Controllers\MailboxController;
 use App\Http\Controllers\MailboxReactivateController;
 use App\Http\Controllers\MailboxTestController;
@@ -261,6 +263,16 @@ Route::middleware(['auth', 'verified', 'project.set'])->group(function (): void 
         Route::get('companies', [CompanyController::class, 'index'])->name('companies.index');
         Route::put('companies/{company}/status', [CompanyStatusController::class, 'update'])
             ->name('companies.status');
+
+        /*
+         * The account-level timeline: free text typed by hand, never sent
+         * anywhere. Same reasoning as `contacts/{contact}/notes` below.
+         */
+        Route::post('companies/{company}/notes', [CompanyNoteController::class, 'store'])
+            ->name('companies.notes.store');
+        Route::delete('companies/{company}/notes/{note}', [CompanyNoteController::class, 'destroy'])
+            ->name('companies.notes.destroy');
+
         Route::get('companies/{company}', [CompanyController::class, 'show'])->name('companies.show');
 
         /*
@@ -288,6 +300,16 @@ Route::middleware(['auth', 'verified', 'project.set'])->group(function (): void 
         Route::post('contacts/search', [ContactSearchController::class, 'store'])->name('contacts.search');
         Route::put('contacts/{contact}/status', [ContactStatusController::class, 'update'])
             ->name('contacts.status');
+
+        /*
+         * The timeline: free text typed by hand, never sent anywhere. The
+         * contact sheet and the inbox's side panel both write here, so
+         * either one adding a note is instantly the other's history too.
+         */
+        Route::post('contacts/{contact}/notes', [LeadNoteController::class, 'store'])
+            ->name('contacts.notes.store');
+        Route::delete('contacts/{contact}/notes/{note}', [LeadNoteController::class, 'destroy'])
+            ->name('contacts.notes.destroy');
 
         /*
          * One person's whole history. Where the address came from, which

@@ -5,6 +5,7 @@ use App\Ai\Agents\CompanyQualifier;
 use App\Ai\Agents\DiscoveryPlanner;
 use App\Enums\AutonomyLevel;
 use App\Enums\ContactSearchStatus;
+use App\Enums\DiscoveryDiagnosis;
 use App\Enums\DiscoveryRunStatus;
 use App\Enums\DiscoveryTaskKind;
 use App\Enums\DiscoveryTaskStatus;
@@ -39,11 +40,11 @@ function discoveryProfile(): TargetProfile
  * The queue is synchronous under test, so dispatching the first node runs the
  * whole graph inside this call.
  */
-function discover(TargetProfile $targetProfile, array $overrides = []): DiscoveryRun
+function discover(TargetProfile $targetProfile, array $overrides = [], ?string $guidance = null): DiscoveryRun
 {
     return app(CurrentProject::class)->run(
         $targetProfile->project,
-        fn (): DiscoveryRun => app(RunDiscovery::class)->handle($targetProfile, $overrides),
+        fn (): DiscoveryRun => app(RunDiscovery::class)->handle($targetProfile, $overrides, $guidance),
     );
 }
 
@@ -199,6 +200,138 @@ it('tells the planner how many probes the run may make', function () {
     // Otherwise it plans twenty-two probes for a run that allows twelve, and the
     // tail is skipped. Which is waste, not caution.
     DiscoveryPlanner::assertPrompted(fn (AgentPrompt $prompt): bool => str_contains((string) $prompt->prompt, 'at most 7 probes'));
+});
+
+it('hands the user\'s own guidance to the planner, for that run only', function () {
+    $targetProfile = discoveryProfile();
+
+    DiscoveryPlanner::fake([overpassPlan()]);
+    CompanyQualifier::fake([qualifierVerdict()]);
+    mapReturning('https://friterie-centre.be');
+
+    $run = discover($targetProfile, guidance: 'Look at wholesalers instead of end users this time.');
+
+    expect($run->guidance)->toBe('Look at wholesalers instead of end users this time.');
+
+    DiscoveryPlanner::assertPrompted(fn (AgentPrompt $prompt): bool => str_contains(
+        (string) $prompt->prompt,
+        'Look at wholesalers instead of end users this time.',
+    ));
+});
+
+it('never mentions guidance in the prompt when none was given', function () {
+    $targetProfile = discoveryProfile();
+
+    DiscoveryPlanner::fake([overpassPlan()]);
+    CompanyQualifier::fake([qualifierVerdict()]);
+    mapReturning('https://friterie-centre.be');
+
+    discover($targetProfile);
+
+    DiscoveryPlanner::assertPrompted(fn (AgentPrompt $prompt): bool => ! str_contains((string) $prompt->prompt, 'asked specifically'));
+});
+
+it('tells the planner what earlier runs for this profile already tried', function () {
+    $targetProfile = discoveryProfile();
+
+    DiscoveryRun::factory()->create([
+        'project_id' => $targetProfile->project_id,
+        'target_profile_id' => $targetProfile->id,
+        'origin' => 'search',
+        'status' => DiscoveryRunStatus::Exhausted,
+        'candidates_found' => 40,
+        'qualified_count' => 0,
+        'finished_at' => now()->subDay(),
+        'stats' => ['candidate_failures' => ['annuaire.test: blocked']],
+    ]);
+
+    DiscoveryPlanner::fake([overpassPlan()]);
+    CompanyQualifier::fake([qualifierVerdict()]);
+    mapReturning('https://friterie-centre.be');
+
+    discover($targetProfile);
+
+    DiscoveryPlanner::assertPrompted(fn (AgentPrompt $prompt): bool => str_contains((string) $prompt->prompt, 'annuaire.test: blocked')
+        && str_contains((string) $prompt->prompt, '40 candidate(s), 0 qualified'));
+});
+
+it('pivots to a different source when the first wave finds nothing, budget allowing', function () {
+    $targetProfile = discoveryProfile();
+
+    DiscoveryPlanner::fake([overpassPlan(), overpassPlan()]);
+    CompanyQualifier::fake([qualifierVerdict()]);
+
+    $calls = 0;
+    Http::fake([
+        '*/api/interpreter' => function () use (&$calls) {
+            $calls++;
+
+            // Nothing on the first probe, a real business on the second -
+            // the pivot's whole point.
+            return $calls === 1
+                ? Http::response(['elements' => []])
+                : Http::response(['elements' => [[
+                    'type' => 'node',
+                    'id' => 1,
+                    'tags' => ['name' => 'Friterie', 'website' => 'https://friterie-centre.be', 'amenity' => 'fast_food'],
+                ]]]);
+        },
+        '*/robots.txt' => Http::response('', 404),
+        '*' => Http::response('<!doctype html><html lang="fr"><body><p>Notre friterie.</p></body></html>'),
+    ]);
+
+    $run = discover($targetProfile, ['max_queries' => 12]);
+
+    // Whether one lonely candidate also trips `too_narrow` is a separate,
+    // already-tested concern; what this test is about is that the pivot
+    // found it at all, instead of the run closing empty after wave one.
+    expect($run->refresh()->diagnosis)->not->toBe(DiscoveryDiagnosis::WrongSource)
+        ->and($run->candidates_found)->toBe(1)
+        // The opening plan, and its one automatic do-over. Never a third.
+        ->and($run->tasks()->where('kind', DiscoveryTaskKind::Plan)->count())->toBe(2);
+
+    DiscoveryPlanner::assertPrompted(fn (AgentPrompt $prompt): bool => str_contains(
+        (string) $prompt->prompt,
+        'The first attempt in THIS run just found nothing',
+    ));
+});
+
+it('never pivots a second time - a run empty twice is genuinely diagnosed', function () {
+    $targetProfile = discoveryProfile();
+
+    DiscoveryPlanner::fake([overpassPlan(), overpassPlan()]);
+
+    Http::fake([
+        '*/api/interpreter' => Http::response(['elements' => []]),
+        '*/robots.txt' => Http::response('', 404),
+    ]);
+
+    $run = discover($targetProfile, ['max_queries' => 12]);
+
+    expect($run->refresh()->status)->toBe(DiscoveryRunStatus::Exhausted)
+        ->and($run->diagnosis)->toBe(DiscoveryDiagnosis::WrongSource)
+        ->and($run->candidates_found)->toBe(0)
+        ->and($run->tasks()->where('kind', DiscoveryTaskKind::Plan)->count())->toBe(2);
+});
+
+it('never pivots a run that already found something - that is too_narrow\'s job, not this', function () {
+    $targetProfile = discoveryProfile();
+
+    DiscoveryPlanner::fake([[
+        'plan' => 'One probe, one miss.',
+        'overpass_probes' => [
+            ['area' => 'Charleroi', 'country' => 'BE', 'tags' => [['key' => 'amenity', 'value' => 'fast_food']], 'why' => 'Friteries.'],
+            ['area' => 'Namur', 'country' => 'BE', 'tags' => [['key' => 'amenity', 'value' => 'fast_food']], 'why' => 'Friteries.'],
+        ],
+        'web_queries' => [],
+    ]]);
+    CompanyQualifier::fake([qualifierVerdict()]);
+    mapReturning('https://friterie-centre.be');
+
+    $run = discover($targetProfile, ['max_queries' => 12]);
+
+    expect($run->refresh()->candidates_found)->toBe(1)
+        ->and($run->tasks()->where('kind', DiscoveryTaskKind::Plan)->count())->toBe(1);
 });
 
 it('says which ceiling stopped a step, in the numbers the run was given', function () {

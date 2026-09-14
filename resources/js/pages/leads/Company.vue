@@ -4,6 +4,7 @@ import { computed, watch } from 'vue'
 import ContactList from '@/components/ContactList.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import LeadsLayout from '@/layouts/LeadsLayout.vue'
+import ActivityTimeline from '@/components/ActivityTimeline.vue'
 import ApproveButton from '@/components/ApproveButton.vue'
 import StatusSelect from '@/components/StatusSelect.vue'
 import { OUTREACH_STATUSES } from '@/lib/status'
@@ -36,7 +37,7 @@ function day (value: string | null) {
 <template>
     <Head :title="company.name" />
 
-    <div class="max-w-4xl space-y-4">
+    <div class="space-y-4">
         <UButton
             icon="i-lucide-arrow-left"
             color="neutral"
@@ -46,152 +47,175 @@ function day (value: string | null) {
             @click="router.get(companyRoutes.index.url())"
         />
 
-        <div class="space-y-3 rounded-lg p-4 ring ring-default">
-            <div class="flex flex-wrap items-start justify-between gap-3">
-                <div class="min-w-0">
-                    <h2 class="font-medium">
-                        {{ company.name }}
-                    </h2>
-                    <ULink
-                        v-if="company.website"
-                        :href="company.website"
-                        target="_blank"
-                        rel="noopener"
-                        class="text-sm"
-                    >{{ company.domain ?? company.website }}</ULink>
-                    <!-- Not missing data: this business publishes no site,
-                         and a directory is where it published an address
-                         instead. -->
-                    <p
-                        v-else
-                        class="text-sm text-dimmed"
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <!-- The wide column: the firmographics, and why it was kept. -->
+            <div class="space-y-4 lg:col-span-2">
+                <div class="space-y-3 rounded-lg p-4 ring ring-default">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <h2 class="font-medium">
+                                {{ company.name }}
+                            </h2>
+                            <ULink
+                                v-if="company.website"
+                                :href="company.website"
+                                target="_blank"
+                                rel="noopener"
+                                class="text-sm"
+                            >{{ company.domain ?? company.website }}</ULink>
+                            <!-- Not missing data: this business publishes no
+                                 site, and a directory is where it published
+                                 an address instead. -->
+                            <p
+                                v-else
+                                class="text-sm text-dimmed"
+                            >
+                                No site of its own
+                            </p>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <!-- Read the fit reason, then decide. This is the
+                                 page that decision is actually made on. -->
+                            <ApproveButton
+                                :company="company"
+                                size="sm"
+                            />
+
+                            <StatusSelect
+                                :status="company.status"
+                                :options="OUTREACH_STATUSES"
+                                :url="companyRoutes.status.url(company.id)"
+                            />
+                        </div>
+                    </div>
+
+                    <dl class="grid gap-2 text-sm sm:grid-cols-3">
+                        <div v-if="company.industry">
+                            <dt class="text-dimmed">
+                                Industry
+                            </dt>
+                            <dd>{{ company.industry }}</dd>
+                        </div>
+                        <div v-if="company.size">
+                            <dt class="text-dimmed">
+                                Size
+                            </dt>
+                            <dd>{{ company.size }}</dd>
+                        </div>
+                        <div v-if="company.location">
+                            <dt class="text-dimmed">
+                                Location
+                            </dt>
+                            <dd>{{ company.location }}</dd>
+                        </div>
+                        <div v-if="company.language">
+                            <dt class="text-dimmed">
+                                Writes in
+                            </dt>
+                            <dd>{{ company.language }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-dimmed">
+                                Found
+                            </dt>
+                            <dd>{{ day(company.discovered_at) }}</dd>
+                        </div>
+                        <div v-if="company.source_url">
+                            <dt class="text-dimmed">
+                                Seen on
+                            </dt>
+                            <dd class="truncate">
+                                <ULink
+                                    :href="company.source_url"
+                                    target="_blank"
+                                    rel="noopener"
+                                >{{ company.source }}</ULink>
+                            </dd>
+                        </div>
+                    </dl>
+
+                    <!-- Whatever the directory or the site published beyond
+                         the fields above: opening hours, a phone number, a
+                         speciality. Kept because a phone number is
+                         sometimes the only way in. -->
+                    <dl
+                        v-if="facts.length"
+                        class="grid gap-2 border-t border-default pt-3 text-sm sm:grid-cols-2"
                     >
-                        No site of its own
-                    </p>
+                        <div
+                            v-for="[label, value] in facts"
+                            :key="label"
+                        >
+                            <dt class="text-dimmed">
+                                {{ label }}
+                            </dt>
+                            <dd>{{ value }}</dd>
+                        </div>
+                    </dl>
                 </div>
 
-                <div class="flex items-center gap-2">
-                    <!-- Read the fit reason, then decide. This is the page
-                         that decision is actually made on. -->
-                    <ApproveButton
-                        :company="company"
-                        size="sm"
-                    />
-
-                    <StatusSelect
-                        :status="company.status"
-                        :options="OUTREACH_STATUSES"
-                        :url="companyRoutes.status.url(company.id)"
-                    />
-                </div>
-            </div>
-
-            <dl class="grid gap-2 text-sm sm:grid-cols-3">
-                <div v-if="company.industry">
-                    <dt class="text-dimmed">
-                        Industry
-                    </dt>
-                    <dd>{{ company.industry }}</dd>
-                </div>
-                <div v-if="company.size">
-                    <dt class="text-dimmed">
-                        Size
-                    </dt>
-                    <dd>{{ company.size }}</dd>
-                </div>
-                <div v-if="company.location">
-                    <dt class="text-dimmed">
-                        Location
-                    </dt>
-                    <dd>{{ company.location }}</dd>
-                </div>
-                <div v-if="company.language">
-                    <dt class="text-dimmed">
-                        Writes in
-                    </dt>
-                    <dd>{{ company.language }}</dd>
-                </div>
-                <div>
-                    <dt class="text-dimmed">
-                        Found
-                    </dt>
-                    <dd>{{ day(company.discovered_at) }}</dd>
-                </div>
-                <div v-if="company.source_url">
-                    <dt class="text-dimmed">
-                        Seen on
-                    </dt>
-                    <dd class="truncate">
-                        <ULink
-                            :href="company.source_url"
-                            target="_blank"
-                            rel="noopener"
-                        >{{ company.source }}</ULink>
-                    </dd>
-                </div>
-            </dl>
-
-            <!-- Whatever the directory or the site published beyond the
-                 fields above: opening hours, a phone number, a speciality.
-                 Kept because a phone number is sometimes the only way in. -->
-            <dl
-                v-if="facts.length"
-                class="grid gap-2 border-t border-default pt-3 text-sm sm:grid-cols-2"
-            >
+                <!-- Why it was kept, per segment. This sentence is the
+                     opening line of the first mail, so it is worth reading
+                     before anything is sent. -->
                 <div
-                    v-for="[label, value] in facts"
-                    :key="label"
+                    v-if="company.evaluations.length"
+                    class="space-y-2 rounded-lg p-4 ring ring-default"
                 >
-                    <dt class="text-dimmed">
-                        {{ label }}
-                    </dt>
-                    <dd>{{ value }}</dd>
+                    <h3 class="font-medium">
+                        Why it was kept
+                    </h3>
+
+                    <div
+                        v-for="(evaluation, index) in company.evaluations"
+                        :key="index"
+                        class="text-sm"
+                    >
+                        <span class="text-dimmed">{{ evaluation.profile ?? 'Deleted profile' }} · {{ evaluation.fit_score }}: </span>
+                        {{ evaluation.fit_reason }}
+                    </div>
                 </div>
-            </dl>
-        </div>
-
-        <!-- Why it was kept, per segment. This sentence is the opening line
-             of the first mail, so it is worth reading before anything is
-             sent. -->
-        <div
-            v-if="company.evaluations.length"
-            class="space-y-2 rounded-lg p-4 ring ring-default"
-        >
-            <h3 class="font-medium">
-                Why it was kept
-            </h3>
-
-            <div
-                v-for="(evaluation, index) in company.evaluations"
-                :key="index"
-                class="text-sm"
-            >
-                <span class="text-dimmed">{{ evaluation.profile ?? 'Deleted profile' }} · {{ evaluation.fit_score }}: </span>
-                {{ evaluation.fit_reason }}
-            </div>
-        </div>
-
-        <div class="space-y-2 rounded-lg p-4 ring ring-default">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-                <h3 class="font-medium">
-                    People here
-                </h3>
-
-                <UButton
-                    v-if="!company.searching"
-                    icon="i-lucide-user-search"
-                    color="neutral"
-                    variant="ghost"
-                    size="xs"
-                    :label="company.contacts.length ? 'Look again' : 'Look for contacts'"
-                    @click="router.post(contactRoutes.search.url(), { company: company.id }, { preserveScroll: true })"
-                />
             </div>
 
-            <ContactList
-                :contacts="company.contacts"
-                :searching="company.searching"
-            />
+            <!-- The narrow column: what happened, and who is there to talk
+                 to - both worth a glance without reading the firmographics
+                 first. -->
+            <div class="space-y-4">
+                <div class="space-y-3 rounded-lg p-4 ring ring-default">
+                    <h3 class="font-medium">
+                        Timeline
+                    </h3>
+
+                    <ActivityTimeline
+                        :notes="company.notes"
+                        :store-url="companyRoutes.notes.store.url(company.id)"
+                        :destroy-url="note => companyRoutes.notes.destroy.url({ company: company.id, note: note.id })"
+                    />
+                </div>
+
+                <div class="space-y-2 rounded-lg p-4 ring ring-default">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <h3 class="font-medium">
+                            People here
+                        </h3>
+
+                        <UButton
+                            v-if="!company.searching"
+                            icon="i-lucide-user-search"
+                            color="neutral"
+                            variant="ghost"
+                            size="xs"
+                            :label="company.contacts.length ? 'Look again' : 'Look for contacts'"
+                            @click="router.post(contactRoutes.search.url(), { company: company.id }, { preserveScroll: true })"
+                        />
+                    </div>
+
+                    <ContactList
+                        :contacts="company.contacts"
+                        :searching="company.searching"
+                    />
+                </div>
+            </div>
         </div>
     </div>
 </template>

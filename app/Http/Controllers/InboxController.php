@@ -36,6 +36,10 @@ class InboxController extends Controller
         abort_unless(in_array($folder, InboxFolders::folders(), true), 404);
 
         $conversations = $this->folders->query($request, $folder)
+            // Only the page actually rendered needs the lead's timeline: the
+            // folder counts below run this same query nine times over and
+            // must not pay for a relation they never read.
+            ->with('lead.notes.user')
             ->orderedByLastActivity()
             ->paginate(20)
             ->withQueryString();

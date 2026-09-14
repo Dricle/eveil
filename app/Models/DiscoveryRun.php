@@ -6,6 +6,8 @@ use App\Enums\DiscoveryDiagnosis;
 use App\Enums\DiscoveryRunOrigin;
 use App\Enums\DiscoveryRunStatus;
 use App\Enums\DiscoveryTaskKind;
+use App\Enums\DiscoveryTaskStatus;
+use App\Jobs\Discovery\PlanDiscovery;
 use App\Models\Concerns\BelongsToProject;
 use Database\Factories\DiscoveryRunFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -27,6 +29,7 @@ use Illuminate\Support\Facades\DB;
  * @property int $project_id
  * @property int|null $target_profile_id
  * @property DiscoveryRunOrigin $origin whether an AI search planned this run or a user pasted the links
+ * @property string|null $guidance a free-text steer the user gave this run through Evie, handed to the planner verbatim
  * @property DiscoveryRunStatus $status
  * @property array{max_companies: int, max_qualified: int, max_pages: int, max_queries: int} $budget
  * @property int $queries_used
@@ -42,7 +45,7 @@ use Illuminate\Support\Facades\DB;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['project_id', 'target_profile_id', 'origin', 'status', 'budget', 'stats', 'relaxations', 'diagnosis', 'started_at', 'finished_at', 'error'])]
+#[Fillable(['project_id', 'target_profile_id', 'origin', 'guidance', 'status', 'budget', 'stats', 'relaxations', 'diagnosis', 'started_at', 'finished_at', 'error'])]
 class DiscoveryRun extends Model
 {
     /** @use HasFactory<DiscoveryRunFactory> */
@@ -133,10 +136,22 @@ class DiscoveryRun extends Model
      * A run is finished when nothing is queued for it any more. Every node asks
      * this on its way out, so whichever one happens to be last closes the run:
      * no supervising job to keep alive, and nothing to poll.
+     *
+     * Before closing, a run that found nothing at all gets one chance to try a
+     * different source with whatever probe budget is left (`mayPivotSource()`):
+     * exactly `wrong_source`'s own fix, "switch tool, not criteria", applied
+     * inside the run that hit it rather than waiting for a brand new one days
+     * later, once `ContinueDiscovery`'s cadence gets around to it.
      */
     public function finishIfIdle(): void
     {
         if ($this->status->isTerminal() || $this->tasks()->open()->exists()) {
+            return;
+        }
+
+        if ($this->mayPivotSource()) {
+            $this->pivotSource();
+
             return;
         }
 
@@ -161,6 +176,39 @@ class DiscoveryRun extends Model
     }
 
     /**
+     * Whether this run gets one more planning wave instead of closing. Three
+     * guards: only an AI search has a source to switch (a manual link
+     * submission has none), only a run that found NOTHING is a `wrong_source`
+     * candidate at all - one that found a few just needs `too_narrow`'s own
+     * answer, widening, which this is deliberately not - and never twice: a
+     * second empty wave is genuinely diagnosed, not retried again.
+     */
+    private function mayPivotSource(): bool
+    {
+        return $this->origin === DiscoveryRunOrigin::Search
+            && $this->candidates_found === 0
+            && $this->queries_used < $this->limit('max_queries')
+            && $this->tasks()->where('kind', DiscoveryTaskKind::Plan)->count() < 2;
+    }
+
+    /**
+     * One more planning wave, same run, same budget row - not a new
+     * `DiscoveryRun`. `PlanDiscovery` reads the Plan-task count itself to know
+     * this is a pivot rather than the opening plan, and tells the model what
+     * came up empty so it reaches for something genuinely different instead
+     * of repeating the first attempt.
+     */
+    private function pivotSource(): void
+    {
+        PlanDiscovery::dispatch(DiscoveryTask::create([
+            'project_id' => $this->project_id,
+            'discovery_run_id' => $this->id,
+            'kind' => DiscoveryTaskKind::Plan,
+            'status' => DiscoveryTaskStatus::Pending,
+        ]));
+    }
+
+    /**
      * Why a run came up short decides what should happen next, and one of the
      * answers is "do not widen". Widening a wrong profile produces off-target
      * leads the user then emails, and the complaints land on their own domain.
@@ -179,8 +227,17 @@ class DiscoveryRun extends Model
             return DiscoveryDiagnosis::WrongSource;
         }
 
+        // Zero this time is only the wrong-target verdict for a profile that
+        // has NEVER qualified anyone. A profile already proven - real
+        // campaigns, real qualified companies - having one quiet run (a
+        // blocked directory, a thinner day) is not "the target was always
+        // wrong", and `bad_target_profile` is the one diagnosis that
+        // permanently stops `ContinueDiscovery` from trying again
+        // (`mayWiden()`): a proven profile must never be told to stop.
         if ($this->qualified_count === 0) {
-            return DiscoveryDiagnosis::BadTargetProfile;
+            return $this->targetProfile->hasEverQualified()
+                ? DiscoveryDiagnosis::Saturated
+                : DiscoveryDiagnosis::BadTargetProfile;
         }
 
         return $this->qualified_count < $this->budget['max_qualified'] / 2

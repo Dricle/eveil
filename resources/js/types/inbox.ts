@@ -1,5 +1,6 @@
 import type { OutreachStatus } from '@/lib/status'
 import type { CampaignStatus } from '@/types/campaign'
+import type { Note } from '@/types/company'
 
 /**
  * What the agent decided about a reply. The label is what the inbox shows; the
@@ -39,6 +40,7 @@ export type Conversation = {
         title: string | null
         status: OutreachStatus
         company: string | null
+        notes: Note[]
     }
     classification: Classification | null
     /** Whether the user has toggled this one done, whatever `needs_attention` says. */

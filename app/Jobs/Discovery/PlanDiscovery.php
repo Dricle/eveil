@@ -25,15 +25,30 @@ class PlanDiscovery extends DiscoveryJob
             throw new RuntimeException('The profile this run was started for has been deleted.');
         }
 
+        // A second Plan task on the same run only ever exists because
+        // `DiscoveryRun::pivotSource()` dispatched it: the first wave found
+        // nothing at all. Told the REMAINING budget, not the whole run's, and
+        // told it is a pivot so it reaches for a different source rather than
+        // repeating the first attempt.
+        $isPivot = $run->tasks()->where('kind', DiscoveryTaskKind::Plan)->where('id', '!=', $task->id)->exists();
+        $remaining = max(0, $run->limit('max_queries') - $run->queries_used);
+
         $plan = app(Planner::class)->plan(
             $targetProfile,
-            $run->limit('max_queries'),
+            $isPivot ? $remaining : $run->limit('max_queries'),
             $this->meter($task, DiscoveryPlanner::slug()),
+            $run->guidance,
+            $isPivot,
         );
 
         $run->update([
             'status' => DiscoveryRunStatus::Running,
-            'stats' => [...$run->stats ?? [], 'plan' => $plan['explanation']],
+            'stats' => [
+                ...$run->stats ?? [],
+                'plan' => $isPivot
+                    ? trim(($run->stats['plan'] ?? '')."\n\nFirst attempt found nothing, tried a different source: {$plan['explanation']}")
+                    : $plan['explanation'],
+            ],
         ]);
 
         foreach ($plan['probes'] as $probe) {

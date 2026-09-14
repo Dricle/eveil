@@ -75,6 +75,16 @@ class Company extends Model
     }
 
     /**
+     * The account-level timeline: newest first, like an activity feed.
+     *
+     * @return HasMany<CompanyNote, $this>
+     */
+    public function notes(): HasMany
+    {
+        return $this->hasMany(CompanyNote::class)->latest('id');
+    }
+
+    /**
      * The companies outreach may still go to. Five statuses take a company out
      *: see `OutreachStatus::excluded()`, and every query that leads to a mail
      * being written has to go through this one, or the first thing an existing

@@ -12,6 +12,8 @@ Paste your product's URL. Eveil's Website AI crawls it into a knowledge base and
 
 Eveil finds and qualifies companies matching a target profile, extracts contacts, and drafts outreach. You review and approve — the step builder underneath is there when you need manual control, not required for the default flow.
 
+A search that comes up completely empty on its first attempt gets one automatic retry with a different source before it's reported as a dead end — a blocked directory or an unlucky query isn't mistaken for "there's nobody here." You can also ask [Evie](/product/evie) to point a search at a specific angle, or start a fresh one exploring something new.
+
 ## 4. Connect a mailbox and send
 
 Outreach sends through a mailbox you connect (Settings → Email accounts), never through a shared relay. Replies land in Eveil's unified inbox — see [Statuses and the inbox](/product/statuses) for how conversations are filed once they arrive.

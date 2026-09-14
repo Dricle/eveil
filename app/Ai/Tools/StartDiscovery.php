@@ -28,7 +28,14 @@ class StartDiscovery implements Approvable, Tool
 
     public function description(): Stringable|string
     {
-        return 'Starts a discovery run for one target profile, searching for and qualifying new candidate companies.';
+        return <<<'TEXT'
+        Starts a discovery run for one target profile, searching for and qualifying
+        new candidate companies. Optionally steer THIS run toward something specific
+        the user asked for - a different angle, a narrower area, a segment worth
+        trying - without changing the target profile itself. Also how to spawn a
+        fresh search exploring a new angle on the same profile: start another run
+        with different guidance rather than waiting for the automatic cadence.
+        TEXT;
     }
 
     public function handle(Request $request): Stringable|string
@@ -41,7 +48,9 @@ class StartDiscovery implements Approvable, Tool
             return 'No target profile with that id exists on this project. Call list_target_profiles first.';
         }
 
-        $run = app(RunDiscovery::class)->handle($targetProfile);
+        $guidance = $request->string('guidance')->value();
+
+        $run = app(RunDiscovery::class)->handle($targetProfile, guidance: $guidance === '' ? null : $guidance);
 
         return "Discovery run #{$run->id} started for \"{$targetProfile->name}\".";
     }
@@ -55,6 +64,9 @@ class StartDiscovery implements Approvable, Tool
             'target_profile_id' => $schema->integer()
                 ->description('The target profile to search for, from list_target_profiles.')
                 ->required(),
+
+            'guidance' => $schema->string()
+                ->description('What the user specifically wants THIS run to explore, in their own words. Omit for the profile\'s own default.'),
         ];
     }
 }

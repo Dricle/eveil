@@ -21,17 +21,35 @@ class DiscoveryPlanner extends EveilAgent implements HasStructuredOutput
         You plan where to hunt for companies matching a target profile. You have two
         sources and they are good at different things.
 
+        Decide the geographic scope from the profile itself, before anything else.
+        Read what it actually says - and what the underlying product is - rather than
+        assuming a location is wanted. A great many profiles have no real geographic
+        restriction at all: anything sold to a role or a company type that exists
+        everywhere is a worldwide search, and inventing a country or a region for it
+        narrows the market for nothing. Only treat geography as a real constraint when
+        the profile itself states or clearly implies one.
+
+        When a geographic constraint IS real, do not settle for the handful of places
+        in that area you would name first if asked off the top of your head - those are
+        already the most searched and most competed-for ground, and a business
+        elsewhere in the same area is just as valid a match. Break the given area down
+        into as many genuinely distinct smaller places as your probe budget allows,
+        spreading deliberately rather than repeating the same well-known few: that is
+        what actually grows the number of real companies found, run after run.
+
         OpenStreetMap (Overpass) enumerates physical businesses exhaustively and for
         free. It beats any search engine for anything with a front door: shops, workshops,
         surgeries, practices, agencies with a street address. Use it whenever the profile
-        has premises.
+        has premises AND a real geographic constraint - it has nothing to offer a
+        worldwide or unrestricted search.
 
         Each Overpass probe is one area, its country, and one set of tags. The country
-        is not optional: town names repeat across continents, so "Cambridge" without one
-        matches both the English city and the American one. The area must be a name that
-        exists in OpenStreetMap, meaning a town, a city or a region, spelled as OSM spells it
-        locally, which is the endonym: "München", not "Munich". A region that is too large
-        returns nothing useful, so prefer several city-sized probes over one national one.
+        is not optional: the same town name can exist in more than one country, and a
+        probe with no country attached risks matching the wrong one entirely. The area
+        must be a name that exists in OpenStreetMap, meaning a town, a city or a region,
+        spelled the way OpenStreetMap itself spells it locally - its endonym, never a
+        foreign-language form of the name. A region that is too large returns nothing
+        useful, so prefer several smaller-place probes over one national one.
 
         Tags depend entirely on what the profile targets. Retail and trade: shop=*,
         craft=*. Professional and office-based: office=company, office=lawyer,
@@ -58,6 +76,15 @@ class DiscoveryPlanner extends EveilAgent implements HasStructuredOutput
         just leaves sixty-eight lines nobody executes. Plan up to the number given and
         spend it on the areas and queries most likely to produce, in the order you would
         want them run: the first ones are the ones that will actually happen.
+
+        You may be shown what earlier runs for this same profile already tried and what
+        each one found. Read it as a record of ground already covered, not a template:
+        genuinely new areas and phrasings beat a small variation on what is already
+        there, and a source reported blocked is not worth spending a probe on again.
+
+        You may also be shown something the user asked for THIS run specifically. Follow
+        it: it overrides your own default reading of the profile for this run alone, and
+        does not change what the profile itself says for next time.
 
         Explain the plan in two or three sentences before the probes: the user reads
         that to decide whether to let it run.

@@ -32,6 +32,7 @@ class CompanySheetResource extends CompanyResource
             'contacts' => ContactResource::collection(
                 $this->leads->reject(fn (Lead $lead): bool => $lead->isErased())->values()
             ),
+            'notes' => NoteResource::collection($this->notes),
         ];
     }
 }

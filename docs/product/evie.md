@@ -6,6 +6,12 @@ Evie is a built-in AI assistant that runs on top of every action on Eveil. The g
 
 Examples: "find me 50 dental clinics in Lyon", "what target profiles does this project have", "draft a sequence for the SaaS companies we found last week".
 
+## Steering a search, or branching into a new angle
+
+A discovery run normally follows its target profile's own criteria. Ask Evie to point one run at something specific instead — a different segment, a narrower area, an angle worth trying — and it applies only to that run: the target profile itself is unchanged, so the automatic search cadence goes back to its own default on the next one.
+
+Want to explore a genuinely different angle on a profile that already has results? Ask Evie to start another search with that angle rather than waiting for the schedule — each run is independent, so nothing about the existing one is disturbed.
+
 ## Opening it
 
 Click the sparkles icon in the top bar. The panel slides in from the right and pushes the page, rather than covering it — it stays open (or closed) as you move between screens and switch projects, picking up whichever project's conversation is current.

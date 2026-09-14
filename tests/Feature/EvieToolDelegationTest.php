@@ -1,7 +1,13 @@
 <?php
 
+use App\Ai\Tools\AddCompanyNote;
+use App\Ai\Tools\AddLeadNote;
 use App\Ai\Tools\CreateSequence;
+use App\Ai\Tools\DeleteCompanyNote;
+use App\Ai\Tools\DeleteLeadNote;
 use App\Ai\Tools\GetCampaign;
+use App\Ai\Tools\GetCompany;
+use App\Ai\Tools\GetContact;
 use App\Ai\Tools\GetDiscoveryRunStatus;
 use App\Ai\Tools\ListCampaigns;
 use App\Ai\Tools\ListCompanies;
@@ -14,7 +20,11 @@ use App\Jobs\Discovery\PlanDiscovery;
 use App\Models\Campaign;
 use App\Models\CampaignStep;
 use App\Models\Company;
+use App\Models\CompanyNote;
+use App\Models\CompanyTargetEvaluation;
 use App\Models\DiscoveryRun;
+use App\Models\Lead;
+use App\Models\LeadNote;
 use App\Models\Project;
 use App\Models\TargetProfile;
 use Illuminate\Support\Facades\Queue;
@@ -90,6 +100,23 @@ it('delegates start_discovery to RunDiscovery::handle, never its own logic', fun
         ->and($result)->toContain('Dental clinics');
 
     Queue::assertPushed(PlanDiscovery::class);
+});
+
+it('lets the user steer one start_discovery run without touching the profile', function () {
+    Queue::fake([PlanDiscovery::class]);
+
+    $project = Project::factory()->create();
+    $profile = TargetProfile::factory()->create(['project_id' => $project->id, 'name' => 'Dental clinics']);
+
+    (new StartDiscovery($project))->handle(new Request([
+        'target_profile_id' => $profile->id,
+        'guidance' => 'Focus on wholesalers rather than end clinics.',
+    ]));
+
+    expect(DiscoveryRun::sole()->guidance)->toBe('Focus on wholesalers rather than end clinics.')
+        // The profile row itself was never written to: guidance is a
+        // one-run request, not a standing edit.
+        ->and($profile->fresh()->updated_at->eq($profile->updated_at))->toBeTrue();
 });
 
 it('refuses start_discovery for a target profile from another project', function () {
@@ -260,4 +287,140 @@ it('refuses get_campaign for a campaign from another project', function () {
     $result = (new GetCampaign($project))->handle(new Request(['campaign_id' => $foreignCampaign->id]));
 
     expect($result)->toContain('No campaign with that id');
+});
+
+it('reads a company\'s full detail: contacts, evaluations, and its own timeline', function () {
+    $project = Project::factory()->create();
+    $company = Company::factory()->create(['project_id' => $project->id, 'name' => 'Acme']);
+    $profile = TargetProfile::factory()->create(['project_id' => $project->id, 'name' => 'SaaS']);
+
+    CompanyTargetEvaluation::factory()->create([
+        'company_id' => $company->id,
+        'target_profile_id' => $profile->id,
+        'fit_score' => 80,
+        'fit_reason' => 'Uses the tool we replace',
+    ]);
+    $lead = Lead::factory()->create(['project_id' => $project->id, 'company_id' => $company->id, 'first_name' => 'Sofia']);
+    CompanyNote::factory()->create(['company_id' => $company->id, 'body' => 'Called them Tuesday']);
+
+    $result = json_decode((new GetCompany($project))->handle(new Request(['company_id' => $company->id])), true);
+
+    expect($result['name'])->toBe('Acme')
+        ->and($result['evaluations'][0])->toMatchArray([
+            'profile' => 'SaaS',
+            'fit_score' => 80,
+            'fit_reason' => 'Uses the tool we replace',
+        ])
+        ->and($result['contacts'][0]['id'])->toBe($lead->id)
+        ->and($result['contacts'][0]['name'])->toContain('Sofia')
+        ->and($result['notes'][0]['body'])->toBe('Called them Tuesday');
+});
+
+it('refuses get_company for a company from another project', function () {
+    $project = Project::factory()->create();
+    $foreign = Company::factory()->create();
+
+    $result = (new GetCompany($project))->handle(new Request(['company_id' => $foreign->id]));
+
+    expect($result)->toContain('No company with that id');
+});
+
+it('reads a contact\'s detail and their own timeline', function () {
+    $project = Project::factory()->create();
+    $company = Company::factory()->create(['project_id' => $project->id, 'name' => 'Acme']);
+    $lead = Lead::factory()->create([
+        'project_id' => $project->id,
+        'company_id' => $company->id,
+        'first_name' => 'Sofia',
+        'last_name' => 'Renard',
+    ]);
+    LeadNote::factory()->create(['lead_id' => $lead->id, 'body' => 'Interested in a demo']);
+
+    $result = json_decode((new GetContact($project))->handle(new Request(['lead_id' => $lead->id])), true);
+
+    expect($result['name'])->toBe('Sofia Renard')
+        ->and($result['company'])->toBe('Acme')
+        ->and($result['notes'][0]['body'])->toBe('Interested in a demo');
+});
+
+it('refuses get_contact for a lead from another project', function () {
+    $project = Project::factory()->create();
+    $foreign = Lead::factory()->create();
+
+    $result = (new GetContact($project))->handle(new Request(['lead_id' => $foreign->id]));
+
+    expect($result)->toContain('No contact with that id');
+});
+
+it('adds and deletes a note on a contact\'s timeline', function () {
+    $project = Project::factory()->create();
+    $lead = Lead::factory()->create(['project_id' => $project->id]);
+
+    $result = (new AddLeadNote($project))->handle(new Request([
+        'lead_id' => $lead->id,
+        'body' => 'Called today, booked a demo for the 20th.',
+    ]));
+
+    $note = LeadNote::sole();
+
+    expect($note->lead_id)->toBe($lead->id)
+        ->and($note->body)->toBe('Called today, booked a demo for the 20th.')
+        ->and($result)->toContain((string) $note->id);
+
+    $deleteResult = (new DeleteLeadNote($project))->handle(new Request([
+        'lead_id' => $lead->id,
+        'note_id' => $note->id,
+    ]));
+
+    expect($deleteResult)->toBe('Note deleted.')
+        ->and(LeadNote::query()->count())->toBe(0);
+});
+
+it('refuses add_lead_note and delete_lead_note for a contact from another project', function () {
+    $project = Project::factory()->create();
+    $foreign = Lead::factory()->create();
+    $note = LeadNote::factory()->create(['lead_id' => $foreign->id]);
+
+    $addResult = (new AddLeadNote($project))->handle(new Request(['lead_id' => $foreign->id, 'body' => 'Sneaky.']));
+    $deleteResult = (new DeleteLeadNote($project))->handle(new Request(['lead_id' => $foreign->id, 'note_id' => $note->id]));
+
+    expect($addResult)->toContain('No contact with that id')
+        ->and($deleteResult)->toContain('No contact with that id')
+        ->and(LeadNote::query()->count())->toBe(1);
+});
+
+it('adds and deletes a note on a company\'s own timeline', function () {
+    $project = Project::factory()->create();
+    $company = Company::factory()->create(['project_id' => $project->id]);
+
+    $result = (new AddCompanyNote($project))->handle(new Request([
+        'company_id' => $company->id,
+        'body' => 'Spoke to their ops manager.',
+    ]));
+
+    $note = CompanyNote::sole();
+
+    expect($note->company_id)->toBe($company->id)
+        ->and($result)->toContain((string) $note->id);
+
+    $deleteResult = (new DeleteCompanyNote($project))->handle(new Request([
+        'company_id' => $company->id,
+        'note_id' => $note->id,
+    ]));
+
+    expect($deleteResult)->toBe('Note deleted.')
+        ->and(CompanyNote::query()->count())->toBe(0);
+});
+
+it('refuses add_company_note and delete_company_note for a company from another project', function () {
+    $project = Project::factory()->create();
+    $foreign = Company::factory()->create();
+    $note = CompanyNote::factory()->create(['company_id' => $foreign->id]);
+
+    $addResult = (new AddCompanyNote($project))->handle(new Request(['company_id' => $foreign->id, 'body' => 'Sneaky.']));
+    $deleteResult = (new DeleteCompanyNote($project))->handle(new Request(['company_id' => $foreign->id, 'note_id' => $note->id]));
+
+    expect($addResult)->toContain('No company with that id')
+        ->and($deleteResult)->toContain('No company with that id')
+        ->and(CompanyNote::query()->count())->toBe(1);
 });

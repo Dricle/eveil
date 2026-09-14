@@ -2,9 +2,15 @@
 
 namespace App\Ai\Agents;
 
+use App\Ai\Tools\AddCompanyNote;
+use App\Ai\Tools\AddLeadNote;
 use App\Ai\Tools\CreateSequence;
+use App\Ai\Tools\DeleteCompanyNote;
+use App\Ai\Tools\DeleteLeadNote;
 use App\Ai\Tools\Evie\ProposeSuggestedReplies;
 use App\Ai\Tools\GetCampaign;
+use App\Ai\Tools\GetCompany;
+use App\Ai\Tools\GetContact;
 use App\Ai\Tools\GetDiscoveryRunStatus;
 use App\Ai\Tools\ListCampaigns;
 use App\Ai\Tools\ListCompanies;
@@ -41,14 +47,27 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
         rather than making them click through screens for it.
 
         Look things up before you act: ListTargetProfiles, ListCompanies,
-        ListCampaigns, GetCampaign and GetDiscoveryRunStatus cost nothing and
-        answer most questions on their own.
+        GetCompany, GetContact, ListCampaigns, GetCampaign and
+        GetDiscoveryRunStatus cost nothing and answer most questions on
+        their own.
 
         ListCampaigns only gives you the shape (id, name, status, step
         count) - when the user wants to discuss, review, or rewrite a
         specific campaign, call GetCampaign for its id to read the actual
         subject lines, bodies and timing first. Never guess or invent what a
-        sequence says.
+        sequence says. Same reasoning for a company or a contact: ListCompanies
+        only gives you the shape, GetCompany reads one company's full detail
+        (including the people found there, with their ids, and its own
+        timeline of notes), and GetContact reads one person's detail and
+        their own timeline.
+
+        AddLeadNote/DeleteLeadNote and AddCompanyNote/DeleteCompanyNote let
+        you log or remove a timeline entry on the user's behalf - "log that
+        I called them today and they want a demo next week" - exactly what
+        they would type into the Timeline on the contact sheet or company
+        page themselves. These need no approval: unlike StartDiscovery,
+        CreateSequence and UpdateSequence below, nothing is spawned and
+        nothing costs beyond the message itself.
 
         Neither CreateSequence nor UpdateSequence has a writer behind it: YOU
         write the actual subject lines and mail bodies, in the tool call
@@ -66,6 +85,15 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
         user is actually asking for that real action, and only against a
         target profile that already exists (create one by asking the user to
         derive it first if none fits - you have no tool to create one).
+
+        The user can steer a search from chat rather than only reading what it
+        found after the fact: pass their own words as StartDiscovery's
+        `guidance` when they ask for a particular angle, area or segment on an
+        existing profile. That guidance applies to the one run you start, never
+        to the profile itself. Wanting to explore something genuinely different
+        from what a profile has been finding is a reason to start ANOTHER run
+        with different guidance, not to wait for the automatic schedule or to
+        edit the profile's own criteria.
 
         StartDiscovery, CreateSequence and UpdateSequence all pause for the
         user's explicit approval before anything real happens: that is
@@ -114,6 +142,12 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
         return [
             new ListTargetProfiles($this->project),
             new ListCompanies($this->project),
+            new GetCompany($this->project),
+            new GetContact($this->project),
+            new AddLeadNote($this->project),
+            new DeleteLeadNote($this->project),
+            new AddCompanyNote($this->project),
+            new DeleteCompanyNote($this->project),
             new ListCampaigns($this->project),
             new GetCampaign($this->project),
             new GetDiscoveryRunStatus($this->project),

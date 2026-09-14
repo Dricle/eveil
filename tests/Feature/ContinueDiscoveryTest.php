@@ -92,6 +92,20 @@ it('starts the scheduled search even while a manual link submission is open for 
     expect(startedRuns($profile))->toBe(1);
 });
 
+it('keeps searching a proven profile after a quiet run, unlike a genuinely bad one', function () {
+    $profile = TargetProfile::factory()->create(['source' => TargetProfileSource::Human, 'is_active' => true]);
+
+    DiscoveryRun::factory()->create([
+        'project_id' => $profile->project_id,
+        'target_profile_id' => $profile->id,
+        'origin' => DiscoveryRunOrigin::Search,
+        'status' => DiscoveryRunStatus::Exhausted,
+        'diagnosis' => 'saturated',
+    ]);
+
+    expect(startedRuns($profile))->toBe(1);
+});
+
 it('never lets a manual submission stand in for the profile\'s latest search', function () {
     $profile = TargetProfile::factory()->create(['source' => TargetProfileSource::Human, 'is_active' => true]);
 

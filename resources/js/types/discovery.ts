@@ -15,7 +15,7 @@ export type DiscoveryRun = {
     id: number
     status: string
     running: boolean
-    diagnosis: 'too_narrow' | 'wrong_source' | 'bad_target_profile' | 'no_contacts' | null
+    diagnosis: 'too_narrow' | 'wrong_source' | 'bad_target_profile' | 'no_contacts' | 'saturated' | null
     error: string | null
     profile: string | null
     profile_id: number | null

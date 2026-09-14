@@ -46,7 +46,8 @@ const DIAGNOSIS = {
     wrong_source: 'No candidate at all. The sources were wrong for this profile, not the profile itself.',
     bad_target_profile: 'Candidates were found but none fit. The profile is probably wrong, and widening it would only produce off-target leads.',
     too_narrow: 'Fewer companies than asked for. Either the profile is narrow, or this is the whole market.',
-    no_contacts: 'Companies were qualified but no contact could be reached on them.'
+    no_contacts: 'Companies were qualified but no contact could be reached on them.',
+    saturated: 'Candidates were found but none fit this time - on a profile that has already qualified real companies before. Probably a blocked source or a quiet day, not a wrong target: search keeps trying.'
 }
 
 /** What a node produced, in the few numbers worth reading in a list. */

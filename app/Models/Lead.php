@@ -90,6 +90,17 @@ class Lead extends Model
     }
 
     /**
+     * The timeline: newest first, like an activity feed rather than a thread
+     * read top to bottom.
+     *
+     * @return HasMany<LeadNote, $this>
+     */
+    public function notes(): HasMany
+    {
+        return $this->hasMany(LeadNote::class)->latest('id');
+    }
+
+    /**
      * The people outreach may still go to: not erased, not marked won, lost,
      * already a client or unsubscribed, and not working at a company the user
      * took out of the running. A lead with no company passes: plenty arrive
@@ -219,6 +230,9 @@ class Lead extends Model
     public function erase(): void
     {
         $this->messages()->update(['subject' => '', 'body' => '']);
+        // A note is free text somebody typed about her: "called today, spoke
+        // to Marie" carries a name as easily as a message body does.
+        $this->notes()->update(['body' => '']);
 
         $this->forceFill([
             'first_name' => null,

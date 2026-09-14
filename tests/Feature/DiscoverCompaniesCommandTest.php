@@ -247,6 +247,37 @@ it('keeps out what the qualifier says is not a prospect', function () {
         ->and(DiscoveryRun::sole()->diagnosis)->toBe(DiscoveryDiagnosis::BadTargetProfile);
 });
 
+it('diagnoses a quiet run as saturated, not wrong, once the profile has proven itself', function () {
+    $targetProfile = activeTargetProfile();
+
+    // The profile already qualified somebody, in an earlier run - what a real
+    // target profile behind an active campaign looks like.
+    DiscoveryRun::factory()->create([
+        'project_id' => $targetProfile->project_id,
+        'target_profile_id' => $targetProfile->id,
+        'status' => DiscoveryRunStatus::Succeeded,
+        'candidates_found' => 5,
+        'qualified_count' => 1,
+    ]);
+
+    DiscoveryPlanner::fake([plan(overpass: [overpassProbe()])]);
+    CompanyQualifier::fake([verdict(prospect: false)]);
+
+    Http::fake([
+        '*/api/interpreter' => Http::response(['elements' => [osmElement('Annuaire', 'https://annuaire.be')]]),
+        '*/robots.txt' => Http::response('', 404),
+        '*' => Http::response(page()),
+    ]);
+
+    $this->artisan('eveil:discover-companies')->assertSuccessful();
+
+    // Never `bad_target_profile`: that diagnosis permanently stops
+    // `ContinueDiscovery` from ever searching this profile again
+    // (`DiscoveryRun::mayWiden()`), which a profile that has already found a
+    // real company must not be told.
+    expect(DiscoveryRun::latest('id')->first()->diagnosis)->toBe(DiscoveryDiagnosis::Saturated);
+});
+
 it('diagnoses a wrong source rather than a wrong profile when nothing is found', function () {
     activeTargetProfile();
     DiscoveryPlanner::fake([plan(overpass: [overpassProbe()])]);

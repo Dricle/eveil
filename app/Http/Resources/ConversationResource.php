@@ -35,6 +35,9 @@ class ConversationResource extends JsonResource
                 'title' => $this->lead->title,
                 'status' => $this->lead->status->value,
                 'company' => $this->lead->company?->name,
+                // The side panel's timeline: free text typed by hand, never
+                // sent anywhere and never read by an agent.
+                'notes' => NoteResource::collection($this->lead->notes),
             ],
             // What the agent made of the latest reply. A permanent record of
             // what it WAS, so it stays on screen (in a neutral color once

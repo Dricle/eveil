@@ -123,7 +123,7 @@ class CompanyController extends Controller
     public function show(ProjectActivity $activity, int $company): Response
     {
         $company = Company::query()
-            ->with(['evaluations.targetProfile', 'leads' => fn ($leads) => $leads->orderBy('id')])
+            ->with(['evaluations.targetProfile', 'leads' => fn ($leads) => $leads->orderBy('id'), 'notes.user'])
             ->withBestFit()
             ->findOrFail($company);
 

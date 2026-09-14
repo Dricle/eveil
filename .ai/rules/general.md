@@ -141,3 +141,11 @@ Update the matching page in the SAME change, not a follow-up, whenever a change 
 - **Install, update, or backup/restore steps change** (`compose.deploy.yaml`, `deploy/Dockerfile`, `deploy/entrypoint.sh`) → `docs/self-hosted/`.
 
 Skip it for anything an end user or self-hoster would never notice: internal refactors, query shape, test-only changes, a rename with no visible effect. The test is the same one as the marketing-site rule above: would a user hit this while using the app, or a self-hoster hit it while running one? Docs describe what things ARE and MEAN from the outside - a status table with what each one does, never a code comment or a changelog entry. After editing, `cd docs && yarn build` catches a broken internal link before it ships (VitePress fails the build on one).
+
+## Two checks before finishing any feature: docs/ and Evie
+Before calling a feature (or a PR) done, check both:
+
+1. **Customer-facing docs.** Does `docs/product/*.md` (or `self-hosted/*.md` for install/config/commands) need a new page or an update? If a user or self-hoster would hit the behavior and it's not described there, it isn't done. See "docs/ documents behaviour" above for what qualifies.
+2. **Can Evie use it?** `evie.md`'s stated goal: "whatever you can do manually inside the app, Evie can do it too." If the feature has a manual UI action (create/read/update/delete, a lookup), check whether `App\Ai\Agents\Evie` has a tool for it in `app/Ai/Tools/`. Missing one is a gap to close in the same PR, not a follow-up - unless the action is destructive/costly enough to need the approval gate (`Approvable`, like `StartDiscovery`/`CreateSequence`), a plain CRUD tool needs no approval.
+
+`Evie::documentation()` reads `docs/product/*.md` fresh off disk on every call, so writing the doc in check 1 also teaches Evie about the feature - do check 1 before check 2.

@@ -3,7 +3,11 @@
 namespace App\Services\Discovery;
 
 use App\Ai\Agents\DiscoveryPlanner;
+use App\Enums\DiscoveryRunOrigin;
+use App\Enums\DiscoveryTaskKind;
 use App\Models\AgentRun;
+use App\Models\DiscoveryRun;
+use App\Models\DiscoveryTask;
 use App\Models\TargetProfile;
 use Laravel\Ai\Responses\StructuredAgentResponse;
 
@@ -14,6 +18,11 @@ use Laravel\Ai\Responses\StructuredAgentResponse;
  */
 class Planner
 {
+    /** How many past runs the planner gets to read. Enough to notice a
+     * pattern (a source that keeps coming back blocked), cheap enough that a
+     * profile searched for months never balloons the prompt. */
+    private const HISTORY_RUNS = 5;
+
     /**
      * @param  int  $maxProbes  What the run's budget allows, map probes and web
      *                          queries counted together. Told to the model
@@ -21,9 +30,19 @@ class Planner
      *                          knows it has twelve spends twelve on the best
      *                          areas, where trimming a plan of eighty throws
      *                          away whichever ones it happened to list last.
+     * @param  string|null  $guidance  A steer the user gave THIS run through Evie,
+     *                                 on top of the profile's own criteria - never
+     *                                 folded into the profile itself, since it is a
+     *                                 one-run request, not a standing fact about
+     *                                 who the profile targets.
+     * @param  bool  $isPivot  True when the FIRST wave of this same run found
+     *                         nothing at all and this is its one automatic
+     *                         do-over (`DiscoveryRun::pivotSource()`): told
+     *                         plainly, so the model reaches for a genuinely
+     *                         different source instead of repeating itself.
      * @return array{explanation: ?string, probes: array<int, array{source: string, probe: array<string, mixed>}>}
      */
-    public function plan(TargetProfile $targetProfile, int $maxProbes, ?AgentRun $run = null): array
+    public function plan(TargetProfile $targetProfile, int $maxProbes, ?AgentRun $run = null, ?string $guidance = null, bool $isPivot = false): array
     {
         $agent = new DiscoveryPlanner($targetProfile->project);
 
@@ -37,13 +56,75 @@ class Planner
             ."Target profile [{$targetProfile->name}]:\n\n".json_encode(
                 $targetProfile->criteria,
                 JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
-            ),
+            )
+            .$this->history($targetProfile)
+            .($guidance === null || $guidance === '' ? '' : "\n\nThe user asked specifically, for this run only: {$guidance}")
+            .($isPivot ? "\n\nThe first attempt in THIS run just found nothing at all worth qualifying. "
+                .'Reach for a genuinely different source or approach with the probes left below - not a '
+                .'variation on what was just tried, that source or angle did not work.' : ''),
         );
 
         return [
             'explanation' => $response->structured['plan'] ?? null,
             'probes' => $this->probes($response->structured),
         ];
+    }
+
+    /**
+     * What earlier runs for this same profile already tried, and how it
+     * went - so the planner keeps expanding coverage instead of repeating a
+     * query that already came up empty, or a source that keeps coming back
+     * blocked. Read from what `finishIfIdle()` already stored on each past
+     * run; no new tracking, no new job.
+     */
+    private function history(TargetProfile $targetProfile): string
+    {
+        $runs = $targetProfile->discoveryRuns()
+            ->where('origin', DiscoveryRunOrigin::Search)
+            ->whereNotNull('finished_at')
+            ->latest('id')
+            ->limit(self::HISTORY_RUNS)
+            ->with('tasks')
+            ->get()
+            ->reverse();
+
+        if ($runs->isEmpty()) {
+            return '';
+        }
+
+        $summaries = $runs->map(function (DiscoveryRun $run): string {
+            $probes = $run->tasks
+                ->where('kind', DiscoveryTaskKind::Probe)
+                ->map(fn (DiscoveryTask $task): ?string => $this->describeProbe($task->payload))
+                ->filter()
+                ->implode('; ');
+
+            $failures = array_unique([
+                ...$run->stats['source_failures'] ?? [],
+                ...$run->stats['candidate_failures'] ?? [],
+            ]);
+
+            return "- Tried: {$probes}\n"
+                ."  Result: {$run->candidates_found} candidate(s), {$run->qualified_count} qualified."
+                .($failures === [] ? '' : ' Failed or blocked: '.implode('; ', $failures).'.');
+        });
+
+        return "\n\nEarlier runs for this profile, oldest first - do not repeat a query or area "
+            .'already tried here, prefer sources that are not blocked, and widen into genuinely '
+            .'new angles (a different area, phrasing, or source) rather than narrowing to the same '
+            ."few queries that already came up empty:\n"
+            .$summaries->implode("\n");
+    }
+
+    private function describeProbe(?array $payload): ?string
+    {
+        return match ($payload['source'] ?? null) {
+            'overpass' => 'map: '.($payload['probe']['area'] ?? '?').' ('
+                .collect($payload['probe']['tags'] ?? [])->map(fn ($value, $key) => "{$key}={$value}")->implode(',')
+                .')',
+            'web_search' => 'web: "'.($payload['probe']['query'] ?? '').'"',
+            default => null,
+        };
     }
 
     /**

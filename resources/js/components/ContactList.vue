@@ -33,11 +33,11 @@ function origin (contact: Contact) {
             <div class="min-w-0 flex-1">
                 <ULink
                     :href="contactRoutes.show.url(contact.id)"
-                    class="font-medium"
+                    class="block truncate font-medium"
                 >{{ contact.name ?? contact.email ?? 'No name' }}</ULink>
                 <p
                     v-if="contact.title"
-                    class="text-muted"
+                    class="truncate text-muted"
                 >
                     {{ contact.title }}
                 </p>
@@ -46,7 +46,7 @@ function origin (contact: Contact) {
             <ULink
                 v-if="contact.email"
                 :href="`mailto:${contact.email}`"
-                class="min-w-0 truncate"
+                class="block max-w-full min-w-0 truncate"
             >{{ contact.email }}</ULink>
 
             <UBadge

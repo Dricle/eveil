@@ -68,6 +68,17 @@ class TargetProfile extends Model
     }
 
     /**
+     * Whether any run has EVER qualified a company for this profile. What
+     * separates a proven target having a quiet run (blocked source, thin day)
+     * from a genuinely wrong one: see `DiscoveryRun::diagnose()`, the one
+     * place this decides whether `bad_target_profile` gets written at all.
+     */
+    public function hasEverQualified(): bool
+    {
+        return $this->discoveryRuns()->where('qualified_count', '>', 0)->exists();
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array

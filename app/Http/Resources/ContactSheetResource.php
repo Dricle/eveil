@@ -69,6 +69,7 @@ class ContactSheetResource extends ContactResource
                 'classification' => $message->classification?->value,
                 'at' => ($message->sent_at ?? $message->received_at ?? $message->created_at)?->toIso8601String(),
             ])->values()->all(),
+            'notes' => NoteResource::collection($this->notes),
         ];
     }
 }

@@ -96,6 +96,7 @@ class ContactController extends Controller
                 'campaignLeads.campaign',
                 'campaignLeads.emailAccount',
                 'messages' => fn ($messages) => $messages->orderBy('id'),
+                'notes.user',
             ])
             ->findOrFail($contact);
 

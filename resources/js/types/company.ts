@@ -53,6 +53,14 @@ export type Paginated<T> = {
     }
 }
 
+/** One free-text timeline entry: "called today, booked a meeting for the 20th". */
+export type Note = {
+    id: number
+    body: string
+    author: string | null
+    at: string | null
+}
+
 export type Contact = {
     id: number
     name: string | null
@@ -103,6 +111,7 @@ export type ContactSheet = Contact & {
         classification: keyof typeof import('./inbox').CLASSIFICATIONS | null
         at: string | null
     }[]
+    notes: Note[]
 }
 
 /** One company with everything found about it, and the people found at it. */
@@ -112,4 +121,5 @@ export type CompanySheet = Company & {
     /** True while a contact search is still reading this company's site. */
     searching: boolean
     contacts: Contact[]
+    notes: Note[]
 }

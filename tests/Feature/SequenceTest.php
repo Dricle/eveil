@@ -1,8 +1,8 @@
 <?php
 
+use App\Actions\GenerateSequence;
 use App\Actions\PersonalizeMessage;
 use App\Actions\WriteMissingCampaigns;
-use App\Actions\WriteSequence;
 use App\Actions\WriteVariant;
 use App\Ai\Agents\CompanyQualifier;
 use App\Ai\Agents\ContactExtractor;
@@ -101,7 +101,7 @@ it('writes a whole sequence from the product and the segment', function () {
 
     SequenceWriter::fake([writtenSequence()]);
 
-    app(WriteSequence::class)->handle($project, $profile);
+    app(GenerateSequence::class)->handle($project, $profile);
 
     $campaign = Campaign::sole();
 
@@ -130,7 +130,7 @@ it('feeds the writer a random sample of proven examples, when any exist', functi
 
     SequenceWriter::fake([writtenSequence()]);
 
-    app(WriteSequence::class)->handle($project, $profile);
+    app(GenerateSequence::class)->handle($project, $profile);
 
     $prompt = (string) (AgentRun::query()->where('agent', 'sequence-writer')->sole()->input['prompt'] ?? '');
 
@@ -144,7 +144,7 @@ it('writes no examples section at all while the bank is still empty', function (
 
     SequenceWriter::fake([writtenSequence()]);
 
-    app(WriteSequence::class)->handle($project, $profile);
+    app(GenerateSequence::class)->handle($project, $profile);
 
     $prompt = (string) (AgentRun::query()->where('agent', 'sequence-writer')->sole()->input['prompt'] ?? '');
 
@@ -162,7 +162,7 @@ it('gives a wait step a duration even when the writer forgets one', function () 
         'steps' => [['type' => 'wait', 'delay_hours' => 0, 'subject' => '', 'body' => '', 'intent' => '']],
     ]]);
 
-    app(WriteSequence::class)->handle($project, $profile);
+    app(GenerateSequence::class)->handle($project, $profile);
 
     expect(Campaign::sole()->steps()->sole()->delay_hours)->toBe(1);
 });
@@ -172,7 +172,7 @@ it('refuses to write a sequence for a product it has not read', function () {
     $project->update(['knowledge_base' => null]);
     $profile = TargetProfile::factory()->create(['project_id' => $project->id]);
 
-    expect(fn () => app(WriteSequence::class)->handle($project, $profile))
+    expect(fn () => app(GenerateSequence::class)->handle($project, $profile))
         ->toThrow(RuntimeException::class);
 });
 

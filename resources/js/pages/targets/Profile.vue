@@ -4,12 +4,19 @@ import { ref, watch } from 'vue'
 import ListRows from '@/components/ListRows.vue'
 import TagChips from '@/components/TagChips.vue'
 import TargetHeader from '@/components/TargetHeader.vue'
+import AppLayout from '@/layouts/AppLayout.vue'
 import TargetsLayout from '@/layouts/TargetsLayout.vue'
 import discoveryRuns from '@/routes/discovery-runs'
 import targets from '@/routes/targets'
 import type { TargetProfile } from '@/types'
 
 const props = defineProps<{ profile: TargetProfile | null }>()
+
+// A function, not a plain array: `defineOptions()` hoists its argument out of
+// setup(), so it cannot reference the local `props` binding. Called with this
+// page's own props each render, so `current` follows whichever profile is
+// open across a persisted-layout navigation that never remounts TargetsLayout.
+defineOptions({ layout: (pageProps: { profile: TargetProfile | null }) => [AppLayout, [TargetsLayout, { current: pageProps.profile?.id }]] })
 
 const TEXTS = [
     { name: 'rationale', label: 'Why they buy', help: 'What makes this segment want the product.' },
@@ -56,289 +63,287 @@ watch(() => props.profile, (profile) => {
 </script>
 
 <template>
-    <TargetsLayout :current="profile?.id">
-        <Head :title="profile?.name ?? 'New profile'" />
+    <Head :title="profile?.name ?? 'New profile'" />
 
-        <div class="space-y-5">
-            <TargetHeader
-                :profile="profile"
-                tab="profile"
-            />
+    <div class="space-y-5">
+        <TargetHeader
+            :profile="profile"
+            tab="profile"
+        />
 
-            <!-- The model reported low confidence in its own guess: it lands
-                 inactive rather than spending budget on its own next tick, and
-                 stays this way until a human looks at it. -->
-            <UAlert
-                v-if="profile?.needs_review"
-                color="warning"
-                variant="subtle"
-                icon="i-lucide-shield-question"
-                title="The agent wasn't confident about this one"
-                :description="`Scored ${profile.confidence}% confidence, below the floor to search on its own. Review the criteria below and turn it on, or search with it manually, whenever you're satisfied.`"
-            />
+        <!-- The model reported low confidence in its own guess: it lands
+             inactive rather than spending budget on its own next tick, and
+             stays this way until a human looks at it. -->
+        <UAlert
+            v-if="profile?.needs_review"
+            color="warning"
+            variant="subtle"
+            icon="i-lucide-shield-question"
+            title="The agent wasn't confident about this one"
+            :description="`Scored ${profile.confidence}% confidence, below the floor to search on its own. Review the criteria below and turn it on, or search with it manually, whenever you're satisfied.`"
+        />
 
-            <Form
-                v-slot="{ errors, processing, recentlySuccessful }"
-                v-bind="profile ? targets.update.form(profile.id) : targets.store.form()"
-                class="space-y-5"
-            >
-                <UCard variant="subtle">
-                    <template #header>
-                        <h3 class="flex items-center gap-2 text-sm font-semibold">
-                            <UIcon
-                                name="i-lucide-target"
-                                class="size-4 text-dimmed"
-                            />
-                            The segment
-                        </h3>
-                    </template>
+        <Form
+            v-slot="{ errors, processing, recentlySuccessful }"
+            v-bind="profile ? targets.update.form(profile.id) : targets.store.form()"
+            class="space-y-5"
+        >
+            <UCard variant="subtle">
+                <template #header>
+                    <h3 class="flex items-center gap-2 text-sm font-semibold">
+                        <UIcon
+                            name="i-lucide-target"
+                            class="size-4 text-dimmed"
+                        />
+                        The segment
+                    </h3>
+                </template>
 
-                    <div class="space-y-4">
-                        <UFormField
-                            label="Name"
+                <div class="space-y-4">
+                    <UFormField
+                        label="Name"
+                        name="name"
+                        :error="errors.name"
+                    >
+                        <UInput
+                            v-model="name"
                             name="name"
-                            :error="errors.name"
+                            required
+                            class="w-full"
+                        />
+                    </UFormField>
+
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <UFormField
+                            label="Kind"
+                            name="type"
+                            :error="errors.type"
+                        >
+                            <USelect
+                                v-model="type"
+                                name="type"
+                                :items="TYPES"
+                                class="w-full"
+                            />
+                        </UFormField>
+
+                        <UFormField
+                            label="Company size"
+                            name="company_size"
+                            :error="errors.company_size"
                         >
                             <UInput
-                                v-model="name"
-                                name="name"
-                                required
-                                class="w-full"
-                            />
-                        </UFormField>
-
-                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <UFormField
-                                label="Kind"
-                                name="type"
-                                :error="errors.type"
-                            >
-                                <USelect
-                                    v-model="type"
-                                    name="type"
-                                    :items="TYPES"
-                                    class="w-full"
-                                />
-                            </UFormField>
-
-                            <UFormField
-                                label="Company size"
+                                v-model="draft.company_size"
                                 name="company_size"
-                                :error="errors.company_size"
-                            >
-                                <UInput
-                                    v-model="draft.company_size"
-                                    name="company_size"
-                                    class="w-full"
-                                />
-                            </UFormField>
-                        </div>
-
-                        <UFormField
-                            v-for="field in (type === 'partner' ? ANGLES : [])"
-                            :key="field.name"
-                            :label="field.label"
-                            :name="field.name"
-                            :help="field.help"
-                            :error="errors[field.name]"
-                        >
-                            <UTextarea
-                                v-model="draft[field.name]"
-                                :name="field.name"
-                                :rows="2"
-                                autoresize
-                                class="w-full"
-                            />
-                        </UFormField>
-
-                        <UFormField
-                            label="Why they buy"
-                            name="rationale"
-                            help="What makes this segment want the product."
-                            :error="errors.rationale"
-                        >
-                            <UTextarea
-                                v-model="draft.rationale"
-                                name="rationale"
-                                :rows="4"
-                                autoresize
-                                class="w-full"
-                            />
-                        </UFormField>
-
-                        <UFormField
-                            label="How many there are"
-                            name="estimated_market_size"
-                            help="Rough count, and how it was arrived at."
-                            :error="errors.estimated_market_size"
-                        >
-                            <UTextarea
-                                v-model="draft.estimated_market_size"
-                                name="estimated_market_size"
-                                :rows="3"
-                                autoresize
                                 class="w-full"
                             />
                         </UFormField>
                     </div>
-                </UCard>
 
-                <UCard variant="subtle">
-                    <template #header>
-                        <h3 class="flex items-center gap-2 text-sm font-semibold">
-                            <UIcon
-                                name="i-lucide-building-2"
-                                class="size-4 text-dimmed"
-                            />
-                            Who they are
-                        </h3>
-                    </template>
+                    <UFormField
+                        v-for="field in (type === 'partner' ? ANGLES : [])"
+                        :key="field.name"
+                        :label="field.label"
+                        :name="field.name"
+                        :help="field.help"
+                        :error="errors[field.name]"
+                    >
+                        <UTextarea
+                            v-model="draft[field.name]"
+                            :name="field.name"
+                            :rows="2"
+                            autoresize
+                            class="w-full"
+                        />
+                    </UFormField>
 
-                    <div class="space-y-4">
-                        <UFormField
-                            label="Sectors"
+                    <UFormField
+                        label="Why they buy"
+                        name="rationale"
+                        help="What makes this segment want the product."
+                        :error="errors.rationale"
+                    >
+                        <UTextarea
+                            v-model="draft.rationale"
+                            name="rationale"
+                            :rows="4"
+                            autoresize
+                            class="w-full"
+                        />
+                    </UFormField>
+
+                    <UFormField
+                        label="How many there are"
+                        name="estimated_market_size"
+                        help="Rough count, and how it was arrived at."
+                        :error="errors.estimated_market_size"
+                    >
+                        <UTextarea
+                            v-model="draft.estimated_market_size"
+                            name="estimated_market_size"
+                            :rows="3"
+                            autoresize
+                            class="w-full"
+                        />
+                    </UFormField>
+                </div>
+            </UCard>
+
+            <UCard variant="subtle">
+                <template #header>
+                    <h3 class="flex items-center gap-2 text-sm font-semibold">
+                        <UIcon
+                            name="i-lucide-building-2"
+                            class="size-4 text-dimmed"
+                        />
+                        Who they are
+                    </h3>
+                </template>
+
+                <div class="space-y-4">
+                    <UFormField
+                        label="Sectors"
+                        name="sectors"
+                        hint="Enter to add, click a pill to remove"
+                        :error="errors.sectors"
+                    >
+                        <TagChips
+                            v-model="draftList.sectors"
                             name="sectors"
-                            hint="Enter to add, click a pill to remove"
-                            :error="errors.sectors"
+                            placeholder="Add a sector…"
+                        />
+                    </UFormField>
+
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <UFormField
+                            label="Geography"
+                            name="geography"
+                            :error="errors.geography"
                         >
                             <TagChips
-                                v-model="draftList.sectors"
-                                name="sectors"
-                                placeholder="Add a sector…"
+                                v-model="draftList.geography"
+                                name="geography"
+                                placeholder="Add…"
                             />
                         </UFormField>
 
-                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <UFormField
-                                label="Geography"
-                                name="geography"
-                                :error="errors.geography"
-                            >
-                                <TagChips
-                                    v-model="draftList.geography"
-                                    name="geography"
-                                    placeholder="Add…"
-                                />
-                            </UFormField>
-
-                            <UFormField
-                                label="Job titles"
-                                name="job_titles"
-                                :error="errors.job_titles"
-                            >
-                                <TagChips
-                                    v-model="draftList.job_titles"
-                                    name="job_titles"
-                                    placeholder="Add…"
-                                />
-                            </UFormField>
-                        </div>
-
                         <UFormField
-                            label="Technologies"
-                            name="technologies"
-                            help="Tools these companies visibly use, when that narrows the search."
-                            :error="errors.technologies"
+                            label="Job titles"
+                            name="job_titles"
+                            :error="errors.job_titles"
                         >
                             <TagChips
-                                v-model="draftList.technologies"
-                                name="technologies"
+                                v-model="draftList.job_titles"
+                                name="job_titles"
                                 placeholder="Add…"
                             />
                         </UFormField>
                     </div>
-                </UCard>
 
-                <UCard variant="subtle">
-                    <template #header>
-                        <h3 class="flex items-center gap-2 text-sm font-semibold">
-                            <UIcon
-                                name="i-lucide-search"
-                                class="size-4 text-dimmed"
-                            />
-                            How the run finds them
-                        </h3>
-                    </template>
+                    <UFormField
+                        label="Technologies"
+                        name="technologies"
+                        help="Tools these companies visibly use, when that narrows the search."
+                        :error="errors.technologies"
+                    >
+                        <TagChips
+                            v-model="draftList.technologies"
+                            name="technologies"
+                            placeholder="Add…"
+                        />
+                    </UFormField>
+                </div>
+            </UCard>
 
-                    <div class="space-y-4">
-                        <UFormField
-                            label="Search queries"
+            <UCard variant="subtle">
+                <template #header>
+                    <h3 class="flex items-center gap-2 text-sm font-semibold">
+                        <UIcon
+                            name="i-lucide-search"
+                            class="size-4 text-dimmed"
+                        />
+                        How the run finds them
+                    </h3>
+                </template>
+
+                <div class="space-y-4">
+                    <UFormField
+                        label="Search queries"
+                        name="search_queries"
+                        help="Exactly what the discovery run searches for."
+                        :error="errors.search_queries"
+                    >
+                        <ListRows
+                            v-model="draftList.search_queries"
                             name="search_queries"
-                            help="Exactly what the discovery run searches for."
-                            :error="errors.search_queries"
-                        >
-                            <ListRows
-                                v-model="draftList.search_queries"
-                                name="search_queries"
-                                variant="numbered"
-                                add-label="add a query…"
-                            />
-                        </UFormField>
+                            variant="numbered"
+                            add-label="add a query…"
+                        />
+                    </UFormField>
 
-                        <UFormField
-                            label="Trigger signals"
+                    <UFormField
+                        label="Trigger signals"
+                        name="trigger_signals"
+                        help="Observable events meaning now is the moment."
+                        :error="errors.trigger_signals"
+                    >
+                        <ListRows
+                            v-model="draftList.trigger_signals"
                             name="trigger_signals"
-                            help="Observable events meaning now is the moment."
-                            :error="errors.trigger_signals"
-                        >
-                            <ListRows
-                                v-model="draftList.trigger_signals"
-                                name="trigger_signals"
-                                variant="bulleted"
-                                add-label="add a signal…"
-                            />
-                        </UFormField>
-                    </div>
-                </UCard>
-
-                <div class="flex items-start gap-3 rounded-lg bg-elevated p-4">
-                    <UCheckbox
-                        v-model="active"
-                        name="is_active"
-                    />
-                    <div>
-                        <p class="text-sm font-medium text-highlighted">
-                            Search for these companies
-                        </p>
-                        <p class="text-sm text-muted">
-                            Every active profile is one more discovery run, and one more budget.
-                        </p>
-                    </div>
+                            variant="bulleted"
+                            add-label="add a signal…"
+                        />
+                    </UFormField>
                 </div>
+            </UCard>
 
-                <div class="sticky bottom-0 flex flex-wrap items-center gap-3 bg-gradient-to-t from-default from-70% to-transparent pt-4">
-                    <UButton
-                        type="submit"
-                        :loading="processing"
-                        :label="profile ? 'Save' : 'Add profile'"
-                    />
-                    <span
-                        v-if="recentlySuccessful"
-                        class="text-sm text-muted"
-                    >Saved.</span>
-
-                    <UButton
-                        v-if="profile"
-                        class="ms-auto"
-                        type="button"
-                        color="neutral"
-                        variant="subtle"
-                        icon="i-lucide-radar"
-                        label="Search with this profile"
-                        @click="router.post(discoveryRuns.store.url(), { target_profile: profile.id })"
-                    />
-
-                    <UButton
-                        v-if="profile"
-                        type="button"
-                        color="error"
-                        variant="ghost"
-                        icon="i-lucide-trash-2"
-                        label="Delete"
-                        @click="router.delete(targets.destroy.url(profile.id))"
-                    />
+            <div class="flex items-start gap-3 rounded-lg bg-elevated p-4">
+                <UCheckbox
+                    v-model="active"
+                    name="is_active"
+                />
+                <div>
+                    <p class="text-sm font-medium text-highlighted">
+                        Search for these companies
+                    </p>
+                    <p class="text-sm text-muted">
+                        Every active profile is one more discovery run, and one more budget.
+                    </p>
                 </div>
-            </Form>
-        </div>
-    </TargetsLayout>
+            </div>
+
+            <div class="sticky bottom-0 flex flex-wrap items-center gap-3 bg-gradient-to-t from-default from-70% to-transparent pt-4">
+                <UButton
+                    type="submit"
+                    :loading="processing"
+                    :label="profile ? 'Save' : 'Add profile'"
+                />
+                <span
+                    v-if="recentlySuccessful"
+                    class="text-sm text-muted"
+                >Saved.</span>
+
+                <UButton
+                    v-if="profile"
+                    class="ms-auto"
+                    type="button"
+                    color="neutral"
+                    variant="subtle"
+                    icon="i-lucide-radar"
+                    label="Search with this profile"
+                    @click="router.post(discoveryRuns.store.url(), { target_profile: profile.id })"
+                />
+
+                <UButton
+                    v-if="profile"
+                    type="button"
+                    color="error"
+                    variant="ghost"
+                    icon="i-lucide-trash-2"
+                    label="Delete"
+                    @click="router.delete(targets.destroy.url(profile.id))"
+                />
+            </div>
+        </Form>
+    </div>
 </template>

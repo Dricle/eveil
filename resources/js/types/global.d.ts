@@ -38,6 +38,8 @@ declare module '@inertiajs/core' {
             sidebarOpen: boolean
             /** The badge on each sidebar entry. Null while no project is selected. */
             navCounts: { targets: number, leads: number, inbox: number } | null
+            /** In-flight jobs the chat panel's job chip polls for. Null while no project is selected. */
+            chatJobs: { type: string, id: number, status: string }[] | null
             [key: string]: unknown
         }
     }

@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Actions\WriteSequence;
+use App\Actions\GenerateSequence;
 use App\Enums\AgentRunStatus;
 use App\Models\AgentRun;
 use App\Models\Project;
@@ -29,7 +29,7 @@ class WriteCampaign implements ShouldQueue
         $this->onQueue('ai');
     }
 
-    public function handle(WriteSequence $write, CurrentProject $currentProject): void
+    public function handle(GenerateSequence $write, CurrentProject $currentProject): void
     {
         $currentProject->run(
             $this->project,

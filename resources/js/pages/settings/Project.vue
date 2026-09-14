@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { Form, Head, router } from '@inertiajs/vue3'
 import { ref, watch } from 'vue'
+import AppLayout from '@/layouts/AppLayout.vue'
 import SettingsLayout from '@/layouts/SettingsLayout.vue'
 import projectRoutes from '@/routes/settings/project'
 import type { ProjectDetail } from '@/types'
+
+defineOptions({ layout: [AppLayout, [SettingsLayout, { title: 'Project' }]] })
 
 const props = defineProps<{ project: ProjectDetail }>()
 
@@ -49,185 +52,183 @@ const AUTONOMY = [
 </script>
 
 <template>
-    <SettingsLayout title="Project">
-        <Head title="Project" />
+    <Head title="Project" />
 
-        <div class="space-y-4">
-            <UCard>
-                <template #header>
-                    <h2 class="font-medium">
-                        Project
-                    </h2>
-                    <p class="mt-1 text-sm text-muted">
-                        Changing the address re-reads the site and rebuilds the
-                        knowledge base.
-                    </p>
-                </template>
-
-                <Form
-                    v-slot="{ errors, processing, recentlySuccessful }"
-                    v-bind="projectRoutes.update.form()"
-                    class="space-y-4"
-                >
-                    <UFormField
-                        label="Name"
-                        name="name"
-                        :error="errors.name"
-                    >
-                        <UInput
-                            v-model="name"
-                            name="name"
-                            required
-                            class="w-full"
-                        />
-                    </UFormField>
-
-                    <UFormField
-                        label="Website"
-                        name="url"
-                        :error="errors.url"
-                    >
-                        <UInput
-                            v-model="url"
-                            name="url"
-                            required
-                            class="w-full"
-                        />
-                    </UFormField>
-
-                    <!-- Same form as the name and the address on purpose: a
-                         second one posting to this route would re-check that the
-                         website answers every time somebody edits the tone. -->
-                    <UFormField
-                        label="How the AI writes"
-                        name="prompt_instructions"
-                        :error="errors.prompt_instructions"
-                        help="Followed by every sequence and every mail personalised from one. E.g. write in French, never use emoji, say vous rather than tu."
-                    >
-                        <UTextarea
-                            v-model="instructions"
-                            name="prompt_instructions"
-                            :rows="5"
-                            :maxlength="2000"
-                            class="w-full"
-                        />
-                    </UFormField>
-
-                    <!-- The one setting that decides how much happens without
-                         being asked. Worth spelling out per option: "semi auto"
-                         says nothing on its own about who gets written to. -->
-                    <UFormField
-                        label="How much it does on its own"
-                        name="autonomy_level"
-                        :error="errors.autonomy_level"
-                        :help="AUTONOMY.find(level => level.value === autonomy)?.help"
-                    >
-                        <USelect
-                            v-model="autonomy"
-                            name="autonomy_level"
-                            :items="AUTONOMY"
-                            class="w-full"
-                        />
-                    </UFormField>
-
-                    <!-- Continuous discovery's throttle: how far it may go
-                         before it stops on its own, for today and forever. -->
-                    <UFormField
-                        label="New leads per day"
-                        name="daily_lead_limit"
-                        :error="errors.daily_lead_limit"
-                        help="Discovery and contact-finding pause for the rest of the day once this many new leads have been found today. Leave empty for no daily cap. Counts every lead on the project, however it was found."
-                    >
-                        <UInput
-                            v-model="dailyLeadLimit"
-                            type="number"
-                            name="daily_lead_limit"
-                            min="1"
-                            placeholder="No daily cap"
-                            class="w-full"
-                        />
-                    </UFormField>
-
-                    <UFormField
-                        label="New leads, ever"
-                        name="lead_limit"
-                        :error="errors.lead_limit"
-                        help="Discovery and contact-finding stop for good once the project has this many leads in total. Leave empty for no lifetime cap."
-                    >
-                        <UInput
-                            v-model="leadLimit"
-                            type="number"
-                            name="lead_limit"
-                            min="1"
-                            placeholder="No lifetime cap"
-                            class="w-full"
-                        />
-                    </UFormField>
-
-                    <div class="flex items-center gap-3">
-                        <UButton
-                            type="submit"
-                            :loading="processing"
-                            label="Save"
-                        />
-                        <span
-                            v-if="recentlySuccessful"
-                            class="text-sm text-muted"
-                        >Saved.</span>
-                    </div>
-                </Form>
-            </UCard>
-
-            <UCard>
-                <template #header>
-                    <h2 class="font-medium">
-                        Delete this project
-                    </h2>
-                </template>
-
-                <p class="text-sm text-muted">
-                    Deleting <strong>{{ project.name }}</strong> also
-                    deletes its leads, companies and campaigns. This cannot be
-                    undone.
-                </p>
-
-                <template #footer>
-                    <UButton
-                        color="error"
-                        variant="soft"
-                        label="Delete project"
-                        @click="confirmingDelete = true"
-                    />
-                </template>
-            </UCard>
-        </div>
-
-        <UModal
-            v-model:open="confirmingDelete"
-            title="Delete project"
-        >
-            <template #body>
-                <p class="text-sm text-muted">
-                    <strong>{{ project.name }}</strong> and everything
-                    found for it will be deleted.
+    <div class="space-y-4">
+        <UCard>
+            <template #header>
+                <h2 class="font-medium">
+                    Project
+                </h2>
+                <p class="mt-1 text-sm text-muted">
+                    Changing the address re-reads the site and rebuilds the
+                    knowledge base.
                 </p>
             </template>
+
+            <Form
+                v-slot="{ errors, processing, recentlySuccessful }"
+                v-bind="projectRoutes.update.form()"
+                class="space-y-4"
+            >
+                <UFormField
+                    label="Name"
+                    name="name"
+                    :error="errors.name"
+                >
+                    <UInput
+                        v-model="name"
+                        name="name"
+                        required
+                        class="w-full"
+                    />
+                </UFormField>
+
+                <UFormField
+                    label="Website"
+                    name="url"
+                    :error="errors.url"
+                >
+                    <UInput
+                        v-model="url"
+                        name="url"
+                        required
+                        class="w-full"
+                    />
+                </UFormField>
+
+                <!-- Same form as the name and the address on purpose: a
+                     second one posting to this route would re-check that the
+                     website answers every time somebody edits the tone. -->
+                <UFormField
+                    label="How the AI writes"
+                    name="prompt_instructions"
+                    :error="errors.prompt_instructions"
+                    help="Followed by every sequence and every mail personalised from one. E.g. write in French, never use emoji, say vous rather than tu."
+                >
+                    <UTextarea
+                        v-model="instructions"
+                        name="prompt_instructions"
+                        :rows="5"
+                        :maxlength="2000"
+                        class="w-full"
+                    />
+                </UFormField>
+
+                <!-- The one setting that decides how much happens without
+                     being asked. Worth spelling out per option: "semi auto"
+                     says nothing on its own about who gets written to. -->
+                <UFormField
+                    label="How much it does on its own"
+                    name="autonomy_level"
+                    :error="errors.autonomy_level"
+                    :help="AUTONOMY.find(level => level.value === autonomy)?.help"
+                >
+                    <USelect
+                        v-model="autonomy"
+                        name="autonomy_level"
+                        :items="AUTONOMY"
+                        class="w-full"
+                    />
+                </UFormField>
+
+                <!-- Continuous discovery's throttle: how far it may go
+                     before it stops on its own, for today and forever. -->
+                <UFormField
+                    label="New leads per day"
+                    name="daily_lead_limit"
+                    :error="errors.daily_lead_limit"
+                    help="Discovery and contact-finding pause for the rest of the day once this many new leads have been found today. Leave empty for no daily cap. Counts every lead on the project, however it was found."
+                >
+                    <UInput
+                        v-model="dailyLeadLimit"
+                        type="number"
+                        name="daily_lead_limit"
+                        min="1"
+                        placeholder="No daily cap"
+                        class="w-full"
+                    />
+                </UFormField>
+
+                <UFormField
+                    label="New leads, ever"
+                    name="lead_limit"
+                    :error="errors.lead_limit"
+                    help="Discovery and contact-finding stop for good once the project has this many leads in total. Leave empty for no lifetime cap."
+                >
+                    <UInput
+                        v-model="leadLimit"
+                        type="number"
+                        name="lead_limit"
+                        min="1"
+                        placeholder="No lifetime cap"
+                        class="w-full"
+                    />
+                </UFormField>
+
+                <div class="flex items-center gap-3">
+                    <UButton
+                        type="submit"
+                        :loading="processing"
+                        label="Save"
+                    />
+                    <span
+                        v-if="recentlySuccessful"
+                        class="text-sm text-muted"
+                    >Saved.</span>
+                </div>
+            </Form>
+        </UCard>
+
+        <UCard>
+            <template #header>
+                <h2 class="font-medium">
+                    Delete this project
+                </h2>
+            </template>
+
+            <p class="text-sm text-muted">
+                Deleting <strong>{{ project.name }}</strong> also
+                deletes its leads, companies and campaigns. This cannot be
+                undone.
+            </p>
 
             <template #footer>
-                <div class="flex w-full justify-end gap-2">
-                    <UButton
-                        label="Cancel"
-                        color="neutral"
-                        variant="ghost"
-                        @click="confirmingDelete = false"
-                    />
-                    <UButton
-                        label="Delete"
-                        color="error"
-                        @click="router.delete(projectRoutes.destroy.url())"
-                    />
-                </div>
+                <UButton
+                    color="error"
+                    variant="soft"
+                    label="Delete project"
+                    @click="confirmingDelete = true"
+                />
             </template>
-        </UModal>
-    </SettingsLayout>
+        </UCard>
+    </div>
+
+    <UModal
+        v-model:open="confirmingDelete"
+        title="Delete project"
+    >
+        <template #body>
+            <p class="text-sm text-muted">
+                <strong>{{ project.name }}</strong> and everything
+                found for it will be deleted.
+            </p>
+        </template>
+
+        <template #footer>
+            <div class="flex w-full justify-end gap-2">
+                <UButton
+                    label="Cancel"
+                    color="neutral"
+                    variant="ghost"
+                    @click="confirmingDelete = false"
+                />
+                <UButton
+                    label="Delete"
+                    color="error"
+                    @click="router.delete(projectRoutes.destroy.url())"
+                />
+            </div>
+        </template>
+    </UModal>
 </template>

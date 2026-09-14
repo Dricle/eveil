@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { Form, Head, router, usePoll } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
+import AppLayout from '@/layouts/AppLayout.vue'
 import LeadsLayout from '@/layouts/LeadsLayout.vue'
 import SearchingBanner from '@/components/SearchingBanner.vue'
 import { useTableQuery } from '@/lib/table'
 import companyRoutes from '@/routes/companies'
 import contactRoutes from '@/routes/contacts'
 import type { Activity, Company, Paginated } from '@/types'
+
+defineOptions({ layout: [AppLayout, LeadsLayout] })
 
 type View = 'all' | 'awaiting' | 'approved' | 'no_contact' | 'set_aside'
 
@@ -243,492 +246,490 @@ function findContacts (company: Company) {
 </script>
 
 <template>
-    <LeadsLayout>
-        <Head title="Companies" />
+    <Head title="Companies" />
 
-        <div class="space-y-4">
-            <SearchingBanner :activity="activity" />
+    <div class="space-y-4">
+        <SearchingBanner :activity="activity" />
 
-            <UAlert
-                v-if="props.knownClients"
-                color="success"
-                variant="subtle"
-                icon="i-lucide-badge-check"
-                :title="`${props.knownClients.companies} compan${props.knownClients.companies === 1 ? 'y' : 'ies'} and ${props.knownClients.leads} contact${props.knownClients.leads === 1 ? '' : 's'} marked as client`"
-            />
+        <UAlert
+            v-if="props.knownClients"
+            color="success"
+            variant="subtle"
+            icon="i-lucide-badge-check"
+            :title="`${props.knownClients.companies} compan${props.knownClients.companies === 1 ? 'y' : 'ies'} and ${props.knownClients.leads} contact${props.knownClients.leads === 1 ? '' : 's'} marked as client`"
+        />
 
-            <!-- One bar holds everything that narrows the list: the free
-                 search, the score/profile selects, and the column boxes. -->
-            <div class="space-y-3 rounded-lg p-3 ring ring-default">
-                <div class="flex flex-wrap items-center gap-3">
-                    <UInput
-                        v-model="table.search.value"
-                        icon="i-lucide-search"
-                        placeholder="Search name, domain, industry, size, location"
-                        class="w-96"
-                    />
+        <!-- One bar holds everything that narrows the list: the free
+             search, the score/profile selects, and the column boxes. -->
+        <div class="space-y-3 rounded-lg p-3 ring ring-default">
+            <div class="flex flex-wrap items-center gap-3">
+                <UInput
+                    v-model="table.search.value"
+                    icon="i-lucide-search"
+                    placeholder="Search name, domain, industry, size, location"
+                    class="w-96"
+                />
 
-                    <USelect
-                        v-model="profile"
-                        :items="PROFILE_OPTIONS"
-                        class="w-48"
-                    />
+                <USelect
+                    v-model="profile"
+                    :items="PROFILE_OPTIONS"
+                    class="w-48"
+                />
 
-                    <USelect
-                        v-model="minScore"
-                        :items="SCORE_OPTIONS"
-                        class="w-40"
-                    />
+                <USelect
+                    v-model="minScore"
+                    :items="SCORE_OPTIONS"
+                    class="w-40"
+                />
 
-                    <UButton
-                        :icon="columnFilters ? 'i-lucide-chevron-up' : 'i-lucide-sliders-horizontal'"
-                        color="neutral"
-                        variant="ghost"
-                        :label="table.activeCount() ? `Columns (${table.activeCount()})` : 'Columns'"
-                        @click="columnFilters = !columnFilters"
-                    />
-
-                    <UButton
-                        v-if="table.activeCount()"
-                        icon="i-lucide-x"
-                        color="neutral"
-                        variant="ghost"
-                        label="Clear"
-                        @click="table.clear()"
-                    />
-
-                    <div class="ml-auto flex flex-wrap items-center gap-2">
-                        <UButton
-                            v-if="unsearched"
-                            icon="i-lucide-users"
-                            color="neutral"
-                            variant="subtle"
-                            :label="`Find contacts (${unsearched})`"
-                            @click="router.post(contactRoutes.search.url(), {}, { preserveScroll: true })"
-                        />
-
-                        <!-- A lead somebody already had. One way companies
-                             arrive, not a place you go -- same reasoning as
-                             importing a list of contacts. -->
-                        <UButton
-                            icon="i-lucide-link"
-                            color="neutral"
-                            variant="subtle"
-                            label="Add links"
-                            @click="addingLinks = true"
-                        />
-
-                        <!-- Clients the user already had, so a later search
-                             never writes them in as a fresh lead. -->
-                        <UButton
-                            icon="i-lucide-badge-check"
-                            color="neutral"
-                            variant="subtle"
-                            label="Mark existing clients"
-                            @click="addingKnownClients = true"
-                        />
-                    </div>
-                </div>
-
-                <div
-                    v-if="columnFilters"
-                    class="grid gap-3 sm:grid-cols-3 lg:grid-cols-5"
-                >
-                    <UFormField
-                        v-for="column in FILTERABLE"
-                        :key="column.key"
-                        :label="column.label"
-                        :name="column.key"
-                        size="xs"
-                    >
-                        <UInput
-                            v-model="table.filter[column.key]"
-                            :placeholder="`Any ${column.label.toLowerCase()}`"
-                            class="w-full"
-                        />
-                    </UFormField>
-                </div>
-            </div>
-
-            <!-- The status pills. One is always active, `view` above holds
-                 which. -->
-            <div class="flex flex-wrap items-center gap-2">
                 <UButton
-                    v-for="pill in PILLS"
-                    :key="pill.key"
-                    :label="`${pill.label} ${counts[pill.key]}`"
-                    size="sm"
-                    :color="view === pill.key ? 'primary' : 'neutral'"
-                    :variant="view === pill.key ? 'subtle' : 'outline'"
-                    class="rounded-full"
-                    @click="view = pill.key"
+                    :icon="columnFilters ? 'i-lucide-chevron-up' : 'i-lucide-sliders-horizontal'"
+                    color="neutral"
+                    variant="ghost"
+                    :label="table.activeCount() ? `Columns (${table.activeCount()})` : 'Columns'"
+                    @click="columnFilters = !columnFilters"
                 />
-                <p class="ml-auto text-xs text-dimmed">
-                    Sorted by fit
-                </p>
+
+                <UButton
+                    v-if="table.activeCount()"
+                    icon="i-lucide-x"
+                    color="neutral"
+                    variant="ghost"
+                    label="Clear"
+                    @click="table.clear()"
+                />
+
+                <div class="ml-auto flex flex-wrap items-center gap-2">
+                    <UButton
+                        v-if="unsearched"
+                        icon="i-lucide-users"
+                        color="neutral"
+                        variant="subtle"
+                        :label="`Find contacts (${unsearched})`"
+                        @click="router.post(contactRoutes.search.url(), {}, { preserveScroll: true })"
+                    />
+
+                    <!-- A lead somebody already had. One way companies
+                         arrive, not a place you go -- same reasoning as
+                         importing a list of contacts. -->
+                    <UButton
+                        icon="i-lucide-link"
+                        color="neutral"
+                        variant="subtle"
+                        label="Add links"
+                        @click="addingLinks = true"
+                    />
+
+                    <!-- Clients the user already had, so a later search
+                         never writes them in as a fresh lead. -->
+                    <UButton
+                        icon="i-lucide-badge-check"
+                        color="neutral"
+                        variant="subtle"
+                        label="Mark existing clients"
+                        @click="addingKnownClients = true"
+                    />
+                </div>
             </div>
 
-            <!-- The header checkbox picks or clears the whole page; the bulk
-                 actions only appear once something is picked. -->
             <div
-                v-if="companies.data.length"
-                class="flex flex-wrap items-center gap-3 rounded-lg px-3.5 py-2.5 ring transition-colors"
-                :class="selected.length ? 'bg-primary/10 ring-primary/25' : 'ring-default'"
+                v-if="columnFilters"
+                class="grid gap-3 sm:grid-cols-3 lg:grid-cols-5"
             >
-                <UCheckbox
-                    :model-value="headerCheckboxState"
-                    aria-label="Select all leads on this page"
-                    @update:model-value="toggleAll"
+                <UFormField
+                    v-for="column in FILTERABLE"
+                    :key="column.key"
+                    :label="column.label"
+                    :name="column.key"
+                    size="xs"
+                >
+                    <UInput
+                        v-model="table.filter[column.key]"
+                        :placeholder="`Any ${column.label.toLowerCase()}`"
+                        class="w-full"
+                    />
+                </UFormField>
+            </div>
+        </div>
+
+        <!-- The status pills. One is always active, `view` above holds
+             which. -->
+        <div class="flex flex-wrap items-center gap-2">
+            <UButton
+                v-for="pill in PILLS"
+                :key="pill.key"
+                :label="`${pill.label} ${counts[pill.key]}`"
+                size="sm"
+                :color="view === pill.key ? 'primary' : 'neutral'"
+                :variant="view === pill.key ? 'subtle' : 'outline'"
+                class="rounded-full"
+                @click="view = pill.key"
+            />
+            <p class="ml-auto text-xs text-dimmed">
+                Sorted by fit
+            </p>
+        </div>
+
+        <!-- The header checkbox picks or clears the whole page; the bulk
+             actions only appear once something is picked. -->
+        <div
+            v-if="companies.data.length"
+            class="flex flex-wrap items-center gap-3 rounded-lg px-3.5 py-2.5 ring transition-colors"
+            :class="selected.length ? 'bg-primary/10 ring-primary/25' : 'ring-default'"
+        >
+            <UCheckbox
+                :model-value="headerCheckboxState"
+                aria-label="Select all leads on this page"
+                @update:model-value="toggleAll"
+            />
+            <span class="text-sm font-medium text-highlighted">
+                {{ selected.length ? `${selected.length} selected` : 'Select all' }}
+            </span>
+            <div
+                v-if="selected.length"
+                class="ml-auto flex flex-wrap items-center gap-1.5"
+            >
+                <UButton
+                    label="Approve"
+                    size="xs"
+                    @click="bulkApprove"
                 />
-                <span class="text-sm font-medium text-highlighted">
-                    {{ selected.length ? `${selected.length} selected` : 'Select all' }}
-                </span>
-                <div
-                    v-if="selected.length"
-                    class="ml-auto flex flex-wrap items-center gap-1.5"
-                >
-                    <UButton
-                        label="Approve"
-                        size="xs"
-                        @click="bulkApprove"
-                    />
-                    <UButton
-                        label="Find contacts"
-                        size="xs"
-                        color="neutral"
-                        variant="outline"
-                        @click="bulkFindContacts"
-                    />
-                    <UButton
-                        label="Set aside"
-                        size="xs"
-                        color="neutral"
-                        variant="ghost"
-                        @click="bulkSetAside"
-                    />
-                    <UButton
-                        label="Clear"
-                        size="xs"
-                        color="neutral"
-                        variant="link"
-                        @click="clearSelection"
-                    />
-                </div>
-            </div>
-
-            <div class="grid gap-2">
-                <div
-                    v-for="company in companies.data"
-                    :key="company.id"
-                    class="grid grid-cols-[auto_1fr] items-start gap-3 rounded-lg p-3.5 ring transition-colors"
-                    :class="selected.includes(company.id) ? 'bg-elevated ring-primary/40' : 'bg-elevated/60 ring-default'"
-                >
-                    <UCheckbox
-                        :model-value="selected.includes(company.id)"
-                        class="mt-0.5"
-                        @update:model-value="toggle(company.id)"
-                    />
-
-                    <div class="min-w-0 space-y-1.5">
-                        <div class="flex flex-wrap items-baseline gap-2">
-                            <ULink
-                                :href="companyRoutes.show.url(company.id)"
-                                class="font-semibold text-highlighted"
-                            >{{ company.name }}</ULink>
-
-                            <ULink
-                                v-if="company.website"
-                                :href="company.website"
-                                target="_blank"
-                                rel="noopener"
-                                class="min-w-0 truncate font-mono text-xs text-dimmed"
-                            >{{ company.domain }}</ULink>
-                            <span
-                                v-else-if="company.domain"
-                                class="min-w-0 truncate font-mono text-xs text-dimmed"
-                            >{{ company.domain }}</span>
-
-                            <span
-                                v-if="company.fit_score !== null"
-                                class="ml-auto flex shrink-0 items-center gap-1.5"
-                            >
-                                <span
-                                    class="font-mono text-xs"
-                                    :class="SCORE_CLASSES[scoreColor(company.fit_score)].text"
-                                >{{ company.fit_score }}</span>
-                                <span class="block h-[3px] w-8 overflow-hidden rounded-full bg-accented">
-                                    <span
-                                        class="block h-full"
-                                        :class="SCORE_CLASSES[scoreColor(company.fit_score)].bar"
-                                        :style="{ width: `${company.fit_score}%` }"
-                                    />
-                                </span>
-                            </span>
-                        </div>
-
-                        <div class="flex flex-wrap items-center gap-2 text-xs text-muted">
-                            <template
-                                v-for="(part, index) in metaParts(company)"
-                                :key="index"
-                            >
-                                <span
-                                    v-if="index > 0"
-                                    class="opacity-40"
-                                >·</span>
-                                <span>{{ part }}</span>
-                            </template>
-                            <span
-                                v-if="metaParts(company).length"
-                                class="opacity-40"
-                            >·</span>
-                            <span class="text-dimmed">Found {{ day(company.discovered_at) }}</span>
-                        </div>
-
-                        <!-- The reason is not a note to ourselves: it is the
-                             line the first email opens with. -->
-                        <p
-                            v-if="best(company)"
-                            class="max-w-[88ch] text-sm text-toned"
-                        >
-                            {{ best(company)?.fit_reason }}
-                        </p>
-
-                        <div class="flex flex-wrap items-center gap-2 pt-0.5">
-                            <UBadge
-                                v-if="company.excluded"
-                                color="neutral"
-                                variant="subtle"
-                                icon="i-lucide-minus"
-                                label="Set aside"
-                            />
-                            <UBadge
-                                v-else-if="company.approved"
-                                color="success"
-                                variant="subtle"
-                                icon="i-lucide-check"
-                                label="Approved"
-                            />
-                            <UBadge
-                                v-else
-                                color="warning"
-                                variant="subtle"
-                                icon="i-lucide-clock"
-                                label="Awaiting approval"
-                            />
-
-                            <UBadge
-                                v-if="best(company)"
-                                color="neutral"
-                                variant="outline"
-                                :label="best(company)?.profile ?? 'Deleted profile'"
-                                class="max-w-64 truncate"
-                            />
-
-                            <!-- No per-row button to go looking: the search is
-                                 dispatched the moment a company is kept,
-                                 because forty companies is forty clicks
-                                 nobody makes. This says where that search
-                                 got to. -->
-                            <span
-                                v-if="contactState(company) === 'looking'"
-                                class="flex items-center gap-1 text-xs text-muted"
-                            >
-                                <UIcon
-                                    name="i-lucide-search"
-                                    class="animate-sweep size-3.5 text-primary"
-                                />
-                                Looking
-                            </span>
-                            <ULink
-                                v-else-if="contactState(company) === 'found'"
-                                :href="contactRoutes.index.url({ query: { company: company.id } })"
-                                class="flex items-center gap-1 text-xs"
-                            >
-                                <UIcon
-                                    name="i-lucide-users"
-                                    class="size-3.5"
-                                />
-                                {{ company.contacts_count }} contact{{ company.contacts_count === 1 ? '' : 's' }}
-                            </ULink>
-                            <span
-                                v-else-if="contactState(company) === 'none'"
-                                class="text-xs text-warning"
-                            >No contact found yet</span>
-                            <span
-                                v-else-if="contactState(company) === 'unreadable'"
-                                class="text-xs text-dimmed"
-                            >Unreadable</span>
-
-                            <div class="ml-auto flex flex-wrap gap-1.5">
-                                <UButton
-                                    v-if="company.excluded"
-                                    label="Put back"
-                                    size="xs"
-                                    color="neutral"
-                                    variant="outline"
-                                    @click="putBack(company)"
-                                />
-                                <template v-else-if="!company.approved">
-                                    <UButton
-                                        label="Approve"
-                                        size="xs"
-                                        @click="approve(company)"
-                                    />
-                                    <UButton
-                                        label="Set aside"
-                                        size="xs"
-                                        color="neutral"
-                                        variant="ghost"
-                                        @click="setAside(company)"
-                                    />
-                                </template>
-                                <UButton
-                                    v-else-if="company.contacts_count > 0"
-                                    label="Details"
-                                    trailing-icon="i-lucide-arrow-right"
-                                    size="xs"
-                                    color="neutral"
-                                    variant="ghost"
-                                    @click="router.get(companyRoutes.show.url(company.id))"
-                                />
-                                <UButton
-                                    v-else-if="contactState(company) !== 'looking'"
-                                    label="Find contacts"
-                                    size="xs"
-                                    color="neutral"
-                                    variant="outline"
-                                    @click="findContacts(company)"
-                                />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <p
-                    v-if="!companies.data.length"
-                    class="text-sm text-muted"
-                >
-                    Nothing here. Run a search from Targets, or loosen the
-                    filters above.
-                </p>
-            </div>
-
-            <div class="flex flex-wrap items-center justify-between gap-3">
-                <span class="text-xs text-dimmed">Showing {{ companies.data.length }} of {{ companies.meta.total }} companies</span>
-
-                <UPagination
-                    v-if="companies.meta.last_page > 1"
-                    :default-page="companies.meta.current_page"
-                    :items-per-page="companies.meta.per_page"
-                    :total="companies.meta.total"
-                    @update:page="page => table.reload({ page })"
+                <UButton
+                    label="Find contacts"
+                    size="xs"
+                    color="neutral"
+                    variant="outline"
+                    @click="bulkFindContacts"
+                />
+                <UButton
+                    label="Set aside"
+                    size="xs"
+                    color="neutral"
+                    variant="ghost"
+                    @click="bulkSetAside"
+                />
+                <UButton
+                    label="Clear"
+                    size="xs"
+                    color="neutral"
+                    variant="link"
+                    @click="clearSelection"
                 />
             </div>
         </div>
 
-        <UModal
-            v-model:open="addingLinks"
-            title="Add links"
-            description="A company site, a directory page, anything you already found by hand. Each one is read and routed the same way a search result is."
-            :ui="{ content: 'max-w-xl' }"
-        >
-            <template #body>
-                <Form
-                    v-slot="{ errors, processing }"
-                    v-bind="companyRoutes.links.store.form()"
-                    class="space-y-4"
-                    @success="addingLinks = false; links = ''"
+        <div class="grid gap-2">
+            <div
+                v-for="company in companies.data"
+                :key="company.id"
+                class="grid grid-cols-[auto_1fr] items-start gap-3 rounded-lg p-3.5 ring transition-colors"
+                :class="selected.includes(company.id) ? 'bg-elevated ring-primary/40' : 'bg-elevated/60 ring-default'"
+            >
+                <UCheckbox
+                    :model-value="selected.includes(company.id)"
+                    class="mt-0.5"
+                    @update:model-value="toggle(company.id)"
+                />
+
+                <div class="min-w-0 space-y-1.5">
+                    <div class="flex flex-wrap items-baseline gap-2">
+                        <ULink
+                            :href="companyRoutes.show.url(company.id)"
+                            class="font-semibold text-highlighted"
+                        >{{ company.name }}</ULink>
+
+                        <ULink
+                            v-if="company.website"
+                            :href="company.website"
+                            target="_blank"
+                            rel="noopener"
+                            class="min-w-0 truncate font-mono text-xs text-dimmed"
+                        >{{ company.domain }}</ULink>
+                        <span
+                            v-else-if="company.domain"
+                            class="min-w-0 truncate font-mono text-xs text-dimmed"
+                        >{{ company.domain }}</span>
+
+                        <span
+                            v-if="company.fit_score !== null"
+                            class="ml-auto flex shrink-0 items-center gap-1.5"
+                        >
+                            <span
+                                class="font-mono text-xs"
+                                :class="SCORE_CLASSES[scoreColor(company.fit_score)].text"
+                            >{{ company.fit_score }}</span>
+                            <span class="block h-[3px] w-8 overflow-hidden rounded-full bg-accented">
+                                <span
+                                    class="block h-full"
+                                    :class="SCORE_CLASSES[scoreColor(company.fit_score)].bar"
+                                    :style="{ width: `${company.fit_score}%` }"
+                                />
+                            </span>
+                        </span>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2 text-xs text-muted">
+                        <template
+                            v-for="(part, index) in metaParts(company)"
+                            :key="index"
+                        >
+                            <span
+                                v-if="index > 0"
+                                class="opacity-40"
+                            >·</span>
+                            <span>{{ part }}</span>
+                        </template>
+                        <span
+                            v-if="metaParts(company).length"
+                            class="opacity-40"
+                        >·</span>
+                        <span class="text-dimmed">Found {{ day(company.discovered_at) }}</span>
+                    </div>
+
+                    <!-- The reason is not a note to ourselves: it is the
+                         line the first email opens with. -->
+                    <p
+                        v-if="best(company)"
+                        class="max-w-[88ch] text-sm text-toned"
+                    >
+                        {{ best(company)?.fit_reason }}
+                    </p>
+
+                    <div class="flex flex-wrap items-center gap-2 pt-0.5">
+                        <UBadge
+                            v-if="company.excluded"
+                            color="neutral"
+                            variant="subtle"
+                            icon="i-lucide-minus"
+                            label="Set aside"
+                        />
+                        <UBadge
+                            v-else-if="company.approved"
+                            color="success"
+                            variant="subtle"
+                            icon="i-lucide-check"
+                            label="Approved"
+                        />
+                        <UBadge
+                            v-else
+                            color="warning"
+                            variant="subtle"
+                            icon="i-lucide-clock"
+                            label="Awaiting approval"
+                        />
+
+                        <UBadge
+                            v-if="best(company)"
+                            color="neutral"
+                            variant="outline"
+                            :label="best(company)?.profile ?? 'Deleted profile'"
+                            class="max-w-64 truncate"
+                        />
+
+                        <!-- No per-row button to go looking: the search is
+                             dispatched the moment a company is kept,
+                             because forty companies is forty clicks
+                             nobody makes. This says where that search
+                             got to. -->
+                        <span
+                            v-if="contactState(company) === 'looking'"
+                            class="flex items-center gap-1 text-xs text-muted"
+                        >
+                            <UIcon
+                                name="i-lucide-search"
+                                class="animate-sweep size-3.5 text-primary"
+                            />
+                            Looking
+                        </span>
+                        <ULink
+                            v-else-if="contactState(company) === 'found'"
+                            :href="contactRoutes.index.url({ query: { company: company.id } })"
+                            class="flex items-center gap-1 text-xs"
+                        >
+                            <UIcon
+                                name="i-lucide-users"
+                                class="size-3.5"
+                            />
+                            {{ company.contacts_count }} contact{{ company.contacts_count === 1 ? '' : 's' }}
+                        </ULink>
+                        <span
+                            v-else-if="contactState(company) === 'none'"
+                            class="text-xs text-warning"
+                        >No contact found yet</span>
+                        <span
+                            v-else-if="contactState(company) === 'unreadable'"
+                            class="text-xs text-dimmed"
+                        >Unreadable</span>
+
+                        <div class="ml-auto flex flex-wrap gap-1.5">
+                            <UButton
+                                v-if="company.excluded"
+                                label="Put back"
+                                size="xs"
+                                color="neutral"
+                                variant="outline"
+                                @click="putBack(company)"
+                            />
+                            <template v-else-if="!company.approved">
+                                <UButton
+                                    label="Approve"
+                                    size="xs"
+                                    @click="approve(company)"
+                                />
+                                <UButton
+                                    label="Set aside"
+                                    size="xs"
+                                    color="neutral"
+                                    variant="ghost"
+                                    @click="setAside(company)"
+                                />
+                            </template>
+                            <UButton
+                                v-else-if="company.contacts_count > 0"
+                                label="Details"
+                                trailing-icon="i-lucide-arrow-right"
+                                size="xs"
+                                color="neutral"
+                                variant="ghost"
+                                @click="router.get(companyRoutes.show.url(company.id))"
+                            />
+                            <UButton
+                                v-else-if="contactState(company) !== 'looking'"
+                                label="Find contacts"
+                                size="xs"
+                                color="neutral"
+                                variant="outline"
+                                @click="findContacts(company)"
+                            />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <p
+                v-if="!companies.data.length"
+                class="text-sm text-muted"
+            >
+                Nothing here. Run a search from Targets, or loosen the
+                filters above.
+            </p>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <span class="text-xs text-dimmed">Showing {{ companies.data.length }} of {{ companies.meta.total }} companies</span>
+
+            <UPagination
+                v-if="companies.meta.last_page > 1"
+                :default-page="companies.meta.current_page"
+                :items-per-page="companies.meta.per_page"
+                :total="companies.meta.total"
+                @update:page="page => table.reload({ page })"
+            />
+        </div>
+    </div>
+
+    <UModal
+        v-model:open="addingLinks"
+        title="Add links"
+        description="A company site, a directory page, anything you already found by hand. Each one is read and routed the same way a search result is."
+        :ui="{ content: 'max-w-xl' }"
+    >
+        <template #body>
+            <Form
+                v-slot="{ errors, processing }"
+                v-bind="companyRoutes.links.store.form()"
+                class="space-y-4"
+                @success="addingLinks = false; links = ''"
+            >
+                <UFormField
+                    label="Score against"
+                    name="target_profile"
+                    :error="errors.target_profile"
                 >
-                    <UFormField
-                        label="Score against"
+                    <USelect
+                        v-model="linkProfile"
                         name="target_profile"
-                        :error="errors.target_profile"
-                    >
-                        <USelect
-                            v-model="linkProfile"
-                            name="target_profile"
-                            :items="PROFILE_SELECT_OPTIONS"
-                            class="w-full"
-                        />
-                    </UFormField>
+                        :items="PROFILE_SELECT_OPTIONS"
+                        class="w-full"
+                    />
+                </UFormField>
 
-                    <UFormField
-                        label="Links"
-                        name="links"
-                        :error="errors.links"
-                        help="One per line, up to 50."
-                    >
-                        <UTextarea
-                            v-model="links"
-                            name="links"
-                            placeholder="https://example.com&#10;https://directory.example.com/plumbers/namur"
-                            :rows="6"
-                            class="w-full"
-                        />
-                    </UFormField>
-
-                    <div class="flex justify-end gap-2">
-                        <UButton
-                            color="neutral"
-                            variant="ghost"
-                            label="Cancel"
-                            :disabled="processing"
-                            @click="addingLinks = false"
-                        />
-                        <UButton
-                            type="submit"
-                            label="Add links"
-                            :loading="processing"
-                        />
-                    </div>
-                </Form>
-            </template>
-        </UModal>
-
-        <UModal
-            v-model:open="addingKnownClients"
-            title="Mark existing clients"
-            description="Emails or websites of clients you already have. Marked as client right away, so a search run never contacts them as a new lead."
-            :ui="{ content: 'max-w-xl' }"
-        >
-            <template #body>
-                <Form
-                    v-slot="{ errors, processing }"
-                    v-bind="companyRoutes.knownClients.store.form()"
-                    class="space-y-4"
-                    @success="addingKnownClients = false; knownClientEntries = ''"
+                <UFormField
+                    label="Links"
+                    name="links"
+                    :error="errors.links"
+                    help="One per line, up to 50."
                 >
-                    <UFormField
-                        label="Emails or websites"
-                        name="entries"
-                        :error="errors.entries"
-                        help="One per line, up to 500."
-                    >
-                        <UTextarea
-                            v-model="knownClientEntries"
-                            name="entries"
-                            placeholder="jean@example.com&#10;https://example.com"
-                            :rows="8"
-                            class="w-full"
-                        />
-                    </UFormField>
+                    <UTextarea
+                        v-model="links"
+                        name="links"
+                        placeholder="https://example.com&#10;https://directory.example.com/plumbers/namur"
+                        :rows="6"
+                        class="w-full"
+                    />
+                </UFormField>
 
-                    <div class="flex justify-end gap-2">
-                        <UButton
-                            color="neutral"
-                            variant="ghost"
-                            label="Cancel"
-                            :disabled="processing"
-                            @click="addingKnownClients = false"
-                        />
-                        <UButton
-                            type="submit"
-                            label="Mark as clients"
-                            :loading="processing"
-                        />
-                    </div>
-                </Form>
-            </template>
-        </UModal>
-    </LeadsLayout>
+                <div class="flex justify-end gap-2">
+                    <UButton
+                        color="neutral"
+                        variant="ghost"
+                        label="Cancel"
+                        :disabled="processing"
+                        @click="addingLinks = false"
+                    />
+                    <UButton
+                        type="submit"
+                        label="Add links"
+                        :loading="processing"
+                    />
+                </div>
+            </Form>
+        </template>
+    </UModal>
+
+    <UModal
+        v-model:open="addingKnownClients"
+        title="Mark existing clients"
+        description="Emails or websites of clients you already have. Marked as client right away, so a search run never contacts them as a new lead."
+        :ui="{ content: 'max-w-xl' }"
+    >
+        <template #body>
+            <Form
+                v-slot="{ errors, processing }"
+                v-bind="companyRoutes.knownClients.store.form()"
+                class="space-y-4"
+                @success="addingKnownClients = false; knownClientEntries = ''"
+            >
+                <UFormField
+                    label="Emails or websites"
+                    name="entries"
+                    :error="errors.entries"
+                    help="One per line, up to 500."
+                >
+                    <UTextarea
+                        v-model="knownClientEntries"
+                        name="entries"
+                        placeholder="jean@example.com&#10;https://example.com"
+                        :rows="8"
+                        class="w-full"
+                    />
+                </UFormField>
+
+                <div class="flex justify-end gap-2">
+                    <UButton
+                        color="neutral"
+                        variant="ghost"
+                        label="Cancel"
+                        :disabled="processing"
+                        @click="addingKnownClients = false"
+                    />
+                    <UButton
+                        type="submit"
+                        label="Mark as clients"
+                        :loading="processing"
+                    />
+                </div>
+            </Form>
+        </template>
+    </UModal>
 </template>

@@ -305,6 +305,18 @@ Settled. Don't reopen without a genuinely new fact.
   is never billed; a run the user interrupts bills only the work actually produced. In
   cloud, the run's own hard budget (see Product shape, above) *is* the credit
   reservation - one mechanism, not two.
+- **A conversational agent bills by depth, not a flat price per call.** Evie (the
+  chat panel) resends its whole history every turn, so turn thirty costs more in
+  real tokens than turn one - unlike every other agent, which acts once per
+  invocation on a roughly bounded input. This tiering is entirely a
+  `CreditSpendGuard` concern (`app/Cloud/Ai/`), never the agent's own: Evie has
+  no idea pricing exists, the same as every other agent. The guard remaps
+  `evie` to `evie:tier-1/2/3` (computed from how many prior user turns the
+  project's conversation already has) only for its own `CreditPrice` lookup;
+  `agent_runs.agent` still records the plain slug for analytics, and
+  self-hosted's `UnmeteredSpend` never computes a tier at all. Clearing the
+  conversation resets the tier along with the history, which is also what
+  keeps a long, degraded-context thread from being the cheap default forever.
 - **Auto top-up is the pay-as-you-go answer to a subscription's auto-renewal**: a saved
   card, a threshold, and an amount - under the threshold, an off-session charge recharges
   without a confirmation prompt, since nobody is at the keyboard when the balance crosses

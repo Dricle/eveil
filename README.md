@@ -52,8 +52,9 @@ unlimited mailboxes, unlimited leads, your data on your own machine.
   reason anybody switches, worked out from the site itself and shown to you
   before anything gets written. It can also read your github repo for a better understanding of your project.
 - **Finds the companies and the people, on its own.** Segments, search terms,
-  fit scores with the sentence that justifies them, over the bundled search
-  engine, no paid data API required to start.
+  fit scores with the sentence that justifies them, over two independent
+  bundled search engines plus OpenStreetMap, no paid data API required to
+  start. See [how discovery finds companies](https://docs.eveil.cloud/product/discovery).
 - **Writes sequences that sound like you.** One AI-writing-style box per
   project (tone, language, banned words) that every generated mail obeys.
 - **Ask Evie instead of clicking through screens.** A chat panel that plans and
@@ -127,7 +128,7 @@ wins.
 
 Leave the `MAIL_*` block for later too: the app boots without it, but
 password resets, member invitations and email verification need it filled in
-before they can actually send. See [Email (SMTP)](#email-smtp) below.
+before they can actually send. See [Configuration](https://docs.eveil.cloud/self-hosted/configuration).
 
 Then bring it up:
 
@@ -135,118 +136,25 @@ Then bring it up:
 docker compose -f compose.deploy.yaml up -d
 ```
 
-The app answers on **port 80 inside the container**, published on the host as
-`APP_PORT`, which defaults to **80**. So a default install is reachable at
-`http://<the-host>` and that is what you point a proxy or a tunnel at. Plain
-HTTP, deliberately: TLS belongs to whatever sits in front.
-
 Open `APP_URL`. You land on the setup screen, or on the login if you set the
 `ADMIN_*` pair. Migrations run on boot, before anything serves a request or picks
 up a job.
 
-### Why `-f compose.deploy.yaml`
-
-The `compose.yaml` at the root of the repository is the **development** stack
-(Laravel Sail): it mounts the source, runs Vite, and shifts its ports off the
-usual ones. The shipped stack is a separate file so that nobody deploys a
-development environment by accident.
-
-If the flag annoys you, put `COMPOSE_FILE=compose.deploy.yaml` in your `.env`.
-
-### What runs
-
-Four containers. The app one holds nginx, PHP-FPM, the queue workers and the
-scheduler, under supervisord: each restarted on its own, so a worker dying does
-not take the site with it.
-
-| Container | Why it has to be there |
-| --- | --- |
-| `app` | nginx + PHP-FPM + **Horizon** + **scheduler**. Nothing queued moves without Horizon: no discovery, no sending, no reading replies. Sending is paced by the scheduler, five minutes at a time. |
-| `pgsql` | Postgres 18. |
-| `redis` | Queue, cache, locks. All three. |
-| `searxng` | The search engine discovery reads. Bundled so a first run needs no paid search API. |
-
-### TLS, reverse proxies and tunnels
-
-The image speaks plain HTTP on container port 80, published as `APP_PORT`
-(default 80), and expects something in front to hold the certificates: Traefik,
-Caddy, nginx, a Cloudflare tunnel, whatever you already run.
-
-Point that thing at the app's HTTP address, which is one of two depending on
-where it runs:
-
-| Where the proxy runs | Address to give it |
-| --- | --- |
-| On the host, beside Docker | `http://localhost:${APP_PORT}` (so `http://localhost:80` by default) |
-| As a container on the same Compose project | `http://app:80`, by service name, whatever `APP_PORT` says |
-
-The second is worth preferring when you can: nothing has to be published on the
-host at all, and you can drop the `ports:` mapping from `compose.deploy.yaml`.
-The Compose project is named `eveil`, so the default network is `eveil_default`
-and `app` resolves on it.
-
-A Cloudflare tunnel is the second row. `cloudflared` in the same project, with
-its ingress pointed at `http://app:80`, and nothing of Eveil exposed to the
-internet except through the tunnel.
-
-**Whichever you choose, set `APP_URL` to the public `https://` address.** It
-matters more than it looks: every link the app generates is built from it, so
-get it wrong and password-reset mails point somewhere that does not answer. The
-app deliberately does not read `X-Forwarded-*` to work the address out instead:
-a client able to reach it directly could then choose the host those links point
-at. `APP_URL` is the single answer, and it is yours to give.
-
-### Email (SMTP)
-
-The app sends its own mail for three things: password resets, member
-invitations and, if sign-ups are open, verifying a new account's address.
-**Not** the outreach sender: campaigns go out through the mailboxes
-connected inside the app, over their own SMTP, configured separately in
-Settings → Mailboxes.
-
-`.env` ships with `MAIL_MAILER=smtp` and the rest of the `MAIL_*` block
-empty, which is enough to boot but not enough to actually send anything.
-Fill in the usual six:
-
-```
-MAIL_MAILER=smtp
-MAIL_HOST=
-MAIL_PORT=587
-MAIL_USERNAME=
-MAIL_PASSWORD=
-MAIL_FROM_ADDRESS="eveil@yourdomain.com"
-```
-
-Any SMTP-compatible provider works: Postmark, Mailgun, Amazon SES, Brevo,
-Cloudflare, a Google Workspace or Microsoft 365 mailbox, or a mail server you
-already run: it is Laravel's own mail configuration underneath, nothing
-Eveil-specific to it. Whichever you pick, send yourself a password-reset mail
-once things are up to confirm it actually left.
-
-### Keys and backups
-
-On first boot the two encryption keys are generated into the storage volume, at
-`storage/app/.keys.env`, and every later boot reuses them. To read them:
-
-```bash
-docker compose -f compose.deploy.yaml exec app cat storage/app/.keys.env
-```
-
-`CREDENTIALS_KEY` encrypts mailbox passwords and your AI provider key. `APP_KEY`
-encrypts cookies and sessions. They are separate so either can be rotated
-without destroying the other: rotating `APP_KEY` after a leak is routine, and
-sharing one key would take every connected mailbox with it.
-
-**Back the keys up with the database.** A dump without them is worthless, and
-losing `CREDENTIALS_KEY` means reconnecting every mailbox by hand. If you would
-rather hold them yourself, put them in `.env`: what is set there wins, and the
-volume copy is then never read.
+The app speaks plain HTTP: TLS, a reverse proxy or a tunnel, what actually runs
+in the four containers, the app's own transactional mail, and where the
+encryption keys live — the full [Installation](https://docs.eveil.cloud/self-hosted/installation)
+and [Configuration](https://docs.eveil.cloud/self-hosted/configuration) docs cover
+all of that. `-f compose.deploy.yaml` on every command gets old fast; put
+`COMPOSE_FILE=compose.deploy.yaml` in `.env` and drop it.
 
 ### Updating
 
 ```bash
 ./update.sh
 ```
+
+See [Updating](https://docs.eveil.cloud/self-hosted/updating) for rolling back, and
+[Backup](https://docs.eveil.cloud/self-hosted/backup) before you do.
 
 ---
 
@@ -285,33 +193,10 @@ neither announces itself otherwise:
 - **No mailbox on this project.** Everything up to writing a sequence works, but
   a campaign will activate and then sit there. Settings → Mailboxes: plain SMTP
   and IMAP, no OAuth, with presets for Infomaniak, OVH, Gandi, Zoho, Gmail and
-  Microsoft 365.
-
-Gmail and Workspace need an **app password**, not the account password, and a
-Workspace admin can disable app passwords for the whole organization. Microsoft
-365 has SMTP AUTH off by default on most tenants. The connection test names both
-of those rather than saying "authentication failed".
-
----
-
-## Trying the whole loop against your own mailbox
-
-The one thing no test can cover is mail actually leaving and a reply coming back.
-So:
-
-```
-OUTREACH_REDIRECT_TO=you@example.com
-```
-
-Every outreach mail then goes to that address instead of the lead's. Everything
-else stays real: the mailbox you connected is still the sender, the mail still
-goes over its own SMTP, and the reply you write still arrives in it over its own
-IMAP. The intended recipient is put in the subject, since everything lands in one
-inbox.
-
-Replies still attribute correctly: a reply is matched on our own `Message-ID`
-and never on the from-address, so your answer stays attached to the lead it was
-about. The Mailboxes screen shows a warning while this is on.
+  Microsoft 365 — see [Configuration](https://docs.eveil.cloud/self-hosted/configuration) for the
+  Gmail/Workspace and Microsoft 365 connection quirks, and for testing the whole
+  loop (search → sequence → send → reply) against your own mailbox before you
+  point it at real leads.
 
 ---
 

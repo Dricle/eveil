@@ -17,6 +17,7 @@ export default defineConfig({
                     text: 'Using Eveil',
                     items: [
                         { text: 'Getting started', link: '/product/getting-started' },
+                        { text: 'How discovery finds companies', link: '/product/discovery' },
                         { text: 'Statuses and the inbox', link: '/product/statuses' },
                         { text: 'The timeline', link: '/product/timeline' },
                         { text: 'Chatting with Evie', link: '/product/evie' },

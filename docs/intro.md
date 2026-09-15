@@ -14,6 +14,14 @@ That's a different starting point from most of the category. Some competitors se
 
 It's a deliberate trade-off: a fresh self-hosted instance starts with less to go on than an account on a vendor whose whole business is a pre-bought list, and there's no shortcut through a shared warm-up network. It's also the reason a reply here comes from an address the recipient's mail provider has no reason to distrust: nothing sent through Eveil ever gets bundled with somebody else's spam complaints. Honest the whole way through.
 
+That posture rules a few things out on purpose:
+
+- **No open tracking.** No pixel, no link rewriting. Apple's Mail Privacy Protection and Gmail's image proxy make open counts fiction anyway, and the pixel costs inbox placement. The metric here is the reply.
+- **No mailbox warm-up.** Warm-up serves high volume from fresh domains, which isn't what this is for, and shared warm-up networks are increasingly a negative signal to Google and Microsoft.
+- **No OAuth.** SMTP and IMAP credentials only.
+- **No unsubscribe link.** Nobody subscribed to anything, so an unsubscribe button contradicts a hand-written message. The opt-out is a sentence in the body, and a reply asking to stop suppresses the address immediately.
+- **No purchased contact database.** Every lead here was found and read.
+
 ## Self-hosted vs. cloud
 
 One codebase, AGPL-3.0, shipped in two editions. Same features either way — cloud adds managed hosting, billing, and a supplied AI key, nothing is held back for self-hosters.

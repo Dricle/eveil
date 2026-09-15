@@ -8,7 +8,7 @@ Examples: "find me 50 dental clinics in Lyon", "what target profiles does this p
 
 ## Steering a search, or branching into a new angle
 
-A discovery run normally follows its target profile's own criteria. Ask Evie to point one run at something specific instead — a different segment, a narrower area, an angle worth trying — and it applies only to that run: the target profile itself is unchanged, so the automatic search cadence goes back to its own default on the next one.
+A discovery run normally follows its target profile's own criteria — see [How discovery finds companies](/product/discovery) for how it decides where to look. Ask Evie to point one run at something specific instead — a different segment, a narrower area, an angle worth trying — and it applies only to that run: the target profile itself is unchanged, so the automatic search cadence goes back to its own default on the next one.
 
 Want to explore a genuinely different angle on a profile that already has results? Ask Evie to start another search with that angle rather than waiting for the schedule — each run is independent, so nothing about the existing one is disturbed.
 

@@ -2,6 +2,7 @@
 paths:
   - '**'
   - composer.json
+  - README.md
 ---
 
 # General
@@ -149,3 +150,6 @@ Before calling a feature (or a PR) done, check both:
 2. **Can Evie use it?** `evie.md`'s stated goal: "whatever you can do manually inside the app, Evie can do it too." If the feature has a manual UI action (create/read/update/delete, a lookup), check whether `App\Ai\Agents\Evie` has a tool for it in `app/Ai/Tools/`. Missing one is a gap to close in the same PR, not a follow-up - unless the action is destructive/costly enough to need the approval gate (`Approvable`, like `StartDiscovery`/`CreateSequence`), a plain CRUD tool needs no approval.
 
 `Evie::documentation()` reads `docs/product/*.md` fresh off disk on every call, so writing the doc in check 1 also teaches Evie about the feature - do check 1 before check 2.
+
+## Docs site is live at docs.eveil.cloud - link there, not to repo-relative .md paths
+The VitePress docs/ site is deployed at https://docs.eveil.cloud (cleanUrls: true, so a page's URL drops the .md extension, e.g. docs/self-hosted/configuration.md -> https://docs.eveil.cloud/self-hosted/configuration). When linking from README.md to a docs/ page, use the live docs.eveil.cloud URL, never a repo-relative docs/*.md path - confirmed by the user directly after a first pass used relative paths.

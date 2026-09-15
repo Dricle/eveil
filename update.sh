@@ -15,7 +15,7 @@ git pull
 
 # Stop running containers
 echo "Stopping current services..."
-docker compose down
+docker compose -f compose.deploy.yaml down
 
 # Check if .env file exists
 if [ ! -f .env ]; then

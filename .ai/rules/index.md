@@ -15,7 +15,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | compose.yaml,compose.deploy.yaml,docker/degoog/** | .ai/rules/degoog.md |
 | deploy/** | .ai/rules/deploy.md |
 | app/Services/Discovery/** | .ai/rules/discovery.md |
-| **, composer.json | .ai/rules/general.md |
+| **, composer.json, README.md | .ai/rules/general.md |
 | app/Jobs/Discovery/** | .ai/rules/jobs-discovery.md |
 | app/Jobs/** | .ai/rules/jobs.md |
 | resources/js/** | .ai/rules/js.md |

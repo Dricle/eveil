@@ -7,6 +7,8 @@ docker compose -f compose.deploy.yaml up -d --build
 
 Migrations run automatically on boot (`php artisan migrate --force --isolated`, in the container's entrypoint) — there is no separate migration step to remember.
 
+`./update.sh` at the repository root wraps this (plus stashing local changes and stopping the stack first) if you'd rather run one command.
+
 ::: tip
 There's no changelog yet. Until there is, `git log` between your current commit and the one you're pulling is the closest thing — most commits explain the *why*, not just the *what*.
 :::

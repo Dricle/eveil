@@ -43,7 +43,7 @@ it('connects a LinkedIn account on a valid callback', function () {
 
     $this->actingAs($user)->withSession(['linkedin_oauth_state' => 'the-state'])
         ->get(route('linkedin.oauth.callback', ['code' => 'a-code', 'state' => 'the-state']))
-        ->assertRedirect(route('settings.linkedin.index'));
+        ->assertRedirect(route('linkedin.account.index'));
 
     $account = LinkedinAccount::query()->where('organization_id', $organization->id)->sole();
 
@@ -60,7 +60,7 @@ it('refuses a callback whose state does not match', function () {
 
     $this->actingAs($user)->withSession(['linkedin_oauth_state' => 'expected'])
         ->get(route('linkedin.oauth.callback', ['code' => 'a-code', 'state' => 'tampered']))
-        ->assertRedirect(route('settings.linkedin.index'));
+        ->assertRedirect(route('linkedin.account.index'));
 
     expect(LinkedinAccount::count())->toBe(0);
     Http::assertNothingSent();

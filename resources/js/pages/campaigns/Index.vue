@@ -6,7 +6,6 @@ import AppLayout from '@/layouts/AppLayout.vue'
 // Suffixed on purpose: an import named `campaigns` would shadow the prop of
 // that name in every template expression, silently.
 import campaignRoutes from '@/routes/campaigns'
-import linkedinPostRoutes from '@/routes/campaigns/linkedin-posts'
 import type { CampaignStatus, TargetProfile } from '@/types'
 
 defineOptions({ layout: AppLayout })
@@ -68,13 +67,13 @@ function due (campaign: Campaign): string {
 </script>
 
 <template>
-    <Head title="Campaigns" />
+    <Head title="Email Campaigns" />
 
     <div class="space-y-6 p-6">
         <div class="flex flex-wrap items-end justify-between gap-3">
             <div>
                 <h2 class="font-medium">
-                    Campaigns
+                    Email Campaigns
                 </h2>
                 <p class="text-sm text-muted">
                     The agent writes the sequence from your product and the segment
@@ -83,14 +82,6 @@ function due (campaign: Campaign): string {
             </div>
 
             <div class="flex items-end gap-2">
-                <UButton
-                    icon="i-lucide-share-2"
-                    color="neutral"
-                    variant="subtle"
-                    label="LinkedIn posts"
-                    :to="linkedinPostRoutes.index.url()"
-                />
-
                 <USelect
                     v-model="profile"
                     :items="profiles.map(p => ({ label: p.name, value: p.id }))"

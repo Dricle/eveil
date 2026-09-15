@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Form, Head, router, usePage, usePoll } from '@inertiajs/vue3'
 import { ref } from 'vue'
+import LinkedinHeader from '@/components/LinkedinHeader.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
-import linkedinPostRoutes from '@/routes/campaigns/linkedin-posts'
-import linkedinSettingsRoutes from '@/routes/settings/linkedin'
+import linkedinAccountRoutes from '@/routes/linkedin/account'
+import linkedinPostRoutes from '@/routes/linkedin/posts'
 import type { LinkedinPost } from '@/types'
 
 defineOptions({ layout: AppLayout })
@@ -16,7 +17,7 @@ defineProps<{
 const page = usePage()
 const toast = useToast()
 
-// New drafts appear on their own schedule (the daily cadence tick), so this
+// New drafts appear on their own schedule (the cadence tick), so this
 // screen rereads rather than sitting still: `.ai/rules/js.md`'s reasoning for
 // keeping this out of Settings.
 usePoll(15000, { only: ['posts'] })
@@ -63,6 +64,8 @@ function reject (post: LinkedinPost) {
     <Head title="LinkedIn posts" />
 
     <div class="space-y-4 p-6">
+        <LinkedinHeader tab="posts" />
+
         <div>
             <h2 class="font-medium">
                 LinkedIn posts
@@ -80,7 +83,7 @@ function reject (post: LinkedinPost) {
             icon="i-lucide-plug"
             title="No LinkedIn account connected to this project"
             description="Drafts can still be written, but nothing can be approved until an account is connected."
-            :actions="[{ label: 'Connect LinkedIn', to: linkedinSettingsRoutes.index.url(), color: 'warning', variant: 'solid' }]"
+            :actions="[{ label: 'Connect LinkedIn', to: linkedinAccountRoutes.index.url(), color: 'warning', variant: 'solid' }]"
         />
 
         <UAlert

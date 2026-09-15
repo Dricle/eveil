@@ -17,6 +17,6 @@ class LinkedinCadenceController extends Controller
     {
         $currentProject->getOrFail()->update($request->validated());
 
-        return to_route('settings.linkedin.index');
+        return to_route('linkedin.account.index');
     }
 }

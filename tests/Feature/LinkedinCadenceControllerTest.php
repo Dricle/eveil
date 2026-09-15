@@ -14,8 +14,8 @@ it('sets the current project posting cadence', function () {
     app(CurrentProject::class)->set($project);
 
     $this->actingAs($user)
-        ->put(route('settings.linkedin.cadence'), ['linkedin_post_frequency' => 'weekly'])
-        ->assertRedirect(route('settings.linkedin.index'));
+        ->put(route('linkedin.account.cadence'), ['linkedin_post_frequency' => 'weekly'])
+        ->assertRedirect(route('linkedin.account.index'));
 
     expect($project->fresh()->linkedin_post_frequency)->toBe(LinkedinPostFrequency::Weekly);
 });
@@ -28,6 +28,6 @@ it('rejects an invalid cadence value', function () {
     app(CurrentProject::class)->set($project);
 
     $this->actingAs($user)
-        ->put(route('settings.linkedin.cadence'), ['linkedin_post_frequency' => 'hourly'])
+        ->put(route('linkedin.account.cadence'), ['linkedin_post_frequency' => 'hourly'])
         ->assertInvalid('linkedin_post_frequency');
 });

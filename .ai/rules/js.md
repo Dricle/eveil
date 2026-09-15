@@ -5,10 +5,10 @@ paths:
 
 # Js
 
-## Sidebar is the pipeline, and it stops at five entries
-The main nav follows the order work flows, not the data model: Dashboard (the run feed. What the app is doing now), Targets (profiles + discovery runs), Leads (companies with fit score, contacts, emails), Campaigns (sequences, sending, caps), Inbox (replies, auto-pause). Account and Settings hang off the user menu at the bottom.
+## Sidebar follows the pipeline; a new top-level entry is a deliberate call, not a default
+The main nav follows the order work flows, not the data model: Dashboard (the run feed - what the app is doing now), Targets (profiles + discovery runs), Leads (companies with fit score, contacts, emails), Email Campaigns (sequences, sending, caps), LinkedIn (the approval queue + connected account), Inbox (replies, auto-pause), Settings (project/organization config).
 
-Every other screen is a tab or a drill-down inside one of those five: never a sixth line. CSV import is a button on Leads, the lead sheet is a drill-down, the sequence editor is inside Campaigns.
+Most new screens are a tab or a drill-down inside an existing entry, never a line of their own: CSV import is a button on Leads, the lead sheet is a drill-down, the sequence editor is inside Email Campaigns. LinkedIn is the one deliberate exception, added on the user's explicit instruction once it grew its own two-page section (posts queue + account) that would otherwise have been split awkwardly across Email Campaigns and Settings - a call for the project owner to make each time, not a precedent to reach for by default.
 
 Settings holds only what you set once and forget: project name/URL, the knowledge base, mailboxes, suppression and retention. Anything reread before each run belongs in the nav: that is why target profiles moved out of `/app/settings/`. Instance settings (AI models, host registry, registration) are a separate superadmin section, never mixed into project settings; organization members and billing are a third scope again.
 

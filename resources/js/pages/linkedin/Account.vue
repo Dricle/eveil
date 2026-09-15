@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { Form, Head, router, usePage } from '@inertiajs/vue3'
 import { ref, watch } from 'vue'
+import LinkedinHeader from '@/components/LinkedinHeader.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
-import SettingsLayout from '@/layouts/SettingsLayout.vue'
-import linkedinRoutes from '@/routes/settings/linkedin'
+import linkedinRoutes from '@/routes/linkedin/account'
 import type { LinkedinAccount, Project } from '@/types'
 
-defineOptions({ layout: [AppLayout, [SettingsLayout, { title: 'LinkedIn' }]] })
+defineOptions({ layout: AppLayout })
 
 // Inline rather than a type alias imported through the barrel: an alias there
 // silently declares no props at all.
@@ -50,9 +50,11 @@ const STATUS = {
 </script>
 
 <template>
-    <Head title="LinkedIn" />
+    <Head title="LinkedIn account" />
 
-    <div class="space-y-6">
+    <div class="space-y-6 p-6">
+        <LinkedinHeader tab="account" />
+
         <div class="space-y-2">
             <p class="text-sm text-muted">
                 Personal-profile posting only, via LinkedIn's official API. No

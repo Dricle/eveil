@@ -44,8 +44,8 @@ it('approves a draft, dispatches the publish job, and rejects its sibling', func
     ]);
 
     $this->actingAs($user)
-        ->post(route('campaigns.linkedin-posts.approve', $anonymized))
-        ->assertRedirect(route('campaigns.linkedin-posts.index'));
+        ->post(route('linkedin.posts.approve', $anonymized))
+        ->assertRedirect(route('linkedin.posts.index'));
 
     expect($anonymized->fresh()->status)->toBe(LinkedinPostStatus::Approved)
         ->and($anonymized->fresh()->linkedin_account_id)->toBe($account->id)
@@ -61,7 +61,7 @@ it('refuses to approve without a connected LinkedIn account', function () {
 
     $post = LinkedinPost::factory()->create(['project_id' => $project->id]);
 
-    $this->actingAs($user)->post(route('campaigns.linkedin-posts.approve', $post));
+    $this->actingAs($user)->post(route('linkedin.posts.approve', $post));
 
     expect($post->fresh()->status)->toBe(LinkedinPostStatus::Draft);
     Queue::assertNotPushed(PublishLinkedinPost::class);
@@ -72,7 +72,7 @@ it('marks a rejected draft as rejected without publishing', function () {
     [$user, $project] = linkedinSetup();
     $post = LinkedinPost::factory()->create(['project_id' => $project->id]);
 
-    $this->actingAs($user)->delete(route('campaigns.linkedin-posts.destroy', $post));
+    $this->actingAs($user)->delete(route('linkedin.posts.destroy', $post));
 
     expect($post->fresh()->status)->toBe(LinkedinPostStatus::Rejected);
     Queue::assertNotPushed(PublishLinkedinPost::class);
@@ -85,5 +85,5 @@ it('cannot reach another project draft by id', function () {
     // otherwise silently stamp this row into MY project too.
     $theirs = LinkedinPost::factory()->for(Project::factory())->create();
 
-    $this->actingAs($user)->post(route('campaigns.linkedin-posts.approve', $theirs))->assertNotFound();
+    $this->actingAs($user)->post(route('linkedin.posts.approve', $theirs))->assertNotFound();
 });

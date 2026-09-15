@@ -4,8 +4,7 @@
 >
     <x-marketing-legal
         heading="Terms of service"
-        meta="Last updated: [publication date] · Provider: DRICLE LLP (OC453390), 5 Brayford Square, London E1 0SG, United Kingdom · Governing law: England and Wales"
-        notice="Draft. Written from the actual product and billing model, but not reviewed by a lawyer. The liability and availability section in particular needs counsel before publishing."
+        meta="Last updated: 14/09/2026 · Provider: DRICLE LLP (OC453390), 5 Brayford Square, London E1 0SG, United Kingdom · Governing law: England and Wales"
     >
         <x-slot:toc>
             <a href="#service" style="color:rgba(232,236,242,.7);font-size:14px">1. The service</a>

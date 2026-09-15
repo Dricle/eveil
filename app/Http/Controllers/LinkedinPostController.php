@@ -28,7 +28,7 @@ class LinkedinPostController extends Controller
     {
         $account = $currentProject->getOrFail()->linkedinAccounts()->first();
 
-        return Inertia::render('campaigns/LinkedinPosts', [
+        return Inertia::render('linkedin/Posts', [
             'posts' => LinkedinPostResource::collection(
                 LinkedinPost::query()->latest()->get()
             ),
@@ -40,7 +40,7 @@ class LinkedinPostController extends Controller
     {
         LinkedinPost::query()->findOrFail($linkedinPost)->update($request->validated());
 
-        return to_route('campaigns.linkedin-posts.index');
+        return to_route('linkedin.posts.index');
     }
 
     public function approve(CurrentProject $currentProject, int $linkedinPost): RedirectResponse
@@ -49,7 +49,7 @@ class LinkedinPostController extends Controller
         $account = $currentProject->getOrFail()->linkedinAccounts()->first();
 
         if ($account === null) {
-            return to_route('campaigns.linkedin-posts.index')->with('status', 'Connect a LinkedIn account first.');
+            return to_route('linkedin.posts.index')->with('status', 'Connect a LinkedIn account first.');
         }
 
         $post->update(['status' => LinkedinPostStatus::Approved, 'linkedin_account_id' => $account->id]);
@@ -60,13 +60,13 @@ class LinkedinPostController extends Controller
 
         PublishLinkedinPost::dispatch($post);
 
-        return to_route('campaigns.linkedin-posts.index');
+        return to_route('linkedin.posts.index');
     }
 
     public function destroy(int $linkedinPost): RedirectResponse
     {
         LinkedinPost::query()->findOrFail($linkedinPost)->update(['status' => LinkedinPostStatus::Rejected]);
 
-        return to_route('campaigns.linkedin-posts.index');
+        return to_route('linkedin.posts.index');
     }
 }

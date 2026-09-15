@@ -21,6 +21,24 @@ const { messages, status, error, loadingHistory, sendMessage, regenerate, stop, 
 // every read forces a real reference change Vue's diffing can see.
 const liveMessages = computed(() => [...messages.value])
 
+// Only the LAST message's own suggestions, never an older turn's: the
+// moment the user sends anything - a suggestion or their own text - that
+// message becomes the last one instead, and these disappear immediately
+// rather than lingering stale above the prompt.
+const suggestedReplies = computed((): string[] => {
+    const last = messages.value.at(-1)
+
+    if (last?.role !== 'assistant') {
+        return []
+    }
+
+    const part = last.parts.find(messagePart => isToolUIPart(messagePart)
+        && getToolName(messagePart) === 'ProposeSuggestedReplies'
+        && messagePart.state !== 'input-streaming')
+
+    return (part as { input?: { replies?: string[] } } | undefined)?.input?.replies ?? []
+})
+
 function onSubmit () {
     if (!input.value.trim()) {
         return
@@ -87,26 +105,12 @@ function renderMarkdown (text: string): string {
                         />
 
                         <!-- The one tool with no side effect: its arguments ARE
-                             the suggestions, rendered as buttons instead of the
-                             usual collapsible tool card. It has no approval
-                             gate, so it runs through to `output-available`
-                             almost immediately - input alone is enough to
-                             render, and never falls through to UChatTool
-                             below once the output lands too. -->
-                        <div
-                            v-else-if="isToolUIPart(part) && getToolName(part) === 'ProposeSuggestedReplies' && part.state !== 'input-streaming'"
-                            class="flex flex-wrap gap-1.5"
-                        >
-                            <UButton
-                                v-for="reply in (part.input as { replies?: string[] })?.replies ?? []"
-                                :key="reply"
-                                :label="reply"
-                                color="neutral"
-                                variant="outline"
-                                size="xs"
-                                @click="sendSuggestion(reply)"
-                            />
-                        </div>
+                             the suggestions. Rendered as buttons above the
+                             prompt (`suggestedReplies`), not here in the
+                             transcript - this branch only keeps it from
+                             falling through to the generic UChatTool card
+                             below, which would show it as a raw tool call. -->
+                        <template v-else-if="isToolUIPart(part) && getToolName(part) === 'ProposeSuggestedReplies'" />
 
                         <UChatTool
                             v-else-if="isToolUIPart(part)"
@@ -121,6 +125,21 @@ function renderMarkdown (text: string): string {
                     </template>
                 </template>
             </UChatMessages>
+
+            <div
+                v-if="suggestedReplies.length > 0"
+                class="flex flex-wrap gap-1.5 border-t border-default px-4 pt-3"
+            >
+                <UButton
+                    v-for="reply in suggestedReplies"
+                    :key="reply"
+                    :label="reply"
+                    color="neutral"
+                    variant="outline"
+                    size="xs"
+                    @click="sendSuggestion(reply)"
+                />
+            </div>
 
             <div class="p-4">
                 <UChatPrompt

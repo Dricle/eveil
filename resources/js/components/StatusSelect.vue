@@ -24,14 +24,21 @@ function save (status?: OutreachStatus) {
          arrived as "Already …". `itemDescription` drops Nuxt UI's default
          single-line `truncate`: the description IS the answer to "what does
          this do", and a one-liner cut to "Stops outreach here and at the
-         whol…" defeats the entire point of putting it there. -->
+         whol…" defeats the entire point of putting it there. `z-[60]`
+         because Nuxt UI ships this popover with no z-index at all
+         (`z-index: auto`): invisible on its own, but the Inbox conversation
+         modal's own overlay and content are pinned to `z-50` (see
+         `Inbox.vue`), and CSS always paints an explicit z-index above an
+         auto one regardless of DOM order - so without this, opening the
+         status select from inside that modal renders the menu, correctly
+         positioned, directly BEHIND the modal. -->
     <USelect
         :model-value="status"
         :items="options"
         variant="ghost"
         size="xs"
         class="w-full"
-        :ui="{ content: 'min-w-80', itemDescription: 'whitespace-normal text-muted' }"
+        :ui="{ content: 'min-w-80 z-[60]', itemDescription: 'whitespace-normal text-muted' }"
         @update:model-value="save"
     />
 </template>

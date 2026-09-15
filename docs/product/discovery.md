@@ -14,14 +14,21 @@ A plan comes first — Eveil reads the target profile and decides where to look 
 
 - **OpenStreetMap**, for anything with a physical address — shops, clinics, agencies, workshops. It's exhaustive and free: every business with a front door in the area searched, not just the ones that rank well on Google.
 - **Web search**, for everything OpenStreetMap can't see — online-only businesses, professions, anything defined by what it sells rather than where it sits.
+- **Official business registries** (Belgium's KBO/BCE, France's SIRENE, the UK's Companies House and others), for a legal-entity search with no SEO bias at all — every registered company, not just the ones with a website. A registry record has a name, address and status, never an email or a site: the contact-finding step that follows spends one search of its own trying to find the company's actual website before giving up on it.
 
-A target profile with no real geographic angle (most software, most online services) skips the map entirely and searches the web only; one built entirely around local premises does the reverse. Most profiles use both.
+::: info Self-hosted only
+Registries need a free API key you set up yourself — see [Configuration](/self-hosted/configuration). Without one, discovery just runs on the other two sources; nothing else is affected. On cloud this is already configured for you, nothing to do here.
+:::
+
+A target profile with no real geographic angle (most software, most online services) skips the map entirely and searches the web only; one built entirely around local premises does the reverse. Most profiles use two or three of these together.
 
 ## Two web search engines, not one
 
 Web search runs against two independent, free search engines behind the scenes rather than one. Neither needs an account or an API key on your part. The reason is resilience, not more results: a single search engine occasionally rate-limits or blocks automated queries, and when that happens a query returning nothing looks identical to "this market genuinely doesn't exist" unless there's a second, independent source to check it against. Running both on every query means a rate-limited instance never gets mistaken for an empty market.
 
-*This only matters if you're self-hosted: SearXNG ships with the stack by default, and a second engine is an optional Docker Compose service you can turn on — see [Configuration](/self-hosted/configuration). On cloud, hosting is managed for you; there's nothing here to set up.*
+::: info Self-hosted only
+SearXNG ships with the stack by default, and a second engine is an optional Docker Compose service you can turn on — see [Configuration](/self-hosted/configuration). On cloud, hosting is managed for you; there's nothing here to set up.
+:::
 
 ## Directories count as leads too
 

@@ -17,12 +17,13 @@ use App\Support\Settings;
 use Database\Seeders\KnownHostSeeder;
 use Illuminate\Support\Facades\Http;
 
-function plan(array $overpass = [], array $web = []): array
+function plan(array $overpass = [], array $web = [], array $registry = []): array
 {
     return [
         'plan' => 'Enumerate friteries in Charleroi on the map.',
         'overpass_probes' => $overpass,
         'web_queries' => $web,
+        'registry_probes' => $registry,
     ];
 }
 
@@ -34,6 +35,11 @@ function overpassProbe(string $area = 'Charleroi'): array
         'tags' => [['key' => 'amenity', 'value' => 'fast_food']],
         'why' => 'Friteries.',
     ];
+}
+
+function registryProbe(string $query = 'Friterie du Centre', string $jurisdiction = 'BE'): array
+{
+    return ['query' => $query, 'jurisdiction' => $jurisdiction, 'why' => 'Legal entity search.'];
 }
 
 function verdict(int $score = 85, bool $prospect = true): array
@@ -197,6 +203,53 @@ it('queries degoog alongside SearXNG for the same web query, deduping the overla
     expect(Company::pluck('domain')->sort()->values()->all())
         ->toBe(['cuisine-fantome.be', 'darkkitchen.be'])
         ->and(Company::query()->firstWhere('domain', 'cuisine-fantome.be')->source)->toBe('degoog');
+});
+
+it('keeps a registry record with no website, judged on its registered address alone', function () {
+    activeTargetProfile();
+    config()->set('eveil.sources.registry.token', 'or_pat_test');
+    DiscoveryPlanner::fake([plan(registry: [registryProbe()])]);
+    CompanyQualifier::fake([verdict()]);
+
+    Http::fake([
+        '*/companies*' => Http::response(['count' => 1, 'results' => [[
+            'jurisdiction' => 'BE',
+            'company_id' => '0821.017.106',
+            'company_name' => 'Friterie du Centre',
+            'status' => 'active',
+            'status_detail' => 'EU Active',
+            'registered_address' => 'Rue Jules Delhaize 51 1080 Molenbeek-Saint-Jean',
+            'jurisdiction_data' => ['enterpriseNo' => '0821017106'],
+        ]]]),
+    ]);
+
+    $this->artisan('eveil:discover-companies')->assertSuccessful();
+
+    $company = Company::sole();
+
+    expect($company->website)->toBeNull()
+        ->and($company->domain)->toBeNull()
+        ->and($company->name)->toBe('Friterie du Centre')
+        ->and($company->source)->toBe('registry')
+        ->and($company->facts['registration_number'])->toBe('0821.017.106')
+        ->and($company->facts['address'])->toBe('Rue Jules Delhaize 51 1080 Molenbeek-Saint-Jean');
+});
+
+it('reports the registry source as unusable rather than searching with no token configured', function () {
+    activeTargetProfile();
+    config()->set('eveil.sources.registry.token', '');
+    // A wave that finds NOTHING gets one automatic pivot to a different source
+    // (`DiscoveryRun::pivotSource()`): queue that second wave empty too, so
+    // the run closes cleanly with nothing left to search for.
+    DiscoveryPlanner::fake([plan(registry: [registryProbe()]), plan()]);
+
+    Http::fake();
+
+    $this->artisan('eveil:discover-companies')->assertSuccessful();
+
+    Http::assertNothingSent();
+    expect(Company::query()->count())->toBe(0)
+        ->and(DiscoveryRun::sole()->stats['source_failures'] ?? [])->toContain('BE/Friterie du Centre: no OPENREGISTRY_TOKEN configured');
 });
 
 it('sorts search results by what each host is, and harvests the lists', function () {

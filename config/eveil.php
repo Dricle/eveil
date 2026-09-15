@@ -50,6 +50,16 @@ return [
             // seconds; one that gives up costs a whole area of the market.
             'retry_wait_ms' => env('OVERPASS_RETRY_WAIT_MS', 3_000),
         ],
+
+        // Official government business registries (KBO/BCE, SIRENE, Companies
+        // House and more) behind one free proxy. Unlike every other source
+        // here this one needs a token: with none set, `RegistrySource` reports
+        // itself as unusable rather than searching.
+        'registry' => [
+            'url' => env('OPENREGISTRY_URL', 'https://openregistry.sophymarine.com/api/v1'),
+            'token' => env('OPENREGISTRY_TOKEN'),
+            'timeout' => 20,
+        ],
     ],
 
     'crawl' => [

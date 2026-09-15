@@ -18,7 +18,7 @@ class DiscoveryPlanner extends EveilAgent implements HasStructuredOutput
     public function instructions(): Stringable|string
     {
         return <<<'PROMPT'
-        You plan where to hunt for companies matching a target profile. You have two
+        You plan where to hunt for companies matching a target profile. You have three
         sources and they are good at different things.
 
         Decide the geographic scope from the profile itself, before anything else.
@@ -66,18 +66,34 @@ class DiscoveryPlanner extends EveilAgent implements HasStructuredOutput
         market's own language, and aim them at the companies themselves rather than at
         directories. A query that mostly returns Tripadvisor or Yellow Pages is wasted.
 
+        Official business registries (KBO/BCE in Belgium, SIRENE in France, Companies
+        House in the UK, and similar registers across most of Europe plus a handful of
+        other countries) enumerate every legally registered company, free and with no
+        SEO bias at all - the opposite failure mode from a search engine, which only
+        surfaces whoever ranks. A registry record carries a legal name, a registered
+        address and a status, never an email or a site: it is worth a probe whenever the
+        profile can be matched on name or activity from that alone (a market segment, a
+        legal form, a company defined by what kind of entity it is), and a weak choice
+        for a profile that lives entirely on nuance a filing never states. Each registry
+        probe is one free-text query plus the jurisdiction, an ISO 3166-1 alpha-2 code
+        (or a regional variant like CA-BC where the registry is sub-national) - a
+        jurisdiction the registry does not cover simply returns nothing, at the cost of
+        one probe, never the whole run.
+
         Pick the sources the profile actually calls for. A business defined by premises
         is almost entirely an OSM job; one that exists only online has no OSM presence at
-        all. Using both when only one fits spends the operator's budget on noise.
+        all; a registry probe earns its place only where a legal-entity search genuinely
+        helps. Using every source when only one fits spends the operator's budget on
+        noise.
 
-        You are told how many probes this run may make. Map probes and web queries are
-        counted together against that one number, and anything past it will not run, so
-        planning eighty probes for a run that allows twelve does not search harder, it
-        just leaves sixty-eight lines nobody executes. Each web query runs against two
-        search sources and so counts DOUBLE against that number - a map probe counts
-        once. Plan up to the number given and spend it on the areas and queries most
-        likely to produce, in the order you would want them run: the first ones are the
-        ones that will actually happen.
+        You are told how many probes this run may make. Map probes, web queries and
+        registry probes are all counted together against that one number, and anything
+        past it will not run, so planning eighty probes for a run that allows twelve does
+        not search harder, it just leaves sixty-eight lines nobody executes. Each web
+        query runs against two search sources and so counts DOUBLE against that number -
+        a map probe and a registry probe each count once. Plan up to the number given and
+        spend it on the areas and queries most likely to produce, in the order you would
+        want them run: the first ones are the ones that will actually happen.
 
         You may be shown what earlier runs for this same profile already tried and what
         each one found. Read it as a record of ground already covered, not a template:
@@ -122,6 +138,12 @@ class DiscoveryPlanner extends EveilAgent implements HasStructuredOutput
                 'language' => $schema->string()->description('Two-letter code, or "auto".')->required(),
                 'why' => $schema->string()->description('What this query is expected to surface.')->required(),
             ]))->description('Empty when the map source covers the profile entirely.')->required(),
+
+            'registry_probes' => $schema->array()->items($schema->object([
+                'query' => $schema->string()->description('Company name, or the activity/sector, to search the registry for.')->required(),
+                'jurisdiction' => $schema->string()->description('ISO 3166-1 alpha-2 code, or a regional variant like CA-BC.')->required(),
+                'why' => $schema->string()->description('What this probe is expected to surface.')->required(),
+            ]))->description('Empty unless a legal-entity registry search genuinely fits the profile.')->required(),
         ];
     }
 }

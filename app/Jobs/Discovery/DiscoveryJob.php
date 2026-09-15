@@ -141,11 +141,14 @@ abstract class DiscoveryJob implements ShouldQueue
             $payload = $candidate->toArray();
             $domain = $payload['domain'];
 
-            // No site of its own, which is ordinary on a directory listing.
-            // Worth qualifying only when the listing also published an address:
-            // with nothing to fetch and nothing to send, reading it is a model
-            // call spent on a row that can never be contacted.
-            if ($domain === null && ($payload['facts']['email'] ?? null) === null) {
+            // No site of its own, which is ordinary on a directory listing and
+            // the norm for a registry record. Worth qualifying only when the
+            // source also published an address or an email: with nothing to
+            // fetch and nothing to send, reading it is a model call spent on a
+            // row that can never be contacted.
+            if ($domain === null
+                && ($payload['facts']['email'] ?? null) === null
+                && ($payload['facts']['address'] ?? null) === null) {
                 continue;
             }
 

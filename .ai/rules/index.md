@@ -24,5 +24,6 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Http/Requests/** | .ai/rules/requests.md |
 | app/Http/Resources/** | .ai/rules/resources.md |
 | routes/** | .ai/rules/routes.md |
+| app/Actions/FindContacts.php,app/Services/Discovery/WebsiteFinder.php | .ai/rules/services-discovery.md |
 | tests/** | .ai/rules/tests.md |
 | app/Ai/Tools/** | .ai/rules/tools.md |

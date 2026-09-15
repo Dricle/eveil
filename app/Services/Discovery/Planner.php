@@ -141,6 +141,8 @@ class Planner
                 .')',
             'web_search' => 'web: "'.($payload['probe']['query'] ?? '').'"',
             'degoog' => 'web (degoog): "'.($payload['probe']['query'] ?? '').'"',
+            'registry' => 'registry: "'.($payload['probe']['query'] ?? '').'" ('
+                .($payload['probe']['jurisdiction'] ?? '?').')',
             default => null,
         };
     }
@@ -158,6 +160,7 @@ class Planner
     {
         $overpass = [];
         $web = [];
+        $registry = [];
 
         foreach ($plan['overpass_probes'] ?? [] as $probe) {
             $tags = [];
@@ -192,13 +195,23 @@ class Planner
             $web[] = ['source' => 'degoog', 'probe' => $probe];
         }
 
+        foreach ($plan['registry_probes'] ?? [] as $probe) {
+            $registry[] = ['source' => 'registry', 'probe' => [
+                'query' => $probe['query'] ?? '',
+                'jurisdiction' => $probe['jurisdiction'] ?? '',
+            ]];
+        }
+
         $probes = [];
 
-        for ($i = 0; $i < max(count($overpass), count($plan['web_queries'] ?? [])); $i++) {
+        $rounds = max(count($overpass), count($plan['web_queries'] ?? []), count($registry));
+
+        for ($i = 0; $i < $rounds; $i++) {
             $probes = array_merge($probes, array_filter([
                 $overpass[$i] ?? null,
                 $web[$i * 2] ?? null,
                 $web[$i * 2 + 1] ?? null,
+                $registry[$i] ?? null,
             ]));
         }
 

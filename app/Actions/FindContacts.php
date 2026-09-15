@@ -12,9 +12,11 @@ use App\Services\Discovery\EmailPattern;
 use App\Services\Discovery\EmailVerifier;
 use App\Services\Discovery\PageFetcher;
 use App\Services\Discovery\PathHints;
+use App\Services\Discovery\WebsiteFinder;
 use App\Support\HtmlText;
 use App\Support\ParsedPage;
 use App\Support\Settings;
+use App\Support\Url;
 use Illuminate\Support\Collection;
 use Laravel\Ai\Responses\StructuredAgentResponse;
 
@@ -32,6 +34,7 @@ class FindContacts
         private EmailVerifier $verifier,
         private PathHints $hints,
         private Settings $settings,
+        private WebsiteFinder $websiteFinder,
     ) {}
 
     /**
@@ -64,10 +67,12 @@ class FindContacts
     }
 
     /**
-     * A business with no site of its own has one address and it came with the
-     * listing: nothing to crawl, nobody to name, and no model call to pay for.
-     * Half of this segment is unreachable by email at all, so the one address a
-     * directory published is the whole of what there is.
+     * A business with no site of its own published SOMETHING to a source: a
+     * directory listing publishes an email directly, kept as-is. A registry
+     * record publishes only a legal name and an address, never a website or an
+     * email - worth one search-engine shot at finding the site before giving
+     * up, since a found site re-enters the normal crawl-and-extract path below
+     * rather than a second, thinner one.
      *
      * @return Collection<int, Lead>
      */
@@ -75,14 +80,34 @@ class FindContacts
     {
         $email = $company->facts['email'] ?? null;
 
-        if (! is_string($email) || $email === '' || $this->erased($company, $email)) {
+        if (is_string($email) && $email !== '' && ! $this->erased($company, $email)) {
+            return new Collection([$this->store($company, [
+                'email' => $email,
+                'email_source' => EmailSource::Scraped,
+            ])]);
+        }
+
+        $address = $company->facts['address'] ?? null;
+
+        if (! is_string($address) || $address === '') {
             return new Collection;
         }
 
-        return new Collection([$this->store($company, [
-            'email' => $email,
-            'email_source' => EmailSource::Scraped,
-        ])]);
+        $website = $this->websiteFinder->find($company->name, $address, $company->project);
+        $domain = $website === null ? null : Url::host($website);
+
+        // A domain another company in this project already owns is left
+        // alone rather than colliding with the unique index: the two are
+        // already two separate rows (found by different sources, keyed
+        // differently with no domain to dedupe on), and merging them is not
+        // this step's job.
+        if ($domain === null || Company::where('project_id', $company->project_id)->where('domain', $domain)->exists()) {
+            return new Collection;
+        }
+
+        $company->update(['website' => $website, 'domain' => $domain]);
+
+        return $this->handle($company->fresh());
     }
 
     /**

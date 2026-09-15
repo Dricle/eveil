@@ -1,6 +1,7 @@
 <?php
 
 use App\Ai\Agents\ContactExtractor;
+use App\Ai\Agents\ResultTriage;
 use App\Enums\EmailSource;
 use App\Enums\EmailStatus;
 use App\Enums\MessageDirection;
@@ -19,6 +20,7 @@ use App\Support\DisposableDomains;
 use App\Support\Settings;
 use Database\Seeders\DisposableDomainSeeder;
 use Database\Seeders\MailHostSeeder;
+use Illuminate\Http\Client\Factory;
 use Illuminate\Support\Facades\Http;
 
 function extraction(array $people = [], array $generic = [], string $pattern = ''): array
@@ -442,4 +444,121 @@ it('takes the address a directory published when the business has no site', func
         ->and($lead->company_id)->toBe($company->id)
         ->and($lead->email_source)->toBe(EmailSource::Scraped)
         ->and($lead->source_url)->toBe('https://annuaire.test/friteries/namur');
+});
+
+it('finds the website for a registry record before giving up, then extracts as normal', function () {
+    // A registry record publishes a legal name and an address, never a
+    // website or an email: one search-engine shot at the real site, trusted
+    // only because the page it lands on actually names the company.
+    $company = Company::factory()->create([
+        'domain' => null,
+        'website' => null,
+        'name' => 'Friterie du Centre',
+        'language' => 'fr',
+        'source' => 'registry',
+        'facts' => ['address' => 'Rue Jules Delhaize 51 1080 Molenbeek-Saint-Jean', 'registration_number' => '0821.017.106'],
+    ]);
+
+    ContactExtractor::fake([extraction(people: [
+        ['first_name' => 'Marcel', 'last_name' => 'Dupont', 'title' => 'Gérant', 'email' => 'marcel@friterie-du-centre.be'],
+    ])]);
+
+    // `beforeEach`'s own `Http::fake(['*' => ...])` is already registered by
+    // the time this runs, and Laravel resolves a faked response by taking the
+    // FIRST stub (in registration order) that matches - a `'*'` pattern
+    // matches everything, so it would win over anything added below no
+    // matter how specific. Swapping in a fresh factory clears it so this
+    // test's own patterns are the only ones in play.
+    Http::swap(new Factory);
+    Http::fake([
+        'http://searxng:8080/search*' => Http::response(['results' => [
+            ['url' => 'https://friterie-du-centre.be', 'title' => 'Friterie du Centre'],
+        ]]),
+        '*/robots.txt' => Http::response('', 404),
+        'https://friterie-du-centre.be*' => Http::response(
+            '<!doctype html><html lang="fr"><head><title>Friterie du Centre</title></head>'
+            .'<body><p>Friterie du Centre, votre friterie a Molenbeek.</p><a href="/contact">Contact</a></body></html>'
+        ),
+        '*' => Http::response(contactPage()),
+    ]);
+
+    $this->artisan('eveil:find-contacts')->assertSuccessful();
+
+    $lead = Lead::sole();
+
+    expect($lead->email)->toBe('marcel@friterie-du-centre.be')
+        ->and($company->fresh()->domain)->toBe('friterie-du-centre.be');
+});
+
+it('does not enrich a registry record when the top hit does not actually name the company', function () {
+    $company = Company::factory()->create([
+        'domain' => null,
+        'website' => null,
+        'name' => 'Friterie du Centre',
+        'facts' => ['address' => 'Rue Jules Delhaize 51 1080 Molenbeek-Saint-Jean'],
+    ]);
+
+    // See the previous test: clears `beforeEach`'s catch-all so it cannot
+    // shadow this test's own, more specific stubs.
+    Http::swap(new Factory);
+    Http::fake([
+        'http://searxng:8080/search*' => Http::response(['results' => [
+            ['url' => 'https://unrelated-business.be', 'title' => 'Unrelated Business'],
+        ]]),
+        '*/robots.txt' => Http::response('', 404),
+        // The wrong site: never mentions the company being looked for.
+        '*' => Http::response(contactPage()),
+    ]);
+
+    $this->artisan('eveil:find-contacts')->assertSuccessful();
+
+    expect(Lead::count())->toBe(0)
+        ->and($company->fresh()->domain)->toBeNull();
+});
+
+it('skips a directory result and finds the company on its own site instead', function () {
+    // A "name + address" search just as often surfaces the very directory or
+    // blog post the address came from, which names the company too - a plain
+    // "does the page mention the name" check cannot tell that apart from the
+    // company's real site. The same host classifier discovery already uses
+    // to sort a search result into a directory or a company has to run here
+    // first, so a directory is never even considered a candidate.
+    $company = Company::factory()->create([
+        'domain' => null,
+        'website' => null,
+        'name' => 'Friterie du Centre',
+        'facts' => ['address' => 'Rue Jules Delhaize 51 1080 Molenbeek-Saint-Jean'],
+    ]);
+
+    ContactExtractor::fake([extraction(people: [
+        ['first_name' => 'Marcel', 'last_name' => 'Dupont', 'title' => 'Gérant', 'email' => 'marcel@friterie-du-centre.be'],
+    ])]);
+    ResultTriage::fake([['hosts' => [
+        ['host' => 'annuaire.test', 'kind' => 'index', 'reason' => 'Lists businesses.'],
+        ['host' => 'friterie-du-centre.be', 'kind' => 'entity', 'reason' => 'One business.'],
+    ]]]);
+
+    Http::swap(new Factory);
+    Http::fake([
+        'http://searxng:8080/search*' => Http::response(['results' => [
+            // The directory ranks first: it must still be skipped.
+            ['url' => 'https://annuaire.test/friteries/namur', 'title' => 'Friterie du Centre - annuaire.test'],
+            ['url' => 'https://friterie-du-centre.be', 'title' => 'Friterie du Centre'],
+        ]]),
+        '*/robots.txt' => Http::response('', 404),
+        'https://annuaire.test*' => Http::response(
+            '<!doctype html><html lang="fr"><head><title>Annuaire</title></head>'
+            .'<body><p>Friterie du Centre, Rue Jules Delhaize 51.</p></body></html>'
+        ),
+        'https://friterie-du-centre.be*' => Http::response(
+            '<!doctype html><html lang="fr"><head><title>Friterie du Centre</title></head>'
+            .'<body><p>Friterie du Centre, votre friterie a Molenbeek.</p><a href="/contact">Contact</a></body></html>'
+        ),
+        '*' => Http::response(contactPage()),
+    ]);
+
+    $this->artisan('eveil:find-contacts')->assertSuccessful();
+
+    expect($company->fresh()->domain)->toBe('friterie-du-centre.be')
+        ->and(Lead::sole()->email)->toBe('marcel@friterie-du-centre.be');
 });

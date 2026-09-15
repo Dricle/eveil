@@ -127,6 +127,7 @@ function renderMarkdown (text: string): string {
                     v-model="input"
                     :error="error"
                     :disabled="loadingHistory"
+                    variant="soft"
                     placeholder="Ask Evie to find, qualify or write something..."
                     @submit="onSubmit"
                 >

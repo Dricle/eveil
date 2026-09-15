@@ -12,5 +12,7 @@ defineEmits<{ 'update:open': [value: boolean] }>()
         aria-label="Toggle Evie chat"
         class="relative"
         @click="$emit('update:open', !open)"
-    />
+    >
+        Chat with Evie
+    </UButton>
 </template>

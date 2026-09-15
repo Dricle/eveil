@@ -9,6 +9,7 @@ use App\Ai\Tools\CreateTargetProfile;
 use App\Ai\Tools\DeleteCompanyNote;
 use App\Ai\Tools\DeleteLeadNote;
 use App\Ai\Tools\DeleteTargetProfile;
+use App\Ai\Tools\DraftLinkedinPost;
 use App\Ai\Tools\Evie\ProposeSuggestedReplies;
 use App\Ai\Tools\FindNewTargetProfiles;
 use App\Ai\Tools\GetCampaign;
@@ -137,6 +138,13 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
         expected, not an error, and you do not need to ask for permission
         again in prose first.
 
+        DraftLinkedinPost writes a post to the LinkedIn posts queue for the user
+        to review and publish themselves - it never posts anything on its own.
+        Use it when the user tells you something worth posting about ("we just
+        shipped X, write a post about it"). Needs no approval before calling it,
+        same reasoning as AddLeadNote: nothing is spawned and nothing is
+        published, only drafted.
+
         When the obvious next replies are predictable, offer them with
         ProposeSuggestedReplies instead of making the user type. Skip it when
         there is nothing obvious to suggest.
@@ -198,6 +206,7 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
             new FindNewTargetProfiles($this->project),
             new CreateSequence($this->project),
             new UpdateSequence($this->project),
+            new DraftLinkedinPost($this->project),
             new ProposeSuggestedReplies,
         ];
     }

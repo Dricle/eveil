@@ -5,6 +5,7 @@ import { computed } from 'vue'
 import general from '@/routes/settings/organization/general'
 import billing from '@/routes/settings/organization/billing'
 import knowledgeBase from '@/routes/settings/knowledge-base'
+import linkedin from '@/routes/settings/linkedin'
 import mailboxes from '@/routes/settings/mailboxes'
 import members from '@/routes/settings/members'
 import project from '@/routes/settings/project'
@@ -27,6 +28,10 @@ const items = computed<NavigationMenuItem[]>(() =>
         // two products and never by a third.
         { label: 'Organization', icon: 'i-lucide-building-2', to: general.edit.url() },
         { label: 'Mailboxes', icon: 'i-lucide-mail', to: mailboxes.index.url() },
+        // No brand icon available (only the `lucide` icon set is installed,
+        // and it carries no LinkedIn glyph): a generic one rather than a
+        // broken reference.
+        { label: 'LinkedIn', icon: 'i-lucide-share-2', to: linkedin.index.url() },
         { label: 'Members', icon: 'i-lucide-users', to: members.index.url() },
         // Cloud only: self-hosted has no wallet, no plan, nothing this
         // screen would show.

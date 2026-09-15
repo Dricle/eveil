@@ -38,6 +38,12 @@
             .marketing .legal-h2 { font-family: 'Sora', sans-serif; font-weight: 600; font-size: 24px; letter-spacing: -.025em; margin: 0 0 12px; }
             .marketing .legal-p { margin: 0 0 32px; color: rgba(232, 236, 242, .68); }
         </style>
+
+        <script
+            src="https://rybbit.dricle.be/api/script.js"
+            data-site-id="c2bb312ab031"
+            defer
+        ></script>
     </head>
     <body class="marketing font-sans antialiased">
         @include('marketing.partials.header')

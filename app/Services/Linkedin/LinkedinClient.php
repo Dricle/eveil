@@ -49,7 +49,7 @@ class LinkedinClient
 
         $urn = $response->header('x-restli-id') ?: $response->header('x-linkedin-id');
 
-        if ($urn === '' || $urn === null) {
+        if ($urn === '') {
             throw new RuntimeException('LinkedIn published the post but returned no id.');
         }
 

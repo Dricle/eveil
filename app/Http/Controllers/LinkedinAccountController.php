@@ -26,14 +26,13 @@ class LinkedinAccountController extends Controller
     {
         $organization = $this->currentProject->organization();
 
-        return Inertia::render('linkedin/Account', [
+        return Inertia::render('settings/Linkedin', [
             'accounts' => LinkedinAccountResource::collection(
                 $organization->linkedinAccounts()->with('projects')->orderBy('id')->get()
             ),
             'projects' => ProjectResource::collection(
                 $organization->projects()->orderBy('name')->get()->each->setRelation('organization', $organization)
             ),
-            'currentProjectFrequency' => $this->currentProject->getOrFail()->linkedin_post_frequency->value,
         ]);
     }
 
@@ -43,13 +42,13 @@ class LinkedinAccountController extends Controller
 
         $account->projects()->sync($request->validated('projects', []));
 
-        return to_route('linkedin.account.index');
+        return to_route('settings.linkedin.index');
     }
 
     public function destroy(Request $request, int $linkedinAccount): RedirectResponse
     {
         LinkedinAccount::query()->ownedBy($request->user())->findOrFail($linkedinAccount)->delete();
 
-        return to_route('linkedin.account.index');
+        return to_route('settings.linkedin.index');
     }
 }

@@ -78,7 +78,7 @@ class LinkedinPost extends Model
      */
     public function sibling(): Builder
     {
-        return static::query()
+        return LinkedinPost::query()
             ->where('source_type', $this->source_type)
             ->where('source_ref', $this->source_ref)
             ->where('variant', '!=', $this->variant)

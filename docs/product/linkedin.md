@@ -4,7 +4,7 @@ Eveil can publish to your own LinkedIn profile — personal-profile posting only
 
 ## Connecting an account
 
-LinkedIn has its own item in the main navigation, with two tabs: **Posts** (the approval queue) and **Account**. From **LinkedIn → Account**, connect your profile (LinkedIn's own sign-in screen, then back to Eveil — no password ever touches this app). A connected account belongs to your organization, the same way a mailbox does: grant it to whichever projects should be able to post through it, and pick a posting cadence (off, daily, weekly, every two weeks, or monthly) for each one.
+From **Settings → LinkedIn**, under the Organization group alongside Mailboxes, connect your profile (LinkedIn's own sign-in screen, then back to Eveil — no password ever touches this app). A connected account belongs to your organization, the same way a mailbox does: grant it to whichever projects should be able to post through it. The posting cadence (off, daily, weekly, every two weeks, or monthly) is set from the **LinkedIn** posts queue instead, right above the queue itself.
 
 ## Where the content comes from
 
@@ -17,4 +17,4 @@ Every draft has to trace to something real — never a generic "5 tips" post. On
 
 ## Approving a draft
 
-Nothing publishes on its own. Every draft — whatever it came from — lands in **LinkedIn → Posts**, showing why it was written (the evidence) beside the text itself. From there you can edit the body, approve and publish it, or reject it. This holds regardless of your project's autonomy level: posting to a public feed under your name is treated differently from a private, one-to-one email.
+Nothing publishes on its own. Every draft — whatever it came from — lands in **LinkedIn** (its own item in the main navigation), showing why it was written (the evidence) beside the text itself. From there you can edit the body, approve and publish it, or reject it. This holds regardless of your project's autonomy level: posting to a public feed under your name is treated differently from a private, one-to-one email.

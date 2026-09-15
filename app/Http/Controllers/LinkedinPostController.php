@@ -33,6 +33,7 @@ class LinkedinPostController extends Controller
                 LinkedinPost::query()->latest()->get()
             ),
             'hasAccount' => $account !== null,
+            'currentProjectFrequency' => $currentProject->getOrFail()->linkedin_post_frequency->value,
         ]);
     }
 

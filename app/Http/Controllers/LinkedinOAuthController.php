@@ -43,7 +43,7 @@ class LinkedinOAuthController extends Controller
         $state = $request->session()->pull('linkedin_oauth_state');
 
         if ($state === null || ! hash_equals($state, (string) $request->query('state'))) {
-            return to_route('linkedin.account.index')->with('status', 'LinkedIn connection failed: the request could not be verified.');
+            return to_route('settings.linkedin.index')->with('status', 'LinkedIn connection failed: the request could not be verified.');
         }
 
         $token = Http::asForm()->post('https://www.linkedin.com/oauth/v2/accessToken', [
@@ -55,14 +55,14 @@ class LinkedinOAuthController extends Controller
         ]);
 
         if (! $token->successful()) {
-            return to_route('linkedin.account.index')->with('status', 'LinkedIn did not grant access. Try connecting again.');
+            return to_route('settings.linkedin.index')->with('status', 'LinkedIn did not grant access. Try connecting again.');
         }
 
         $identity = Http::withToken((string) $token->json('access_token'))
             ->get('https://api.linkedin.com/v2/userinfo');
 
         if (! $identity->successful()) {
-            return to_route('linkedin.account.index')->with('status', 'Connected, but LinkedIn did not return the profile.');
+            return to_route('settings.linkedin.index')->with('status', 'Connected, but LinkedIn did not return the profile.');
         }
 
         $organization = $currentProject->organization();
@@ -82,6 +82,6 @@ class LinkedinOAuthController extends Controller
             ],
         );
 
-        return to_route('linkedin.account.index')->with('status', 'LinkedIn account connected.');
+        return to_route('settings.linkedin.index')->with('status', 'LinkedIn account connected.');
     }
 }

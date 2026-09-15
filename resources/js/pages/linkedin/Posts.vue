@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { Form, Head, router, usePage, usePoll } from '@inertiajs/vue3'
-import { ref } from 'vue'
-import LinkedinHeader from '@/components/LinkedinHeader.vue'
+import { ref, watch } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
-import linkedinAccountRoutes from '@/routes/linkedin/account'
 import linkedinPostRoutes from '@/routes/linkedin/posts'
+import linkedinAccountRoutes from '@/routes/settings/linkedin'
 import type { LinkedinPost } from '@/types'
 
 defineOptions({ layout: AppLayout })
 
-defineProps<{
+const props = defineProps<{
     posts: LinkedinPost[]
     hasAccount: boolean
+    currentProjectFrequency: 'off' | 'daily' | 'weekly' | 'biweekly' | 'monthly'
 }>()
 
 const page = usePage()
@@ -21,6 +21,20 @@ const toast = useToast()
 // screen rereads rather than sitting still: `.ai/rules/js.md`'s reasoning for
 // keeping this out of Settings.
 usePoll(15000, { only: ['posts'] })
+
+// A local draft synced from the prop, not `default-value`: Nuxt UI's select
+// reads that once and every re-render (this page's own redirect, or the poll
+// above) would silently stomp whatever the user just picked.
+const frequency = ref(props.currentProjectFrequency)
+watch(() => props.currentProjectFrequency, value => frequency.value = value, { immediate: true })
+
+const FREQUENCIES = [
+    { label: 'Off', value: 'off' },
+    { label: 'Daily', value: 'daily' },
+    { label: 'Weekly', value: 'weekly' },
+    { label: 'Every two weeks', value: 'biweekly' },
+    { label: 'Monthly', value: 'monthly' }
+]
 
 const editing = ref<number | null>(null)
 const approving = ref<number | null>(null)
@@ -64,16 +78,37 @@ function reject (post: LinkedinPost) {
     <Head title="LinkedIn posts" />
 
     <div class="space-y-4 p-6">
-        <LinkedinHeader tab="posts" />
+        <div class="flex flex-wrap items-end justify-between gap-3">
+            <div>
+                <h2 class="font-medium">
+                    LinkedIn posts
+                </h2>
+                <p class="text-sm text-muted">
+                    Every draft, from every source, lands here for review. Nothing
+                    publishes without your approval.
+                </p>
+            </div>
 
-        <div>
-            <h2 class="font-medium">
-                LinkedIn posts
-            </h2>
-            <p class="text-sm text-muted">
-                Every draft, from every source, lands here for review. Nothing
-                publishes without your approval.
-            </p>
+            <Form
+                v-slot="{ processing }"
+                v-bind="linkedinPostRoutes.cadence.form()"
+                class="flex items-end gap-3"
+            >
+                <UFormField label="New post">
+                    <USelect
+                        v-model="frequency"
+                        name="linkedin_post_frequency"
+                        :items="FREQUENCIES"
+                        class="w-44"
+                    />
+                </UFormField>
+
+                <UButton
+                    type="submit"
+                    label="Save"
+                    :loading="processing"
+                />
+            </Form>
         </div>
 
         <UAlert

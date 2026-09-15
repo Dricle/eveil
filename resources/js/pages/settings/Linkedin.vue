@@ -1,19 +1,18 @@
 <script setup lang="ts">
 import { Form, Head, router, usePage } from '@inertiajs/vue3'
-import { ref, watch } from 'vue'
-import LinkedinHeader from '@/components/LinkedinHeader.vue'
+import { ref } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
-import linkedinRoutes from '@/routes/linkedin/account'
+import SettingsLayout from '@/layouts/SettingsLayout.vue'
+import linkedinRoutes from '@/routes/settings/linkedin'
 import type { LinkedinAccount, Project } from '@/types'
 
-defineOptions({ layout: AppLayout })
+defineOptions({ layout: [AppLayout, [SettingsLayout, { title: 'LinkedIn' }]] })
 
 // Inline rather than a type alias imported through the barrel: an alias there
 // silently declares no props at all.
-const props = defineProps<{
+defineProps<{
     accounts: LinkedinAccount[]
     projects: Project[]
-    currentProjectFrequency: 'off' | 'daily' | 'weekly' | 'biweekly' | 'monthly'
 }>()
 
 const page = usePage()
@@ -28,20 +27,6 @@ function open (account: LinkedinAccount) {
     editingOpen.value = true
 }
 
-// A local draft synced from the prop, not `default-value`: Nuxt UI's select
-// reads that once and every re-render (this page's own redirect included)
-// would silently stomp whatever the user just picked.
-const frequency = ref(props.currentProjectFrequency)
-watch(() => props.currentProjectFrequency, value => frequency.value = value, { immediate: true })
-
-const FREQUENCIES = [
-    { label: 'Off', value: 'off' },
-    { label: 'Daily', value: 'daily' },
-    { label: 'Weekly', value: 'weekly' },
-    { label: 'Every two weeks', value: 'biweekly' },
-    { label: 'Monthly', value: 'monthly' }
-]
-
 const STATUS = {
     active: { color: 'success' as const, label: 'Active' },
     expired: { color: 'warning' as const, label: 'Expired' },
@@ -50,16 +35,15 @@ const STATUS = {
 </script>
 
 <template>
-    <Head title="LinkedIn account" />
+    <Head title="LinkedIn" />
 
-    <div class="space-y-6 p-6">
-        <LinkedinHeader tab="account" />
-
+    <div class="space-y-6">
         <div class="space-y-2">
             <p class="text-sm text-muted">
                 Personal-profile posting only, via LinkedIn's official API. No
                 automation of connection requests or messages: publishing a post
-                is the only thing this connects.
+                is the only thing this connects. The posting cadence is set from
+                the LinkedIn posts queue, not here.
             </p>
 
             <UAlert
@@ -138,34 +122,8 @@ const STATUS = {
                 icon="i-lucide-plug"
                 label="Connect a LinkedIn account"
                 :href="linkedinRoutes.connect.url()"
+                external
             />
-        </div>
-
-        <div class="space-y-3">
-            <h3 class="text-sm font-medium text-muted">
-                Posting cadence for this project
-            </h3>
-
-            <Form
-                v-slot="{ processing }"
-                v-bind="linkedinRoutes.cadence.form()"
-                class="flex items-end gap-3"
-            >
-                <UFormField label="New post">
-                    <USelect
-                        v-model="frequency"
-                        name="linkedin_post_frequency"
-                        :items="FREQUENCIES"
-                        class="w-56"
-                    />
-                </UFormField>
-
-                <UButton
-                    type="submit"
-                    label="Save"
-                    :loading="processing"
-                />
-            </Form>
         </div>
     </div>
 

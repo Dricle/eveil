@@ -118,10 +118,6 @@ services:
     # --profile degoog up` to run it. Never a dependency of laravel.test or
     # horizon - a source that fails is caught and reported, never fatal
     # (`ReportsFailures`), so nothing here needs it running to boot.
-    #
-    # `DEGOOG_SETTINGS_PASSWORDS` gates the settings API degoog needs
-    # `searxApiEnabled` flipped through; see docs/self-hosted for the
-    # one-time curl that turns it on after first boot.
     degoog:
         image: 'ghcr.io/degoog-org/degoog:latest'
         profiles: ['degoog']
@@ -133,6 +129,32 @@ services:
             - 'sail-degoog:/app/data'
         networks:
             - sail
+        healthcheck:
+            test: ['CMD', 'curl', '-fsS', 'http://127.0.0.1:4444/readyz']
+            retries: 5
+            timeout: 5s
+    # Ships degoog with no search engine enabled at all (confirmed against its
+    # own source: the only builtin is its own crawl-based indexer, off by
+    # default). Runs once against a healthy degoog and exits: turns on the
+    # SearXNG-compatible API, installs a handful of free, no-API-key engines
+    # from the official extensions store. Never blocks or fails `docker
+    # compose up` - see docker/degoog/bootstrap.sh for the "why" and the
+    # engine list.
+    degoog-bootstrap:
+        image: 'curlimages/curl:8.11.0'
+        profiles: ['degoog']
+        entrypoint: ['sh', '/bootstrap.sh']
+        environment:
+            DEGOOG_URL: 'http://degoog:4444'
+            DEGOOG_SETTINGS_PASSWORDS: '${DEGOOG_SETTINGS_PASSWORDS:-changeme}'
+        volumes:
+            - './docker/degoog/bootstrap.sh:/bootstrap.sh:ro'
+        depends_on:
+            degoog:
+                condition: service_healthy
+        networks:
+            - sail
+        restart: 'no'
 networks:
     sail:
         driver: bridge

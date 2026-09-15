@@ -63,3 +63,16 @@ and every outreach mail goes to that address instead of the lead's, with the int
 ## AI provider
 
 Self-hosted instances bring their own AI provider key; cloud instances get one supplied. Configure it from the instance/organization AI settings screen. [`eveil:agent-model`](/self-hosted/commands#eveil-agent-model) lets you change which model each agent runs on from the command line.
+
+## LinkedIn posting
+
+Personal-profile posting only (publishing, and eventually replying to comments on your own posts) — no automated connection requests or messages, and no Company Page posting either: both need LinkedIn's gated Community Management API, a separate partner approval this app does not depend on.
+
+This needs its own LinkedIn Developer App, one per instance, the same bring-your-own-key shape as the AI provider key above:
+
+1. Create an app at [linkedin.com/developers/apps](https://www.linkedin.com/developers/apps).
+2. Under **Products**, request **"Sign In with LinkedIn using OpenID Connect"** and **"Share on LinkedIn"**. Both are self-serve — no review wait, unlike Company Page access.
+3. Under **Auth**, add this instance's callback as an authorized redirect URL: `{APP_URL}/app/linkedin/oauth/callback`.
+4. Copy the **Client ID** and **Client Secret** into **App Settings → LinkedIn** (superadmin only, like the AI provider key — encrypted, never sent back to the browser).
+
+Once that's saved, any organization member connects their own profile from **Settings → LinkedIn** (under the Organization group, alongside Mailboxes) and grants it to whichever projects should post through it. The posting cadence is set per project from the **LinkedIn** posts queue instead (its own item in the main navigation). Every draft — from the knowledge-base rotation, a client win, relevant industry news, or drafted by asking Evie — lands in that same queue for review; nothing publishes without an explicit approve.

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Casts\EncryptedCredential;
 use App\Enums\AutonomyLevel;
+use App\Enums\LinkedinPostFrequency;
 use App\Enums\OrganizationRole;
 use Database\Factories\ProjectFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -33,10 +34,12 @@ use Illuminate\Support\Carbon;
  * @property AutonomyLevel $autonomy_level
  * @property int|null $daily_lead_limit
  * @property int|null $lead_limit
+ * @property LinkedinPostFrequency $linkedin_post_frequency
+ * @property Carbon|null $linkedin_next_post_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['organization_id', 'name', 'url', 'github_token', 'knowledge_base', 'knowledge_base_edited_by_user', 'default_language', 'prompt_instructions', 'autonomy_level', 'daily_lead_limit', 'lead_limit'])]
+#[Fillable(['organization_id', 'name', 'url', 'github_token', 'knowledge_base', 'knowledge_base_edited_by_user', 'default_language', 'prompt_instructions', 'autonomy_level', 'daily_lead_limit', 'lead_limit', 'linkedin_post_frequency', 'linkedin_next_post_at'])]
 #[Hidden(['github_token'])]
 class Project extends Model
 {
@@ -179,6 +182,25 @@ class Project extends Model
     }
 
     /**
+     * LinkedIn accounts this project may draft/post through. Owned by the
+     * organization and granted here, same reasoning as `emailAccounts()`.
+     *
+     * @return BelongsToMany<LinkedinAccount, $this>
+     */
+    public function linkedinAccounts(): BelongsToMany
+    {
+        return $this->belongsToMany(LinkedinAccount::class)->withTimestamps();
+    }
+
+    /**
+     * @return HasMany<LinkedinPost, $this>
+     */
+    public function linkedinPosts(): HasMany
+    {
+        return $this->hasMany(LinkedinPost::class);
+    }
+
+    /**
      * @return HasMany<AgentRun, $this>
      */
     public function agentRuns(): HasMany
@@ -265,6 +287,8 @@ class Project extends Model
             'knowledge_base_edited_by_user' => 'boolean',
             'autonomy_level' => AutonomyLevel::class,
             'github_token' => EncryptedCredential::class,
+            'linkedin_post_frequency' => LinkedinPostFrequency::class,
+            'linkedin_next_post_at' => 'datetime',
         ];
     }
 }

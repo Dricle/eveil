@@ -4,8 +4,7 @@
 >
     <x-marketing-legal
         heading="Privacy policy"
-        meta="Last updated: [publication date] · Controller: DRICLE LLP (OC453390), 5 Brayford Square, London E1 0SG, United Kingdom"
-        notice="Draft. Written from the actual product and data model, but not reviewed by a lawyer. Confirm the supervisory authority and response deadlines against your jurisdiction before publishing."
+        meta="Last updated: 14/09/2026 · Controller: DRICLE LLP (OC453390), 5 Brayford Square, London E1 0SG, United Kingdom"
     >
         <x-slot:toc>
             <a href="#collect" style="color:rgba(232,236,242,.7);font-size:14px">1. What we collect</a>

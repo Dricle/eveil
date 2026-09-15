@@ -213,6 +213,16 @@
                 </div>
                 <div class="bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-6 pt-[26px] pb-7">
                     <div class="font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[rgba(232,236,242,.45)] mb-3">
+                        Channels
+                    </div>
+                    <h4 class="font-[Sora,sans-serif] font-semibold text-[20px] tracking-[-.02em] mb-[10px]">
+                        LinkedIn posting</h4>
+                    <p class="text-[14.5px] text-[rgba(232,236,242,.6)]">Official API, personal profile.
+                        A knowledge-base fact, a client you just won, or relevant industry news, drafted and queued
+                        for your approval. No automation of connection requests or messages.</p>
+                </div>
+                <div class="bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-6 pt-[26px] pb-7">
+                    <div class="font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[rgba(232,236,242,.45)] mb-3">
                         Team
                     </div>
                     <h4 class="font-[Sora,sans-serif] font-semibold text-[20px] tracking-[-.02em] mb-[10px]">

@@ -67,13 +67,13 @@ function due (campaign: Campaign): string {
 </script>
 
 <template>
-    <Head title="Campaigns" />
+    <Head title="Email Campaigns" />
 
     <div class="space-y-6 p-6">
         <div class="flex flex-wrap items-end justify-between gap-3">
             <div>
                 <h2 class="font-medium">
-                    Campaigns
+                    Email Campaigns
                 </h2>
                 <p class="text-sm text-muted">
                     The agent writes the sequence from your product and the segment

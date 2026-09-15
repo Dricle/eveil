@@ -5,6 +5,7 @@ namespace App\Jobs\Discovery;
 use App\Enums\DiscoveryTaskKind;
 use App\Models\DiscoveryRun;
 use App\Models\DiscoveryTask;
+use App\Services\Discovery\Sources\DegoogSearchSource;
 use App\Services\Discovery\Sources\DiscoverySourceInterface;
 use App\Services\Discovery\Sources\OverpassSource;
 use App\Services\Discovery\Sources\WebSearchSource;
@@ -55,6 +56,7 @@ class RunProbe extends DiscoveryJob
     {
         return match ($name) {
             'overpass' => app(OverpassSource::class),
+            'degoog' => app(DegoogSearchSource::class),
             default => app(WebSearchSource::class),
         };
     }

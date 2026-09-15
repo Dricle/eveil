@@ -10,6 +10,20 @@ Deployment-only settings — the things an env file sets and no in-app screen sh
 - `REGISTRATION_ENABLED` — set to `false` to close sign-ups. The first account is always created through `/app/setup` (or `ADMIN_*`, below) regardless of this flag.
 - `DB_PASSWORD`, `SEARXNG_SECRET` — required, no default: the stack refuses to start without them.
 - `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME` / `ADMIN_ORGANIZATION` — if set, the first super admin account is created from these at boot instead of through the `/app/setup` screen. Leave unset to use the setup screen.
+- `DEGOOG_URL`, `DEGOOG_SETTINGS_PASSWORDS` — a second, optional web-search source alongside SearXNG. Off by default; bring it up with `docker compose -f compose.deploy.yaml --profile degoog up -d`. After first boot, enable its search API once (it ships off): trade the password for a settings token, then flip the flag:
+
+  ```bash
+  TOKEN=$(curl -s -X POST http://localhost:4444/api/settings/auth \
+    -H "Content-Type: application/json" \
+    -d "{\"password\": \"$DEGOOG_SETTINGS_PASSWORDS\"}" | jq -r .token)
+
+  curl -X POST http://localhost:4444/api/settings/field \
+    -H "x-settings-token: $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{"key": "searxApiEnabled", "value": "true"}'
+  ```
+
+  Discovery works the same without it: a source that is not running is caught and reported, never fatal.
 
 ## In-app settings
 

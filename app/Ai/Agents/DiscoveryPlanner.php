@@ -73,9 +73,11 @@ class DiscoveryPlanner extends EveilAgent implements HasStructuredOutput
         You are told how many probes this run may make. Map probes and web queries are
         counted together against that one number, and anything past it will not run, so
         planning eighty probes for a run that allows twelve does not search harder, it
-        just leaves sixty-eight lines nobody executes. Plan up to the number given and
-        spend it on the areas and queries most likely to produce, in the order you would
-        want them run: the first ones are the ones that will actually happen.
+        just leaves sixty-eight lines nobody executes. Each web query runs against two
+        search sources and so counts DOUBLE against that number - a map probe counts
+        once. Plan up to the number given and spend it on the areas and queries most
+        likely to produce, in the order you would want them run: the first ones are the
+        ones that will actually happen.
 
         You may be shown what earlier runs for this same profile already tried and what
         each one found. Read it as a record of ground already covered, not a template:

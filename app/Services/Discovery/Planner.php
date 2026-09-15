@@ -140,6 +140,7 @@ class Planner
                 .$this->describeTags($payload['probe']['tags'] ?? [])
                 .')',
             'web_search' => 'web: "'.($payload['probe']['query'] ?? '').'"',
+            'degoog' => 'web (degoog): "'.($payload['probe']['query'] ?? '').'"',
             default => null,
         };
     }
@@ -175,16 +176,30 @@ class Planner
         }
 
         foreach ($plan['web_queries'] ?? [] as $query) {
-            $web[] = ['source' => 'web_search', 'probe' => [
+            $probe = [
                 'query' => $query['query'] ?? '',
                 'language' => $query['language'] ?? 'auto',
-            ]];
+            ];
+
+            // Both web sources run every query (issue #27): a meta-search
+            // instance returning nothing is normal under upstream rate
+            // limiting, so degoog is a cross-check rather than an
+            // alternative. Two entries here means two `RunProbe` tasks, each
+            // claiming its own `max_queries` slot; the existing domain-dedupe
+            // in `queueQualifications()` collapses whatever overlap the two
+            // sources find.
+            $web[] = ['source' => 'web_search', 'probe' => $probe];
+            $web[] = ['source' => 'degoog', 'probe' => $probe];
         }
 
         $probes = [];
 
-        for ($i = 0; $i < max(count($overpass), count($web)); $i++) {
-            $probes = array_merge($probes, array_filter([$overpass[$i] ?? null, $web[$i] ?? null]));
+        for ($i = 0; $i < max(count($overpass), count($plan['web_queries'] ?? [])); $i++) {
+            $probes = array_merge($probes, array_filter([
+                $overpass[$i] ?? null,
+                $web[$i * 2] ?? null,
+                $web[$i * 2 + 1] ?? null,
+            ]));
         }
 
         return $probes;

@@ -31,6 +31,16 @@ return [
             'url' => env('SEARXNG_URL', 'http://searxng:8080'),
             'timeout' => 20,
         ],
+
+        // degoog: a second free, no-API-key search aggregator, run alongside
+        // SearXNG rather than instead of it. Upstream engines rate-limit a
+        // meta-search instance, so an empty result from one is normal and not
+        // distinguishable from a dead instance without a second source to
+        // cross-check against.
+        'degoog' => [
+            'url' => env('DEGOOG_URL', 'http://degoog:4444'),
+            'timeout' => 20,
+        ],
         'overpass' => [
             'url' => env('OVERPASS_URL', 'https://overpass-api.de/api/interpreter'),
             'timeout' => 60,

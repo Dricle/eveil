@@ -79,7 +79,23 @@ services:
         volumes:
             - './docker/searxng/settings.yml:/etc/searxng/settings.yml:ro'
 
+    # Second, optional web-search source (issue #27), off by default:
+    # `docker compose -f compose.deploy.yaml --profile degoog up -d`. Never a
+    # dependency of `app` - a source that fails is caught and reported, never
+    # fatal (`ReportsFailures`), so nothing else needs it running to boot.
+    # `DEGOOG_SETTINGS_PASSWORDS` gates the settings API that turns on
+    # `searxApiEnabled`; see docs/self-hosted for the one-time curl.
+    degoog:
+        image: 'ghcr.io/degoog-org/degoog:latest'
+        profiles: ['degoog']
+        restart: unless-stopped
+        environment:
+            DEGOOG_SETTINGS_PASSWORDS: '${DEGOOG_SETTINGS_PASSWORDS:?set DEGOOG_SETTINGS_PASSWORDS in .env}'
+        volumes:
+            - degoog:/app/data
+
 volumes:
     pgsql:
     redis:
     storage:
+    degoog:

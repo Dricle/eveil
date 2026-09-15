@@ -171,6 +171,34 @@ it('searches the web when the profile has no premises', function () {
     expect(Company::sole()->source)->toBe('web_search');
 });
 
+it('queries degoog alongside SearXNG for the same web query, deduping the overlap', function () {
+    // Issue #27: degoog runs alongside SearXNG rather than instead of it, so a
+    // rate-limited or dead meta-search instance is not the only word on a
+    // query. Distinct hosts here so each source's own results are visible;
+    // the shared `darkkitchen.be` proves the overlap collapses to one company.
+    activeTargetProfile();
+    DiscoveryPlanner::fake([plan(web: [['query' => 'dark kitchen bruxelles', 'language' => 'fr', 'why' => '...']])]);
+    CompanyQualifier::fake([verdict(), verdict()]);
+
+    Http::fake([
+        'http://searxng:8080/search*' => Http::response(['results' => [
+            ['url' => 'https://darkkitchen.be', 'title' => 'Dark Kitchen', 'content' => 'Cuisine 100% livraison'],
+        ]]),
+        'http://degoog:4444/api/search*' => Http::response(['results' => [
+            ['url' => 'https://darkkitchen.be', 'title' => 'Dark Kitchen', 'content' => 'Cuisine 100% livraison'],
+            ['url' => 'https://cuisine-fantome.be', 'title' => 'Cuisine Fantôme', 'content' => 'Dark kitchen bruxelloise'],
+        ]]),
+        '*/robots.txt' => Http::response('', 404),
+        '*' => Http::response(page()),
+    ]);
+
+    $this->artisan('eveil:discover-companies')->assertSuccessful();
+
+    expect(Company::pluck('domain')->sort()->values()->all())
+        ->toBe(['cuisine-fantome.be', 'darkkitchen.be'])
+        ->and(Company::query()->firstWhere('domain', 'cuisine-fantome.be')->source)->toBe('degoog');
+});
+
 it('sorts search results by what each host is, and harvests the lists', function () {
     // This used to assert that directories were thrown away. They are the most
     // valuable result there is: one listing page is hundreds of businesses,

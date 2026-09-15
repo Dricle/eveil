@@ -114,6 +114,25 @@ services:
             test: ['CMD-SHELL', 'wget -q --spider http://127.0.0.1:8080/ || exit 1']
             retries: 5
             timeout: 5s
+    # Second web-search source (issue #27), off by default: `docker compose
+    # --profile degoog up` to run it. Never a dependency of laravel.test or
+    # horizon - a source that fails is caught and reported, never fatal
+    # (`ReportsFailures`), so nothing here needs it running to boot.
+    #
+    # `DEGOOG_SETTINGS_PASSWORDS` gates the settings API degoog needs
+    # `searxApiEnabled` flipped through; see docs/self-hosted for the
+    # one-time curl that turns it on after first boot.
+    degoog:
+        image: 'ghcr.io/degoog-org/degoog:latest'
+        profiles: ['degoog']
+        ports:
+            - '${FORWARD_DEGOOG_PORT:-8091}:4444'
+        environment:
+            DEGOOG_SETTINGS_PASSWORDS: '${DEGOOG_SETTINGS_PASSWORDS:-changeme}'
+        volumes:
+            - 'sail-degoog:/app/data'
+        networks:
+            - sail
 networks:
     sail:
         driver: bridge
@@ -121,4 +140,6 @@ volumes:
     sail-pgsql:
         driver: local
     sail-redis:
+        driver: local
+    sail-degoog:
         driver: local

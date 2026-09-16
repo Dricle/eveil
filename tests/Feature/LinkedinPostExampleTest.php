@@ -31,6 +31,22 @@ it('refuses an empty example', function () {
         ->assertSessionHasErrors('body');
 });
 
+it('accepts an example over LinkedIn\'s own 3000-char limit', function () {
+    $long = str_repeat('a', 4000);
+
+    $this->actingAs(superAdmin())
+        ->post(route('app-settings.linkedin-post-examples.store'), ['body' => $long])
+        ->assertSessionHasNoErrors();
+
+    expect(LinkedinPostExample::query()->sole()->body)->toBe($long);
+});
+
+it('still rejects a body over the app\'s own outer limit', function () {
+    $this->actingAs(superAdmin())
+        ->post(route('app-settings.linkedin-post-examples.store'), ['body' => str_repeat('a', 10001)])
+        ->assertSessionHasErrors('body');
+});
+
 it('deletes an example', function () {
     $example = LinkedinPostExample::factory()->create();
 

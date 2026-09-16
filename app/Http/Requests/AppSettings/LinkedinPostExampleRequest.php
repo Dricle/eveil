@@ -12,7 +12,7 @@ class LinkedinPostExampleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'body' => ['required', 'string', 'max:3000'],
+            'body' => ['required', 'string', 'max:10000'],
         ];
     }
 }

@@ -9,7 +9,6 @@ use App\Ai\Tools\CreateTargetProfile;
 use App\Ai\Tools\DeleteCompanyNote;
 use App\Ai\Tools\DeleteLeadNote;
 use App\Ai\Tools\DeleteTargetProfile;
-use App\Ai\Tools\DraftLinkedinPost;
 use App\Ai\Tools\Evie\ProposeSuggestedReplies;
 use App\Ai\Tools\FindNewTargetProfiles;
 use App\Ai\Tools\GetCampaign;
@@ -20,11 +19,9 @@ use App\Ai\Tools\GetKnowledgeBase;
 use App\Ai\Tools\GetTargetProfile;
 use App\Ai\Tools\ListCampaigns;
 use App\Ai\Tools\ListCompanies;
-use App\Ai\Tools\ListLinkedinPosts;
 use App\Ai\Tools\ListTargetProfiles;
 use App\Ai\Tools\StartDiscovery;
 use App\Ai\Tools\UpdateKnowledgeBase;
-use App\Ai\Tools\UpdateLinkedinPost;
 use App\Ai\Tools\UpdateSequence;
 use App\Ai\Tools\UpdateTargetProfile;
 use Laravel\Ai\Attributes\MaxSteps;
@@ -58,8 +55,8 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
 
         Look things up before you act: ListTargetProfiles, ListCompanies,
         GetCompany, GetContact, ListCampaigns, GetCampaign,
-        GetDiscoveryRunStatus, GetKnowledgeBase, GetTargetProfile and
-        ListLinkedinPosts cost nothing and answer most questions on their own.
+        GetDiscoveryRunStatus, GetKnowledgeBase and GetTargetProfile cost
+        nothing and answer most questions on their own.
 
         ListCampaigns only gives you the shape (id, name, status, step
         count) - when the user wants to discuss, review, or rewrite a
@@ -140,24 +137,6 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
         expected, not an error, and you do not need to ask for permission
         again in prose first.
 
-        DraftLinkedinPost writes a NEW post to the LinkedIn posts queue for the user
-        to review and publish themselves - it never posts anything on its own.
-        Use it when the user tells you something worth posting about ("we just
-        shipped X, write a post about it"). Needs no approval before calling it,
-        same reasoning as AddLeadNote: nothing is spawned and nothing is
-        published, only drafted.
-
-        Before drafting, consider whether the user is actually asking to CHANGE
-        something already in the queue ("update the post about the pricing
-        change", "make that LinkedIn draft shorter") rather than write a new
-        one. Call ListLinkedinPosts first whenever that is ambiguous: drafting
-        again for something that already exists creates a duplicate the user
-        then has to notice and reject by hand. Found the right one? Use
-        UpdateLinkedinPost, not DraftLinkedinPost. UpdateLinkedinPost only
-        works on a draft still awaiting approval - once approved, rejected or
-        published it refuses, since the queue's own edit option is gone by
-        then too.
-
         When the obvious next replies are predictable, offer them with
         ProposeSuggestedReplies instead of making the user type. Skip it when
         there is nothing obvious to suggest.
@@ -219,9 +198,6 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
             new FindNewTargetProfiles($this->project),
             new CreateSequence($this->project),
             new UpdateSequence($this->project),
-            new DraftLinkedinPost($this->project),
-            new ListLinkedinPosts($this->project),
-            new UpdateLinkedinPost($this->project),
             new ProposeSuggestedReplies,
         ];
     }

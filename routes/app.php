@@ -14,7 +14,6 @@ use App\Http\Controllers\AppSettings\EmailExampleController;
 use App\Http\Controllers\AppSettings\EmailExampleThresholdController;
 use App\Http\Controllers\AppSettings\KnownHostController;
 use App\Http\Controllers\AppSettings\LimitController;
-use App\Http\Controllers\AppSettings\LinkedinCredentialsController;
 use App\Http\Controllers\AppSettings\ProviderController;
 use App\Http\Controllers\AppSettings\ProviderTestController;
 use App\Http\Controllers\AppSettings\SendingController;
@@ -48,10 +47,6 @@ use App\Http\Controllers\InboxController;
 use App\Http\Controllers\KnownClientController;
 use App\Http\Controllers\LeadImportController;
 use App\Http\Controllers\LeadNoteController;
-use App\Http\Controllers\LinkedinAccountController;
-use App\Http\Controllers\LinkedinCadenceController;
-use App\Http\Controllers\LinkedinOAuthController;
-use App\Http\Controllers\LinkedinPostController;
 use App\Http\Controllers\MailboxController;
 use App\Http\Controllers\MailboxReactivateController;
 use App\Http\Controllers\MailboxTestController;
@@ -168,24 +163,6 @@ Route::middleware(['auth', 'verified', 'project.set'])->group(function (): void 
                 ->name('mailboxes.reactivate');
 
             /*
-             * LinkedIn account belongs to the ORGANIZATION, same reasoning
-             * as mailboxes above: one LinkedIn identity is often posted
-             * through by several products and never a third. The posting
-             * cadence lives on the posts queue instead (`linkedin.posts.
-             * cadence` below): it is a decision about that queue's own
-             * rhythm, not about the account itself. Literal segments before
-             * {linkedinAccount}, or "connect" would themselves be read as
-             * an account id.
-             */
-            Route::get('linkedin', [LinkedinAccountController::class, 'index'])->name('linkedin.index');
-            Route::get('linkedin/connect', [LinkedinOAuthController::class, 'redirect'])
-                ->name('linkedin.connect');
-            Route::put('linkedin/{linkedinAccount}', [LinkedinAccountController::class, 'update'])
-                ->name('linkedin.update');
-            Route::delete('linkedin/{linkedinAccount}', [LinkedinAccountController::class, 'destroy'])
-                ->name('linkedin.destroy');
-
-            /*
              * Cloud billing. The route exists in both editions (one repo,
              * nothing withheld) but is reachable only through a nav link
              * cloud renders: self-hosted has no Stripe key, so a direct hit
@@ -243,39 +220,6 @@ Route::middleware(['auth', 'verified', 'project.set'])->group(function (): void 
                 ->name('repositories.destroy');
             Route::post('repositories/{codeRepository}/retry', [CodeRepositoryController::class, 'retry'])
                 ->name('repositories.retry');
-        });
-
-        /*
-         * The approval queue every post source lands in: knowledge base,
-         * client win, news, or drafted by talking to Evie. Its own nav
-         * item rather than a Settings page: new drafts appear on their own
-         * schedule, same reasoning as Targets living outside Settings.
-         * The connected account itself lives in Settings -> the account
-         * is organization-scoped config, set once, not reread on a
-         * schedule the way this queue is.
-         */
-        Route::prefix('linkedin')->name('linkedin.')->group(function (): void {
-            Route::get('posts', [LinkedinPostController::class, 'index'])->name('posts.index');
-            /*
-             * Literal segment before {linkedin_post} below, or "cadence"
-             * would itself be read as a post id.
-             */
-            Route::put('posts/cadence', [LinkedinCadenceController::class, 'update'])
-                ->name('posts.cadence');
-            Route::put('posts/{linkedin_post}', [LinkedinPostController::class, 'update'])
-                ->name('posts.update');
-            Route::post('posts/{linkedin_post}/approve', [LinkedinPostController::class, 'approve'])
-                ->name('posts.approve');
-            Route::delete('posts/{linkedin_post}', [LinkedinPostController::class, 'destroy'])
-                ->name('posts.destroy');
-
-            /*
-             * Reached from LinkedIn itself, not from a link in the app:
-             * the redirect_uri given at authorize time. Not a settings
-             * page a user navigates to, so it stays outside that prefix.
-             */
-            Route::get('oauth/callback', [LinkedinOAuthController::class, 'callback'])
-                ->name('oauth.callback');
         });
 
         /*
@@ -489,10 +433,6 @@ Route::middleware(['auth', 'verified', 'project.set'])->group(function (): void 
         Route::put('provider', [ProviderController::class, 'update'])->name('provider.update');
         Route::delete('provider/{provider}', [ProviderController::class, 'destroy'])->name('provider.destroy');
         Route::post('provider/{provider}/test', [ProviderTestController::class, 'store'])->name('provider.test');
-
-        Route::get('linkedin', [LinkedinCredentialsController::class, 'edit'])->name('linkedin.edit');
-        Route::put('linkedin', [LinkedinCredentialsController::class, 'update'])->name('linkedin.update');
-        Route::delete('linkedin', [LinkedinCredentialsController::class, 'destroy'])->name('linkedin.destroy');
 
         Route::get('agents', [AgentController::class, 'index'])->name('agents.index');
         /*

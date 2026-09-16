@@ -7,7 +7,6 @@ import ChatToggleButton from '@/components/chat/ChatToggleButton.vue'
 import { dashboard, inbox, logout } from '@/routes'
 import campaigns from '@/routes/campaigns'
 import companies from '@/routes/companies'
-import linkedinPosts from '@/routes/linkedin/posts'
 import { profile } from '@/routes/account'
 import { update as switchProject } from '@/routes/current-project'
 import appSettings from '@/routes/app-settings/provider'
@@ -72,21 +71,10 @@ const items = computed<NavigationMenuItem[]>(() => [
             : undefined
     },
     {
-        label: 'Email Campaigns',
+        label: 'Campaigns',
         icon: 'i-lucide-send',
         to: campaigns.index.url(),
         active: isCurrent(campaigns.index.url())
-    },
-    {
-        label: 'LinkedIn',
-        // No brand icon available (only the `lucide` icon set is installed,
-        // and it carries no LinkedIn glyph): a generic one rather than a
-        // broken reference.
-        icon: 'i-lucide-share-2',
-        to: linkedinPosts.index.url(),
-        // Broad on purpose: covers both the posts queue and the account
-        // page, same reasoning as Settings' prefix check below.
-        active: page.url.startsWith('/app/linkedin')
     },
     {
         label: 'Inbox',

@@ -21,7 +21,6 @@ export default defineConfig({
                         { text: 'Statuses and the inbox', link: '/product/statuses' },
                         { text: 'The timeline', link: '/product/timeline' },
                         { text: 'Chatting with Evie', link: '/product/evie' },
-                        { text: 'Posting to LinkedIn', link: '/product/linkedin' },
                     ],
                 },
             ],

@@ -4,7 +4,8 @@
 >
     <x-marketing-legal
         heading="Data retention"
-        meta="Last updated: 14/09/2026 · Periods below are Eveil's own policy, not a third-party standard"
+        meta="Last updated: [publication date] · Periods below are Eveil's own policy, not a third-party standard"
+        notice="Draft. The periods and mechanics below are accurate to the current codebase. Confirm the enforcement status in section 2 before publishing, and fill in the closed-account row once that policy is decided."
     >
         <x-slot:toc>
             <a href="#defaults" style="color:rgba(232,236,242,.7);font-size:14px">1. Default periods</a>

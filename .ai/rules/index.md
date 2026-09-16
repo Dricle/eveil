@@ -16,7 +16,6 @@ Before planning or editing, find the row whose globs match the file's path and r
 | deploy/** | .ai/rules/deploy.md |
 | app/Services/Discovery/** | .ai/rules/discovery.md |
 | **, composer.json, README.md | .ai/rules/general.md |
-| app/Ai/Agents/LinkedinPostWriter.php,app/Services/Linkedin/**,app/Models/LinkedinAccount.php,app/Models/LinkedinPost.php,app/Http/Controllers/Linkedin*.php | .ai/rules/http-controllers.md |
 | app/Jobs/Discovery/** | .ai/rules/jobs-discovery.md |
 | app/Jobs/** | .ai/rules/jobs.md |
 | resources/js/** | .ai/rules/js.md |

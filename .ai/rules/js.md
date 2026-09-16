@@ -5,15 +5,12 @@ paths:
 
 # Js
 
-## Sidebar follows the pipeline; a new top-level entry is a deliberate call, not a default
-The main nav follows the order work flows, not the data model: Dashboard (the run feed - what the app is doing now), Targets (profiles + discovery runs), Leads (companies with fit score, contacts, emails), Email Campaigns (sequences, sending, caps), LinkedIn (the post approval queue only - the connected account lives in Settings, see below), Inbox (replies, auto-pause), Settings (project/organization config).
+## Sidebar is the pipeline, and it stops at five entries
+The main nav follows the order work flows, not the data model: Dashboard (the run feed. What the app is doing now), Targets (profiles + discovery runs), Leads (companies with fit score, contacts, emails), Campaigns (sequences, sending, caps), Inbox (replies, auto-pause). Account and Settings hang off the user menu at the bottom.
 
-Most new screens are a tab or a drill-down inside an existing entry, never a line of their own: CSV import is a button on Leads, the lead sheet is a drill-down, the sequence editor is inside Email Campaigns. LinkedIn's post queue is the one deliberate exception, added on the user's explicit instruction: it rereads on its own schedule (new drafts appear on their own), which is exactly the "belongs in the nav, not Settings" case below - a call for the project owner to make each time, not a precedent to reach for by default. The LinkedIn ACCOUNT (connect, grant to projects, posting cadence) is the opposite case: set once, so it stayed in Settings rather than following the queue out.
+Every other screen is a tab or a drill-down inside one of those five: never a sixth line. CSV import is a button on Leads, the lead sheet is a drill-down, the sequence editor is inside Campaigns.
 
-Settings holds only what you set once and forget: project name/URL, the knowledge base, mailboxes, the LinkedIn account, suppression and retention. Anything reread before each run belongs in the nav: that is why target profiles moved out of `/app/settings/`, and why the LinkedIn post queue never moved in. Instance settings (AI models, host registry, registration) are a separate superadmin section, never mixed into project settings; organization members and billing are a third scope again.
-
-## Settings splits into a Project group and an Organization group
-`SettingsLayout.vue`'s aside renders two labelled `UNavigationMenu` blocks rather than one flat list: Project (Project, Project knowledge - never shared with another product) and Organization (Organization, Mailboxes, LinkedIn, Members, Billing - things one organization's several products can share, or that describe the organization itself). A new settings page picks its group by that test: would a second project in the same organization see the same value, or its own?
+Settings holds only what you set once and forget: project name/URL, the knowledge base, mailboxes, suppression and retention. Anything reread before each run belongs in the nav: that is why target profiles moved out of `/app/settings/`. Instance settings (AI models, host registry, registration) are a separate superadmin section, never mixed into project settings; organization members and billing are a third scope again.
 
 ## The app bar stays empty, and sections navigate in their own content
 `AppLayout`'s header bar holds the sidebar toggle and nothing else. It is reserved for app-wide things still to come: a search field, a notification bell, so no page or layout puts a title, tabs or actions in the `#header` slot. Section navigation and page titles live in the content area (`<h2>`, a `UNavigationMenu` at the top of the panel, or an aside).
@@ -67,8 +64,3 @@ Every screen has been swept: `OpenQuestions.vue`, `settings/KnowledgeBase.vue`, 
 
 ## Action buttons show a loading state and a success toast
 Any button that triggers a write (`router.post/put/delete`, a `Form` submit, a bulk action) must: (1) show a loading state while in flight — `:loading="processing"` from `Form`'s slot, or a local `ref` flipped around a manual `router.*` call; a button with no feedback reads as broken on a slow request. (2) surface success via a toast (`useToast().add(...)`) rather than relying on the page silently re-rendering — a redirect-back with no visible change is easy to miss, especially on a bulk or background-feeling action. `back()`-style requests that only mutate state the user can already see on screen (e.g. a status select that repaints its own row) are the one exception; anything else gets both.
-
-## A link to a real (non-Inertia) redirect needs `external` on the button/link
-`ui({ router: 'inertia' })` makes Nuxt UI's `ULink` (what `UButton`'s `:href`/`:to` renders through) intercept clicks and issue an Inertia visit by default. Fine for a page inside this app; wrong for a route whose whole point is a real 302 to somewhere else - LinkedIn's OAuth authorize screen, Stripe's billing portal. An Inertia visit there gets treated as a partial reload and never actually navigates the browser.
-
-Fix: pass `external` on the `UButton`/`ULink`, forcing a plain `<a href>` and a full page navigation. `settings/OrganizationBilling.vue`'s Stripe portal button is the original example; `linkedin/Account.vue`'s "Connect a LinkedIn account" button is the second. Any future button whose target is an external OAuth flow or a hosted redirect (not an Inertia page in this app) needs the same `external` prop, or the click silently does nothing useful.

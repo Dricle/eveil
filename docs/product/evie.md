@@ -16,12 +16,6 @@ Want to explore a genuinely different angle on a profile that already has result
 
 Shipped something new? Tell Evie in chat. It reads the current knowledge base, agrees the wording with you, and updates it — the same portrait target profiles and sequences are derived from, corrected the way you'd correct it on the knowledge base settings screen. From there it can look for a target profile the feature opens up that isn't covered yet, and flag an existing draft sequence worth mentioning it in.
 
-## Drafting a LinkedIn post
-
-Tell Evie about something worth posting about — a feature you just shipped, a topic you want covered — and it writes a draft straight into your [LinkedIn posts queue](/product/linkedin) for review. It never posts on its own: the same approve/reject step applies whatever the source, so publishing still happens from that screen.
-
-Asking it to change something already there ("update the post about the pricing change", "make that draft shorter") edits that same draft in place rather than writing a new one — it checks the queue first when it's not obvious which post you mean. Only a post still awaiting approval can be edited this way; once approved, rejected or published, Evie refuses, same as the queue's own edit button disappearing at that point.
-
 ## Managing target profiles from chat
 
 Evie can list, read, create, correct and delete target profiles — the same segments you'd otherwise manage from the Targets screen. Already know the segment you want? Tell it directly ("also target dental clinics under 10 people") rather than asking it to work one out from the knowledge base. Deleting one takes its discovery run history with it and cannot be undone, so it stops for your approval first, same as starting a real discovery run.

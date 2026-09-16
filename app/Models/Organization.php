@@ -73,14 +73,6 @@ class Organization extends Model
         return $this->hasMany(EmailAccount::class);
     }
 
-    /**
-     * @return HasMany<LinkedinAccount, $this>
-     */
-    public function linkedinAccounts(): HasMany
-    {
-        return $this->hasMany(LinkedinAccount::class);
-    }
-
     public function roleOf(User $user): ?OrganizationRole
     {
         $role = $this->users()->whereKey($user->getKey())->first()?->getAttribute('pivot')?->role;

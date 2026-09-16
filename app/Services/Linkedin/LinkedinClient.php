@@ -20,7 +20,7 @@ use RuntimeException;
  */
 class LinkedinClient
 {
-    private const API_VERSION = '202509';
+    private const API_VERSION = '202608';
 
     public function __construct(private LinkedinCredentials $credentials) {}
 

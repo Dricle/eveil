@@ -8,7 +8,6 @@ use App\Models\Campaign;
 use App\Models\EmailExample;
 use App\Models\Project;
 use App\Models\TargetProfile;
-use Laravel\Ai\Responses\StructuredAgentResponse;
 use RuntimeException;
 
 /**
@@ -31,7 +30,7 @@ class GenerateSequence
             );
         }
 
-        $agent = new SequenceWriter($project);
+        $agent = new SequenceWriter($project, $targetProfile, EmailExample::promptDigest());
 
         // The caller already opened a run row when it queued this: report into
         // it instead of leaving a `pending` row behind next to a second one.
@@ -39,8 +38,7 @@ class GenerateSequence
             $agent->recordInto($run);
         }
 
-        /** @var StructuredAgentResponse $response */
-        $response = $agent->prompt($this->prompt($project, $targetProfile));
+        $response = $agent->write();
 
         /** @var array<int, array<string, mixed>> $steps */
         $steps = $response->structured['steps'] ?? [];
@@ -50,24 +48,5 @@ class GenerateSequence
         }
 
         return $this->store->handle($project, $targetProfile, (string) ($response->structured['name'] ?? ''), $steps);
-    }
-
-    private function prompt(Project $project, TargetProfile $targetProfile): string
-    {
-        $portrait = json_encode(
-            $project->knowledge_base,
-            JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
-        );
-
-        $criteria = json_encode(
-            $targetProfile->criteria,
-            JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
-        );
-
-        $examples = EmailExample::promptDigest();
-
-        return "Product: {$project->name} ({$project->url})\n\n{$portrait}\n\n"
-            ."Segment [{$targetProfile->name}], of kind {$targetProfile->type->value}:\n{$criteria}"
-            .($examples === '' ? '' : "\n\n---\n\n{$examples}");
     }
 }

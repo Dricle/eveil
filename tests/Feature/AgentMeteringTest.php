@@ -24,7 +24,7 @@ use RuntimeException;
  */
 function analyst(): WebsiteAnalyst
 {
-    return new WebsiteAnalyst(Project::factory()->create());
+    return new WebsiteAnalyst(Project::factory()->create(), collect());
 }
 
 // One test below rebinds this to prove the refusal path; the binding is a
@@ -89,7 +89,7 @@ it('attaches the run to the project the agent acts for', function () {
     $project = Project::factory()->create();
     WebsiteAnalyst::fake([['what_it_does' => 'Widgets.']]);
 
-    (new WebsiteAnalyst($project))->prompt('Analyse this.');
+    (new WebsiteAnalyst($project, collect()))->prompt('Analyse this.');
 
     expect(AgentRun::sole()->project_id)->toBe($project->id);
 });

@@ -10,7 +10,6 @@ use App\Models\EmailExample;
 use App\Models\Lead;
 use App\Models\StepVariant;
 use Illuminate\Support\Collection;
-use Laravel\Ai\Responses\StructuredAgentResponse;
 use RuntimeException;
 
 /**
@@ -40,14 +39,21 @@ class PersonalizeMessage
             throw new RuntimeException('This step has no mail to personalise.');
         }
 
-        $agent = new MessagePersonalizer($step->campaign->project);
+        $agent = new MessagePersonalizer(
+            $step->campaign->project,
+            $step,
+            $lead,
+            $variant->subject,
+            $variant->body,
+            $this->fitReason($step, $lead),
+            EmailExample::promptDigest(),
+        );
 
         if ($run !== null) {
             $agent->recordInto($run);
         }
 
-        /** @var StructuredAgentResponse $response */
-        $response = $agent->prompt($this->prompt($step, $lead, $variant->subject, $variant->body));
+        $response = $agent->personalize();
 
         return [
             'subject' => (string) ($response->structured['subject'] ?? $variant->subject),
@@ -86,51 +92,6 @@ class PersonalizeMessage
         }
 
         return $variants->last();
-    }
-
-    private function prompt(CampaignStep $step, Lead $lead, string $subject, string $body): string
-    {
-        $company = $lead->company;
-        $campaign = $step->campaign;
-
-        // The project's own language, same one the sequence was drafted in:
-        // never the lead's or the company's, which only says what language
-        // THEIR site happens to be in, not what language the sender writes in.
-        $language = $campaign->project->default_language;
-
-        $context = [
-            'product' => $campaign->project->knowledge_base,
-            // Enough to work out WHO is being written to, without deciding it
-            // here: a shared mailbox and a named person want different mails,
-            // and the address itself is half the evidence.
-            'recipient' => array_filter([
-                'first_name' => $lead->first_name,
-                'title' => $lead->title,
-                'address_local_part' => $lead->email === null
-                    ? null
-                    : mb_strstr($lead->email, '@', before_needle: true),
-                'address_came_from' => $lead->email_source?->value,
-            ]),
-            'company' => $company === null ? null : array_filter([
-                'name' => $company->name,
-                'industry' => $company->industry,
-                'size' => $company->size,
-                'location' => $company->location,
-                'website' => $company->website,
-                'facts' => $company->facts,
-            ]),
-            // What convinced the qualifier this company was worth writing to,
-            // in its own words. This is the opener's raw material.
-            'why_this_company' => $this->fitReason($step, $lead),
-            'language' => $language ?? 'the language the product knowledge base is written in',
-            'step_intent' => $step->config['intent'] ?? null,
-        ];
-
-        $json = (string) json_encode($context, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        $examples = EmailExample::promptDigest();
-
-        return "Step to rewrite:\nSubject: {$subject}\n\n{$body}\n\n---\n\nWho it is going to:\n{$json}"
-            .($examples === '' ? '' : "\n\n---\n\n{$examples}");
     }
 
     /**

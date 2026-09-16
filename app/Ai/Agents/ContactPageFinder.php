@@ -2,8 +2,11 @@
 
 namespace App\Ai\Agents;
 
+use App\Models\Project;
+use App\Support\ParsedPage;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\HasStructuredOutput;
+use Laravel\Ai\Responses\StructuredAgentResponse;
 use Stringable;
 
 /**
@@ -20,6 +23,11 @@ use Stringable;
  */
 class ContactPageFinder extends EveilAgent implements HasStructuredOutput
 {
+    public function __construct(Project $project, private ParsedPage $home)
+    {
+        parent::__construct($project);
+    }
+
     public static function smallModelSufficient(): bool
     {
         return true;
@@ -58,5 +66,18 @@ class ContactPageFinder extends EveilAgent implements HasStructuredOutput
                 'why' => $schema->string()->description('A few words: what you expect to find there.')->required(),
             ]))->description('Empty when the site links to nothing of the sort.')->required(),
         ];
+    }
+
+    public function find(): StructuredAgentResponse
+    {
+        /** @var StructuredAgentResponse $response */
+        $response = $this->prompt($this->buildPrompt());
+
+        return $response;
+    }
+
+    private function buildPrompt(): string
+    {
+        return "Home page: {$this->home->url}\n\n".mb_substr($this->home->text, 0, 12_000);
     }
 }

@@ -145,9 +145,7 @@ class PathHints
         }
 
         try {
-            $response = (new ContactPageFinder($project))->prompt(
-                "Home page: {$home->url}\n\n".mb_substr($home->text, 0, 12_000),
-            );
+            $response = (new ContactPageFinder($project, $home))->find();
         } catch (Throwable) {
             // A site we cannot read must not cost the run everything else.
             return new Collection;

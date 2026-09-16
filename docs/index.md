@@ -18,6 +18,8 @@ features:
     details: Sequencer with AI personalisation, deliverability, and a unified inbox.
   - title: Zero-config targeting
     details: Give a product URL and Eveil derives target profiles and finds leads.
+  - title: LinkedIn posting too
+    details: Evidence-driven personal-profile posts, queued for your approval. Not just B2B outreach - works for anyone building an online presence.
   - title: Self-hosted or cloud
     details: One codebase, AGPL-3.0. Unlimited mailboxes at no cost, or run managed on eveil.cloud.
 ---

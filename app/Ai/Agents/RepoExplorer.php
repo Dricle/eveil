@@ -4,6 +4,7 @@ namespace App\Ai\Agents;
 
 use App\Ai\Tools\ListRepoPaths;
 use App\Ai\Tools\ReadRepoFile;
+use App\Models\CodeRepository;
 use App\Models\Project;
 use App\Services\RepoReader;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -11,6 +12,7 @@ use Illuminate\Support\Collection;
 use Laravel\Ai\Attributes\MaxSteps;
 use Laravel\Ai\Contracts\HasStructuredOutput;
 use Laravel\Ai\Contracts\HasTools;
+use Laravel\Ai\Responses\StructuredAgentResponse;
 use Stringable;
 
 /**
@@ -28,11 +30,20 @@ use Stringable;
 class RepoExplorer extends EveilAgent implements HasStructuredOutput, HasTools
 {
     /**
+     * How much of the path list is dumped straight into the prompt. Capped
+     * for a large monorepo's sake, not the agent's own view of the repo -
+     * `ListRepoPaths` still holds every path regardless, this only bounds
+     * what is spent showing them all upfront.
+     */
+    private const MAX_PATH_LIST_CHARS = 20_000;
+
+    /**
      * @param  Collection<int, string>  $paths  every path in the repo,
      *                                          fetched once so navigating never costs another GitHub call
      */
     public function __construct(
         Project $project,
+        private CodeRepository $codeRepository,
         private RepoReader $reader,
         private string $owner,
         private string $repo,
@@ -73,7 +84,7 @@ class RepoExplorer extends EveilAgent implements HasStructuredOutput, HasTools
 
         Work only from what you read. Where something is missing or thin, say
         so rather than inventing what a project like this "probably" has.
-        PROMPT.$this->projectInstructions();
+        PROMPT;
     }
 
     /**
@@ -120,5 +131,32 @@ class RepoExplorer extends EveilAgent implements HasStructuredOutput, HasTools
                 ->description('Every file path you actually opened with the read tool, in the order you read them.')
                 ->required(),
         ];
+    }
+
+    public function explore(): StructuredAgentResponse
+    {
+        /** @var StructuredAgentResponse $response */
+        $response = $this->prompt($this->buildPrompt());
+
+        return $response;
+    }
+
+    /**
+     * The repo's own path list, so the model knows what exists before it
+     * asks to look inside anything. Paths only, no content: that is what the
+     * tools are for. Truncated for a large repo; `ListRepoPaths` still sees
+     * every path regardless, so nothing here is actually out of reach.
+     */
+    private function buildPrompt(): string
+    {
+        $full = $this->paths->implode("\n");
+        $list = mb_substr($full, 0, self::MAX_PATH_LIST_CHARS);
+        $note = mb_strlen($full) > mb_strlen($list)
+            ? "This repository is large; the list below is truncated. Use the directory-listing tool to see what is not shown here.\n\n"
+            : '';
+
+        return "Repository {$this->codeRepository->name} ({$this->codeRepository->url}).\n\n"
+            .$note
+            ."Every file path in this repository:\n\n{$list}";
     }
 }

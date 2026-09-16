@@ -2,8 +2,12 @@
 
 namespace App\Ai\Agents;
 
+use App\Models\CampaignStep;
+use App\Models\Lead;
+use App\Models\Project;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\HasStructuredOutput;
+use Laravel\Ai\Responses\StructuredAgentResponse;
 use Stringable;
 
 /**
@@ -17,6 +21,26 @@ use Stringable;
  */
 class MessagePersonalizer extends EveilAgent implements HasStructuredOutput
 {
+    /**
+     * @param  string|null  $fitReason  What convinced the qualifier this company was
+     *                                  worth writing to, in its own words - the caller's
+     *                                  job to resolve (`CompanyTargetEvaluation`), since
+     *                                  it is a business decision about which evaluation
+     *                                  wins, not this class's to make.
+     * @param  string  $examples  `EmailExample::promptDigest()`, gathered by the caller.
+     */
+    public function __construct(
+        Project $project,
+        private CampaignStep $step,
+        private Lead $lead,
+        private string $subject,
+        private string $body,
+        private ?string $fitReason,
+        private string $examples,
+    ) {
+        parent::__construct($project);
+    }
+
     /**
      * A model that drops the schema here sends an empty subject to a real
      * person from the user's own mailbox.
@@ -63,7 +87,7 @@ class MessagePersonalizer extends EveilAgent implements HasStructuredOutput
         like, is a shared mailbox: several people read it, so a mail that opens as
         though it found one particular person reads as a mail merge to every one of
         them. Write to the business.
-        PROMPT.$this->projectInstructions();
+        PROMPT.$this->emailWritingInstructions();
     }
 
     /**
@@ -80,5 +104,57 @@ class MessagePersonalizer extends EveilAgent implements HasStructuredOutput
                 ->description('The mail as plain text, opening on something specific to this company.')
                 ->required(),
         ];
+    }
+
+    public function personalize(): StructuredAgentResponse
+    {
+        /** @var StructuredAgentResponse $response */
+        $response = $this->prompt($this->buildPrompt());
+
+        return $response;
+    }
+
+    private function buildPrompt(): string
+    {
+        $company = $this->lead->company;
+        $campaign = $this->step->campaign;
+
+        // The project's own language, same one the sequence was drafted in:
+        // never the lead's or the company's, which only says what language
+        // THEIR site happens to be in, not what language the sender writes in.
+        $language = $campaign->project->default_language;
+
+        $context = [
+            'product' => $campaign->project->knowledge_base,
+            // Enough to work out WHO is being written to, without deciding it
+            // here: a shared mailbox and a named person want different mails,
+            // and the address itself is half the evidence.
+            'recipient' => array_filter([
+                'first_name' => $this->lead->first_name,
+                'title' => $this->lead->title,
+                'address_local_part' => $this->lead->email === null
+                    ? null
+                    : mb_strstr($this->lead->email, '@', before_needle: true),
+                'address_came_from' => $this->lead->email_source?->value,
+            ]),
+            'company' => $company === null ? null : array_filter([
+                'name' => $company->name,
+                'industry' => $company->industry,
+                'size' => $company->size,
+                'location' => $company->location,
+                'website' => $company->website,
+                'facts' => $company->facts,
+            ]),
+            // What convinced the qualifier this company was worth writing to,
+            // in its own words. This is the opener's raw material.
+            'why_this_company' => $this->fitReason,
+            'language' => $language ?? 'the language the product knowledge base is written in',
+            'step_intent' => $this->step->config['intent'] ?? null,
+        ];
+
+        $json = (string) json_encode($context, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        return "Step to rewrite:\nSubject: {$this->subject}\n\n{$this->body}\n\n---\n\nWho it is going to:\n{$json}"
+            .($this->examples === '' ? '' : "\n\n---\n\n{$this->examples}");
     }
 }

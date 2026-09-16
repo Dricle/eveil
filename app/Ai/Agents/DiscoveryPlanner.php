@@ -2,8 +2,15 @@
 
 namespace App\Ai\Agents;
 
+use App\Enums\DiscoveryTaskKind;
+use App\Models\DiscoveryRun;
+use App\Models\DiscoveryTask;
+use App\Models\Project;
+use App\Models\TargetProfile;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Support\Collection;
 use Laravel\Ai\Contracts\HasStructuredOutput;
+use Laravel\Ai\Responses\StructuredAgentResponse;
 use Stringable;
 
 /**
@@ -15,6 +22,40 @@ use Stringable;
  */
 class DiscoveryPlanner extends EveilAgent implements HasStructuredOutput
 {
+    /**
+     * @param  int  $maxProbes  What the run's budget allows, map probes and web
+     *                          queries counted together. Told to the model
+     *                          rather than trimmed afterwards: a planner that
+     *                          knows it has twelve spends twelve on the best
+     *                          areas, where trimming a plan of eighty throws
+     *                          away whichever ones it happened to list last.
+     * @param  string|null  $guidance  A steer the user gave THIS run through Evie,
+     *                                 on top of the profile's own criteria - never
+     *                                 folded into the profile itself, since it is a
+     *                                 one-run request, not a standing fact about
+     *                                 who the profile targets.
+     * @param  bool  $isPivot  True when the FIRST wave of this same run found
+     *                         nothing at all and this is its one automatic
+     *                         do-over (`DiscoveryRun::pivotSource()`): told
+     *                         plainly, so the model reaches for a genuinely
+     *                         different source instead of repeating itself.
+     * @param  Collection<int, DiscoveryRun>  $history  earlier finished runs for this
+     *                                                  same profile, oldest first, tasks
+     *                                                  eager-loaded - what the planner
+     *                                                  reads to avoid repeating ground
+     *                                                  already covered
+     */
+    public function __construct(
+        Project $project,
+        private TargetProfile $targetProfile,
+        private int $maxProbes,
+        private ?string $guidance,
+        private bool $isPivot,
+        private Collection $history,
+    ) {
+        parent::__construct($project);
+    }
+
     public function instructions(): Stringable|string
     {
         return <<<'PROMPT'
@@ -145,5 +186,171 @@ class DiscoveryPlanner extends EveilAgent implements HasStructuredOutput
                 'why' => $schema->string()->description('What this probe is expected to surface.')->required(),
             ]))->description('Empty unless a legal-entity registry search genuinely fits the profile.')->required(),
         ];
+    }
+
+    /**
+     * @return array{explanation: ?string, probes: array<int, array{source: string, probe: array<string, mixed>}>}
+     */
+    public function plan(): array
+    {
+        /** @var StructuredAgentResponse $response */
+        $response = $this->prompt($this->buildPrompt());
+
+        return [
+            'explanation' => $response->structured['plan'] ?? null,
+            'probes' => $this->probes($response->structured),
+        ];
+    }
+
+    private function buildPrompt(): string
+    {
+        return "This run may make at most {$this->maxProbes} probes in total.\n\n"
+            ."Target profile [{$this->targetProfile->name}]:\n\n".json_encode(
+                $this->targetProfile->criteria,
+                JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
+            )
+            .$this->historyText()
+            .($this->guidance === null || $this->guidance === '' ? '' : "\n\nThe user asked specifically, for this run only: {$this->guidance}")
+            .($this->isPivot ? "\n\nThe first attempt in THIS run just found nothing at all worth qualifying. "
+                .'Reach for a genuinely different source or approach with the probes left below - not a '
+                .'variation on what was just tried, that source or angle did not work.' : '');
+    }
+
+    /**
+     * What earlier runs for this same profile already tried, and how it
+     * went - so the planner keeps expanding coverage instead of repeating a
+     * query that already came up empty, or a source that keeps coming back
+     * blocked.
+     */
+    private function historyText(): string
+    {
+        if ($this->history->isEmpty()) {
+            return '';
+        }
+
+        $summaries = $this->history->map(function (DiscoveryRun $run): string {
+            $probes = $run->tasks
+                ->where('kind', DiscoveryTaskKind::Probe)
+                ->map(fn (DiscoveryTask $task): ?string => $this->describeProbe($task->payload))
+                ->filter()
+                ->implode('; ');
+
+            $failures = array_unique([
+                ...$run->stats['source_failures'] ?? [],
+                ...$run->stats['candidate_failures'] ?? [],
+            ]);
+
+            return "- Tried: {$probes}\n"
+                ."  Result: {$run->candidates_found} candidate(s), {$run->qualified_count} qualified."
+                .($failures === [] ? '' : ' Failed or blocked: '.implode('; ', $failures).'.');
+        });
+
+        return "\n\nEarlier runs for this profile, oldest first - do not repeat a query or area "
+            .'already tried here, prefer sources that are not blocked, and widen into genuinely '
+            .'new angles (a different area, phrasing, or source) rather than narrowing to the same '
+            ."few queries that already came up empty:\n"
+            .$summaries->implode("\n");
+    }
+
+    /**
+     * @param  array<string, mixed>  $tags
+     */
+    private function describeTags(array $tags): string
+    {
+        $pairs = [];
+
+        foreach ($tags as $key => $value) {
+            $pairs[] = "{$key}={$value}";
+        }
+
+        return implode(',', $pairs);
+    }
+
+    /**
+     * @param  array{source?: string, probe?: array<string, mixed>}|null  $payload
+     */
+    private function describeProbe(?array $payload): ?string
+    {
+        return match ($payload['source'] ?? null) {
+            'overpass' => 'map: '.($payload['probe']['area'] ?? '?').' ('
+                .$this->describeTags($payload['probe']['tags'] ?? [])
+                .')',
+            'web_search' => 'web: "'.($payload['probe']['query'] ?? '').'"',
+            'degoog' => 'web (degoog): "'.($payload['probe']['query'] ?? '').'"',
+            'registry' => 'registry: "'.($payload['probe']['query'] ?? '').'" ('
+                .($payload['probe']['jurisdiction'] ?? '?').')',
+            default => null,
+        };
+    }
+
+    /**
+     * Interleaved, one source then the other, because `max_queries` is spent in
+     * order: run every map probe first and a rate-limited or dead map service
+     * takes the entire budget with it, so the web queries the plan asked for
+     * never run and the run reports an empty market it never looked at.
+     *
+     * @param  array<string, mixed>  $plan
+     * @return array<int, array{source: string, probe: array<string, mixed>}>
+     */
+    private function probes(array $plan): array
+    {
+        $overpass = [];
+        $web = [];
+        $registry = [];
+
+        foreach ($plan['overpass_probes'] ?? [] as $probe) {
+            $tags = [];
+
+            foreach ($probe['tags'] ?? [] as $tag) {
+                if (isset($tag['key'], $tag['value'])) {
+                    $tags[(string) $tag['key']] = (string) $tag['value'];
+                }
+            }
+
+            $overpass[] = ['source' => 'overpass', 'probe' => [
+                'area' => $probe['area'] ?? '',
+                'country' => $probe['country'] ?? '',
+                'tags' => $tags,
+            ]];
+        }
+
+        foreach ($plan['web_queries'] ?? [] as $query) {
+            $probe = [
+                'query' => $query['query'] ?? '',
+                'language' => $query['language'] ?? 'auto',
+            ];
+
+            // Both web sources run every query (issue #27): a meta-search
+            // instance returning nothing is normal under upstream rate
+            // limiting, so degoog is a cross-check rather than an
+            // alternative. Two entries here means two `RunProbe` tasks, each
+            // claiming its own `max_queries` slot; the existing domain-dedupe
+            // in `queueQualifications()` collapses whatever overlap the two
+            // sources find.
+            $web[] = ['source' => 'web_search', 'probe' => $probe];
+            $web[] = ['source' => 'degoog', 'probe' => $probe];
+        }
+
+        foreach ($plan['registry_probes'] ?? [] as $probe) {
+            $registry[] = ['source' => 'registry', 'probe' => [
+                'query' => $probe['query'] ?? '',
+                'jurisdiction' => $probe['jurisdiction'] ?? '',
+            ]];
+        }
+
+        $probes = [];
+
+        $rounds = max(count($overpass), count($plan['web_queries'] ?? []), count($registry));
+
+        for ($i = 0; $i < $rounds; $i++) {
+            $probes = array_merge($probes, array_filter([
+                $overpass[$i] ?? null,
+                $web[$i * 2] ?? null,
+                $web[$i * 2 + 1] ?? null,
+                $registry[$i] ?? null,
+            ]));
+        }
+
+        return $probes;
     }
 }

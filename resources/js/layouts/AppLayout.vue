@@ -7,6 +7,7 @@ import ChatToggleButton from '@/components/chat/ChatToggleButton.vue'
 import { dashboard, inbox, logout } from '@/routes'
 import campaigns from '@/routes/campaigns'
 import companies from '@/routes/companies'
+import linkedinPosts from '@/routes/linkedin/posts'
 import { profile } from '@/routes/account'
 import { update as switchProject } from '@/routes/current-project'
 import appSettings from '@/routes/app-settings/provider'
@@ -53,38 +54,61 @@ const items = computed<NavigationMenuItem[]>(() => [
         active: page.url === dashboard.url().replace(/^https?:\/\/[^/]+/, '')
     },
     {
-        label: 'Targets',
-        icon: 'i-lucide-crosshair',
-        to: targets.index.url(),
-        active: isCurrent(targets.index.url()) || page.url.startsWith('/app/discovery-runs'),
-        badge: navCounts.value?.targets
-            ? { label: navCounts.value.targets, color: 'neutral', variant: 'ghost' }
+        label: 'Email',
+        icon: 'i-lucide-mail',
+        defaultOpen: true,
+        children: [
+            {
+                label: 'Targets',
+                icon: 'i-lucide-crosshair',
+                to: targets.index.url(),
+                active: isCurrent(targets.index.url()) || page.url.startsWith('/app/discovery-runs'),
+                badge: navCounts.value?.targets
+                    ? { label: navCounts.value.targets, color: 'neutral', variant: 'ghost' }
+                    : undefined
+            },
+            {
+                label: 'Leads',
+                icon: 'i-lucide-building-2',
+                to: companies.index.url(),
+                active: isCurrent(companies.index.url()),
+                badge: navCounts.value?.leads
+                    ? { label: navCounts.value.leads, color: 'neutral', variant: 'ghost' }
+                    : undefined
+            },
+            {
+                label: 'Campaigns',
+                icon: 'i-lucide-send',
+                to: campaigns.index.url(),
+                active: isCurrent(campaigns.index.url())
+            },
+            {
+                label: 'Inbox',
+                icon: 'i-lucide-inbox',
+                to: inbox.url(),
+                active: isCurrent(inbox.url()),
+                badge: navCounts.value?.inbox
+                    ? { label: navCounts.value.inbox, color: 'primary', variant: 'solid' }
+                    : undefined
+            }
+        ]
+    },
+
+    {
+        label: 'LinkedIn',
+        // No brand icon available (only the `lucide` icon set is installed,
+        // and it carries no LinkedIn glyph): a generic one rather than a
+        // broken reference.
+        icon: 'i-lucide-share-2',
+        to: linkedinPosts.index.url(),
+        // Broad on purpose: covers both the posts queue and the account
+        // page, same reasoning as Settings' prefix check below.
+        active: page.url.startsWith('/app/linkedin'),
+        badge: navCounts.value?.linkedin
+            ? { label: navCounts.value.linkedin, color: 'primary', variant: 'solid' }
             : undefined
     },
-    {
-        label: 'Leads',
-        icon: 'i-lucide-building-2',
-        to: companies.index.url(),
-        active: isCurrent(companies.index.url()),
-        badge: navCounts.value?.leads
-            ? { label: navCounts.value.leads, color: 'neutral', variant: 'ghost' }
-            : undefined
-    },
-    {
-        label: 'Campaigns',
-        icon: 'i-lucide-send',
-        to: campaigns.index.url(),
-        active: isCurrent(campaigns.index.url())
-    },
-    {
-        label: 'Inbox',
-        icon: 'i-lucide-inbox',
-        to: inbox.url(),
-        active: isCurrent(inbox.url()),
-        badge: navCounts.value?.inbox
-            ? { label: navCounts.value.inbox, color: 'primary', variant: 'solid' }
-            : undefined
-    },
+
     {
         label: 'Settings',
         icon: 'i-lucide-settings',

@@ -51,7 +51,7 @@ it('charges the balance only after a successful call, never on a thrown one', fu
         ),
     ]);
 
-    (new WebsiteAnalyst($project))->prompt('Analyse this.');
+    (new WebsiteAnalyst($project, collect()))->prompt('Analyse this.');
 
     expect($organization->fresh()->credits_balance)->toBe(800)
         ->and(CreditTransaction::sole())
@@ -67,7 +67,7 @@ it('never charges when the provider throws', function () {
 
     WebsiteAnalyst::fake(fn () => throw new RuntimeException('provider exploded'));
 
-    expect(fn () => (new WebsiteAnalyst($project))->prompt('Analyse this.'))->toThrow(RuntimeException::class);
+    expect(fn () => (new WebsiteAnalyst($project, collect()))->prompt('Analyse this.'))->toThrow(RuntimeException::class);
 
     expect($organization->fresh()->credits_balance)->toBe(1000)
         ->and(CreditTransaction::count())->toBe(0);
@@ -79,7 +79,7 @@ it('refuses the call outright when the balance cannot cover the price', function
 
     WebsiteAnalyst::fake(fn () => throw new RuntimeException('the provider was called'));
 
-    expect(fn () => (new WebsiteAnalyst($project))->prompt('Analyse this.'))->toThrow(OutOfCredit::class);
+    expect(fn () => (new WebsiteAnalyst($project, collect()))->prompt('Analyse this.'))->toThrow(OutOfCredit::class);
 });
 
 it('debits atomically, never past what the organization actually holds', function () {
@@ -112,7 +112,7 @@ it('never charges the operator\'s own organization', function () {
         ),
     ]);
 
-    (new WebsiteAnalyst($project))->prompt('Analyse this.');
+    (new WebsiteAnalyst($project, collect()))->prompt('Analyse this.');
 
     expect($organization->fresh()->credits_balance)->toBe(1000)
         ->and(CreditTransaction::count())->toBe(0);
@@ -137,7 +137,7 @@ it('still charges an organization the superadmin only belongs to, not owns', fun
         ),
     ]);
 
-    (new WebsiteAnalyst($project))->prompt('Analyse this.');
+    (new WebsiteAnalyst($project, collect()))->prompt('Analyse this.');
 
     expect($organization->fresh()->credits_balance)->toBe(800);
 });
@@ -150,6 +150,6 @@ it('refuses with a clear message when nobody priced the agent', function () {
 
     WebsiteAnalyst::fake(fn () => throw new RuntimeException('the provider was called'));
 
-    expect(fn () => (new WebsiteAnalyst($project))->prompt('Analyse this.'))
+    expect(fn () => (new WebsiteAnalyst($project, collect()))->prompt('Analyse this.'))
         ->toThrow(OutOfCredit::class, 'No credit price is set');
 });

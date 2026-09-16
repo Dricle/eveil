@@ -4,8 +4,7 @@
 >
     <x-marketing-legal
         heading="Privacy policy"
-        meta="Last updated: [publication date] · Controller: DRICLE LLP (OC453390), 5 Brayford Square, London E1 0SG, United Kingdom"
-        notice="Draft. Written from the actual product and data model, but not reviewed by a lawyer. Confirm the supervisory authority and response deadlines against your jurisdiction before publishing."
+        meta="Last updated: 14/09/2026 · Controller: DRICLE LLP (OC453390), 5 Brayford Square, London E1 0SG, United Kingdom"
     >
         <x-slot:toc>
             <a href="#collect" style="color:rgba(232,236,242,.7);font-size:14px">1. What we collect</a>
@@ -19,7 +18,7 @@
 
         <h2 id="collect" class="legal-h2">1. What we collect</h2>
         <p class="legal-p" style="margin-bottom:14px">At signup we collect your name, email address, a hashed password, the organization name you give, and the projects and role you hold inside it. This is what an account is: nothing here is optional, and it exists to let you log in and to attribute actions to a person.</p>
-        <p class="legal-p">Using the product creates operational records tied to your organization: sending logs, credit ledger entries, and the input and output of each AI agent run (site analysis, target profile derivation, company qualification, contact extraction, sequence writing, reply handling). Agent run payloads, which can contain prospect names and email addresses, are treated as short lived: Eveil's policy is to clear them 90 days after the run. Agent run metrics (which model ran, how long, how many tokens, whether it succeeded) hold no personal data and are kept indefinitely, since they feed billing history. See <a href="{{ route('data-retention') }}">Data retention</a> for the full table and its current enforcement status.</p>
+        <p class="legal-p">Using the product creates operational records tied to your organization: sending logs, credit ledger entries, and the input and output of each AI agent run (site analysis, target profile derivation, company qualification, contact extraction, sequence writing, LinkedIn post drafting, reply handling). Agent run payloads, which can contain prospect names and email addresses, are treated as short lived: Eveil's policy is to clear them 90 days after the run. Agent run metrics (which model ran, how long, how many tokens, whether it succeeded) hold no personal data and are kept indefinitely, since they feed billing history. See <a href="{{ route('data-retention') }}">Data retention</a> for the full table and its current enforcement status.</p>
 
         <h2 id="prospects" class="legal-h2">2. Prospect data</h2>
         <p class="legal-p" style="margin-bottom:14px">Companies and contacts are found and read live at qualification time, over a bundled search engine and the company's own public pages. Nothing here is a purchased or scraped contact database. For the prospects you choose to contact, you (or your organization) are the data controller; Eveil processes that data on your instructions, as a processor, and the disclosure obligation toward the person contacted (for example under GDPR Article 14) sits with you.</p>
@@ -29,7 +28,7 @@
         <p class="legal-p">SMTP and IMAP credentials for the mailbox you connect are encrypted at rest with a dedicated encryption key, held separately from the key that protects sessions and cookies, so that rotating one never touches the other. Nobody at Eveil reads these credentials in the course of normal operation; they exist only for the application to send and read mail on your behalf. Message bodies fetched over IMAP are stored, not just their metadata, for the threads a campaign actually touches, so replies can be threaded and shown to you; they are cleared when the lead they belong to is erased.</p>
 
         <h2 id="ai" class="legal-h2">4. AI processing</h2>
-        <p class="legal-p" style="margin-bottom:14px">The hosted edition's agents currently run on Anthropic's Claude models. Site content, target profile drafts, company and contact information, and message drafts are sent to Anthropic's API to be processed and are subject to Anthropic's own commercial API terms, under which API inputs are not used to train their models by default. If that changes, or if we add or switch providers, this section will say so before it takes effect.</p>
+        <p class="legal-p" style="margin-bottom:14px">The hosted edition's agents currently run on Anthropic's Claude models. Site content, target profile drafts, company and contact information, message drafts, and LinkedIn post drafts are sent to Anthropic's API to be processed and are subject to Anthropic's own commercial API terms, under which API inputs are not used to train their models by default. If that changes, or if we add or switch providers, this section will say so before it takes effect.</p>
         <p class="legal-p">On a self-hosted instance, the operator supplies their own AI provider key and chooses the provider and model for each agent; nothing is sent to Eveil or to any provider we choose on the operator's behalf. Provider keys are encrypted at rest the same way mailbox credentials are.</p>
 
         <h2 id="subprocessors" class="legal-h2">5. Subprocessors</h2>
@@ -45,7 +44,7 @@
                 <tbody>
                     <tr><td style="padding:13px 16px;border-top:1px solid rgba(232,236,242,.08)">[Infrastructure host]</td><td style="padding:13px 16px;border-top:1px solid rgba(232,236,242,.08);color:rgba(232,236,242,.62)">Application hosting and backups</td><td style="padding:13px 16px;border-top:1px solid rgba(232,236,242,.08);color:rgba(232,236,242,.62)">[region]</td></tr>
                     <tr><td style="padding:13px 16px;border-top:1px solid rgba(232,236,242,.08)">Stripe</td><td style="padding:13px 16px;border-top:1px solid rgba(232,236,242,.08);color:rgba(232,236,242,.62)">Payments, invoices, and saved payment methods. Card details are held by Stripe; Eveil stores only a customer and payment method reference</td><td style="padding:13px 16px;border-top:1px solid rgba(232,236,242,.08);color:rgba(232,236,242,.62)">EU / US</td></tr>
-                    <tr><td style="padding:13px 16px;border-top:1px solid rgba(232,236,242,.08)">Anthropic</td><td style="padding:13px 16px;border-top:1px solid rgba(232,236,242,.08);color:rgba(232,236,242,.62)">AI agent inference (site analysis, targeting, writing, reply handling)</td><td style="padding:13px 16px;border-top:1px solid rgba(232,236,242,.08);color:rgba(232,236,242,.62)">US</td></tr>
+                    <tr><td style="padding:13px 16px;border-top:1px solid rgba(232,236,242,.08)">Anthropic</td><td style="padding:13px 16px;border-top:1px solid rgba(232,236,242,.08);color:rgba(232,236,242,.62)">AI agent inference (site analysis, targeting, writing, LinkedIn post drafting, reply handling)</td><td style="padding:13px 16px;border-top:1px solid rgba(232,236,242,.08);color:rgba(232,236,242,.62)">US</td></tr>
                 </tbody>
             </table>
         </div>

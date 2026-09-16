@@ -5,7 +5,6 @@ namespace App\Services\Discovery;
 use App\Ai\Agents\ListingExtractor;
 use App\Models\Project;
 use App\Support\HtmlText;
-use App\Support\ParsedPage;
 use App\Support\Settings;
 use App\Support\Url;
 use Illuminate\Support\Collection;
@@ -161,7 +160,7 @@ class ListingHarvester
             return [];
         }
 
-        $extractor = new ListingExtractor($project);
+        $extractor = new ListingExtractor($project, $parsed, $url);
 
         // The one call that costs money, so it is paid for once per page. Keyed
         // and expiring like the page cache it mirrors, for the same reason
@@ -177,7 +176,7 @@ class ListingHarvester
         $businesses = Cache::remember(
             'listing:'.hash('xxh3', (string) $extractor->instructions()).':'.hash('sha256', $url),
             now()->addDays($this->settings->int('crawl.cache_ttl_days')),
-            fn (): array => $this->ask($extractor, $parsed, $url),
+            fn (): array => $this->ask($extractor),
         );
 
         return collect($businesses)
@@ -190,12 +189,10 @@ class ListingHarvester
     /**
      * @return array<int, array<string, string>>
      */
-    private function ask(ListingExtractor $extractor, ParsedPage $parsed, string $url): array
+    private function ask(ListingExtractor $extractor): array
     {
         try {
-            $response = $extractor->prompt(
-                "Directory listing page: {$url}\n\n".mb_substr($parsed->text, 0, 24_000),
-            );
+            $response = $extractor->extract();
         } catch (Throwable) {
             // One unreadable listing must not cost a run everything before it.
             // The same rule the qualification loop learned the hard way.

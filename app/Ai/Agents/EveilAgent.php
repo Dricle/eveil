@@ -80,15 +80,27 @@ abstract class EveilAgent implements Agent, HasMiddleware
     }
 
     /**
-     * The project's own instructions for anything written in its name: tone,
-     * language, words to avoid. Appended by the agents that WRITE, and by them
-     * only: an extractor returns fields nobody reads as prose, and telling it
-     * to avoid emoji is prompt it has to spend attention on for nothing.
+     * The project's own instructions for the EMAILS written in its name: tone,
+     * language, words to avoid. The "How the AI writes" box on Settings ->
+     * Project. Appended by the agents that write an email a lead actually
+     * reads - `MessagePersonalizer`, `SequenceWriter`, `VariantWriter` - and
+     * by them only. Not appended to agents whose output is raw material for
+     * those (`CompanyQualifier`'s fit_reason, `WebsiteAnalyst`'s portrait,
+     * `TargetProfileDeriver`'s profiles): the actual email writer re-applies
+     * style when it turns that material into prose, so requiring compliance
+     * one step upstream too would be redundant, and requiring it of
+     * extractors that return fields nobody reads as prose spends the model's
+     * attention for nothing. Not appended to `Evie` either - see
+     * `Evie::emailPreferencesForReference()` for why the chat needs to know
+     * about this box without being governed by it. Not appended to
+     * `LinkedinPostWriter` - a public feed post has its own box,
+     * `linkedinInstructions()` below, since it is a different kind of writing
+     * with its own audience and does not default to the email tone.
      *
      * Placed last and stated as overriding, because that is what the user
      * expects of a box they filled in themselves.
      */
-    protected function projectInstructions(): string
+    protected function emailWritingInstructions(): string
     {
         $instructions = trim((string) $this->project->prompt_instructions);
 
@@ -99,8 +111,33 @@ abstract class EveilAgent implements Agent, HasMiddleware
         return <<<PROMPT
 
 
-            The user's own instructions for how this product writes. Where they disagree
-            with anything above, follow these:
+            The user's own instructions for how this product writes emails. Where they
+            disagree with anything above, follow these:
+
+            {$instructions}
+            PROMPT;
+    }
+
+    /**
+     * LinkedIn's own tone, independent of `emailWritingInstructions()` above:
+     * a public feed post under the user's own name is a different kind of
+     * writing than a cold email, with its own audience, so it gets its own
+     * box rather than inheriting the email one by default. Only
+     * `LinkedinPostWriter` calls this.
+     */
+    protected function linkedinInstructions(): string
+    {
+        $instructions = trim((string) $this->project->linkedin_prompt_instructions);
+
+        if ($instructions === '') {
+            return '';
+        }
+
+        return <<<PROMPT
+
+
+            The user's own instructions for how this product writes LinkedIn posts.
+            Where they disagree with anything above, follow these:
 
             {$instructions}
             PROMPT;

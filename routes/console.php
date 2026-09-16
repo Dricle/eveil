@@ -42,3 +42,8 @@ Schedule::command('eveil:discover-due')->everySixHours();
 // each step once. Cheap either way: nothing to do once every step already
 // promoted or still short of the floor is skipped.
 Schedule::command('eveil:promote-proven-emails')->daily();
+
+// The shortest LinkedIn posting cadence is daily, so daily is the right
+// check granularity: nothing to do for a project whose next post is not
+// due yet, same reasoning as the command above.
+Schedule::command('eveil:linkedin-generate-due')->daily();

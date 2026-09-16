@@ -37,10 +37,6 @@ class LinkedinPostExample extends Model
     /** @use HasFactory<LinkedinPostExampleFactory> */
     use HasFactory;
 
-    /**
-     * The user's own number, not a setting: nobody asked to tune how many
-     * examples an agent sees at once.
-     */
     public const SAMPLE_SIZE = 10;
 
     /**

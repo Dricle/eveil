@@ -2,6 +2,7 @@
 import { router, usePage } from '@inertiajs/vue3'
 import type { DropdownMenuItem } from '@nuxt/ui'
 import { computed, ref } from 'vue'
+import { relativeUrl } from '@/lib/utils'
 import targets from '@/routes/targets'
 import type { TargetProfile } from '@/types'
 
@@ -149,7 +150,7 @@ const subtitle = computed(() => {
                     block
                     class="justify-start"
                     label="New profile"
-                    :to="targets.create.url()"
+                    :to="relativeUrl(targets.create.url())"
                 />
 
                 <!-- Last in the list, because the ordinary reason to open

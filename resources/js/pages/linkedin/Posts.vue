@@ -2,6 +2,7 @@
 import { Form, Head, router, usePage, usePoll } from '@inertiajs/vue3'
 import { ref, watch } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
+import { relativeUrl } from '@/lib/utils'
 import linkedinPostRoutes from '@/routes/linkedin/posts'
 import linkedinAccountRoutes from '@/routes/settings/linkedin'
 import type { LinkedinPost } from '@/types'
@@ -155,7 +156,7 @@ function promote (post: LinkedinPost) {
             icon="i-lucide-plug"
             title="No LinkedIn account connected to this project"
             description="Drafts can still be written, but nothing can be approved until an account is connected."
-            :actions="[{ label: 'Connect LinkedIn', to: linkedinAccountRoutes.index.url(), color: 'warning', variant: 'solid' }]"
+            :actions="[{ label: 'Connect LinkedIn', to: relativeUrl(linkedinAccountRoutes.index.url()), color: 'warning', variant: 'solid' }]"
         />
 
         <UAlert

@@ -3,6 +3,7 @@ import { Head, router, usePage, usePoll } from '@inertiajs/vue3'
 import { computed, watch } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import TargetsLayout from '@/layouts/TargetsLayout.vue'
+import { relativeUrl } from '@/lib/utils'
 import targets from '@/routes/targets'
 
 defineOptions({ layout: [AppLayout, TargetsLayout] })
@@ -54,7 +55,7 @@ watch(deriving, busy => busy ? poll.start() : poll.stop())
                     variant="subtle"
                     icon="i-lucide-plus"
                     label="Write one myself"
-                    :to="targets.create.url()"
+                    :to="relativeUrl(targets.create.url())"
                 />
             </div>
 

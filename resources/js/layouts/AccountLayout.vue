@@ -2,6 +2,7 @@
 import { usePage } from '@inertiajs/vue3'
 import type { NavigationMenuItem } from '@nuxt/ui'
 import { computed } from 'vue'
+import { relativeUrl } from '@/lib/utils'
 import { deleteMethod, password, profile, twoFactor } from '@/routes/account'
 
 defineProps<{
@@ -12,17 +13,17 @@ const page = usePage()
 
 const items = computed<NavigationMenuItem[]>(() =>
     [
-        { label: 'Profile', icon: 'i-lucide-user', to: profile.url() },
-        { label: 'Password', icon: 'i-lucide-key-round', to: password.url() },
+        { label: 'Profile', icon: 'i-lucide-user', to: relativeUrl(profile.url()) },
+        { label: 'Password', icon: 'i-lucide-key-round', to: relativeUrl(password.url()) },
         {
             label: 'Two-factor authentication',
             icon: 'i-lucide-shield-check',
-            to: twoFactor.url()
+            to: relativeUrl(twoFactor.url())
         },
         {
             label: 'Delete account',
             icon: 'i-lucide-trash-2',
-            to: deleteMethod.url()
+            to: relativeUrl(deleteMethod.url())
         }
     ].map(item => ({ ...item, active: page.url.startsWith(item.to) }))
 )

@@ -2,6 +2,7 @@
 import { usePage } from '@inertiajs/vue3'
 import type { NavigationMenuItem } from '@nuxt/ui'
 import { computed } from 'vue'
+import { relativeUrl } from '@/lib/utils'
 import general from '@/routes/settings/organization/general'
 import billing from '@/routes/settings/organization/billing'
 import knowledgeBase from '@/routes/settings/knowledge-base'
@@ -31,23 +32,23 @@ function withActive (item: NavigationMenuItem): NavigationMenuItem {
 // belongs to the organization behind it - a mailbox or a LinkedIn account is
 // often shared across several products, project name/knowledge never is.
 const projectItems = computed<NavigationMenuItem[]>(() => [
-    { label: 'Project', icon: 'i-lucide-folder-cog', to: project.edit.url() },
-    { label: 'Project knowledge', icon: 'i-lucide-book-open', to: knowledgeBase.edit.url() },
-    { label: 'AI instructions', icon: 'i-lucide-sparkles', to: aiInstructions.edit.url() }
+    { label: 'Project', icon: 'i-lucide-folder-cog', to: relativeUrl(project.edit.url()) },
+    { label: 'Project knowledge', icon: 'i-lucide-book-open', to: relativeUrl(knowledgeBase.edit.url()) },
+    { label: 'AI instructions', icon: 'i-lucide-sparkles', to: relativeUrl(aiInstructions.edit.url()) }
 ].map(withActive))
 
 const organizationItems = computed<NavigationMenuItem[]>(() => [
-    { label: 'Organization', icon: 'i-lucide-building-2', to: general.edit.url() },
-    { label: 'Mailboxes', icon: 'i-lucide-mail', to: mailboxes.index.url() },
+    { label: 'Organization', icon: 'i-lucide-building-2', to: relativeUrl(general.edit.url()) },
+    { label: 'Mailboxes', icon: 'i-lucide-mail', to: relativeUrl(mailboxes.index.url()) },
     // No brand icon available (only the `lucide` icon set is installed, and
     // it carries no LinkedIn glyph): a generic one rather than a broken
     // reference.
-    { label: 'LinkedIn', icon: 'i-lucide-share-2', to: linkedin.index.url() },
-    { label: 'Members', icon: 'i-lucide-users', to: members.index.url() },
+    { label: 'LinkedIn', icon: 'i-lucide-share-2', to: relativeUrl(linkedin.index.url()) },
+    { label: 'Members', icon: 'i-lucide-users', to: relativeUrl(members.index.url()) },
     // Cloud only: self-hosted has no wallet, no plan, nothing this screen
     // would show.
     ...(page.props.edition === 'cloud'
-        ? [{ label: 'Billing', icon: 'i-lucide-credit-card', to: billing.edit.url() }]
+        ? [{ label: 'Billing', icon: 'i-lucide-credit-card', to: relativeUrl(billing.edit.url()) }]
         : [])
 ].map(withActive))
 </script>

@@ -4,6 +4,7 @@ import { computed, watch } from 'vue'
 import TargetHeader from '@/components/TargetHeader.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import TargetsLayout from '@/layouts/TargetsLayout.vue'
+import { relativeUrl } from '@/lib/utils'
 import discoveryRuns from '@/routes/discovery-runs'
 import targets from '@/routes/targets'
 import type { DiscoveryRun, TargetProfile } from '@/types'
@@ -85,7 +86,7 @@ function status (run: DiscoveryRun) {
         <ULink
             v-for="run in runs"
             :key="run.id"
-            :href="discoveryRuns.show.url(run.id)"
+            :href="relativeUrl(discoveryRuns.show.url(run.id))"
             class="flex items-center gap-3 rounded-lg p-4 ring ring-default hover:bg-elevated/50"
         >
             <UIcon

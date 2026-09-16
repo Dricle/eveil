@@ -3,6 +3,7 @@ import { Head, router, usePoll } from '@inertiajs/vue3'
 import { ref, watch } from 'vue'
 import CampaignSwitch from '@/components/CampaignSwitch.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
+import { relativeUrl } from '@/lib/utils'
 // Suffixed on purpose: an import named `campaigns` would shadow the prop of
 // that name in every template expression, silently.
 import campaignRoutes from '@/routes/campaigns'
@@ -166,7 +167,7 @@ function due (campaign: Campaign): string {
             class="flex flex-wrap items-center gap-3 rounded-lg p-4 ring ring-default"
         >
             <ULink
-                :href="campaignRoutes.show.url(campaign.id)"
+                :href="relativeUrl(campaignRoutes.show.url(campaign.id))"
                 class="min-w-0 flex-1 font-medium"
             >
                 {{ campaign.name }}

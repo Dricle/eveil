@@ -3,6 +3,7 @@ import { Head, router, usePoll } from '@inertiajs/vue3'
 import { computed, watch } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import TargetsLayout from '@/layouts/TargetsLayout.vue'
+import { relativeUrl } from '@/lib/utils'
 import discoveryRuns from '@/routes/discovery-runs'
 import discoveryTasks from '@/routes/discovery-tasks'
 import targets from '@/routes/targets'
@@ -81,7 +82,7 @@ function outcome (task: DiscoveryTask): string {
             <div class="min-w-0">
                 <ULink
                     v-if="run.profile_id"
-                    :href="targets.searches.url(run.profile_id)"
+                    :href="relativeUrl(targets.searches.url(run.profile_id))"
                     class="text-sm text-muted"
                 >
                     ← Searches for {{ run.profile }}

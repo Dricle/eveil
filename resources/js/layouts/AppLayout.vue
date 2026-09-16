@@ -4,6 +4,7 @@ import type { DropdownMenuItem, NavigationMenuItem } from '@nuxt/ui'
 import { computed, ref } from 'vue'
 import ChatPanel from '@/components/chat/ChatPanel.vue'
 import ChatToggleButton from '@/components/chat/ChatToggleButton.vue'
+import { relativeUrl } from '@/lib/utils'
 import { dashboard, inbox, logout } from '@/routes'
 import campaigns from '@/routes/campaigns'
 import companies from '@/routes/companies'
@@ -35,8 +36,12 @@ const chatOpen = ref(false)
 // active-link detection compares the two directly and would silently never
 // match in prod, so every item needs its href's origin stripped before
 // comparing - a plain `to`+`exact` pair on the item is not enough here.
+// The same absolute-URL mismatch also makes Nuxt UI's `ULink` treat every
+// nav item as an external link in prod (skipping Inertia's SPA visit
+// entirely) unless the `to` itself is relativised too - see every `to:`
+// below.
 function isCurrent (path: string): boolean {
-    return page.url.startsWith(path.replace(/^https?:\/\/[^/]+/, ''))
+    return page.url.startsWith(relativeUrl(path))
 }
 
 // Muted counts for Targets/Leads, a filled pill for Inbox: the same
@@ -50,8 +55,8 @@ const items = computed<NavigationMenuItem[]>(() => [
     {
         label: 'Dashboard',
         icon: 'i-lucide-house',
-        to: dashboard.url(),
-        active: page.url === dashboard.url().replace(/^https?:\/\/[^/]+/, '')
+        to: relativeUrl(dashboard.url()),
+        active: page.url === relativeUrl(dashboard.url())
     },
     {
         label: 'Email',
@@ -61,7 +66,7 @@ const items = computed<NavigationMenuItem[]>(() => [
             {
                 label: 'Targets',
                 icon: 'i-lucide-crosshair',
-                to: targets.index.url(),
+                to: relativeUrl(targets.index.url()),
                 active: isCurrent(targets.index.url()) || page.url.startsWith('/app/discovery-runs'),
                 badge: navCounts.value?.targets
                     ? { label: navCounts.value.targets, color: 'neutral', variant: 'ghost' }
@@ -70,7 +75,7 @@ const items = computed<NavigationMenuItem[]>(() => [
             {
                 label: 'Leads',
                 icon: 'i-lucide-building-2',
-                to: companies.index.url(),
+                to: relativeUrl(companies.index.url()),
                 active: isCurrent(companies.index.url()),
                 badge: navCounts.value?.leads
                     ? { label: navCounts.value.leads, color: 'neutral', variant: 'ghost' }
@@ -79,13 +84,13 @@ const items = computed<NavigationMenuItem[]>(() => [
             {
                 label: 'Campaigns',
                 icon: 'i-lucide-send',
-                to: campaigns.index.url(),
+                to: relativeUrl(campaigns.index.url()),
                 active: isCurrent(campaigns.index.url())
             },
             {
                 label: 'Inbox',
                 icon: 'i-lucide-inbox',
-                to: inbox.url(),
+                to: relativeUrl(inbox.url()),
                 active: isCurrent(inbox.url()),
                 badge: navCounts.value?.inbox
                     ? { label: navCounts.value.inbox, color: 'primary', variant: 'solid' }
@@ -100,7 +105,7 @@ const items = computed<NavigationMenuItem[]>(() => [
         // and it carries no LinkedIn glyph): a generic one rather than a
         // broken reference.
         icon: 'i-lucide-share-2',
-        to: linkedinPosts.index.url(),
+        to: relativeUrl(linkedinPosts.index.url()),
         // Broad on purpose: covers both the posts queue and the account
         // page, same reasoning as Settings' prefix check below.
         active: page.url.startsWith('/app/linkedin'),
@@ -112,7 +117,7 @@ const items = computed<NavigationMenuItem[]>(() => [
     {
         label: 'Settings',
         icon: 'i-lucide-settings',
-        to: projectSettings.edit.url(),
+        to: relativeUrl(projectSettings.edit.url()),
         // Broad on purpose: mailboxes, billing, members and other settings
         // pages all live under this one prefix, not just the project-edit page.
         active: page.url.startsWith('/app/settings')
@@ -164,7 +169,7 @@ const orgMenu = computed<DropdownMenuItem[][]>(() => [
             initial: organization.name.charAt(0).toUpperCase(),
             current: isCurrent,
             class: isCurrent ? 'bg-primary/10' : '',
-            to: (!isCurrent && !project) ? createProject.url({ query: { organization_id: organization.id } }) : undefined,
+            to: (!isCurrent && !project) ? relativeUrl(createProject.url({ query: { organization_id: organization.id } })) : undefined,
             onSelect: (!isCurrent && project) ? () => router.put(switchProject.url(project.id)) : undefined
         }
     }),
@@ -172,7 +177,7 @@ const orgMenu = computed<DropdownMenuItem[][]>(() => [
         {
             label: 'New organization',
             icon: 'i-lucide-plus',
-            to: createOrganization.url()
+            to: relativeUrl(createOrganization.url())
         }
     ]
 ])
@@ -195,7 +200,7 @@ const projectMenu = computed<DropdownMenuItem[][]>(() => [
         {
             label: 'New project',
             icon: 'i-lucide-plus',
-            to: createProject.url()
+            to: relativeUrl(createProject.url())
         }
     ]
 ])
@@ -211,9 +216,9 @@ const currentSectionLabel = computed(() => items.value.find(item => item.active)
 // in the sidebar is the current project's; this one is the whole app's.
 const userMenu = computed<DropdownMenuItem[][]>(() => [
     [
-        { label: 'Account', icon: 'i-lucide-user', to: profile.url() },
+        { label: 'Account', icon: 'i-lucide-user', to: relativeUrl(profile.url()) },
         ...(page.props.auth.user.is_super_admin
-            ? [{ label: 'App settings', icon: 'i-lucide-server-cog', to: appSettings.edit.url() }]
+            ? [{ label: 'App settings', icon: 'i-lucide-server-cog', to: relativeUrl(appSettings.edit.url()) }]
             : []),
         {
             label: 'Log out',
@@ -422,7 +427,7 @@ const userMenu = computed<DropdownMenuItem[][]>(() => [
 
                     <UButton
                         v-if="page.props.setup?.broken?.length"
-                        :to="mailboxes.index.url()"
+                        :to="relativeUrl(mailboxes.index.url())"
                         :label="page.props.setup.broken.length === 1
                             ? '1 mailbox paused'
                             : `${page.props.setup.broken.length} mailboxes paused`"
@@ -435,7 +440,7 @@ const userMenu = computed<DropdownMenuItem[][]>(() => [
 
                     <UButton
                         v-if="page.props.wallet"
-                        :href="organizationBilling.edit.url()"
+                        :href="relativeUrl(organizationBilling.edit.url())"
                         :label="`${page.props.wallet.balance.toLocaleString()} credits`"
                         icon="i-lucide-coins"
                         color="neutral"
@@ -461,7 +466,7 @@ const userMenu = computed<DropdownMenuItem[][]>(() => [
                         icon="i-lucide-key-round"
                         title="No AI provider key yet"
                         description="Nothing the agents do can run without one: analysing a site, deriving segments, qualifying a company, writing a sequence. Jobs will queue and fail."
-                        :actions="[{ label: 'Add the key', to: appSettings.edit.url(), color: 'warning', variant: 'solid' }]"
+                        :actions="[{ label: 'Add the key', to: relativeUrl(appSettings.edit.url()), color: 'warning', variant: 'solid' }]"
                     />
 
                     <UAlert
@@ -471,7 +476,7 @@ const userMenu = computed<DropdownMenuItem[][]>(() => [
                         icon="i-lucide-mail"
                         title="No mailbox connected to this project"
                         description="Everything up to writing a sequence works, but nothing can be sent: a campaign will activate and then sit there. Connect one, and tick this project."
-                        :actions="[{ label: 'Connect a mailbox', to: mailboxes.index.url(), color: 'warning', variant: 'solid' }]"
+                        :actions="[{ label: 'Connect a mailbox', to: relativeUrl(mailboxes.index.url()), color: 'warning', variant: 'solid' }]"
                     />
 
                     <!-- A mailbox that stopped itself is not missing, it is
@@ -492,7 +497,7 @@ const userMenu = computed<DropdownMenuItem[][]>(() => [
                         :description="mailbox.error
                             ? `The mail server said: ${mailbox.error}`
                             : 'Nothing leaves this address until it is switched back on. Sequences using it stay where they are.'"
-                        :actions="[{ label: 'Fix the mailbox', to: mailboxes.index.url(), color: 'error', variant: 'solid' }]"
+                        :actions="[{ label: 'Fix the mailbox', to: relativeUrl(mailboxes.index.url()), color: 'error', variant: 'solid' }]"
                     />
                 </div>
 

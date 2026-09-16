@@ -5,6 +5,7 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import LeadsLayout from '@/layouts/LeadsLayout.vue'
 import SearchingBanner from '@/components/SearchingBanner.vue'
 import { useTableQuery } from '@/lib/table'
+import { relativeUrl } from '@/lib/utils'
 import companyRoutes from '@/routes/companies'
 import contactRoutes from '@/routes/contacts'
 import type { Activity, Company, Paginated } from '@/types'
@@ -434,7 +435,7 @@ function findContacts (company: Company) {
                 <div class="min-w-0 space-y-1.5">
                     <div class="flex flex-wrap items-baseline gap-2">
                         <ULink
-                            :href="companyRoutes.show.url(company.id)"
+                            :href="relativeUrl(companyRoutes.show.url(company.id))"
                             class="font-semibold text-highlighted"
                         >{{ company.name }}</ULink>
 
@@ -543,7 +544,7 @@ function findContacts (company: Company) {
                         </span>
                         <ULink
                             v-else-if="contactState(company) === 'found'"
-                            :href="contactRoutes.index.url({ query: { company: company.id } })"
+                            :href="relativeUrl(contactRoutes.index.url({ query: { company: company.id } }))"
                             class="flex items-center gap-1 text-xs"
                         >
                             <UIcon

@@ -5,6 +5,7 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import ActivityTimeline from '@/components/ActivityTimeline.vue'
 import StatusSelect from '@/components/StatusSelect.vue'
 import { OUTREACH_STATUSES } from '@/lib/status'
+import { relativeUrl } from '@/lib/utils'
 import contactRoutes from '@/routes/contacts'
 import { attention as attentionRoute, reply as replyRoute } from '@/routes/inbox'
 import { inbox } from '@/routes'
@@ -334,7 +335,7 @@ function delivery (conversation: Conversation) {
                         </span>
 
                         <ULink
-                            :href="contactRoutes.show.url(activeConversation.lead.id)"
+                            :href="relativeUrl(contactRoutes.show.url(activeConversation.lead.id))"
                             class="min-w-0 truncate font-medium text-highlighted"
                         >{{ activeConversation.lead.name ?? activeConversation.lead.email }}</ULink>
                     </div>

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import StatusSelect from '@/components/StatusSelect.vue'
-import { OUTREACH_STATUSES } from '@/lib/status'
 import { SOURCES, VERIFICATION } from '@/lib/contacts'
+import { OUTREACH_STATUSES } from '@/lib/status'
+import { relativeUrl } from '@/lib/utils'
 import contactRoutes from '@/routes/contacts'
 import type { Contact } from '@/types'
 
@@ -32,7 +33,7 @@ function origin (contact: Contact) {
         >
             <div class="min-w-0 flex-1">
                 <ULink
-                    :href="contactRoutes.show.url(contact.id)"
+                    :href="relativeUrl(contactRoutes.show.url(contact.id))"
                     class="block truncate font-medium"
                 >{{ contact.name ?? contact.email ?? 'No name' }}</ULink>
                 <p

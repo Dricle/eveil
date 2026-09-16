@@ -9,6 +9,7 @@ import StatusSelect from '@/components/StatusSelect.vue'
 import { OUTREACH_STATUSES } from '@/lib/status'
 import { SOURCES, VERIFICATION } from '@/lib/contacts'
 import { useTableQuery } from '@/lib/table'
+import { relativeUrl } from '@/lib/utils'
 import contactRoutes from '@/routes/contacts'
 import type { Activity, Contact, Paginated } from '@/types'
 
@@ -274,7 +275,7 @@ function sourceLabel (contact: Contact) {
 
             <template #name-cell="{ row }">
                 <ULink
-                    :href="contactRoutes.show.url(row.original.id)"
+                    :href="relativeUrl(contactRoutes.show.url(row.original.id))"
                     class="font-medium"
                 >{{ row.original.name ?? row.original.email ?? 'No name' }}</ULink>
                 <ULink
@@ -346,7 +347,7 @@ function sourceLabel (contact: Contact) {
             <template #company-cell="{ row }">
                 <ULink
                     v-if="row.original.company"
-                    :href="contactRoutes.index.url({ query: { company: row.original.company.id } })"
+                    :href="relativeUrl(contactRoutes.index.url({ query: { company: row.original.company.id } }))"
                 >{{ row.original.company.name }}</ULink>
                 <span
                     v-if="row.original.company?.location"

@@ -3,6 +3,7 @@ import { router } from '@inertiajs/vue3'
 import type { NavigationMenuItem } from '@nuxt/ui'
 import { computed, ref } from 'vue'
 import CampaignSwitch from '@/components/CampaignSwitch.vue'
+import { relativeUrl } from '@/lib/utils'
 import campaignRoutes from '@/routes/campaigns'
 import type { CampaignStatus } from '@/types'
 
@@ -25,13 +26,13 @@ const items = computed<NavigationMenuItem[]>(() => [
     {
         label: 'Sequence',
         icon: 'i-lucide-file-text',
-        to: campaignRoutes.show.url(props.campaign.id),
+        to: relativeUrl(campaignRoutes.show.url(props.campaign.id)),
         active: props.tab === 'sequence'
     },
     {
         label: 'Delivery',
         icon: 'i-lucide-send',
-        to: campaignRoutes.delivery.url(props.campaign.id),
+        to: relativeUrl(campaignRoutes.delivery.url(props.campaign.id)),
         active: props.tab === 'delivery'
     }
 ])

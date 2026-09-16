@@ -2,6 +2,7 @@
 import { Form, usePage } from '@inertiajs/vue3'
 import type { NavigationMenuItem } from '@nuxt/ui'
 import { computed, ref } from 'vue'
+import { relativeUrl } from '@/lib/utils'
 import companies from '@/routes/companies'
 import contacts from '@/routes/contacts'
 
@@ -11,8 +12,8 @@ const page = usePage()
 // you move between them constantly.
 const items = computed<NavigationMenuItem[]>(() =>
     [
-        { label: 'Companies', icon: 'i-lucide-building-2', to: companies.index.url() },
-        { label: 'Contacts', icon: 'i-lucide-users', to: contacts.index.url() }
+        { label: 'Companies', icon: 'i-lucide-building-2', to: relativeUrl(companies.index.url()) },
+        { label: 'Contacts', icon: 'i-lucide-users', to: relativeUrl(contacts.index.url()) }
     ].map(item => ({ ...item, active: page.url.startsWith(item.to) }))
 )
 

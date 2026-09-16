@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { NavigationMenuItem } from '@nuxt/ui'
 import { computed } from 'vue'
+import { relativeUrl } from '@/lib/utils'
 import targets from '@/routes/targets'
 import type { TargetProfile } from '@/types'
 
@@ -18,13 +19,13 @@ const items = computed<NavigationMenuItem[]>(() => props.profile === null
             {
                 label: 'Profile',
                 icon: 'i-lucide-file-text',
-                to: targets.show.url(props.profile.id),
+                to: relativeUrl(targets.show.url(props.profile.id)),
                 active: props.tab === 'profile'
             },
             {
                 label: 'Searches',
                 icon: 'i-lucide-radar',
-                to: targets.searches.url(props.profile.id),
+                to: relativeUrl(targets.searches.url(props.profile.id)),
                 active: props.tab === 'searches'
             }
         ])

@@ -2,6 +2,7 @@
 import { usePage } from '@inertiajs/vue3'
 import type { NavigationMenuItem } from '@nuxt/ui'
 import { computed } from 'vue'
+import { relativeUrl } from '@/lib/utils'
 import agents from '@/routes/app-settings/agents'
 import billing from '@/routes/app-settings/billing'
 import emailExamples from '@/routes/app-settings/email-examples'
@@ -23,19 +24,19 @@ const items = computed<NavigationMenuItem[]>(() =>
         {
             label: 'AI provider',
             icon: 'i-lucide-key-round',
-            to: provider.edit.url()
+            to: relativeUrl(provider.edit.url())
         },
-        { label: 'Agents', icon: 'i-lucide-bot', to: agents.index.url() },
-        { label: 'LinkedIn', icon: 'i-lucide-share-2', to: linkedin.edit.url() },
-        { label: 'Limits', icon: 'i-lucide-gauge', to: limits.edit.url() },
-        { label: 'Sending', icon: 'i-lucide-send', to: sending.edit.url() },
-        { label: 'Host registry', icon: 'i-lucide-globe', to: hosts.index.url() },
-        { label: 'Email examples', icon: 'i-lucide-mail-plus', to: emailExamples.index.url() },
-        { label: 'LinkedIn post examples', icon: 'i-lucide-thumbs-up', to: linkedinPostExamples.index.url() },
+        { label: 'Agents', icon: 'i-lucide-bot', to: relativeUrl(agents.index.url()) },
+        { label: 'LinkedIn', icon: 'i-lucide-share-2', to: relativeUrl(linkedin.edit.url()) },
+        { label: 'Limits', icon: 'i-lucide-gauge', to: relativeUrl(limits.edit.url()) },
+        { label: 'Sending', icon: 'i-lucide-send', to: relativeUrl(sending.edit.url()) },
+        { label: 'Host registry', icon: 'i-lucide-globe', to: relativeUrl(hosts.index.url()) },
+        { label: 'Email examples', icon: 'i-lucide-mail-plus', to: relativeUrl(emailExamples.index.url()) },
+        { label: 'LinkedIn post examples', icon: 'i-lucide-thumbs-up', to: relativeUrl(linkedinPostExamples.index.url()) },
         // `billing.*` is never read on self-hosted (`.ai/rules/cloud.md`), so
         // the tab itself only exists where the settings would do anything.
         ...(page.props.edition === 'cloud'
-            ? [{ label: 'Billing', icon: 'i-lucide-credit-card', to: billing.edit.url() }]
+            ? [{ label: 'Billing', icon: 'i-lucide-credit-card', to: relativeUrl(billing.edit.url()) }]
             : [])
     ].map(item => ({
         ...item,

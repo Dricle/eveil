@@ -54,29 +54,46 @@ const items = computed<NavigationMenuItem[]>(() => [
         active: page.url === dashboard.url().replace(/^https?:\/\/[^/]+/, '')
     },
     {
-        label: 'Targets',
-        icon: 'i-lucide-crosshair',
-        to: targets.index.url(),
-        active: isCurrent(targets.index.url()) || page.url.startsWith('/app/discovery-runs'),
-        badge: navCounts.value?.targets
-            ? { label: navCounts.value.targets, color: 'neutral', variant: 'ghost' }
-            : undefined
+        label: 'Email',
+        icon: 'i-lucide-mail',
+        defaultOpen: true,
+        children: [
+            {
+                label: 'Targets',
+                icon: 'i-lucide-crosshair',
+                to: targets.index.url(),
+                active: isCurrent(targets.index.url()) || page.url.startsWith('/app/discovery-runs'),
+                badge: navCounts.value?.targets
+                    ? { label: navCounts.value.targets, color: 'neutral', variant: 'ghost' }
+                    : undefined
+            },
+            {
+                label: 'Leads',
+                icon: 'i-lucide-building-2',
+                to: companies.index.url(),
+                active: isCurrent(companies.index.url()),
+                badge: navCounts.value?.leads
+                    ? { label: navCounts.value.leads, color: 'neutral', variant: 'ghost' }
+                    : undefined
+            },
+            {
+                label: 'Campaigns',
+                icon: 'i-lucide-send',
+                to: campaigns.index.url(),
+                active: isCurrent(campaigns.index.url())
+            },
+            {
+                label: 'Inbox',
+                icon: 'i-lucide-inbox',
+                to: inbox.url(),
+                active: isCurrent(inbox.url()),
+                badge: navCounts.value?.inbox
+                    ? { label: navCounts.value.inbox, color: 'primary', variant: 'solid' }
+                    : undefined
+            }
+        ]
     },
-    {
-        label: 'Leads',
-        icon: 'i-lucide-building-2',
-        to: companies.index.url(),
-        active: isCurrent(companies.index.url()),
-        badge: navCounts.value?.leads
-            ? { label: navCounts.value.leads, color: 'neutral', variant: 'ghost' }
-            : undefined
-    },
-    {
-        label: 'Email Campaigns',
-        icon: 'i-lucide-send',
-        to: campaigns.index.url(),
-        active: isCurrent(campaigns.index.url())
-    },
+
     {
         label: 'LinkedIn',
         // No brand icon available (only the `lucide` icon set is installed,
@@ -91,15 +108,7 @@ const items = computed<NavigationMenuItem[]>(() => [
             ? { label: navCounts.value.linkedin, color: 'primary', variant: 'solid' }
             : undefined
     },
-    {
-        label: 'Inbox',
-        icon: 'i-lucide-inbox',
-        to: inbox.url(),
-        active: isCurrent(inbox.url()),
-        badge: navCounts.value?.inbox
-            ? { label: navCounts.value.inbox, color: 'primary', variant: 'solid' }
-            : undefined
-    },
+
     {
         label: 'Settings',
         icon: 'i-lucide-settings',

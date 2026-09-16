@@ -8,8 +8,6 @@ use App\Enums\AnalysisType;
 use App\Models\CodeRepository;
 use App\Models\ProjectAnalysis;
 use App\Services\RepoReader;
-use Illuminate\Support\Collection;
-use Laravel\Ai\Responses\StructuredAgentResponse;
 use Throwable;
 
 /**
@@ -19,14 +17,6 @@ use Throwable;
  */
 class ExploreRepo
 {
-    /**
-     * How much of the path list is dumped straight into the prompt. Capped
-     * for a large monorepo's sake, not the agent's own view of the repo -
-     * `ListRepoPaths` still holds every path regardless, this only bounds
-     * what is spent showing them all upfront.
-     */
-    private const MAX_PATH_LIST_CHARS = 20_000;
-
     public function __construct(private RepoReader $reader) {}
 
     public function handle(CodeRepository $codeRepository): ProjectAnalysis
@@ -52,16 +42,16 @@ class ExploreRepo
         $paths = $this->reader->paths($resolved['owner'], $resolved['repo'], $resolved['branch'], $token);
 
         try {
-            /** @var StructuredAgentResponse $response */
             $response = (new RepoExplorer(
                 $project,
+                $codeRepository,
                 $this->reader,
                 $resolved['owner'],
                 $resolved['repo'],
                 $resolved['branch'],
                 $paths,
                 $token,
-            ))->prompt($this->prompt($codeRepository, $paths));
+            ))->explore();
         } catch (Throwable $e) {
             $analysis->update(['status' => AnalysisStatus::Failed, 'error' => $e->getMessage()]);
 
@@ -121,26 +111,5 @@ class ExploreRepo
         $project->update([
             'knowledge_base' => [...$project->knowledge_base ?? [], 'repositories' => $repositories],
         ]);
-    }
-
-    /**
-     * The repo's own path list, so the model knows what exists before it
-     * asks to look inside anything. Paths only, no content: that is what the
-     * tools are for. Truncated for a large repo; `ListRepoPaths` still sees
-     * every path regardless, so nothing here is actually out of reach.
-     *
-     * @param  Collection<int, string>  $paths
-     */
-    private function prompt(CodeRepository $codeRepository, Collection $paths): string
-    {
-        $full = $paths->implode("\n");
-        $list = mb_substr($full, 0, self::MAX_PATH_LIST_CHARS);
-        $note = mb_strlen($full) > mb_strlen($list)
-            ? "This repository is large; the list below is truncated. Use the directory-listing tool to see what is not shown here.\n\n"
-            : '';
-
-        return "Repository {$codeRepository->name} ({$codeRepository->url}).\n\n"
-            .$note
-            ."Every file path in this repository:\n\n{$list}";
     }
 }

@@ -2,8 +2,11 @@
 
 namespace App\Ai\Agents;
 
+use App\Models\Project;
+use App\Models\TargetProfile;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\HasStructuredOutput;
+use Laravel\Ai\Responses\StructuredAgentResponse;
 use Stringable;
 
 /**
@@ -16,6 +19,14 @@ use Stringable;
  */
 class SequenceWriter extends EveilAgent implements HasStructuredOutput
 {
+    /**
+     * @param  string  $examples  `EmailExample::promptDigest()`, gathered by the caller.
+     */
+    public function __construct(Project $project, private TargetProfile $targetProfile, private string $examples)
+    {
+        parent::__construct($project);
+    }
+
     public function instructions(): Stringable|string
     {
         // The product's own language, not one guessed from the segment: a
@@ -96,5 +107,30 @@ class SequenceWriter extends EveilAgent implements HasStructuredOutput
                     ->required(),
             ]))->required(),
         ];
+    }
+
+    public function write(): StructuredAgentResponse
+    {
+        /** @var StructuredAgentResponse $response */
+        $response = $this->prompt($this->buildPrompt());
+
+        return $response;
+    }
+
+    private function buildPrompt(): string
+    {
+        $portrait = json_encode(
+            $this->project->knowledge_base,
+            JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
+        );
+
+        $criteria = json_encode(
+            $this->targetProfile->criteria,
+            JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
+        );
+
+        return "Product: {$this->project->name} ({$this->project->url})\n\n{$portrait}\n\n"
+            ."Segment [{$this->targetProfile->name}], of kind {$this->targetProfile->type->value}:\n{$criteria}"
+            .($this->examples === '' ? '' : "\n\n---\n\n{$this->examples}");
     }
 }

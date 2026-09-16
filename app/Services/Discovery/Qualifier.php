@@ -11,7 +11,6 @@ use App\Models\DiscoveryRun;
 use App\Models\TargetProfile;
 use App\Support\HtmlText;
 use App\Support\ParsedPage;
-use Laravel\Ai\Responses\StructuredAgentResponse;
 
 /**
  * One candidate's own site, read and scored against the profile. This is where
@@ -57,18 +56,13 @@ class Qualifier
             }
         }
 
-        $agent = new CompanyQualifier($targetProfile->project);
+        $agent = new CompanyQualifier($targetProfile->project, $targetProfile, $candidate, $parsed);
 
         if ($agentRun !== null) {
             $agent->recordInto($agentRun);
         }
 
-        $criteria = (string) json_encode($targetProfile->criteria, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-
-        /** @var StructuredAgentResponse $verdict */
-        $verdict = $agent->prompt(
-            "Target profile [{$targetProfile->name}]:\n{$criteria}\n\n".$this->evidence($candidate, $parsed),
-        );
+        $verdict = $agent->qualify();
 
         if (! ($verdict['is_a_prospect'] ?? false)) {
             return null;
@@ -101,22 +95,6 @@ class Qualifier
         return $domain !== null
             ? $query->where('domain', $domain)->first()
             : $query->whereNull('domain')->whereRaw('lower(name) = ?', [mb_strtolower($candidate->name)])->first();
-    }
-
-    /**
-     * What the model is asked to judge: the company's own pages when it has
-     * them, and otherwise the line a directory published about it.
-     */
-    private function evidence(Candidate $candidate, ?ParsedPage $page): string
-    {
-        if ($page !== null) {
-            return "Company website ({$candidate->website}):\n".mb_substr($page->text, 0, 8_000);
-        }
-
-        $facts = (string) json_encode($candidate->facts, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-
-        return "This business publishes no website. All that is known is what a directory listed:\n"
-            ."Name: {$candidate->name}\n{$facts}";
     }
 
     /**

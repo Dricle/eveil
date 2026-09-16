@@ -166,7 +166,7 @@ class HostRegistry
     private function ask(array $hosts, Collection $urls, Project $project): array
     {
         try {
-            $response = (new ResultTriage($project))->prompt($this->prompt($hosts, $urls));
+            $response = (new ResultTriage($project, $hosts, $urls))->triage();
         } catch (Throwable) {
             // A triage that fails must not fail the run: treat the batch as
             // ordinary company sites, which is what happened before any of this
@@ -197,25 +197,5 @@ class HostRegistry
         // A host the model skipped is left unrecorded on purpose: better to
         // ask again next time than to cache a guess we did not make.
         return $verdicts + array_fill_keys(array_keys($hosts), HostKind::Entity);
-    }
-
-    /**
-     * One line per host: the count is the strongest signal that something is an
-     * index, and it costs nothing to compute.
-     *
-     * @param  array<string, int>  $hosts
-     * @param  Collection<int, string>  $urls
-     */
-    private function prompt(array $hosts, Collection $urls): string
-    {
-        $lines = [];
-
-        foreach ($hosts as $host => $count) {
-            $sample = $urls->first(fn (string $url): bool => Url::host($url) === $host) ?? $host;
-
-            $lines[] = "{$host}: {$count} of {$urls->count()} results. E.g. {$sample}";
-        }
-
-        return "Search results by host:\n\n".implode("\n", $lines);
     }
 }

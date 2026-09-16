@@ -25,6 +25,7 @@ use App\Jobs\WriteCampaign;
 use App\Jobs\WriteStepVariant;
 use App\Models\AgentRun;
 use App\Models\Campaign;
+use App\Models\CampaignStep;
 use App\Models\Company;
 use App\Models\CompanyTargetEvaluation;
 use App\Models\EmailExample;
@@ -34,6 +35,7 @@ use App\Models\Project;
 use App\Models\StepVariant;
 use App\Models\TargetProfile;
 use App\Models\User;
+use App\Services\Discovery\Candidate;
 use Illuminate\Support\Facades\Queue;
 use RuntimeException;
 
@@ -709,48 +711,52 @@ it('never previews a lead the user has taken out of outreach', function () {
 
 it('starts every project with the house style already in the box', function () {
     [, $project] = sequencer();
+    $targetProfile = TargetProfile::factory()->create();
 
     // Dash punctuation is one of the cheapest tells that a machine wrote a
     // sentence, and everything sent from here is supposed to read as though a
     // person typed it. It sits in the box the user can see and edit.
     expect($project->prompt_instructions)->toBe(Project::DEFAULT_INSTRUCTIONS)
-        ->and((string) (new SequenceWriter($project))->instructions())->toContain('Never use dash punctuation')
+        ->and((string) (new SequenceWriter($project, $targetProfile, ''))->instructions())->toContain('Never use dash punctuation')
         // Not in the agents whose output is raw material re-written by an
         // actual email writer downstream (the portrait, the segment
         // rationales, the fit reason that becomes the opener's raw
         // material for `MessagePersonalizer`) - the box governs the email
         // that actually reaches a lead, not every step that feeds it.
-        ->and((string) (new WebsiteAnalyst($project))->instructions())->not->toContain('Never use dash punctuation')
+        ->and((string) (new WebsiteAnalyst($project, collect()))->instructions())->not->toContain('Never use dash punctuation')
         ->and((string) (new TargetProfileDeriver($project))->instructions())->not->toContain('Never use dash punctuation')
-        ->and((string) (new CompanyQualifier($project))->instructions())->not->toContain('Never use dash punctuation')
+        ->and((string) (new CompanyQualifier($project, TargetProfile::factory()->create(), new Candidate('Acme', null, 'test'), null))->instructions())->not->toContain('Never use dash punctuation')
         // Not in the ones that only return fields either: nobody reads those
         // as prose, and a strict-structure agent breaks rather than blurs as
         // the prompt grows.
-        ->and((string) (new ContactExtractor($project))->instructions())->not->toContain('Never use dash punctuation');
+        ->and((string) (new ContactExtractor($project, Company::factory()->create(), collect()))->instructions())->not->toContain('Never use dash punctuation');
 });
 
 it("appends the project's own EMAIL writing instructions to the agents that write emails", function () {
     [, $project] = sequencer();
+    $step = CampaignStep::factory()->create();
+    $lead = Lead::factory()->create();
+    $targetProfile = TargetProfile::factory()->create();
 
-    expect((string) (new SequenceWriter($project))->instructions())
+    expect((string) (new SequenceWriter($project, $targetProfile, ''))->instructions())
         ->not->toContain('Never use emoji')
-        ->and((string) (new MessagePersonalizer($project))->instructions())
+        ->and((string) (new MessagePersonalizer($project, $step, $lead, 'Subject', 'Body', null, ''))->instructions())
         ->not->toContain('Never use emoji');
 
     // Replacing the default rather than adding to it: the box is the user's.
     $project->update(['prompt_instructions' => 'Write in French. Never use emoji.']);
 
-    expect((string) (new SequenceWriter($project))->instructions())
+    expect((string) (new SequenceWriter($project, $targetProfile, ''))->instructions())
         ->toContain('Never use emoji')
-        ->and((string) (new MessagePersonalizer($project))->instructions())
+        ->and((string) (new MessagePersonalizer($project, $step, $lead, 'Subject', 'Body', null, ''))->instructions())
         ->toContain('Never use emoji')
         // Last and stated as overriding: it is a box the user filled in
         // themselves, and they expect it to win.
-        ->and((string) (new MessagePersonalizer($project))->instructions())
+        ->and((string) (new MessagePersonalizer($project, $step, $lead, 'Subject', 'Body', null, ''))->instructions())
         ->toEndWith('Never use emoji.')
         // The box never reaches a LinkedIn post, which has its own separate
         // tone box entirely.
-        ->and((string) (new LinkedinPostWriter($project))->instructions())
+        ->and((string) (new LinkedinPostWriter($project, null, collect(), collect(), collect(), collect(), ''))->instructions())
         ->not->toContain('Write in French. Never use emoji.');
 
     // Evie DOES see the box's content, since the user may ask her about it -

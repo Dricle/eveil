@@ -2,8 +2,11 @@
 
 namespace App\Ai\Agents;
 
+use App\Models\Project;
+use App\Support\ParsedPage;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\HasStructuredOutput;
+use Laravel\Ai\Responses\StructuredAgentResponse;
 use Stringable;
 
 /**
@@ -20,6 +23,11 @@ use Stringable;
  */
 class ListingExtractor extends EveilAgent implements HasStructuredOutput
 {
+    public function __construct(Project $project, private ParsedPage $page, private string $url)
+    {
+        parent::__construct($project);
+    }
+
     public static function smallModelSufficient(): bool
     {
         return true;
@@ -72,5 +80,18 @@ class ListingExtractor extends EveilAgent implements HasStructuredOutput
                 'address' => $schema->string()->description('Only if written. Empty otherwise.')->required(),
             ]))->description('Empty when the page carries no listing at all.')->required(),
         ];
+    }
+
+    public function extract(): StructuredAgentResponse
+    {
+        /** @var StructuredAgentResponse $response */
+        $response = $this->prompt($this->buildPrompt());
+
+        return $response;
+    }
+
+    private function buildPrompt(): string
+    {
+        return "Directory listing page: {$this->url}\n\n".mb_substr($this->page->text, 0, 24_000);
     }
 }

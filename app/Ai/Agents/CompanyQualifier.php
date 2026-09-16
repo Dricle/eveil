@@ -2,8 +2,13 @@
 
 namespace App\Ai\Agents;
 
+use App\Models\Project;
+use App\Models\TargetProfile;
+use App\Services\Discovery\Candidate;
+use App\Support\ParsedPage;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\HasStructuredOutput;
+use Laravel\Ai\Responses\StructuredAgentResponse;
 use Stringable;
 
 /**
@@ -16,6 +21,16 @@ use Stringable;
  */
 class CompanyQualifier extends EveilAgent implements HasStructuredOutput
 {
+    /**
+     * @param  ParsedPage|null  $page  the candidate's own homepage, already fetched
+     *                                 and parsed - null when it publishes no website,
+     *                                 in which case only its directory facts are judged
+     */
+    public function __construct(Project $project, private TargetProfile $targetProfile, private Candidate $candidate, private ?ParsedPage $page)
+    {
+        parent::__construct($project);
+    }
+
     /**
      * A model that cannot hold the schema returns a score and a sentence that
      * both look plausible and describe nothing on the page.
@@ -98,5 +113,36 @@ class CompanyQualifier extends EveilAgent implements HasStructuredOutput
                 ->description('Two-letter code of the language the site is written in. Drives the language of the email.')
                 ->required(),
         ];
+    }
+
+    public function qualify(): StructuredAgentResponse
+    {
+        /** @var StructuredAgentResponse $response */
+        $response = $this->prompt($this->buildPrompt());
+
+        return $response;
+    }
+
+    private function buildPrompt(): string
+    {
+        $criteria = (string) json_encode($this->targetProfile->criteria, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        return "Target profile [{$this->targetProfile->name}]:\n{$criteria}\n\n{$this->evidence()}";
+    }
+
+    /**
+     * What the model is asked to judge: the company's own pages when it has
+     * them, and otherwise the line a directory published about it.
+     */
+    private function evidence(): string
+    {
+        if ($this->page !== null) {
+            return "Company website ({$this->candidate->website}):\n".mb_substr($this->page->text, 0, 8_000);
+        }
+
+        $facts = (string) json_encode($this->candidate->facts, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        return "This business publishes no website. All that is known is what a directory listed:\n"
+            ."Name: {$this->candidate->name}\n{$facts}";
     }
 }

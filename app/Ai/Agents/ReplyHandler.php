@@ -12,6 +12,7 @@ use App\Models\Message;
 use App\Models\Project;
 use Laravel\Ai\Attributes\MaxSteps;
 use Laravel\Ai\Contracts\HasTools;
+use Laravel\Ai\Responses\AgentResponse;
 use Stringable;
 
 /**
@@ -83,5 +84,43 @@ class ReplyHandler extends EveilAgent implements HasTools
             new AskForRightContact($this->reply),
             new IgnoreReply($this->reply),
         ];
+    }
+
+    /**
+     * Reads the reply (already held on the agent) and acts by calling exactly
+     * one tool. Nothing meaningful in the return value - the tool call is the
+     * whole effect - but it is exposed for the caller to await/record.
+     */
+    public function decide(): AgentResponse
+    {
+        return $this->prompt($this->buildPrompt());
+    }
+
+    /**
+     * The mail it answers travels with it: "yes, that works" means nothing on
+     * its own, and the step's intent is what makes the difference between an
+     * agreement and a brush-off.
+     */
+    private function buildPrompt(): string
+    {
+        $ours = $this->reply->campaignLead
+            ?->messages()
+            ->where('message_id', $this->reply->in_reply_to)
+            ->first();
+
+        $lead = $this->reply->lead;
+        $context = [
+            'from' => $lead->email,
+            'their_name' => mb_trim($lead->first_name.' '.$lead->last_name) ?: null,
+            'their_company' => $lead->company?->name,
+            'we_wrote' => $ours === null ? null : [
+                'subject' => $ours->subject,
+                'body' => $ours->body,
+            ],
+        ];
+
+        $json = (string) json_encode($context, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        return "Their reply:\nSubject: {$this->reply->subject}\n\n{$this->reply->body}\n\n---\n\nContext:\n{$json}";
     }
 }

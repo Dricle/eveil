@@ -20,7 +20,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
-use Laravel\Ai\Responses\StructuredAgentResponse;
 
 /**
  * One generation cycle: gather every available signal, ask
@@ -40,7 +39,6 @@ class GenerateLinkedinPost implements ShouldQueue
     {
         $currentProject->run($this->project, function () use ($newsSearch): void {
             $clientWon = $this->pendingClientWin();
-            $news = $newsSearch->recent($this->project);
 
             $run = AgentRun::create([
                 'project_id' => $this->project->id,
@@ -48,10 +46,17 @@ class GenerateLinkedinPost implements ShouldQueue
                 'status' => AgentRunStatus::Pending,
             ]);
 
-            /** @var StructuredAgentResponse $response */
-            $response = (new LinkedinPostWriter($this->project))
-                ->recordInto($run)
-                ->prompt($this->prompt($clientWon, $news));
+            $agent = new LinkedinPostWriter(
+                $this->project,
+                $clientWon,
+                $newsSearch->recent($this->project),
+                $this->recentPublished(),
+                $this->rejected(),
+                $this->ownWinners(),
+                LinkedinPostExample::promptDigest(),
+            );
+
+            $response = $agent->recordInto($run)->draft();
 
             $created = $this->persist($response->structured, $run->id, $clientWon);
 
@@ -84,65 +89,39 @@ class GenerateLinkedinPost implements ShouldQueue
     }
 
     /**
-     * @param  Collection<int, array{title: string, url: string, snippet: string}>  $news
+     * @return Collection<int, string>
      */
-    private function prompt(?Company $clientWon, Collection $news): string
+    private function recentPublished(): Collection
     {
-        $sections = [
-            "## Knowledge base\n\n".json_encode($this->project->knowledge_base ?? [], JSON_PRETTY_PRINT),
-        ];
-
-        if ($clientWon !== null) {
-            $sections[] = "## Pending client win\n\nCompany: {$clientWon->name}\nSector: {$clientWon->industry}\nLocation: {$clientWon->location}";
-        }
-
-        if ($news->isNotEmpty()) {
-            $sections[] = "## Recent news candidates\n\n".$news
-                ->map(fn (array $item): string => "- {$item['title']} ({$item['url']}): {$item['snippet']}")
-                ->implode("\n");
-        }
-
-        $recent = $this->project->linkedinPosts()
+        return $this->project->linkedinPosts()
             ->where('status', LinkedinPostStatus::Published)
             ->latest('published_at')
             ->limit(5)
             ->pluck('body');
+    }
 
-        if ($recent->isNotEmpty()) {
-            $sections[] = "## Already published, do not repeat the angle\n\n".$recent->implode("\n\n---\n\n");
-        }
-
-        $rejected = $this->project->linkedinPosts()
+    /**
+     * @return Collection<int, LinkedinPost>
+     */
+    private function rejected(): Collection
+    {
+        return $this->project->linkedinPosts()
             ->where('status', LinkedinPostStatus::Rejected)
             ->latest('updated_at')
             ->limit(5)
             ->get(['body', 'rejection_reason']);
+    }
 
-        if ($rejected->isNotEmpty()) {
-            $sections[] = "## Recently rejected, and why - do not reproduce these\n\n".$rejected
-                ->map(fn (LinkedinPost $post): string => "{$post->body}\n\nReason: ".($post->rejection_reason ?? '(no reason given)'))
-                ->implode("\n\n---\n\n");
-        }
-
-        $ownWinners = $this->project->linkedinPosts()
+    /**
+     * @return Collection<int, string>
+     */
+    private function ownWinners(): Collection
+    {
+        return $this->project->linkedinPosts()
             ->whereNotNull('promoted_at')
             ->latest('promoted_at')
             ->limit(5)
             ->pluck('body');
-
-        if ($ownWinners->isNotEmpty()) {
-            $sections[] = "## This project's own posts that performed well\n\n".$ownWinners->implode("\n\n---\n\n");
-        }
-
-        $sharedPool = LinkedinPostExample::promptDigest();
-
-        if ($sharedPool !== '') {
-            $sections[] = $sharedPool;
-        }
-
-        $sections[] = "## Today's date\n\n".now()->toDateString();
-
-        return implode("\n\n", $sections);
     }
 
     /**

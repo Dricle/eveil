@@ -2,8 +2,13 @@
 
 namespace App\Ai\Agents;
 
+use App\Models\Company;
+use App\Models\LinkedinPost;
+use App\Models\Project;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Support\Collection;
 use Laravel\Ai\Contracts\HasStructuredOutput;
+use Laravel\Ai\Responses\StructuredAgentResponse;
 use Stringable;
 
 /**
@@ -19,6 +24,31 @@ use Stringable;
  */
 class LinkedinPostWriter extends EveilAgent implements HasStructuredOutput
 {
+    /**
+     * Every signal is gathered by the caller (`GenerateLinkedinPost`) and
+     * handed over already resolved: which company is the pending win, what
+     * counts as "recently rejected", which of this project's own posts
+     * proved themselves - these are business decisions made once, by the
+     * job that owns them, not re-derived here.
+     *
+     * @param  Collection<int, array{title: string, url: string, snippet: string}>  $news
+     * @param  Collection<int, string>  $recentPublished  bodies already published, do not repeat the angle
+     * @param  Collection<int, LinkedinPost>  $rejected  recently rejected, with reasons
+     * @param  Collection<int, string>  $ownWinners  bodies of this project's own promoted posts
+     * @param  string  $sharedPoolDigest  `LinkedinPostExample::promptDigest()`
+     */
+    public function __construct(
+        Project $project,
+        private ?Company $clientWon,
+        private Collection $news,
+        private Collection $recentPublished,
+        private Collection $rejected,
+        private Collection $ownWinners,
+        private string $sharedPoolDigest,
+    ) {
+        parent::__construct($project);
+    }
+
     public function instructions(): Stringable|string
     {
         return <<<'PROMPT'
@@ -84,5 +114,52 @@ class LinkedinPostWriter extends EveilAgent implements HasStructuredOutput
             'body_anonymized' => $schema->string()
                 ->description('The post text without naming the client, for client_won only. Leave empty otherwise.'),
         ];
+    }
+
+    public function draft(): StructuredAgentResponse
+    {
+        /** @var StructuredAgentResponse $response */
+        $response = $this->prompt($this->buildPrompt());
+
+        return $response;
+    }
+
+    private function buildPrompt(): string
+    {
+        $sections = [
+            "## Knowledge base\n\n".json_encode($this->project->knowledge_base ?? [], JSON_PRETTY_PRINT),
+        ];
+
+        if ($this->clientWon !== null) {
+            $sections[] = "## Pending client win\n\nCompany: {$this->clientWon->name}\nSector: {$this->clientWon->industry}\nLocation: {$this->clientWon->location}";
+        }
+
+        if ($this->news->isNotEmpty()) {
+            $sections[] = "## Recent news candidates\n\n".$this->news
+                ->map(fn (array $item): string => "- {$item['title']} ({$item['url']}): {$item['snippet']}")
+                ->implode("\n");
+        }
+
+        if ($this->recentPublished->isNotEmpty()) {
+            $sections[] = "## Already published, do not repeat the angle\n\n".$this->recentPublished->implode("\n\n---\n\n");
+        }
+
+        if ($this->rejected->isNotEmpty()) {
+            $sections[] = "## Recently rejected, and why - do not reproduce these\n\n".$this->rejected
+                ->map(fn (LinkedinPost $post): string => "{$post->body}\n\nReason: ".($post->rejection_reason ?? '(no reason given)'))
+                ->implode("\n\n---\n\n");
+        }
+
+        if ($this->ownWinners->isNotEmpty()) {
+            $sections[] = "## This project's own posts that performed well\n\n".$this->ownWinners->implode("\n\n---\n\n");
+        }
+
+        if ($this->sharedPoolDigest !== '') {
+            $sections[] = $this->sharedPoolDigest;
+        }
+
+        $sections[] = "## Today's date\n\n".now()->toDateString();
+
+        return implode("\n\n", $sections);
     }
 }

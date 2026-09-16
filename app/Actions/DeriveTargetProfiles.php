@@ -10,7 +10,6 @@ use App\Models\Project;
 use App\Models\TargetProfile;
 use App\Support\Settings;
 use Illuminate\Support\Collection;
-use Laravel\Ai\Responses\StructuredAgentResponse;
 use RuntimeException;
 
 /**
@@ -42,8 +41,7 @@ class DeriveTargetProfiles
             $agent->recordInto($run);
         }
 
-        /** @var StructuredAgentResponse $response */
-        $response = $agent->prompt($this->prompt($project));
+        $response = $agent->derive();
 
         /** @var array<int, array<string, mixed>> $profiles */
         $profiles = $response->structured['profiles'] ?? [];
@@ -103,15 +101,5 @@ class DeriveTargetProfiles
             // worth more than one they have to catch mid-run.
             'is_active' => $confidence === null || $confidence >= $minConfidence,
         ]);
-    }
-
-    private function prompt(Project $project): string
-    {
-        $portrait = json_encode(
-            $project->knowledge_base,
-            JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
-        );
-
-        return "Product: {$project->name} ({$project->url})\n\n{$portrait}";
     }
 }

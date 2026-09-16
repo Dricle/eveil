@@ -2,8 +2,12 @@
 
 namespace App\Ai\Agents;
 
+use App\Models\Project;
+use App\Support\ParsedPage;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Support\Collection;
 use Laravel\Ai\Contracts\HasStructuredOutput;
+use Laravel\Ai\Responses\StructuredAgentResponse;
 use Stringable;
 
 /**
@@ -15,6 +19,22 @@ use Stringable;
  */
 class WebsiteAnalyst extends EveilAgent implements HasStructuredOutput
 {
+    /**
+     * Characters of page text handed to the model. Roughly 15k tokens, which is
+     * ~$0.08 of Opus input: the bounded-budget rule applied to the
+     * one place where a big site could otherwise run the bill up unnoticed.
+     */
+    private const MAX_CHARS = 60_000;
+
+    /**
+     * @param  Collection<int, ParsedPage>  $pages  Already-crawled pages: crawling is
+     *                                              I/O the caller does, not this class.
+     */
+    public function __construct(Project $project, private Collection $pages)
+    {
+        parent::__construct($project);
+    }
+
     public function instructions(): Stringable|string
     {
         return <<<'PROMPT'
@@ -148,5 +168,59 @@ class WebsiteAnalyst extends EveilAgent implements HasStructuredOutput
                 )
                 ->required(),
         ];
+    }
+
+    public function analyze(): StructuredAgentResponse
+    {
+        /** @var StructuredAgentResponse $response */
+        $response = $this->prompt($this->buildPrompt());
+
+        return $response;
+    }
+
+    private function buildPrompt(): string
+    {
+        $budget = self::MAX_CHARS;
+        $sections = [];
+
+        foreach ($this->pages as $page) {
+            if ($budget <= 0) {
+                break;
+            }
+
+            $text = mb_substr($page->text, 0, $budget);
+            $budget -= mb_strlen($text);
+
+            $sections[] = "## {$page->title}\nURL: {$page->url}\n\n{$text}";
+        }
+
+        $body = implode("\n\n---\n\n", $sections);
+        $repos = $this->repoDigest();
+
+        return "Website of {$this->project->name} ({$this->project->url}).\n\n{$body}".($repos === '' ? '' : "\n\n---\n\n{$repos}");
+    }
+
+    /**
+     * Whatever `ExploreRepo` has already found, short enough to always fit:
+     * this is a digest of an already-structured analysis, not raw file
+     * text, so it costs little of the model-input budget for what it adds.
+     */
+    private function repoDigest(): string
+    {
+        $repositories = $this->project->knowledge_base['repositories'] ?? [];
+
+        if (! is_array($repositories) || $repositories === []) {
+            return '';
+        }
+
+        $sections = collect($repositories)->map(function (array $repo): string {
+            $capabilities = implode('; ', $repo['capabilities'] ?? []);
+            $hiddenFeatures = implode('; ', $repo['hidden_features'] ?? []);
+            $techStack = implode(', ', $repo['tech_stack'] ?? []);
+
+            return "### {$repo['name']}\nCapabilities: {$capabilities}\nHidden features: {$hiddenFeatures}\nTech stack: {$techStack}";
+        });
+
+        return "## Linked repositories\n\n".$sections->implode("\n\n");
     }
 }

@@ -4,6 +4,7 @@ namespace App\Ai\Agents;
 
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\HasStructuredOutput;
+use Laravel\Ai\Responses\StructuredAgentResponse;
 use Stringable;
 
 /**
@@ -148,5 +149,23 @@ class TargetProfileDeriver extends EveilAgent implements HasStructuredOutput
                     ->required(),
             ]))->required(),
         ];
+    }
+
+    public function derive(): StructuredAgentResponse
+    {
+        /** @var StructuredAgentResponse $response */
+        $response = $this->prompt($this->buildPrompt());
+
+        return $response;
+    }
+
+    private function buildPrompt(): string
+    {
+        $portrait = json_encode(
+            $this->project->knowledge_base,
+            JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
+        );
+
+        return "Product: {$this->project->name} ({$this->project->url})\n\n{$portrait}";
     }
 }

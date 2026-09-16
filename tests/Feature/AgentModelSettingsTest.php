@@ -105,7 +105,7 @@ it('feeds the mapping straight into the agent laravel/ai asks', function () {
 
     // `Promptable` consults these before its own attributes, which is what
     // makes a model change a settings change rather than a deploy.
-    $agent = new WebsiteAnalyst(Project::factory()->create());
+    $agent = new WebsiteAnalyst(Project::factory()->create(), collect());
 
     expect($agent->model())->toBe('claude-sonnet-5')
         // A Lab case, not a string: it is the package's own type and the one

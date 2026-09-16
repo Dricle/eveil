@@ -2,8 +2,12 @@
 
 namespace App\Ai\Agents;
 
+use App\Models\Project;
+use App\Support\Url;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Support\Collection;
 use Laravel\Ai\Contracts\HasStructuredOutput;
+use Laravel\Ai\Responses\StructuredAgentResponse;
 use Stringable;
 
 /**
@@ -29,6 +33,18 @@ use Stringable;
  */
 class ResultTriage extends EveilAgent implements HasStructuredOutput
 {
+    /**
+     * @param  array<string, int>  $hosts  host => how many results sit on it, already
+     *                                     narrowed to the batch the registry could not
+     *                                     resolve on its own
+     * @param  Collection<int, string>  $urls  the full result set, sampled for one
+     *                                         example URL per host
+     */
+    public function __construct(Project $project, private array $hosts, private Collection $urls)
+    {
+        parent::__construct($project);
+    }
+
     public static function smallModelSufficient(): bool
     {
         return true;
@@ -101,5 +117,30 @@ class ResultTriage extends EveilAgent implements HasStructuredOutput
                 'reason' => $schema->string()->description('One short clause. Shown to an operator reviewing the registry.')->required(),
             ]))->description('One entry per host you were given, none missing.')->required(),
         ];
+    }
+
+    public function triage(): StructuredAgentResponse
+    {
+        /** @var StructuredAgentResponse $response */
+        $response = $this->prompt($this->buildPrompt());
+
+        return $response;
+    }
+
+    /**
+     * One line per host: the count is the strongest signal that something is an
+     * index, and it costs nothing to compute.
+     */
+    private function buildPrompt(): string
+    {
+        $lines = [];
+
+        foreach ($this->hosts as $host => $count) {
+            $sample = $this->urls->first(fn (string $url): bool => Url::host($url) === $host) ?? $host;
+
+            $lines[] = "{$host}: {$count} of {$this->urls->count()} results. E.g. {$sample}";
+        }
+
+        return "Search results by host:\n\n".implode("\n", $lines);
     }
 }

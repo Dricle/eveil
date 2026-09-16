@@ -18,7 +18,6 @@ use App\Support\ParsedPage;
 use App\Support\Settings;
 use App\Support\Url;
 use Illuminate\Support\Collection;
-use Laravel\Ai\Responses\StructuredAgentResponse;
 
 /**
  * Turns qualified companies into people we can actually write to.
@@ -58,8 +57,7 @@ class FindContacts
             return new Collection;
         }
 
-        /** @var StructuredAgentResponse $extracted */
-        $extracted = (new ContactExtractor($company->project))->prompt($this->prompt($company, $pages));
+        $extracted = (new ContactExtractor($company->project, $company, $pages))->extract();
 
         $this->rememberPhone($company, $extracted->structured);
 
@@ -356,26 +354,5 @@ class FindContacts
         );
 
         return $lead;
-    }
-
-    /**
-     * @param  Collection<int, ParsedPage>  $pages
-     */
-    private function prompt(Company $company, Collection $pages): string
-    {
-        $budget = 12_000;
-        $sections = [];
-
-        foreach ($pages as $page) {
-            if ($budget <= 0) {
-                break;
-            }
-
-            $text = mb_substr($page->text, 0, $budget);
-            $budget -= mb_strlen($text);
-            $sections[] = "## {$page->url}\n{$text}";
-        }
-
-        return "Company: {$company->name} ({$company->domain})\n\n".implode("\n\n---\n\n", $sections);
     }
 }

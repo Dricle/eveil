@@ -2,8 +2,13 @@
 
 namespace App\Ai\Agents;
 
+use App\Models\Company;
+use App\Models\Project;
+use App\Support\ParsedPage;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Support\Collection;
 use Laravel\Ai\Contracts\HasStructuredOutput;
+use Laravel\Ai\Responses\StructuredAgentResponse;
 use Stringable;
 
 /**
@@ -15,6 +20,14 @@ use Stringable;
  */
 class ContactExtractor extends EveilAgent implements HasStructuredOutput
 {
+    /**
+     * @param  Collection<int, ParsedPage>  $pages  the homepage plus any contact/team pages found
+     */
+    public function __construct(Project $project, private Company $company, private Collection $pages)
+    {
+        parent::__construct($project);
+    }
+
     public static function requiresStrictStructure(): bool
     {
         return true;
@@ -73,5 +86,31 @@ class ContactExtractor extends EveilAgent implements HasStructuredOutput
 
             'phone' => $schema->string()->description('Main phone number, when given.')->required(),
         ];
+    }
+
+    public function extract(): StructuredAgentResponse
+    {
+        /** @var StructuredAgentResponse $response */
+        $response = $this->prompt($this->buildPrompt());
+
+        return $response;
+    }
+
+    private function buildPrompt(): string
+    {
+        $budget = 12_000;
+        $sections = [];
+
+        foreach ($this->pages as $page) {
+            if ($budget <= 0) {
+                break;
+            }
+
+            $text = mb_substr($page->text, 0, $budget);
+            $budget -= mb_strlen($text);
+            $sections[] = "## {$page->url}\n{$text}";
+        }
+
+        return "Company: {$this->company->name} ({$this->company->domain})\n\n".implode("\n\n---\n\n", $sections);
     }
 }

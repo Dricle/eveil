@@ -26,8 +26,8 @@
         <div class="flex flex-col gap-[10px] text-[14px]">
             <div class="font-[Geist_Mono,monospace] text-[10.5px] tracking-[.08em] uppercase text-[rgba(232,236,242,.38)] mb-[2px]">Open source</div>
             <a href="https://github.com/Dricle/eveil" class="text-[rgba(232,236,242,.7)]">GitHub</a>
-            <a href="https://github.com/Dricle/eveil" class="text-[rgba(232,236,242,.7)]">Docs</a>
-            <a href="https://github.com/Dricle/eveil" class="text-[rgba(232,236,242,.7)]">Self-host guide</a>
+            <a href="https://docs.eveil.cloud/" class="text-[rgba(232,236,242,.7)]">Docs</a>
+            <a href="https://docs.eveil.cloud/self-hosted/installation" class="text-[rgba(232,236,242,.7)]">Self-host guide</a>
             <a href="https://github.com/Dricle/eveil/blob/main/LICENSE" class="text-[rgba(232,236,242,.7)]">AGPL-3.0 licence</a>
         </div>
         <div class="flex flex-col gap-[10px] text-[14px]">

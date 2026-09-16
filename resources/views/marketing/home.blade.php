@@ -1,7 +1,7 @@
 @php use Illuminate\Support\Facades\Route; @endphp
 <x-marketing-layout
     :title="config('app.name') . ' - open-source outreach'"
-    description="Give a URL and what you sell. Eveil finds the companies that need it and writes the outreach. Open source, self-hostable."
+    description="Give a URL and what you sell. Eveil finds the companies that need it, writes the outreach, and drafts your LinkedIn posts. Open source, self-hostable."
 >
     <div class="border-b border-[rgba(232,236,242,.08)] px-4 py-2.5 flex flex-wrap justify-center items-center gap-3 text-[13px] text-[rgba(232,236,242,.72)] text-center">
         <span class="font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[#6fd3ec] border border-[rgba(111,211,236,.35)] rounded-full px-[9px] py-[2px]">Free trial</span>
@@ -18,8 +18,8 @@
                 You don't have time to run marketing.<br>Now you don't need to.</h1>
             <p class="text-[16px] sm:text-[18.5px] leading-[1.6] max-w-[64ch] mx-auto mb-[18px] text-[rgba(232,236,242,.66)] [text-wrap:pretty]">
                 Paste your product URL. Eveil reads the site, works out who buys it, finds those companies and the
-                people at them, writes the emails, sends it from your own mailbox, and reads the replies. You approve
-                as much or as little as you want.</p>
+                people at them, writes and sends the outreach from your own mailbox, reads the replies, and drafts
+                LinkedIn posts about what you're building. You approve as much or as little as you want.</p>
 
             <p class="text-[14px] sm:text-[15px] leading-[1.6] max-w-[58ch] mx-auto mb-8 sm:mb-10 text-[rgba(232,236,242,.48)] [text-wrap:pretty]">
                 Not a purchased contact list, and not a pool of pre-warmed inboxes sending on your behalf. It
@@ -135,11 +135,11 @@
                         The team
                     </div>
                     <h2 class="font-[Sora,sans-serif] font-semibold text-[28px] sm:text-[34px] lg:text-[40px] leading-[1.12] tracking-[-.03em]">
-                        Nine agents, one knowledge base.</h2>
+                        One team of agents, one knowledge base.</h2>
                 </div>
-                <p class="text-[rgba(232,236,242,.62)] max-w-[48ch]">Every stage from discovery to sending
-                    reads the same understanding of your product, so nothing is re-explained and nothing contradicts
-                    itself.</p>
+                <p class="text-[rgba(232,236,242,.62)] max-w-[48ch]">Every stage from discovery to sending,
+                    and every channel you publish to, reads the same understanding of your product, so nothing is
+                    re-explained and nothing contradicts itself.</p>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[14px]">
                 <div class="bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-6 pt-[26px] pb-7">

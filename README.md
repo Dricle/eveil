@@ -19,8 +19,9 @@ Enter your product's website, Eveil reads it, works out who buys it, goes
 looking for those companies, finds the people at them, writes the email
 sequence, sends it from your own mailbox, and reads the replies.
 
-Your own AI CMO, running its own army of agents. B2B only for now; B2C
-(content generation to build an online presence) is planned.
+Your own AI CMO, running its own army of agents. Lead discovery and outreach
+are B2B; LinkedIn posting (personal-profile content, evidence-driven) already
+works for anyone building an online presence, B2C solo founders included.
 
 That's automation of the same work a human researcher would do by hand:
 searching the web for the right companies and people, then writing to them one

@@ -45,10 +45,6 @@ class ProjectRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'url' => ['required', 'string', 'url:http,https', 'max:255', new ReachableUrl],
-            // Only the edit screen sends this one. Creating a project asks for
-            // as little as possible, and house style is something you write
-            // once you have read what the agent produces without it.
-            'prompt_instructions' => ['nullable', 'string', 'max:2000'],
             // Edit screen only. Never sent back to the browser, so a blank
             // submission means "keep the one stored", not "remove it" -
             // `prepareForValidation()` below drops the key entirely rather

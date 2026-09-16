@@ -13,8 +13,8 @@ it('sets the current project\'s LinkedIn-specific writing instructions', functio
     app(CurrentProject::class)->set($project);
 
     $this->actingAs($user)
-        ->put(route('linkedin.posts.instructions'), ['linkedin_prompt_instructions' => 'Write in first person, casual tone.'])
-        ->assertRedirect(route('linkedin.posts.index'));
+        ->put(route('settings.ai-instructions.linkedin.update'), ['linkedin_prompt_instructions' => 'Write in first person, casual tone.'])
+        ->assertRedirect(route('settings.ai-instructions.edit'));
 
     expect($project->fresh()->linkedin_prompt_instructions)->toBe('Write in first person, casual tone.');
 });
@@ -26,7 +26,7 @@ it('allows clearing the LinkedIn-specific instructions', function () {
     $project = Project::factory()->for($organization)->create(['linkedin_prompt_instructions' => 'Old tone.']);
     app(CurrentProject::class)->set($project);
 
-    $this->actingAs($user)->put(route('linkedin.posts.instructions'), ['linkedin_prompt_instructions' => null]);
+    $this->actingAs($user)->put(route('settings.ai-instructions.linkedin.update'), ['linkedin_prompt_instructions' => null]);
 
     expect($project->fresh()->linkedin_prompt_instructions)->toBeNull();
 });
@@ -39,6 +39,6 @@ it('rejects instructions over the length limit', function () {
     app(CurrentProject::class)->set($project);
 
     $this->actingAs($user)
-        ->put(route('linkedin.posts.instructions'), ['linkedin_prompt_instructions' => str_repeat('a', 2001)])
+        ->put(route('settings.ai-instructions.linkedin.update'), ['linkedin_prompt_instructions' => str_repeat('a', 2001)])
         ->assertInvalid('linkedin_prompt_instructions');
 });

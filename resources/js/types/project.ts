@@ -123,7 +123,6 @@ export type TargetProfile = {
 export type ProjectDetail = Project & {
     edited_by_user: boolean
     has_github_token: boolean
-    prompt_instructions: string | null
     /** How much of the run happens without being asked. */
     autonomy_level: 'supervised' | 'semi_auto' | 'autonomous'
     /** Pauses continuous discovery for the rest of the day once reached. Null is uncapped. */

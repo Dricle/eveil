@@ -12,7 +12,6 @@ const props = defineProps<{
     posts: LinkedinPost[]
     hasAccount: boolean
     currentProjectFrequency: 'off' | 'daily' | 'weekly' | 'biweekly' | 'monthly'
-    currentProjectInstructions: string | null
 }>()
 
 const page = usePage()
@@ -28,9 +27,6 @@ usePoll(15000, { only: ['posts'] })
 // above) would silently stomp whatever the user just picked.
 const frequency = ref(props.currentProjectFrequency)
 watch(() => props.currentProjectFrequency, value => frequency.value = value, { immediate: true })
-
-const instructions = ref(props.currentProjectInstructions ?? '')
-watch(() => props.currentProjectInstructions, value => instructions.value = value ?? '', { immediate: true })
 
 const FREQUENCIES = [
     { label: 'Off', value: 'off' },
@@ -151,39 +147,6 @@ function promote (post: LinkedinPost) {
                 />
             </Form>
         </div>
-
-        <Form
-            v-slot="{ processing, recentlySuccessful }"
-            v-bind="linkedinPostRoutes.instructions.form()"
-            class="flex flex-wrap items-end gap-3"
-        >
-            <UFormField
-                label="How LinkedIn posts are written"
-                name="linkedin_prompt_instructions"
-                help="On top of the project's general writing instructions, for LinkedIn's own tone only. E.g. more casual, first person, short punchy lines."
-                class="min-w-64 flex-1"
-            >
-                <UTextarea
-                    v-model="instructions"
-                    name="linkedin_prompt_instructions"
-                    :rows="2"
-                    :maxlength="2000"
-                    class="w-full"
-                />
-            </UFormField>
-
-            <div class="flex items-center gap-3">
-                <UButton
-                    type="submit"
-                    label="Save"
-                    :loading="processing"
-                />
-                <span
-                    v-if="recentlySuccessful"
-                    class="text-sm text-muted"
-                >Saved.</span>
-            </div>
-        </Form>
 
         <UAlert
             v-if="!hasAccount"

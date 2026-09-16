@@ -18,7 +18,6 @@ const confirmingDelete = ref(false)
 // was typed. Saving re-renders this page, which is exactly when it bites.
 const name = ref(props.project.name)
 const url = ref(props.project.url)
-const instructions = ref(props.project.prompt_instructions ?? '')
 const autonomy = ref(props.project.autonomy_level)
 const dailyLeadLimit = ref(props.project.daily_lead_limit)
 const leadLimit = ref(props.project.lead_limit)
@@ -26,7 +25,6 @@ const leadLimit = ref(props.project.lead_limit)
 watch(() => props.project, (project) => {
     name.value = project.name
     url.value = project.url
-    instructions.value = project.prompt_instructions ?? ''
     autonomy.value = project.autonomy_level
     dailyLeadLimit.value = project.daily_lead_limit
     leadLimit.value = project.lead_limit
@@ -93,24 +91,6 @@ const AUTONOMY = [
                         v-model="url"
                         name="url"
                         required
-                        class="w-full"
-                    />
-                </UFormField>
-
-                <!-- Same form as the name and the address on purpose: a
-                     second one posting to this route would re-check that the
-                     website answers every time somebody edits the tone. -->
-                <UFormField
-                    label="How the AI writes"
-                    name="prompt_instructions"
-                    :error="errors.prompt_instructions"
-                    help="Followed by every sequence and every mail personalised from one. E.g. write in French, never use emoji, say vous rather than tu."
-                >
-                    <UTextarea
-                        v-model="instructions"
-                        name="prompt_instructions"
-                        :rows="5"
-                        :maxlength="2000"
                         class="w-full"
                     />
                 </UFormField>

@@ -9,6 +9,7 @@ import linkedin from '@/routes/settings/linkedin'
 import mailboxes from '@/routes/settings/mailboxes'
 import members from '@/routes/settings/members'
 import project from '@/routes/settings/project'
+import aiInstructions from '@/routes/settings/ai-instructions'
 
 defineProps<{
     title: string
@@ -31,7 +32,8 @@ function withActive (item: NavigationMenuItem): NavigationMenuItem {
 // often shared across several products, project name/knowledge never is.
 const projectItems = computed<NavigationMenuItem[]>(() => [
     { label: 'Project', icon: 'i-lucide-folder-cog', to: project.edit.url() },
-    { label: 'Project knowledge', icon: 'i-lucide-book-open', to: knowledgeBase.edit.url() }
+    { label: 'Project knowledge', icon: 'i-lucide-book-open', to: knowledgeBase.edit.url() },
+    { label: 'AI instructions', icon: 'i-lucide-sparkles', to: aiInstructions.edit.url() }
 ].map(withActive))
 
 const organizationItems = computed<NavigationMenuItem[]>(() => [

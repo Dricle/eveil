@@ -7,6 +7,7 @@ use App\Cloud\Http\Controllers\OrganizationBillingController;
 use App\Cloud\Http\Controllers\PaymentMethodController;
 use App\Http\Controllers\Account\AccountDeletionController;
 use App\Http\Controllers\Account\TwoFactorController;
+use App\Http\Controllers\AiInstructionsController;
 use App\Http\Controllers\AppSettings\AgentController;
 use App\Http\Controllers\AppSettings\BillingController;
 use App\Http\Controllers\AppSettings\CreditPriceController;
@@ -46,6 +47,7 @@ use App\Http\Controllers\DiscoveryLinkController;
 use App\Http\Controllers\DiscoveryRunCancellationController;
 use App\Http\Controllers\DiscoveryRunController;
 use App\Http\Controllers\DiscoveryTaskReplayController;
+use App\Http\Controllers\EmailInstructionsController;
 use App\Http\Controllers\EvieChatController;
 use App\Http\Controllers\InboxController;
 use App\Http\Controllers\KnownClientController;
@@ -146,6 +148,19 @@ Route::middleware(['auth', 'verified', 'project.set'])->group(function (): void 
             Route::get('project', [ProjectController::class, 'edit'])->name('project.edit');
             Route::put('project', [ProjectController::class, 'update'])->name('project.update');
             Route::delete('project', [ProjectController::class, 'destroy'])->name('project.destroy');
+
+            /*
+             * Both writing-tone boxes together - see `AiInstructionsController`.
+             * Each saves through its own small route/controller since a
+             * different agent reads each one (`EveilAgent::
+             * emailWritingInstructions()` / `linkedinInstructions()`).
+             */
+            Route::get('ai-instructions', [AiInstructionsController::class, 'edit'])
+                ->name('ai-instructions.edit');
+            Route::put('ai-instructions/emails', [EmailInstructionsController::class, 'update'])
+                ->name('ai-instructions.emails.update');
+            Route::put('ai-instructions/linkedin', [LinkedinInstructionsController::class, 'update'])
+                ->name('ai-instructions.linkedin.update');
 
             /*
              * Organization-scoped, same reasoning as mailboxes below: a
@@ -274,14 +289,6 @@ Route::middleware(['auth', 'verified', 'project.set'])->group(function (): void 
              */
             Route::put('posts/cadence', [LinkedinCadenceController::class, 'update'])
                 ->name('posts.cadence');
-            /*
-             * The LinkedIn-specific tone, on top of the project's general
-             * "how the AI writes" instructions - see
-             * `EveilAgent::linkedinInstructions()`. Same reasoning as cadence
-             * above: a decision about this queue's own voice.
-             */
-            Route::put('posts/instructions', [LinkedinInstructionsController::class, 'update'])
-                ->name('posts.instructions');
             Route::put('posts/{linkedin_post}', [LinkedinPostController::class, 'update'])
                 ->name('posts.update');
             Route::post('posts/{linkedin_post}/approve', [LinkedinPostController::class, 'approve'])

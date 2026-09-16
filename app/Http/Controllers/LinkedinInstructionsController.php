@@ -7,11 +7,12 @@ use App\Support\CurrentProject;
 use Illuminate\Http\RedirectResponse;
 
 /**
- * The project's own tone for LinkedIn specifically, on top of the general
- * "how the AI writes" box (`ProjectController`) - see
- * `EveilAgent::linkedinInstructions()`. Lives on the posts queue screen, same
- * reasoning as `LinkedinCadenceController`: it is a decision about this
- * queue's own voice, not the project's settings in general.
+ * The project's own tone for LinkedIn specifically, independent of the
+ * "How Emails are written" box - see `EveilAgent::linkedinInstructions()`.
+ * Lives on the AI instructions settings screen next to that one
+ * (`AiInstructionsController`), not the posts queue: it is a writing-tone
+ * setting, same category as the email box, not the queue's own rhythm
+ * (`LinkedinCadenceController`, which does stay on the queue).
  */
 class LinkedinInstructionsController extends Controller
 {
@@ -19,6 +20,6 @@ class LinkedinInstructionsController extends Controller
     {
         $currentProject->getOrFail()->update($request->validated());
 
-        return to_route('linkedin.posts.index');
+        return to_route('settings.ai-instructions.edit');
     }
 }

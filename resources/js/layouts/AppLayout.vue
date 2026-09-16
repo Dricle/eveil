@@ -86,7 +86,10 @@ const items = computed<NavigationMenuItem[]>(() => [
         to: linkedinPosts.index.url(),
         // Broad on purpose: covers both the posts queue and the account
         // page, same reasoning as Settings' prefix check below.
-        active: page.url.startsWith('/app/linkedin')
+        active: page.url.startsWith('/app/linkedin'),
+        badge: navCounts.value?.linkedin
+            ? { label: navCounts.value.linkedin, color: 'primary', variant: 'solid' }
+            : undefined
     },
     {
         label: 'Inbox',

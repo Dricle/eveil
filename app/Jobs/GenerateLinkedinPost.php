@@ -11,12 +11,15 @@ use App\Enums\OutreachStatus;
 use App\Models\AgentRun;
 use App\Models\Company;
 use App\Models\LinkedinPost;
+use App\Models\LinkedinPostExample;
 use App\Models\Project;
+use App\Notifications\LinkedinPostDrafted;
 use App\Services\Linkedin\NewsSearch;
 use App\Support\CurrentProject;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Notification;
 use Laravel\Ai\Responses\StructuredAgentResponse;
 
 /**
@@ -50,7 +53,11 @@ class GenerateLinkedinPost implements ShouldQueue
                 ->recordInto($run)
                 ->prompt($this->prompt($clientWon, $news));
 
-            $this->persist($response->structured, $run->id, $clientWon);
+            $created = $this->persist($response->structured, $run->id, $clientWon);
+
+            if ($created) {
+                Notification::send($this->project->users, LinkedinPostDrafted::for($this->project));
+            }
         });
     }
 
@@ -105,6 +112,34 @@ class GenerateLinkedinPost implements ShouldQueue
             $sections[] = "## Already published, do not repeat the angle\n\n".$recent->implode("\n\n---\n\n");
         }
 
+        $rejected = $this->project->linkedinPosts()
+            ->where('status', LinkedinPostStatus::Rejected)
+            ->latest('updated_at')
+            ->limit(5)
+            ->get(['body', 'rejection_reason']);
+
+        if ($rejected->isNotEmpty()) {
+            $sections[] = "## Recently rejected, and why - do not reproduce these\n\n".$rejected
+                ->map(fn (LinkedinPost $post): string => "{$post->body}\n\nReason: ".($post->rejection_reason ?? '(no reason given)'))
+                ->implode("\n\n---\n\n");
+        }
+
+        $ownWinners = $this->project->linkedinPosts()
+            ->whereNotNull('promoted_at')
+            ->latest('promoted_at')
+            ->limit(5)
+            ->pluck('body');
+
+        if ($ownWinners->isNotEmpty()) {
+            $sections[] = "## This project's own posts that performed well\n\n".$ownWinners->implode("\n\n---\n\n");
+        }
+
+        $sharedPool = LinkedinPostExample::promptDigest();
+
+        if ($sharedPool !== '') {
+            $sections[] = $sharedPool;
+        }
+
         $sections[] = "## Today's date\n\n".now()->toDateString();
 
         return implode("\n\n", $sections);
@@ -112,8 +147,10 @@ class GenerateLinkedinPost implements ShouldQueue
 
     /**
      * @param  array<string, mixed>  $structured
+     * @return bool whether at least one draft was actually written - what
+     *              decides whether `LinkedinPostDrafted` goes out.
      */
-    private function persist(array $structured, int $agentRunId, ?Company $clientWon): void
+    private function persist(array $structured, int $agentRunId, ?Company $clientWon): bool
     {
         $sourceType = LinkedinPostSourceType::from((string) $structured['source_type']);
         $evidence = (string) $structured['evidence'];
@@ -123,6 +160,8 @@ class GenerateLinkedinPost implements ShouldQueue
                 [LinkedinPostVariant::Named, (string) ($structured['body_named'] ?? '')],
                 [LinkedinPostVariant::Anonymized, (string) ($structured['body_anonymized'] ?? '')],
             ];
+
+            $created = false;
 
             foreach ($variants as [$variant, $body]) {
                 if ($body === '') {
@@ -139,15 +178,17 @@ class GenerateLinkedinPost implements ShouldQueue
                     'body' => $body,
                     'status' => LinkedinPostStatus::Draft,
                 ]);
+
+                $created = true;
             }
 
-            return;
+            return $created;
         }
 
         $body = (string) ($structured['body'] ?? '');
 
         if ($body === '') {
-            return;
+            return false;
         }
 
         LinkedinPost::create([
@@ -158,5 +199,7 @@ class GenerateLinkedinPost implements ShouldQueue
             'body' => $body,
             'status' => LinkedinPostStatus::Draft,
         ]);
+
+        return true;
     }
 }

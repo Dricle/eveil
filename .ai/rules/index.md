@@ -10,11 +10,13 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Ai/** | .ai/rules/ai.md |
 | app/Ai/**,app/Http/Controllers/AppSettings/** | .ai/rules/app-settings.md |
 | app/Cloud/** | .ai/rules/cloud.md |
+| app/Models/LinkedinPost.php,app/Models/LinkedinPostExample.php,app/Http/Controllers/LinkedinPostController.php,app/Actions/FetchLinkedinPostStats.php | .ai/rules/controllers-actions.md |
 | app/Http/Controllers/** | .ai/rules/controllers.md |
 | database/** | .ai/rules/database.md |
 | compose.yaml,compose.deploy.yaml,docker/degoog/** | .ai/rules/degoog.md |
 | deploy/** | .ai/rules/deploy.md |
 | app/Services/Discovery/** | .ai/rules/discovery.md |
+| app/Models/LinkedinPost.php,app/Http/Controllers/LinkedinPostController.php,app/Enums/LinkedinPostStatus.php | .ai/rules/enums.md |
 | **, composer.json, README.md | .ai/rules/general.md |
 | app/Ai/Agents/LinkedinPostWriter.php,app/Services/Linkedin/**,app/Models/LinkedinAccount.php,app/Models/LinkedinPost.php,app/Http/Controllers/Linkedin*.php | .ai/rules/http-controllers.md |
 | app/Jobs/Discovery/** | .ai/rules/jobs-discovery.md |
@@ -26,5 +28,6 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Http/Resources/** | .ai/rules/resources.md |
 | routes/** | .ai/rules/routes.md |
 | app/Actions/FindContacts.php,app/Services/Discovery/WebsiteFinder.php | .ai/rules/services-discovery.md |
+| app/Http/Controllers/LinkedinStatsOAuthController.php,app/Support/LinkedinCredentials.php,app/Models/LinkedinAccount.php | .ai/rules/support-models.md |
 | tests/** | .ai/rules/tests.md |
 | app/Ai/Tools/** | .ai/rules/tools.md |

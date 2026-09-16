@@ -39,13 +39,15 @@ const FREQUENCIES = [
 const editing = ref<number | null>(null)
 const approving = ref<number | null>(null)
 const rejecting = ref<number | null>(null)
+const deleting = ref<number | null>(null)
+const promoting = ref<number | null>(null)
+const rejectingPost = ref<LinkedinPost | null>(null)
+const rejectReason = ref('')
 
 const STATUS = {
     draft: { color: 'neutral' as const, label: 'Draft' },
-    approved: { color: 'info' as const, label: 'Publishing…' },
     published: { color: 'success' as const, label: 'Published' },
-    rejected: { color: 'neutral' as const, label: 'Rejected' },
-    failed: { color: 'error' as const, label: 'Failed' }
+    rejected: { color: 'neutral' as const, label: 'Rejected' }
 }
 
 const SOURCE = {
@@ -64,12 +66,47 @@ function approve (post: LinkedinPost) {
     })
 }
 
-function reject (post: LinkedinPost) {
+function openReject (post: LinkedinPost) {
+    rejectingPost.value = post
+    rejectReason.value = ''
+}
+
+function confirmReject () {
+    const post = rejectingPost.value
+    if (!post) {
+        return
+    }
+
     rejecting.value = post.id
+    router.post(linkedinPostRoutes.reject.url(post.id), { reason: rejectReason.value }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            toast.add({ title: 'Draft rejected', color: 'neutral' })
+            rejectingPost.value = null
+        },
+        onFinish: () => rejecting.value = null
+    })
+}
+
+function destroy (post: LinkedinPost) {
+    deleting.value = post.id
     router.delete(linkedinPostRoutes.destroy.url(post.id), {
         preserveScroll: true,
-        onSuccess: () => toast.add({ title: 'Draft rejected', color: 'neutral' }),
-        onFinish: () => rejecting.value = null
+        onSuccess: () => toast.add({ title: 'Draft deleted', color: 'neutral' }),
+        onFinish: () => deleting.value = null
+    })
+}
+
+function promote (post: LinkedinPost) {
+    promoting.value = post.id
+    router.post(linkedinPostRoutes.promote.url(post.id), {}, {
+        preserveScroll: true,
+        onSuccess: () => toast.add({
+            title: 'Marked as successful',
+            description: 'Your writer will use this as an example for future posts on this project.',
+            color: 'success'
+        }),
+        onFinish: () => promoting.value = null
     })
 }
 </script>
@@ -180,8 +217,31 @@ function reject (post: LinkedinPost) {
                         variant="ghost"
                         size="xs"
                         label="Reject"
-                        :loading="rejecting === post.id"
-                        @click="reject(post)"
+                        @click="openReject(post)"
+                    />
+                    <UButton
+                        v-if="post.status === 'published' && !post.promoted_at"
+                        icon="i-lucide-thumbs-up"
+                        color="success"
+                        variant="ghost"
+                        size="xs"
+                        label="Mark as successful"
+                        :loading="promoting === post.id"
+                        @click="promote(post)"
+                    />
+                    <UBadge
+                        v-if="post.promoted_at"
+                        color="success"
+                        variant="subtle"
+                        label="Marked as successful"
+                    />
+                    <UButton
+                        icon="i-lucide-trash"
+                        color="neutral"
+                        variant="ghost"
+                        size="xs"
+                        :loading="deleting === post.id"
+                        @click="destroy(post)"
                     />
                 </div>
             </div>
@@ -231,6 +291,13 @@ function reject (post: LinkedinPost) {
             >
                 {{ post.last_error }}
             </p>
+
+            <p
+                v-if="post.status === 'rejected' && post.rejection_reason"
+                class="text-sm text-dimmed"
+            >
+                Rejected: {{ post.rejection_reason }}
+            </p>
         </div>
 
         <p
@@ -239,5 +306,40 @@ function reject (post: LinkedinPost) {
         >
             No drafts yet.
         </p>
+
+        <UModal
+            :open="rejectingPost !== null"
+            title="Reject this draft"
+            @update:open="(value: boolean) => { if (!value) rejectingPost = null }"
+        >
+            <template #body>
+                <UFormField
+                    label="Why? (optional)"
+                    description="Fed back to the writer so it doesn't repeat this."
+                >
+                    <UTextarea
+                        v-model="rejectReason"
+                        :rows="4"
+                        class="w-full"
+                        placeholder="Too many emojis, wrong tone, ..."
+                    />
+                </UFormField>
+            </template>
+
+            <template #footer>
+                <UButton
+                    color="neutral"
+                    variant="ghost"
+                    label="Cancel"
+                    @click="rejectingPost = null"
+                />
+                <UButton
+                    color="error"
+                    label="Reject"
+                    :loading="rejecting === rejectingPost?.id"
+                    @click="confirmReject"
+                />
+            </template>
+        </UModal>
     </div>
 </template>

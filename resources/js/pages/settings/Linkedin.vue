@@ -13,6 +13,7 @@ defineOptions({ layout: [AppLayout, [SettingsLayout, { title: 'LinkedIn' }]] })
 defineProps<{
     accounts: LinkedinAccount[]
     projects: Project[]
+    statsConfigured: boolean
 }>()
 
 const page = usePage()
@@ -109,6 +110,23 @@ const STATUS = {
                 >
                     No project may draft/post through it yet.
                 </p>
+
+                <UBadge
+                    v-if="account.has_stats_access"
+                    color="success"
+                    variant="subtle"
+                    label="Performance polling enabled"
+                />
+                <UButton
+                    v-else-if="statsConfigured"
+                    icon="i-lucide-line-chart"
+                    color="neutral"
+                    variant="outline"
+                    size="xs"
+                    label="Connect performance polling"
+                    :href="linkedinRoutes.stats.connect.url(account.id)"
+                    external
+                />
             </div>
 
             <p

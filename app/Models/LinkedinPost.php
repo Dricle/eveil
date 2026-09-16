@@ -38,16 +38,21 @@ use Illuminate\Support\Carbon;
  * @property string $evidence
  * @property string $body
  * @property LinkedinPostStatus $status
+ * @property string|null $rejection_reason
  * @property string|null $urn
  * @property Carbon|null $published_at
  * @property string|null $last_error
+ * @property Carbon|null $promoted_at
+ * @property int $likes_count
+ * @property Carbon|null $stats_checked_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
 #[Fillable([
     'project_id', 'linkedin_account_id', 'agent_run_id',
     'source_type', 'source_ref', 'variant', 'evidence', 'body',
-    'status', 'urn', 'published_at', 'last_error',
+    'status', 'rejection_reason', 'urn', 'published_at', 'last_error',
+    'promoted_at', 'likes_count', 'stats_checked_at',
 ])]
 class LinkedinPost extends Model
 {
@@ -97,6 +102,8 @@ class LinkedinPost extends Model
             'variant' => LinkedinPostVariant::class,
             'status' => LinkedinPostStatus::class,
             'published_at' => 'datetime',
+            'promoted_at' => 'datetime',
+            'stats_checked_at' => 'datetime',
         ];
     }
 }

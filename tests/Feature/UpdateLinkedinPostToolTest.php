@@ -28,8 +28,8 @@ it('refuses to update a post that is no longer a draft', function () {
     $project = Project::factory()->create();
     $post = LinkedinPost::factory()->create([
         'project_id' => $project->id,
-        'body' => 'Already approved.',
-        'status' => LinkedinPostStatus::Approved,
+        'body' => 'Already published.',
+        'status' => LinkedinPostStatus::Published,
     ]);
 
     $result = (new UpdateLinkedinPost($project))->handle(new Request([
@@ -37,8 +37,8 @@ it('refuses to update a post that is no longer a draft', function () {
         'body' => 'Too late.',
     ]));
 
-    expect((string) $result)->toContain('already approved')
-        ->and($post->fresh()->body)->toBe('Already approved.');
+    expect((string) $result)->toContain('already published')
+        ->and($post->fresh()->body)->toBe('Already published.');
 });
 
 it('refuses to reach another project\'s post', function () {

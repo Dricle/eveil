@@ -9,9 +9,10 @@ use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
 /**
- * The two calls this product actually needs against LinkedIn's official API:
- * publish a post as a member, refresh an expiring token. Personal-profile
- * only (`w_member_social`) - see `.ai/rules/linkedin.md`.
+ * The calls this product needs against LinkedIn's official API: publish a
+ * post as a member, refresh an expiring token, and (only for an account with
+ * the separate, restricted stats connection) read a post's engagement.
+ * Personal-profile only (`w_member_social`) - see `.ai/rules/linkedin.md`.
  *
  * Comment read/reply on your own post is a documented gap, not an oversight:
  * LinkedIn's exact API shape for it needs verifying against their current
@@ -54,6 +55,31 @@ class LinkedinClient
         }
 
         return $urn;
+    }
+
+    /**
+     * The reaction/comment counts on a post the connected member published -
+     * `App\Actions\FetchLinkedinPostStats`'s only call. Requires the
+     * SEPARATE `stats_access_token` (the Community Management app's
+     * restricted `r_member_social_feed`, not the posting app's
+     * `w_member_social`): a 401/403 here almost always means the account
+     * was never granted it, which is expected for most accounts and must
+     * never be treated as an error to surface.
+     */
+    public function socialMetadata(LinkedinAccount $account, string $urn): int
+    {
+        $response = Http::withToken($account->stats_access_token)
+            ->withHeaders($this->headers())
+            ->get("https://api.linkedin.com/rest/socialMetadata/{$urn}");
+
+        if (! $response->successful()) {
+            throw new RuntimeException("LinkedIn refused the social metadata request: HTTP {$response->status()}");
+        }
+
+        /** @var array<string, array{count: int}> $reactions */
+        $reactions = $response->json('reactionSummaries') ?? [];
+
+        return array_sum(array_column($reactions, 'count'));
     }
 
     /**

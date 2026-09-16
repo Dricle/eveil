@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\PublishLinkedinPost;
 use App\Enums\LinkedinPostStatus;
+use App\Http\Requests\LinkedinPostRejectRequest;
 use App\Http\Requests\LinkedinPostRequest;
 use App\Http\Resources\LinkedinPostResource;
-use App\Jobs\PublishLinkedinPost;
 use App\Models\LinkedinPost;
 use App\Support\CurrentProject;
 use Illuminate\Http\RedirectResponse;
@@ -44,7 +45,13 @@ class LinkedinPostController extends Controller
         return to_route('linkedin.posts.index');
     }
 
-    public function approve(CurrentProject $currentProject, int $linkedinPost): RedirectResponse
+    /**
+     * Approving and publishing are the same action: there is no separate
+     * `approved` status to sit in first. A failure leaves the row at
+     * `Draft` with `last_error` set, so the exact same button remains the
+     * retry.
+     */
+    public function approve(PublishLinkedinPost $publish, CurrentProject $currentProject, int $linkedinPost): RedirectResponse
     {
         $post = LinkedinPost::query()->findOrFail($linkedinPost);
         $account = $currentProject->getOrFail()->linkedinAccounts()->first();
@@ -53,20 +60,61 @@ class LinkedinPostController extends Controller
             return to_route('linkedin.posts.index')->with('status', 'Connect a LinkedIn account first.');
         }
 
-        $post->update(['status' => LinkedinPostStatus::Approved, 'linkedin_account_id' => $account->id]);
+        $post->update(['linkedin_account_id' => $account->id]);
 
         // Only one of a named/anonymized pair can ever go out: the user just
         // chose which by approving this one.
-        $post->sibling()->update(['status' => LinkedinPostStatus::Rejected]);
+        $post->sibling()->update([
+            'status' => LinkedinPostStatus::Rejected,
+            'rejection_reason' => 'Superseded by the other variant.',
+        ]);
 
-        PublishLinkedinPost::dispatch($post);
+        $publish->handle($post, $account);
 
         return to_route('linkedin.posts.index');
     }
 
+    /**
+     * Keeps the row, with an optional reason: `GenerateLinkedinPost::prompt()`
+     * reads recent rejections (and why) so the writer stops reproducing them.
+     */
+    public function reject(LinkedinPostRejectRequest $request, int $linkedinPost): RedirectResponse
+    {
+        LinkedinPost::query()->findOrFail($linkedinPost)->update([
+            'status' => LinkedinPostStatus::Rejected,
+            'rejection_reason' => $request->validated('reason'),
+        ]);
+
+        return to_route('linkedin.posts.index');
+    }
+
+    /**
+     * Hard delete: no trace, no feedback. Different from reject on purpose -
+     * see `reject()`.
+     */
     public function destroy(int $linkedinPost): RedirectResponse
     {
-        LinkedinPost::query()->findOrFail($linkedinPost)->update(['status' => LinkedinPostStatus::Rejected]);
+        LinkedinPost::query()->findOrFail($linkedinPost)->delete();
+
+        return to_route('linkedin.posts.index');
+    }
+
+    /**
+     * Project-scoped only: stamps `promoted_at` so THIS project's own
+     * `GenerateLinkedinPost::prompt()` treats it as a proven example. Never
+     * touches the shared instance-wide `linkedin_post_examples` pool - a
+     * user's own click can only ever affect their own project's future
+     * drafts, which is what makes it safe with no review step. The shared
+     * pool is fed only by a superadmin's own hand or `FetchLinkedinPostStats`'
+     * real, externally-measured number.
+     */
+    public function promote(int $linkedinPost): RedirectResponse
+    {
+        $post = LinkedinPost::query()->findOrFail($linkedinPost);
+
+        if ($post->status === LinkedinPostStatus::Published && $post->promoted_at === null) {
+            $post->update(['promoted_at' => now()]);
+        }
 
         return to_route('linkedin.posts.index');
     }

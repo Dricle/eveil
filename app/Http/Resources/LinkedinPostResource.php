@@ -23,9 +23,11 @@ class LinkedinPostResource extends JsonResource
             'evidence' => $this->evidence,
             'body' => $this->body,
             'status' => $this->status->value,
+            'rejection_reason' => $this->rejection_reason,
             'urn' => $this->urn,
             'published_at' => $this->published_at?->toIso8601String(),
             'last_error' => $this->last_error,
+            'promoted_at' => $this->promoted_at?->toIso8601String(),
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }

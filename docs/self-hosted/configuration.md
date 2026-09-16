@@ -66,7 +66,7 @@ Self-hosted instances bring their own AI provider key; cloud instances get one s
 
 ## LinkedIn posting
 
-Personal-profile posting only (publishing, and eventually replying to comments on your own posts) — no automated connection requests or messages, and no Company Page posting either: both need LinkedIn's gated Community Management API, a separate partner approval this app does not depend on.
+Personal-profile posting only (publishing to your own feed) — no automated connection requests or messages, no replying to comments, and no Company Page posting: LinkedIn exposes no feed-read API to third-party apps at any tier, so none of those are buildable against the official API today.
 
 This needs its own LinkedIn Developer App, one per instance, the same bring-your-own-key shape as the AI provider key above:
 
@@ -76,3 +76,16 @@ This needs its own LinkedIn Developer App, one per instance, the same bring-your
 4. Copy the **Client ID** and **Client Secret** into **App Settings → LinkedIn** (superadmin only, like the AI provider key — encrypted, never sent back to the browser).
 
 Once that's saved, any organization member connects their own profile from **Settings → LinkedIn** (under the Organization group, alongside Mailboxes) and grants it to whichever projects should post through it. The posting cadence is set per project from the **LinkedIn** posts queue instead (its own item in the main navigation). Every draft — from the knowledge-base rotation, a client win, relevant industry news, or drafted by asking Evie — lands in that same queue for review; nothing publishes without an explicit approve.
+
+### Performance polling (optional, a second app)
+
+Eveil can check a published post's real like count once a day and, past a threshold, feed it back as a proven example — both for that same project's own writer and, if it clears the bar, into the instance-wide bank every project draws from. This needs `r_member_social_feed`, a restricted scope under LinkedIn's **Community Management API** product, granted to select developers only.
+
+LinkedIn does not allow the Community Management API product to live on the same Developer App as Share on LinkedIn, so this is a genuinely **second app**, not an extra scope on the one above:
+
+1. Create a second app at [linkedin.com/developers/apps](https://www.linkedin.com/developers/apps).
+2. Under **Products**, request **Community Management API**. Unlike the first app's products, this one requires filling in a form and waiting for LinkedIn's review — it may be refused, and that's fine: nothing else in the product depends on it.
+3. Under **Auth**, add this instance's stats callback as an authorized redirect URL: `{APP_URL}/app/linkedin/stats/oauth/callback`.
+4. Copy this app's **Client ID** and **Client Secret** into **App Settings → LinkedIn**, in the separate "Community Management app" card.
+
+Once configured, a **"Connect performance polling"** button appears next to each connected account on **Settings → LinkedIn** — a second, independent OAuth step per account, since it's a different app registration. Accounts that never connect it are simply skipped by the daily poll, and the whole feature stays invisible on an instance that never sets up this second app. The like-count threshold is set from **App Settings → LinkedIn post examples**, where a superadmin can also add examples to the shared bank by hand.

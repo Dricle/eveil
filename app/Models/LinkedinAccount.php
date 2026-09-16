@@ -40,6 +40,10 @@ use Illuminate\Support\Carbon;
  * @property LinkedinAccountStatus $status
  * @property string|null $last_error
  * @property Carbon|null $last_checked_at
+ * @property string|null $stats_access_token
+ * @property string|null $stats_refresh_token
+ * @property Carbon|null $stats_access_token_expires_at
+ * @property Carbon|null $stats_refresh_token_expires_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -47,8 +51,9 @@ use Illuminate\Support\Carbon;
     'organization_id', 'member_urn', 'display_name',
     'access_token', 'refresh_token', 'access_token_expires_at', 'refresh_token_expires_at',
     'status', 'last_error', 'last_checked_at',
+    'stats_access_token', 'stats_refresh_token', 'stats_access_token_expires_at', 'stats_refresh_token_expires_at',
 ])]
-#[Hidden(['access_token', 'refresh_token'])]
+#[Hidden(['access_token', 'refresh_token', 'stats_access_token', 'stats_refresh_token'])]
 class LinkedinAccount extends Model
 {
     /** @use HasFactory<LinkedinAccountFactory> */
@@ -94,6 +99,17 @@ class LinkedinAccount extends Model
     }
 
     /**
+     * Whether this account has been through the second, separate OAuth
+     * connection for the Community Management app - LinkedIn does not allow
+     * that product to live on the same app as Share on LinkedIn, so this is
+     * a genuinely different token, not a wider scope on the primary one.
+     */
+    public function hasStatsAccess(): bool
+    {
+        return $this->stats_access_token !== null;
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array
@@ -105,6 +121,10 @@ class LinkedinAccount extends Model
             'access_token_expires_at' => 'datetime',
             'refresh_token_expires_at' => 'datetime',
             'last_checked_at' => 'datetime',
+            'stats_access_token' => EncryptedCredential::class,
+            'stats_refresh_token' => EncryptedCredential::class,
+            'stats_access_token_expires_at' => 'datetime',
+            'stats_refresh_token_expires_at' => 'datetime',
         ];
     }
 }

@@ -2,12 +2,18 @@
 
 use App\Ai\Agents\LinkedinPostWriter;
 use App\Enums\LinkedinPostSourceType;
+use App\Enums\LinkedinPostStatus;
 use App\Enums\LinkedinPostVariant;
 use App\Enums\OutreachStatus;
 use App\Jobs\GenerateLinkedinPost;
+use App\Models\AgentRun;
 use App\Models\Company;
 use App\Models\LinkedinPost;
+use App\Models\LinkedinPostExample;
 use App\Models\Project;
+use App\Models\User;
+use App\Notifications\LinkedinPostDrafted;
+use Illuminate\Support\Facades\Notification;
 use Laravel\Ai\Responses\Data\Meta;
 use Laravel\Ai\Responses\Data\Usage;
 use Laravel\Ai\Responses\StructuredTextResponse;
@@ -81,4 +87,96 @@ it('never proposes the same client win twice', function () {
     GenerateLinkedinPost::dispatchSync($project);
 
     expect(LinkedinPost::where('source_type', LinkedinPostSourceType::ClientWon)->count())->toBe(1);
+});
+
+it('feeds recently rejected posts and their reasons into the prompt', function () {
+    $project = Project::factory()->create();
+    LinkedinPost::factory()->create([
+        'project_id' => $project->id,
+        'status' => LinkedinPostStatus::Rejected,
+        'body' => 'Too salesy.',
+        'rejection_reason' => 'Sounded like an ad.',
+    ]);
+
+    LinkedinPostWriter::fake([fakeWriterResponse([
+        'source_type' => 'knowledge_base',
+        'evidence' => 'e',
+        'body' => 'A fact.',
+    ])]);
+
+    GenerateLinkedinPost::dispatchSync($project);
+
+    expect(AgentRun::sole()->input['prompt'])
+        ->toContain('Recently rejected')
+        ->toContain('Too salesy.')
+        ->toContain('Sounded like an ad.');
+});
+
+it('feeds this project\'s own promoted posts into the prompt', function () {
+    $project = Project::factory()->create();
+    LinkedinPost::factory()->create([
+        'project_id' => $project->id,
+        'status' => LinkedinPostStatus::Published,
+        'body' => 'Our best post ever.',
+        'promoted_at' => now(),
+    ]);
+
+    LinkedinPostWriter::fake([fakeWriterResponse([
+        'source_type' => 'knowledge_base',
+        'evidence' => 'e',
+        'body' => 'A fact.',
+    ])]);
+
+    GenerateLinkedinPost::dispatchSync($project);
+
+    expect(AgentRun::sole()->input['prompt'])
+        ->toContain('performed well')
+        ->toContain('Our best post ever.');
+});
+
+it('feeds the shared instance-wide pool into the prompt', function () {
+    $project = Project::factory()->create();
+    LinkedinPostExample::factory()->create(['body' => 'A proven post from another tenant.']);
+
+    LinkedinPostWriter::fake([fakeWriterResponse([
+        'source_type' => 'knowledge_base',
+        'evidence' => 'e',
+        'body' => 'A fact.',
+    ])]);
+
+    GenerateLinkedinPost::dispatchSync($project);
+
+    expect(AgentRun::sole()->input['prompt'])
+        ->toContain('Proven LinkedIn posts')
+        ->toContain('A proven post from another tenant.');
+});
+
+it('notifies the project\'s users when a draft is created', function () {
+    $project = Project::factory()->has(User::factory())->create();
+    Notification::fake();
+
+    LinkedinPostWriter::fake([fakeWriterResponse([
+        'source_type' => 'knowledge_base',
+        'evidence' => 'e',
+        'body' => 'A fact.',
+    ])]);
+
+    GenerateLinkedinPost::dispatchSync($project);
+
+    Notification::assertSentTo($project->users, LinkedinPostDrafted::class);
+});
+
+it('does not notify anyone when nothing was drafted', function () {
+    $project = Project::factory()->has(User::factory())->create();
+    Notification::fake();
+
+    LinkedinPostWriter::fake([fakeWriterResponse([
+        'source_type' => 'knowledge_base',
+        'evidence' => 'e',
+        'body' => '',
+    ])]);
+
+    GenerateLinkedinPost::dispatchSync($project);
+
+    Notification::assertNothingSent();
 });

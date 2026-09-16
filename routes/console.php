@@ -47,3 +47,9 @@ Schedule::command('eveil:promote-proven-emails')->daily();
 // check granularity: nothing to do for a project whose next post is not
 // due yet, same reasoning as the command above.
 Schedule::command('eveil:linkedin-generate-due')->daily();
+
+// A post's engagement settles quickly, so daily is enough to catch it. Cheap
+// either way: an account that never connected the separate Community
+// Management app is skipped outright, and most never will - LinkedIn grants
+// `r_member_social_feed` selectively.
+Schedule::command('eveil:linkedin-fetch-stats')->daily();

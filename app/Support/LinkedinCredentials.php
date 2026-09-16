@@ -41,4 +41,40 @@ class LinkedinCredentials
         $this->settings->forget('linkedin.client_id');
         $this->settings->forget('linkedin.client_secret');
     }
+
+    /**
+     * A SECOND LinkedIn Developer App, for the Community Management API's
+     * restricted `r_member_social_feed` (post-performance polling).
+     * LinkedIn does not allow that product to live on the same app as Share
+     * on LinkedIn, so this is a genuinely separate registration - its own
+     * client id/secret, its own review wait - never a wider scope on the
+     * app above. Entirely optional: nothing else in the product depends on
+     * it being configured.
+     */
+    public function statsClientId(): ?string
+    {
+        return $this->settings->get('linkedin.stats_client_id');
+    }
+
+    public function statsClientSecret(): ?string
+    {
+        return $this->settings->secret('linkedin.stats_client_secret');
+    }
+
+    public function isStatsConfigured(): bool
+    {
+        return $this->statsClientId() !== null && $this->settings->hasSecret('linkedin.stats_client_secret');
+    }
+
+    public function saveStats(string $clientId, string $clientSecret): void
+    {
+        $this->settings->set('linkedin.stats_client_id', $clientId);
+        $this->settings->set('linkedin.stats_client_secret', $clientSecret, encrypted: true);
+    }
+
+    public function forgetStats(): void
+    {
+        $this->settings->forget('linkedin.stats_client_id');
+        $this->settings->forget('linkedin.stats_client_secret');
+    }
 }

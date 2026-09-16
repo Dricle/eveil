@@ -22,6 +22,7 @@ class LinkedinAccountResource extends JsonResource
             'member_urn' => $this->member_urn,
             'status' => $this->status->value,
             'last_error' => $this->last_error,
+            'has_stats_access' => $this->hasStatsAccess(),
             'projects' => $this->projects->pluck('id')->all(),
         ];
     }

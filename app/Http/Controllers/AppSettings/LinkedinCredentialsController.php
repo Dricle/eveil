@@ -21,6 +21,10 @@ class LinkedinCredentialsController extends Controller
         return Inertia::render('app-settings/Linkedin', [
             'clientId' => $credentials->clientId(),
             'configured' => $credentials->isConfigured(),
+            // The second, optional app for post-performance polling - see
+            // `LinkedinStatsCredentialsController`.
+            'statsClientId' => $credentials->statsClientId(),
+            'statsConfigured' => $credentials->isStatsConfigured(),
         ]);
     }
 

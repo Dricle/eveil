@@ -8,6 +8,8 @@ export type LinkedinAccount = {
     member_urn: string
     status: 'active' | 'expired' | 'error'
     last_error: string | null
+    /** Whether the SEPARATE Community Management app connection exists - see docs/self-hosted. */
+    has_stats_access: boolean
     /** The projects granted this account, as ids, because it is a checkbox list. */
     projects: number[]
 }
@@ -23,9 +25,14 @@ export type LinkedinPost = {
     /** What grounds this draft, shown beside the body. */
     evidence: string
     body: string
-    status: 'draft' | 'approved' | 'published' | 'rejected' | 'failed'
+    status: 'draft' | 'published' | 'rejected'
+    /** Set on reject, optional - shown beside a rejected post's body. */
+    rejection_reason: string | null
     urn: string | null
     published_at: string | null
+    /** A failed publish attempt, on a post that stays `draft` - never its own status. */
     last_error: string | null
+    /** Set by "mark as successful" or the performance poll crossing the threshold. */
+    promoted_at: string | null
     created_at: string | null
 }

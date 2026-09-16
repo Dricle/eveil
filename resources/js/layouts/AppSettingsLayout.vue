@@ -8,6 +8,7 @@ import emailExamples from '@/routes/app-settings/email-examples'
 import hosts from '@/routes/app-settings/hosts'
 import limits from '@/routes/app-settings/limits'
 import linkedin from '@/routes/app-settings/linkedin'
+import linkedinPostExamples from '@/routes/app-settings/linkedin-post-examples'
 import provider from '@/routes/app-settings/provider'
 import sending from '@/routes/app-settings/sending'
 
@@ -30,6 +31,7 @@ const items = computed<NavigationMenuItem[]>(() =>
         { label: 'Sending', icon: 'i-lucide-send', to: sending.edit.url() },
         { label: 'Host registry', icon: 'i-lucide-globe', to: hosts.index.url() },
         { label: 'Email examples', icon: 'i-lucide-mail-plus', to: emailExamples.index.url() },
+        { label: 'LinkedIn post examples', icon: 'i-lucide-thumbs-up', to: linkedinPostExamples.index.url() },
         // `billing.*` is never read on self-hosted (`.ai/rules/cloud.md`), so
         // the tab itself only exists where the settings would do anything.
         ...(page.props.edition === 'cloud'

@@ -40,6 +40,18 @@ return new class extends Migration
             $table->text('last_error')->nullable();
             $table->timestamp('last_checked_at')->nullable();
 
+            // A SECOND LinkedIn app's tokens, for the Community Management
+            // API's restricted `r_member_social_feed` (post-performance
+            // polling). LinkedIn does not allow that product to live on the
+            // same app as Share on LinkedIn, so this is deliberately a
+            // second OAuth connection, not a wider scope on the first one -
+            // see `LinkedinStatsOAuthController`. All nullable: most
+            // accounts never connect this half at all.
+            $table->text('stats_access_token')->nullable();
+            $table->text('stats_refresh_token')->nullable();
+            $table->timestamp('stats_access_token_expires_at')->nullable();
+            $table->timestamp('stats_refresh_token_expires_at')->nullable();
+
             $table->timestamps();
         });
 
@@ -73,11 +85,24 @@ return new class extends Migration
             $table->text('evidence');
             $table->text('body');
 
-            // draft|approved|published|rejected|failed.
+            // draft|published|rejected. A failed publish attempt stays
+            // `draft` with `last_error` set, never its own status: that
+            // would overwrite the fact this was a draft awaiting review.
             $table->string('status')->default('draft');
+            $table->text('rejection_reason')->nullable();
             $table->string('urn')->nullable();
             $table->timestamp('published_at')->nullable();
             $table->text('last_error')->nullable();
+
+            // Set by a user's own "mark as successful" click OR by
+            // `FetchLinkedinPostStats` crossing the like threshold - either
+            // way, this project's own writer treats it as a proven example
+            // (`GenerateLinkedinPost::prompt()`). The poll additionally
+            // copies it into the instance-wide `linkedin_post_examples`
+            // pool; the click never does - see `.ai/rules` for why.
+            $table->timestamp('promoted_at')->nullable();
+            $table->unsignedInteger('likes_count')->default(0);
+            $table->timestamp('stats_checked_at')->nullable();
 
             $table->timestamps();
 
@@ -109,11 +134,22 @@ return new class extends Migration
                 'created_at' => now(),
             ],
         );
+
+        // The like count `FetchLinkedinPostStats` requires before a post
+        // earns a place in the shared instance-wide pool.
+        DB::table('settings')->updateOrInsert(
+            ['key' => 'linkedin_examples.min_likes'],
+            ['value' => json_encode(20), 'is_encrypted' => false, 'updated_at' => now(), 'created_at' => now()],
+        );
+
+        // Cleanup for any local row written while `approved`/`failed` still
+        // existed as statuses, before this migration ever ran anywhere real.
+        DB::table('linkedin_posts')->whereIn('status', ['approved', 'failed'])->update(['status' => 'draft']);
     }
 
     public function down(): void
     {
-        DB::table('settings')->where('key', 'agents.linkedin-post-writer')->delete();
+        DB::table('settings')->whereIn('key', ['agents.linkedin-post-writer', 'linkedin_examples.min_likes'])->delete();
 
         Schema::table('projects', function (Blueprint $table) {
             $table->dropColumn(['linkedin_post_frequency', 'linkedin_next_post_at']);

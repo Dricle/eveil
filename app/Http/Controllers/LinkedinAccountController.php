@@ -7,6 +7,7 @@ use App\Http\Resources\LinkedinAccountResource;
 use App\Http\Resources\ProjectResource;
 use App\Models\LinkedinAccount;
 use App\Support\CurrentProject;
+use App\Support\LinkedinCredentials;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -22,7 +23,7 @@ class LinkedinAccountController extends Controller
 {
     public function __construct(private CurrentProject $currentProject) {}
 
-    public function index(): Response
+    public function index(LinkedinCredentials $credentials): Response
     {
         $organization = $this->currentProject->organization();
 
@@ -33,6 +34,10 @@ class LinkedinAccountController extends Controller
             'projects' => ProjectResource::collection(
                 $organization->projects()->orderBy('name')->get()->each->setRelation('organization', $organization)
             ),
+            // The "Connect performance polling" button only exists at all
+            // once the superadmin has configured the second app - a feature
+            // that is invisible, not just inert, on an instance without it.
+            'statsConfigured' => $credentials->isStatsConfigured(),
         ]);
     }
 

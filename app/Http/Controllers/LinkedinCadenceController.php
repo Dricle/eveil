@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\LinkedinCadenceRequest;
+use App\Http\Requests\LinkedinPostFrequencyRequest;
 use App\Support\CurrentProject;
 use Illuminate\Http\RedirectResponse;
 
@@ -15,7 +15,7 @@ use Illuminate\Http\RedirectResponse;
  */
 class LinkedinCadenceController extends Controller
 {
-    public function update(LinkedinCadenceRequest $request, CurrentProject $currentProject): RedirectResponse
+    public function update(LinkedinPostFrequencyRequest $request, CurrentProject $currentProject): RedirectResponse
     {
         $currentProject->getOrFail()->update($request->validated());
 

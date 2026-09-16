@@ -6,7 +6,7 @@ use App\Enums\LinkedinPostFrequency;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class LinkedinCadenceRequest extends FormRequest
+class LinkedinPostFrequencyRequest extends FormRequest
 {
     /**
      * @return array<string, array<int, mixed>>

@@ -755,8 +755,12 @@ it("appends the project's own EMAIL writing instructions to the agents that writ
 
     // Evie DOES see the box's content, since the user may ask her about it -
     // but framed as reference, never as a directive for her own chat voice.
+    // Same treatment for the LinkedIn tone box.
+    $project->update(['linkedin_prompt_instructions' => 'Be punchy, first person.']);
+
     expect((string) (new Evie($project))->instructions())
         ->toContain('Never use emoji.')
+        ->toContain('Be punchy, first person.')
         ->toContain('for your own reference only')
         ->not->toContain('Where they disagree with anything above, follow these');
 });

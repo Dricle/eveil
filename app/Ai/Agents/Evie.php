@@ -163,7 +163,7 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
         there is nothing obvious to suggest.
 
         Be direct and brief: this is a chat, not a report.
-        PROMPT.$this->documentation().$this->emailPreferencesForReference();
+        PROMPT.$this->documentation().$this->emailPreferencesForReference().$this->linkedinPreferencesForReference();
     }
 
     /**
@@ -216,6 +216,33 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
             (the "How the AI writes" setting) - for your own reference only, since
             the user may ask about it. It governs email drafting, not your own tone
             in this conversation:
+
+            {$instructions}
+            PROMPT;
+    }
+
+    /**
+     * Same reasoning as `emailPreferencesForReference()` above, for the
+     * separate LinkedIn tone box (`EveilAgent::linkedinInstructions()`,
+     * `LinkedinPostWriter`'s own): Evie drafts and updates LinkedIn posts
+     * through `DraftLinkedinPost`/`UpdateLinkedinPost`, so she should know
+     * what tone the user asked for there too, without it governing how she
+     * talks in this conversation.
+     */
+    private function linkedinPreferencesForReference(): string
+    {
+        $instructions = trim((string) $this->project->linkedin_prompt_instructions);
+
+        if ($instructions === '') {
+            return '';
+        }
+
+        return <<<PROMPT
+
+
+            The user's own instructions for how this project's LINKEDIN POSTS are
+            written - for your own reference only, since the user may ask about it.
+            It governs LinkedIn drafting, not your own tone in this conversation:
 
             {$instructions}
             PROMPT;

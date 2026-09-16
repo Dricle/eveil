@@ -57,8 +57,8 @@ class LinkedinPostWriter extends EveilAgent implements HasStructuredOutput
 
         Write in plain LinkedIn style: short paragraphs, no markdown, no hashtag
         spam (at most two or three, only if they add something). No dash
-        punctuation, per the instructions below.
-        PROMPT.$this->projectInstructions();
+        punctuation: no em dash, en dash, or hyphen standing in for one.
+        PROMPT.$this->linkedinInstructions();
     }
 
     /**

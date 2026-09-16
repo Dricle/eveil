@@ -31,6 +31,7 @@ use Illuminate\Support\Carbon;
  * @property bool $knowledge_base_edited_by_user
  * @property string|null $default_language
  * @property string|null $prompt_instructions
+ * @property string|null $linkedin_prompt_instructions
  * @property AutonomyLevel $autonomy_level
  * @property int|null $daily_lead_limit
  * @property int|null $lead_limit
@@ -39,7 +40,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['organization_id', 'name', 'url', 'github_token', 'knowledge_base', 'knowledge_base_edited_by_user', 'default_language', 'prompt_instructions', 'autonomy_level', 'daily_lead_limit', 'lead_limit', 'linkedin_post_frequency', 'linkedin_next_post_at'])]
+#[Fillable(['organization_id', 'name', 'url', 'github_token', 'knowledge_base', 'knowledge_base_edited_by_user', 'default_language', 'prompt_instructions', 'linkedin_prompt_instructions', 'autonomy_level', 'daily_lead_limit', 'lead_limit', 'linkedin_post_frequency', 'linkedin_next_post_at'])]
 #[Hidden(['github_token'])]
 class Project extends Model
 {

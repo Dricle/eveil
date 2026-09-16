@@ -46,7 +46,7 @@ class WebsiteAnalyst extends EveilAgent implements HasStructuredOutput
         weekly" is a recommendation; "do content marketing" is not, and must not be
         written. Rank each by impact and effort rather than listing whatever comes to
         mind first.
-        PROMPT.$this->projectInstructions();
+        PROMPT;
     }
 
     /**

@@ -63,7 +63,7 @@ class MessagePersonalizer extends EveilAgent implements HasStructuredOutput
         like, is a shared mailbox: several people read it, so a mail that opens as
         though it found one particular person reads as a mail merge to every one of
         them. Write to the business.
-        PROMPT.$this->projectInstructions();
+        PROMPT.$this->emailWritingInstructions();
     }
 
     /**

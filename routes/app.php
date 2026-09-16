@@ -53,6 +53,7 @@ use App\Http\Controllers\LeadImportController;
 use App\Http\Controllers\LeadNoteController;
 use App\Http\Controllers\LinkedinAccountController;
 use App\Http\Controllers\LinkedinCadenceController;
+use App\Http\Controllers\LinkedinInstructionsController;
 use App\Http\Controllers\LinkedinOAuthController;
 use App\Http\Controllers\LinkedinPostController;
 use App\Http\Controllers\LinkedinStatsOAuthController;
@@ -273,6 +274,14 @@ Route::middleware(['auth', 'verified', 'project.set'])->group(function (): void 
              */
             Route::put('posts/cadence', [LinkedinCadenceController::class, 'update'])
                 ->name('posts.cadence');
+            /*
+             * The LinkedIn-specific tone, on top of the project's general
+             * "how the AI writes" instructions - see
+             * `EveilAgent::linkedinInstructions()`. Same reasoning as cadence
+             * above: a decision about this queue's own voice.
+             */
+            Route::put('posts/instructions', [LinkedinInstructionsController::class, 'update'])
+                ->name('posts.instructions');
             Route::put('posts/{linkedin_post}', [LinkedinPostController::class, 'update'])
                 ->name('posts.update');
             Route::post('posts/{linkedin_post}/approve', [LinkedinPostController::class, 'approve'])

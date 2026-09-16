@@ -81,7 +81,7 @@ class TargetProfileDeriver extends EveilAgent implements HasStructuredOutput
 
         Write the profiles in the language of the product's own market, not in English,
         unless the market is English-speaking.
-        PROMPT.$this->projectInstructions();
+        PROMPT;
     }
 
     /**

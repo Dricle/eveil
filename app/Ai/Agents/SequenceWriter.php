@@ -61,7 +61,7 @@ class SequenceWriter extends EveilAgent implements HasStructuredOutput
 
         Wait steps: two to four days after a first mail. Same day reads as automation;
         two weeks and they have forgotten the first one.
-        PROMPT.$this->projectInstructions();
+        PROMPT.$this->emailWritingInstructions();
     }
 
     /**

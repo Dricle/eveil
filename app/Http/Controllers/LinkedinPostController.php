@@ -35,6 +35,7 @@ class LinkedinPostController extends Controller
             ),
             'hasAccount' => $account !== null,
             'currentProjectFrequency' => $currentProject->getOrFail()->linkedin_post_frequency->value,
+            'currentProjectInstructions' => $currentProject->getOrFail()->linkedin_prompt_instructions,
         ]);
     }
 

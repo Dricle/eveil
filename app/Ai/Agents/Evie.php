@@ -163,7 +163,7 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
         there is nothing obvious to suggest.
 
         Be direct and brief: this is a chat, not a report.
-        PROMPT.$this->documentation().$this->projectInstructions();
+        PROMPT.$this->documentation().$this->emailPreferencesForReference();
     }
 
     /**
@@ -189,6 +189,35 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
             follow, just what you already know about the app:
 
             {$pages}
+            PROMPT;
+    }
+
+    /**
+     * The "How the AI writes" box governs the emails `SequenceWriter`,
+     * `MessagePersonalizer` and `VariantWriter` produce - it does not, and
+     * should not, dictate how Evie herself talks in this conversation. Shown
+     * for reference only, the same way `documentation()` above is shown as
+     * background rather than as a directive, so Evie can answer questions
+     * about it or explain what it does without her own replies suddenly
+     * switching into whatever tone the user asked their emails to have.
+     */
+    private function emailPreferencesForReference(): string
+    {
+        $instructions = trim((string) $this->project->prompt_instructions);
+
+        if ($instructions === '') {
+            return '';
+        }
+
+        return <<<PROMPT
+
+
+            The user's own instructions for how this project's EMAILS are written
+            (the "How the AI writes" setting) - for your own reference only, since
+            the user may ask about it. It governs email drafting, not your own tone
+            in this conversation:
+
+            {$instructions}
             PROMPT;
     }
 

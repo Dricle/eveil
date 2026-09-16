@@ -6,6 +6,8 @@ use App\Actions\WriteMissingCampaigns;
 use App\Actions\WriteVariant;
 use App\Ai\Agents\CompanyQualifier;
 use App\Ai\Agents\ContactExtractor;
+use App\Ai\Agents\Evie;
+use App\Ai\Agents\LinkedinPostWriter;
 use App\Ai\Agents\MessagePersonalizer;
 use App\Ai\Agents\SequenceWriter;
 use App\Ai\Agents\TargetProfileDeriver;
@@ -713,19 +715,21 @@ it('starts every project with the house style already in the box', function () {
     // person typed it. It sits in the box the user can see and edit.
     expect($project->prompt_instructions)->toBe(Project::DEFAULT_INSTRUCTIONS)
         ->and((string) (new SequenceWriter($project))->instructions())->toContain('Never use dash punctuation')
-        // And in everything else whose output is read as prose: the portrait,
-        // the segment rationales, and the fit reason that becomes the opening
-        // line of the first mail.
-        ->and((string) (new WebsiteAnalyst($project))->instructions())->toContain('Never use dash punctuation')
-        ->and((string) (new TargetProfileDeriver($project))->instructions())->toContain('Never use dash punctuation')
-        ->and((string) (new CompanyQualifier($project))->instructions())->toContain('Never use dash punctuation')
-        // Not in the ones that only return fields: nobody reads those as prose,
-        // and a strict-structure agent breaks rather than blurs as the prompt
-        // grows.
+        // Not in the agents whose output is raw material re-written by an
+        // actual email writer downstream (the portrait, the segment
+        // rationales, the fit reason that becomes the opener's raw
+        // material for `MessagePersonalizer`) - the box governs the email
+        // that actually reaches a lead, not every step that feeds it.
+        ->and((string) (new WebsiteAnalyst($project))->instructions())->not->toContain('Never use dash punctuation')
+        ->and((string) (new TargetProfileDeriver($project))->instructions())->not->toContain('Never use dash punctuation')
+        ->and((string) (new CompanyQualifier($project))->instructions())->not->toContain('Never use dash punctuation')
+        // Not in the ones that only return fields either: nobody reads those
+        // as prose, and a strict-structure agent breaks rather than blurs as
+        // the prompt grows.
         ->and((string) (new ContactExtractor($project))->instructions())->not->toContain('Never use dash punctuation');
 });
 
-it("appends the project's own writing instructions to the agents that write", function () {
+it("appends the project's own EMAIL writing instructions to the agents that write emails", function () {
     [, $project] = sequencer();
 
     expect((string) (new SequenceWriter($project))->instructions())
@@ -743,7 +747,18 @@ it("appends the project's own writing instructions to the agents that write", fu
         // Last and stated as overriding: it is a box the user filled in
         // themselves, and they expect it to win.
         ->and((string) (new MessagePersonalizer($project))->instructions())
-        ->toEndWith('Never use emoji.');
+        ->toEndWith('Never use emoji.')
+        // The box never reaches a LinkedIn post, which has its own separate
+        // tone box entirely.
+        ->and((string) (new LinkedinPostWriter($project))->instructions())
+        ->not->toContain('Write in French. Never use emoji.');
+
+    // Evie DOES see the box's content, since the user may ask her about it -
+    // but framed as reference, never as a directive for her own chat voice.
+    expect((string) (new Evie($project))->instructions())
+        ->toContain('Never use emoji.')
+        ->toContain('for your own reference only')
+        ->not->toContain('Where they disagree with anything above, follow these');
 });
 
 it('points at the segments nothing is written to, and writes them in one go', function () {

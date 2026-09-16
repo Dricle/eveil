@@ -73,7 +73,7 @@ class RepoExplorer extends EveilAgent implements HasStructuredOutput, HasTools
 
         Work only from what you read. Where something is missing or thin, say
         so rather than inventing what a project like this "probably" has.
-        PROMPT.$this->projectInstructions();
+        PROMPT;
     }
 
     /**

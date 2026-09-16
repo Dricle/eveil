@@ -64,7 +64,7 @@ class ReplyHandler extends EveilAgent implements HasTools
         answer needs words, that is mark_needs_human and the user writes them.
 
         Call one tool. Do not explain yourself in prose afterwards.
-        PROMPT.$this->projectInstructions();
+        PROMPT;
     }
 
     /**

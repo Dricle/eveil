@@ -57,7 +57,7 @@ class CompanyQualifier extends EveilAgent implements HasStructuredOutput
         what a salesperson can actually open with.
 
         Write the reason in the language of the company's own website.
-        PROMPT.$this->projectInstructions();
+        PROMPT;
     }
 
     /**

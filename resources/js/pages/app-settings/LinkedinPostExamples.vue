@@ -22,6 +22,8 @@ watch(() => props.threshold, (threshold) => {
 function sourceLabel (source: string): string {
     return source === 'promoted' ? 'Promoted' : 'Manual'
 }
+
+const viewing = ref<LinkedinPostExampleRow | null>(null)
 </script>
 
 <template>
@@ -144,7 +146,8 @@ function sourceLabel (source: string): string {
                 <div
                     v-for="example in examples"
                     :key="example.id"
-                    class="flex items-start justify-between gap-3 rounded-lg bg-elevated p-3"
+                    class="flex cursor-pointer items-start justify-between gap-3 rounded-lg bg-elevated p-3 hover:bg-elevated/70"
+                    @click="viewing = example"
                 >
                     <div class="min-w-0">
                         <div class="flex items-center gap-2">
@@ -166,10 +169,49 @@ function sourceLabel (source: string): string {
                         variant="ghost"
                         icon="i-lucide-trash-2"
                         size="sm"
-                        @click="router.delete(linkedinPostExamples.destroy.url(example.id))"
+                        @click.stop="router.delete(linkedinPostExamples.destroy.url(example.id))"
                     />
                 </div>
             </div>
         </UCard>
     </div>
+
+    <UModal
+        :open="viewing !== null"
+        title="LinkedIn post example"
+        :ui="{ content: 'max-w-lg' }"
+        @update:open="(value: boolean) => { if (!value) viewing = null }"
+    >
+        <template #body>
+            <div
+                v-if="viewing"
+                class="space-y-3"
+            >
+                <div class="flex items-center gap-2">
+                    <UBadge
+                        :color="viewing.source === 'promoted' ? 'primary' : 'neutral'"
+                        variant="subtle"
+                        size="sm"
+                        :label="sourceLabel(viewing.source)"
+                    />
+                    <span
+                        v-if="viewing.added_by"
+                        class="text-sm text-dimmed"
+                    >Added by {{ viewing.added_by }}</span>
+                </div>
+                <p class="whitespace-pre-line text-sm">
+                    {{ viewing.body }}
+                </p>
+            </div>
+        </template>
+
+        <template #footer>
+            <UButton
+                color="neutral"
+                variant="ghost"
+                label="Close"
+                @click="viewing = null"
+            />
+        </template>
+    </UModal>
 </template>

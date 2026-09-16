@@ -922,6 +922,24 @@ it('reads a bounce that comes back by mail, and suppresses the dead address', fu
     Queue::assertNothingPushed();
 });
 
+it('stores a bounce diagnostic longer than 255 characters instead of crashing the fetch', function () {
+    Queue::fake();
+
+    [$mailbox, , $sent] = awaitingReply();
+
+    $diagnostic = 'smtp;550 5.1.1 '.rtrim(str_repeat('the recipient address was rejected. ', 20));
+    expect(mb_strlen($diagnostic))->toBeGreaterThan(255);
+
+    $report = MailParser::deliveryStatus(bounceMail(diagnostic: $diagnostic));
+
+    fakeImap([inbound('', ['uid' => 20, 'messageId' => 'dsn-1@friterie.test', 'inReplyTo' => null, 'bounce' => $report])]);
+
+    app(FetchReplies::class)->handle($mailbox);
+
+    expect($sent->refresh()->status)->toBe(MessageStatus::Bounced)
+        ->and(Suppression::query()->where('layer', SuppressionLayer::Bounce)->value('reason'))->toBe($diagnostic);
+});
+
 it('waits a day on a soft bounce instead of throwing the lead away', function () {
     Queue::fake();
 

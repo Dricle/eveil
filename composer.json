@@ -10,6 +10,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.3",
+        "grkamil/laravel-telegram-logging": "^1.15",
         "inertiajs/inertia-laravel": "^3.0",
         "laravel/ai": "v0.11.0",
         "laravel/cashier": "^16.7",

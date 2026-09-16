@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "2ea97ded7aa5bd46754e92c2db68c64c",
+    "content-hash": "8df58d437112df51c0e1cc8a528caa81",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -1096,6 +1096,49 @@
                 }
             ],
             "time": "2026-08-24T09:06:52+00:00"
+        },
+        {
+            "name": "grkamil/laravel-telegram-logging",
+            "version": "v1.15.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/grkamil/laravel-telegram-logging.git",
+                "reference": "0346907408d6d285d6b35d804469a3d95cd20a62"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/grkamil/laravel-telegram-logging/zipball/0346907408d6d285d6b35d804469a3d95cd20a62",
+                "reference": "0346907408d6d285d6b35d804469a3d95cd20a62",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/support": "^5.5 || ^6.0 || ^7.0 || ^8.0 || ^9.0|^10.0|^11.0|^12.0|^13.0",
+                "monolog/monolog": "^1.23|^2.0|^3.2",
+                "php": "^7.1.3|^8.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Logger\\TelegramLoggerServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Logger\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Send logs to Telegram chat via Telegram bot",
+            "support": {
+                "issues": "https://github.com/grkamil/laravel-telegram-logging/issues",
+                "source": "https://github.com/grkamil/laravel-telegram-logging/tree/v1.15.0"
+            },
+            "time": "2026-05-25T09:08:03+00:00"
         },
         {
             "name": "guzzlehttp/guzzle",

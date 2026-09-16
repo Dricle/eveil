@@ -14,7 +14,7 @@ const props = defineProps<{
     balance: number
     creditsPerDollar: number
     hasPaymentMethod: boolean
-    autoTopup: { threshold: number | null, amountCents: number | null }
+    autoTopup: { threshold: number | null, amountCents: number | null, monthlyCapCents: number | null }
     transactions: CreditTransactionRow[]
     creditsByProject: ProjectCreditRow[]
 }>()
@@ -34,11 +34,15 @@ const topUpCredits = computed(() => Math.floor(topUpDollars.value * props.credit
 const autoTopupEnabled = ref(false)
 const autoTopupThreshold = ref(500)
 const autoTopupDollars = ref(20)
+const autoTopupCapEnabled = ref(false)
+const autoTopupCapDollars = ref(100)
 
 watch(() => props.autoTopup, (autoTopup) => {
     autoTopupEnabled.value = autoTopup.threshold !== null
     autoTopupThreshold.value = autoTopup.threshold ?? 500
     autoTopupDollars.value = autoTopup.amountCents ? autoTopup.amountCents / 100 : 20
+    autoTopupCapEnabled.value = autoTopup.monthlyCapCents !== null
+    autoTopupCapDollars.value = autoTopup.monthlyCapCents ? autoTopup.monthlyCapCents / 100 : 100
 }, { immediate: true, deep: true })
 
 function describe (row: CreditTransactionRow): string {
@@ -250,6 +254,43 @@ function describe (row: CreditTransactionRow): string {
                         value=""
                     >
                 </template>
+
+                <UCheckbox
+                    v-model="autoTopupCapEnabled"
+                    label="Cap auto top-up spend per month"
+                />
+
+                <div
+                    v-if="autoTopupCapEnabled"
+                    class="grid gap-4 sm:grid-cols-2"
+                >
+                    <UFormField
+                        label="Monthly limit ($)"
+                        name="auto_topup_monthly_cap_cents"
+                        :error="errors.auto_topup_monthly_cap_cents"
+                        help="Stops recharging for the rest of the month once this much has been auto-charged."
+                    >
+                        <UInput
+                            v-model.number="autoTopupCapDollars"
+                            type="number"
+                            min="1"
+                            class="w-full"
+                        />
+                    </UFormField>
+
+                    <input
+                        type="hidden"
+                        name="auto_topup_monthly_cap_cents"
+                        :value="Math.round(autoTopupCapDollars * 100)"
+                    >
+                </div>
+
+                <input
+                    v-if="!autoTopupCapEnabled"
+                    type="hidden"
+                    name="auto_topup_monthly_cap_cents"
+                    value=""
+                >
 
                 <div class="flex items-center gap-3">
                     <UButton

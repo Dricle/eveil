@@ -32,6 +32,7 @@ class AutoTopUpRequest extends FormRequest
         return [
             'auto_topup_threshold' => ['nullable', 'integer', 'min:0', 'required_with:auto_topup_amount_cents'],
             'auto_topup_amount_cents' => ['nullable', 'integer', 'min:100', 'max:1000000', 'required_with:auto_topup_threshold'],
+            'auto_topup_monthly_cap_cents' => ['nullable', 'integer', 'min:100'],
         ];
     }
 }

@@ -43,3 +43,9 @@ Credits never expire, whether from the trial grant or a top-up - a customer who 
 
 Use it in positioning: cloud saves you the cold start, plus hosting, plus the AI key. Not: cloud unlocks features.
 
+## Auto top-up monthly cap: scoped to auto-charges only, tracked in cents
+`organizations.auto_topup_monthly_cap_cents` limits only unattended off-session auto top-up charges (`AutoTopUp::maybeTrigger`), never a manual "Buy credits" checkout - a manual buy is already a deliberate click, the cap exists for the charge nobody is watching happen.
+
+Tracked in dollar cents, not credits, matching `auto_topup_amount_cents` - avoids drift if `billing.credits_per_dollar` ever changes. Running total lives on `Organization` (`auto_topup_spent_cents` + `auto_topup_spent_month`), reset lazily by comparing the stored month to the current one (`Organization::currentMonthAutoTopUpSpendCents()`), not by a scheduled job.
+
+The cap check happens BEFORE `claimAutoTopUpLock()`, not after: a capped-out organization should never claim the lock or start the cooldown, matching the existing pattern where every early-return guard in `AutoTopUp::maybeTrigger` precedes the lock claim.

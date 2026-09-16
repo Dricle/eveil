@@ -36,6 +36,14 @@ class AutoTopUp
             return;
         }
 
+        $amountCents = $organization->auto_topup_amount_cents;
+
+        if ($organization->autoTopUpCapExceededBy($amountCents)) {
+            Log::info('Auto top-up skipped: monthly cap reached.', ['organization_id' => $organization->id]);
+
+            return;
+        }
+
         // The atomic claim, not a prior SELECT: two agent calls can cross
         // the threshold within moments of each other, and only one may
         // reach for the card.
@@ -43,7 +51,6 @@ class AutoTopUp
             return;
         }
 
-        $amountCents = $organization->auto_topup_amount_cents;
         $credits = intdiv($amountCents * $this->settings->int('billing.credits_per_dollar'), 100);
 
         // `defaultPaymentMethod()` returns `Cashier\PaymentMethod|Stripe\Card
@@ -69,8 +76,9 @@ class AutoTopUp
 
         $stripePaymentIntentId = $payment->asStripePaymentIntent()->id;
 
-        DB::transaction(function () use ($organization, $credits, $stripePaymentIntentId): void {
+        DB::transaction(function () use ($organization, $credits, $amountCents, $stripePaymentIntentId): void {
             $organization->increment('credits_balance', $credits);
+            $organization->recordAutoTopUpSpend($amountCents);
 
             CreditTransaction::create([
                 'organization_id' => $organization->id,

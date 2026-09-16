@@ -30,6 +30,7 @@ class OrganizationBillingController extends Controller
             'autoTopup' => [
                 'threshold' => $organization->auto_topup_threshold,
                 'amountCents' => $organization->auto_topup_amount_cents,
+                'monthlyCapCents' => $organization->auto_topup_monthly_cap_cents,
             ],
             'transactions' => CreditTransactionResource::collection(
                 $organization->creditTransactions()->latest('id')->limit(50)->get()

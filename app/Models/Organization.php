@@ -38,10 +38,13 @@ use Laravel\Cashier\Billable;
  * @property int|null $auto_topup_threshold
  * @property int|null $auto_topup_amount_cents
  * @property Carbon|null $auto_topup_locked_until
+ * @property int|null $auto_topup_monthly_cap_cents
+ * @property int $auto_topup_spent_cents
+ * @property string|null $auto_topup_spent_month
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'slug', 'auto_topup_threshold', 'auto_topup_amount_cents'])]
+#[Fillable(['name', 'slug', 'auto_topup_threshold', 'auto_topup_amount_cents', 'auto_topup_monthly_cap_cents'])]
 class Organization extends Model
 {
     /** @use HasFactory<OrganizationFactory> */
@@ -181,5 +184,43 @@ class Organization extends Model
         $this->refresh();
 
         return true;
+    }
+
+    /**
+     * True when charging `$cents` more auto top-ups this calendar month
+     * would exceed `auto_topup_monthly_cap_cents`. No cap set means no
+     * limit. Only ever called from inside `AutoTopUp::maybeTrigger`, before
+     * `claimAutoTopUpLock()` is claimed - one process at a time per
+     * organization reaches this, so no extra locking is needed here.
+     */
+    public function autoTopUpCapExceededBy(int $cents): bool
+    {
+        if ($this->auto_topup_monthly_cap_cents === null) {
+            return false;
+        }
+
+        return $this->currentMonthAutoTopUpSpendCents() + $cents > $this->auto_topup_monthly_cap_cents;
+    }
+
+    /**
+     * Adds `$cents` to this month's auto top-up total, resetting it first
+     * if the last recorded charge was in an earlier calendar month. Called
+     * once, from inside the same transaction that grants the credits.
+     */
+    public function recordAutoTopUpSpend(int $cents): void
+    {
+        $this->forceFill([
+            'auto_topup_spent_cents' => $this->currentMonthAutoTopUpSpendCents() + $cents,
+            'auto_topup_spent_month' => Carbon::now()->startOfMonth()->toDateString(),
+        ])->save();
+    }
+
+    private function currentMonthAutoTopUpSpendCents(): int
+    {
+        if ($this->auto_topup_spent_month !== Carbon::now()->startOfMonth()->toDateString()) {
+            return 0;
+        }
+
+        return $this->auto_topup_spent_cents;
     }
 }

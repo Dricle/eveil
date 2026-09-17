@@ -21,6 +21,8 @@ Every draft has to trace to something real — never a generic "5 tips" post. On
 
 Nothing publishes on its own. Every draft — whatever it came from — lands in **LinkedIn** (its own item in the main navigation, badged with how many are waiting on you, the same way Inbox is), showing why it was written (the evidence) beside the text itself. From there you can edit the body, approve and publish it, reject it, or delete it. This holds regardless of your project's autonomy level: posting to a public feed under your name is treated differently from a private, one-to-one email. You also get an email whenever a new draft is ready to review, unless it was Evie who wrote it into the same conversation you're already in.
 
+If more than one LinkedIn account is granted to the project, approving asks which one to publish through; with only one connected, approving publishes to it directly with no extra step.
+
 **Reject vs. delete** are two different things. Delete removes the draft with no trace. Reject keeps it, marks it rejected, and optionally asks why ("too many emojis", "wrong tone") — that reason is fed back to the writer on the next cycle so it doesn't repeat the mistake, alongside every other recently rejected draft. Approving one of a client-win pair automatically rejects its sibling this way too.
 
 ## Teaching the writer what works

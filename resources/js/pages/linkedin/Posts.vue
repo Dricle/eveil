@@ -5,12 +5,13 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import { relativeUrl } from '@/lib/utils'
 import linkedinPostRoutes from '@/routes/linkedin/posts'
 import linkedinAccountRoutes from '@/routes/settings/linkedin'
-import type { LinkedinPost } from '@/types'
+import type { LinkedinAccount, LinkedinPost } from '@/types'
 
 defineOptions({ layout: AppLayout })
 
 const props = defineProps<{
     posts: LinkedinPost[]
+    linkedinAccounts: LinkedinAccount[]
     hasAccount: boolean
     currentProjectFrequency: 'off' | 'daily' | 'weekly' | 'biweekly' | 'monthly'
 }>()
@@ -44,6 +45,8 @@ const deleting = ref<number | null>(null)
 const promoting = ref<number | null>(null)
 const rejectingPost = ref<LinkedinPost | null>(null)
 const rejectReason = ref('')
+const approvingPost = ref<LinkedinPost | null>(null)
+const selectedAccountId = ref<number | undefined>(undefined)
 
 const STATUS = {
     draft: { color: 'neutral' as const, label: 'Draft' },
@@ -59,8 +62,34 @@ const SOURCE = {
 }
 
 function approve (post: LinkedinPost) {
+    // One account: nothing to pick, approve goes straight through. Several:
+    // ask which one, since the project may be granted more than one.
+    if (props.linkedinAccounts.length > 1) {
+        approvingPost.value = post
+        selectedAccountId.value = post.linkedin_account?.id ?? props.linkedinAccounts[0].id
+        return
+    }
+
+    submitApprove(post, props.linkedinAccounts[0]?.id ?? null)
+}
+
+function confirmApprove () {
+    const post = approvingPost.value
+    if (!post || !selectedAccountId.value) {
+        return
+    }
+
+    submitApprove(post, selectedAccountId.value)
+    approvingPost.value = null
+}
+
+function submitApprove (post: LinkedinPost, linkedinAccountId: number | null) {
+    if (!linkedinAccountId) {
+        return
+    }
+
     approving.value = post.id
-    router.post(linkedinPostRoutes.approve.url(post.id), {}, {
+    router.post(linkedinPostRoutes.approve.url(post.id), { linkedin_account_id: linkedinAccountId }, {
         preserveScroll: true,
         onSuccess: () => toast.add({ title: 'Publishing to LinkedIn…', color: 'success' }),
         onFinish: () => approving.value = null
@@ -188,6 +217,13 @@ function promote (post: LinkedinPost) {
                     :color="STATUS[post.status].color"
                     variant="subtle"
                     :label="STATUS[post.status].label"
+                />
+                <UBadge
+                    v-if="post.linkedin_account && linkedinAccounts.length > 1"
+                    color="neutral"
+                    variant="outline"
+                    icon="i-lucide-linkedin"
+                    :label="post.linkedin_account.display_name"
                 />
 
                 <div class="ml-auto flex items-center gap-2">
@@ -339,6 +375,37 @@ function promote (post: LinkedinPost) {
                     label="Reject"
                     :loading="rejecting === rejectingPost?.id"
                     @click="confirmReject"
+                />
+            </template>
+        </UModal>
+
+        <UModal
+            :open="approvingPost !== null"
+            title="Publish to which account?"
+            @update:open="(value: boolean) => { if (!value) approvingPost = null }"
+        >
+            <template #body>
+                <UFormField label="LinkedIn account">
+                    <USelect
+                        v-model="selectedAccountId"
+                        :items="linkedinAccounts.map(account => ({ label: account.display_name, value: account.id }))"
+                        class="w-full"
+                    />
+                </UFormField>
+            </template>
+
+            <template #footer>
+                <UButton
+                    color="neutral"
+                    variant="ghost"
+                    label="Cancel"
+                    @click="approvingPost = null"
+                />
+                <UButton
+                    color="success"
+                    label="Approve & publish"
+                    :loading="approving === approvingPost?.id"
+                    @click="confirmApprove"
                 />
             </template>
         </UModal>

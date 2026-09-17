@@ -4,9 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Actions\PublishLinkedinPost;
 use App\Enums\LinkedinPostStatus;
+use App\Http\Requests\LinkedinPostApproveRequest;
 use App\Http\Requests\LinkedinPostRejectRequest;
 use App\Http\Requests\LinkedinPostRequest;
+use App\Http\Resources\LinkedinAccountResource;
 use App\Http\Resources\LinkedinPostResource;
+use App\Models\LinkedinAccount;
 use App\Models\LinkedinPost;
 use App\Support\CurrentProject;
 use Illuminate\Http\RedirectResponse;
@@ -27,13 +30,14 @@ class LinkedinPostController extends Controller
 {
     public function index(CurrentProject $currentProject): Response
     {
-        $account = $currentProject->getOrFail()->linkedinAccounts()->first();
+        $accounts = $currentProject->getOrFail()->linkedinAccounts()->get();
 
         return Inertia::render('linkedin/Posts', [
             'posts' => LinkedinPostResource::collection(
-                LinkedinPost::query()->latest()->get()
+                LinkedinPost::query()->with('linkedinAccount')->latest()->get()
             ),
-            'hasAccount' => $account !== null,
+            'linkedinAccounts' => LinkedinAccountResource::collection($accounts),
+            'hasAccount' => $accounts->isNotEmpty(),
             'currentProjectFrequency' => $currentProject->getOrFail()->linkedin_post_frequency->value,
         ]);
     }
@@ -50,15 +54,16 @@ class LinkedinPostController extends Controller
      * `approved` status to sit in first. A failure leaves the row at
      * `Draft` with `last_error` set, so the exact same button remains the
      * retry.
+     *
+     * Which account it goes to is now explicit (`linkedin_account_id` on the
+     * request), not the first one attached to the project:
+     * `LinkedinPostApproveRequest` confirms it is one the project is
+     * actually granted before this ever touches `PublishLinkedinPost`.
      */
-    public function approve(PublishLinkedinPost $publish, CurrentProject $currentProject, int $linkedinPost): RedirectResponse
+    public function approve(LinkedinPostApproveRequest $request, PublishLinkedinPost $publish, int $linkedinPost): RedirectResponse
     {
         $post = LinkedinPost::query()->findOrFail($linkedinPost);
-        $account = $currentProject->getOrFail()->linkedinAccounts()->first();
-
-        if ($account === null) {
-            return to_route('linkedin.posts.index')->with('status', 'Connect a LinkedIn account first.');
-        }
+        $account = LinkedinAccount::query()->findOrFail($request->validated('linkedin_account_id'));
 
         $post->update(['linkedin_account_id' => $account->id]);
 

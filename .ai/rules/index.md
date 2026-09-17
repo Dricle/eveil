@@ -8,6 +8,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Actions/** | .ai/rules/actions.md |
 | app/Ai/Agents/EveilAgent.php,app/Ai/Agents/LinkedinPostWriter.php,app/Models/Project.php | .ai/rules/agents-models.md |
 | app/Ai/Agents/** | .ai/rules/agents.md |
+| app/Models/DiscoveryRun.php,app/Jobs/Discovery/ReflectAndExpand.php,app/Ai/Agents/DiscoveryPlanner.php | .ai/rules/ai-agents.md |
 | app/Ai/** | .ai/rules/ai.md |
 | app/Ai/**,app/Http/Controllers/AppSettings/** | .ai/rules/app-settings.md |
 | app/Cloud/** | .ai/rules/cloud.md |
@@ -26,10 +27,12 @@ Before planning or editing, find the row whose globs match the file's path and r
 | resources/js/** | .ai/rules/js.md |
 | app/Models/**, app/Models/EmailAccount.php | .ai/rules/models.md |
 | app/Services/Outreach/** | .ai/rules/outreach.md |
+| app/Http/Controllers/LinkedinPostController.php,app/Http/Requests/LinkedinPostApproveRequest.php,app/Models/LinkedinPost.php | .ai/rules/requests-models.md |
 | app/Http/Requests/** | .ai/rules/requests.md |
 | app/Http/Resources/** | .ai/rules/resources.md |
 | routes/** | .ai/rules/routes.md |
 | app/Actions/FindContacts.php,app/Services/Discovery/WebsiteFinder.php | .ai/rules/services-discovery.md |
+| app/Services/Discovery/Triage.php,app/Services/Discovery/Sources/** | .ai/rules/sources.md |
 | app/Http/Controllers/LinkedinStatsOAuthController.php,app/Support/LinkedinCredentials.php,app/Models/LinkedinAccount.php | .ai/rules/support-models.md |
 | tests/** | .ai/rules/tests.md |
 | app/Ai/Tools/** | .ai/rules/tools.md |

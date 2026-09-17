@@ -28,6 +28,8 @@ export type LinkedinPost = {
     status: 'draft' | 'published' | 'rejected'
     /** Set on reject, optional - shown beside a rejected post's body. */
     rejection_reason: string | null
+    /** Which of the project's granted accounts this went out on. Set on approve. */
+    linkedin_account: { id: number, display_name: string } | null
     urn: string | null
     published_at: string | null
     /** A failed publish attempt, on a post that stays `draft` - never its own status. */

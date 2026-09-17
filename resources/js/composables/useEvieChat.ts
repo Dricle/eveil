@@ -1,6 +1,6 @@
 import type { UIMessage } from 'ai'
 import { useChat } from '@ai-sdk/vue'
-import { DefaultChatTransport } from 'ai'
+import { DefaultChatTransport, isToolUIPart } from 'ai'
 import { usePage } from '@inertiajs/vue3'
 import { ref, watch } from 'vue'
 import chatRoutes from '@/routes/chat'
@@ -78,11 +78,35 @@ export function useEvieChat () {
     // whatever the previous conversation still holds.
     function clear () {
         chat.messages.value = []
+        pendingDecisions.value = {}
 
         void fetch(chatRoutes.destroy.url({ project: page.props.currentProject!.slug }), {
             method: 'DELETE',
             headers: { 'X-XSRF-TOKEN': xsrfToken() }
         })
+    }
+
+    // The backend validates a resume against EVERY pending approval-gated
+    // tool call in the turn at once (`TextGenerationLoop::validateApproval`):
+    // a decision missing for even one of them throws
+    // `ApprovalMismatchException` and fails the whole run, undoing nothing
+    // (the mismatch is caught before any tool executes) but breaking the
+    // chat's local state. A turn proposing several approvable actions -
+    // e.g. deleting five target profiles - renders one card per tool call,
+    // so a single click here must not resume by itself. Decisions accumulate
+    // locally and only resume once every pending card in the turn has one.
+    const pendingDecisions = ref<Record<string, boolean>>({})
+
+    function pendingApprovalToolCallIds (): string[] {
+        const last = chat.messages.value.at(-1)
+
+        if (!last) {
+            return []
+        }
+
+        return last.parts
+            .filter(part => isToolUIPart(part) && part.state === 'approval-requested')
+            .map(part => (part as { toolCallId: string }).toolCallId)
     }
 
     // regenerate() is built around replaying a full turn, and its own
@@ -92,7 +116,19 @@ export function useEvieChat () {
     // local optimistic state, treat the server's own record as the only
     // truth once the resume settles.
     async function approve (toolCallId: string, approved: boolean) {
-        await chat.regenerate({ body: { decisions: { [toolCallId]: approved } } })
+        pendingDecisions.value = { ...pendingDecisions.value, [toolCallId]: approved }
+
+        const stillWaiting = pendingApprovalToolCallIds()
+            .some(id => !(id in pendingDecisions.value))
+
+        if (stillWaiting) {
+            return
+        }
+
+        const decisions = pendingDecisions.value
+        pendingDecisions.value = {}
+
+        await chat.regenerate({ body: { decisions } })
         await loadHistory()
     }
 
@@ -100,10 +136,11 @@ export function useEvieChat () {
     // mounted across every project switch: reload whichever project's
     // conversation is now current rather than keep showing the last one's.
     watch(() => page.props.currentProject?.id, () => {
+        pendingDecisions.value = {}
         void loadHistory()
     })
 
     void loadHistory()
 
-    return { ...chat, loadingHistory, clear, approve }
+    return { ...chat, loadingHistory, clear, approve, pendingDecisions }
 }

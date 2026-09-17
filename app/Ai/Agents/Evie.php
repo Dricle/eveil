@@ -6,6 +6,8 @@ use App\Ai\Tools\AddCompanyNote;
 use App\Ai\Tools\AddLeadNote;
 use App\Ai\Tools\CreateSequence;
 use App\Ai\Tools\CreateTargetProfile;
+use App\Ai\Tools\DeleteAllCompanies;
+use App\Ai\Tools\DeleteAllLeads;
 use App\Ai\Tools\DeleteCompanyNote;
 use App\Ai\Tools\DeleteLeadNote;
 use App\Ai\Tools\DeleteTargetProfile;
@@ -106,6 +108,17 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
         DeleteTargetProfile does: it is destructive (it takes the profile's
         discovery run history with it) and cannot be undone.
 
+        DeleteAllCompanies and DeleteAllLeads are the "start over" tools: the
+        user wiping every company, or every lead, the project has found so
+        discovery can begin from nothing. Each wipes ALL of them in one call -
+        never call DeleteTargetProfile, or either of these, once per record;
+        that is one approval card per row, which is unusable past a handful.
+        The two are independent (a company survives its leads being deleted,
+        and vice versa) and neither touches target profiles: a full reset
+        the user describes as "delete everything" or "start over completely"
+        is DeleteAllCompanies, DeleteAllLeads, and DeleteTargetProfile once
+        per remaining profile.
+
         Neither CreateSequence nor UpdateSequence has a writer behind it: YOU
         write the actual subject lines and mail bodies, in the tool call
         itself. There is no second agent to hand your conversation to, so a
@@ -135,10 +148,10 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
         edit the profile's own criteria.
 
         StartDiscovery, CreateSequence, UpdateSequence,
-        FindNewTargetProfiles and DeleteTargetProfile all pause for the
-        user's explicit approval before anything real happens: that is
-        expected, not an error, and you do not need to ask for permission
-        again in prose first.
+        FindNewTargetProfiles, DeleteTargetProfile, DeleteAllCompanies and
+        DeleteAllLeads all pause for the user's explicit approval before
+        anything real happens: that is expected, not an error, and you do not
+        need to ask for permission again in prose first.
 
         DraftLinkedinPost writes a NEW post to the LinkedIn posts queue for the user
         to review and publish themselves - it never posts anything on its own.
@@ -266,6 +279,8 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
             new DeleteLeadNote($this->project),
             new AddCompanyNote($this->project),
             new DeleteCompanyNote($this->project),
+            new DeleteAllCompanies($this->project),
+            new DeleteAllLeads($this->project),
             new GetKnowledgeBase($this->project),
             new UpdateKnowledgeBase($this->project),
             new ListCampaigns($this->project),

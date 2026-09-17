@@ -26,6 +26,12 @@ Asking it to change something already there ("update the post about the pricing 
 
 Evie can list, read, create, correct and delete target profiles — the same segments you'd otherwise manage from the Targets screen. Already know the segment you want? Tell it directly ("also target dental clinics under 10 people") rather than asking it to work one out from the knowledge base. Deleting one takes its discovery run history with it and cannot be undone, so it stops for your approval first, same as starting a real discovery run.
 
+## Starting a project's discovery over
+
+Ask Evie to wipe everything found so far ("delete all target profiles and leads, I want to start over") and it deletes every target profile one at a time, plus every company and every lead in one shot each for the two of those. A company and its leads reset independently, so asking for only one of them leaves the other alone.
+
+Each of the three (every target profile, every company, every lead) is its own approval, whatever it takes to get there in chat — never one card per row. The same reset is also available by hand, one danger-zone button per kind, from the project settings screen.
+
 ## Opening it
 
 Click the sparkles icon in the top bar. The panel slides in from the right and pushes the page, rather than covering it — it stays open (or closed) as you move between screens and switch projects, picking up whichever project's conversation is current.

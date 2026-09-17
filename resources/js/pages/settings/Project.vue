@@ -3,6 +3,8 @@ import { Form, Head, router } from '@inertiajs/vue3'
 import { ref, watch } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import SettingsLayout from '@/layouts/SettingsLayout.vue'
+import companyRoutes from '@/routes/settings/companies'
+import contactRoutes from '@/routes/settings/contacts'
 import projectRoutes from '@/routes/settings/project'
 import type { ProjectDetail } from '@/types'
 
@@ -10,6 +12,8 @@ defineOptions({ layout: [AppLayout, [SettingsLayout, { title: 'Project' }]] })
 
 const props = defineProps<{ project: ProjectDetail }>()
 
+const confirmingCompanyDelete = ref(false)
+const confirmingLeadDelete = ref(false)
 const confirmingDelete = ref(false)
 
 // Every field is bound, never left to `default-value`: Nuxt UI reads that prop
@@ -160,9 +164,69 @@ const AUTONOMY = [
             </Form>
         </UCard>
 
-        <UCard>
+        <UCard class="border-error/60 bg-error/5">
             <template #header>
-                <h2 class="font-medium">
+                <h2 class="flex items-center gap-1.5 font-medium text-error">
+                    <UIcon
+                        name="i-lucide-triangle-alert"
+                        class="size-4"
+                    />
+                    Delete all companies
+                </h2>
+            </template>
+
+            <p class="text-sm text-muted">
+                Deletes every company found for this project, along with
+                their notes and fit scores. Leads are untouched - a discovery
+                run finds them again from nothing. This cannot be undone.
+            </p>
+
+            <template #footer>
+                <UButton
+                    color="error"
+                    variant="solid"
+                    icon="i-lucide-triangle-alert"
+                    label="Delete all companies"
+                    @click="confirmingCompanyDelete = true"
+                />
+            </template>
+        </UCard>
+
+        <UCard class="border-error/60 bg-error/5">
+            <template #header>
+                <h2 class="flex items-center gap-1.5 font-medium text-error">
+                    <UIcon
+                        name="i-lucide-triangle-alert"
+                        class="size-4"
+                    />
+                    Delete all leads
+                </h2>
+            </template>
+
+            <p class="text-sm text-muted">
+                Deletes every lead found for this project, along with their
+                notes and message history. Companies are untouched. This
+                cannot be undone.
+            </p>
+
+            <template #footer>
+                <UButton
+                    color="error"
+                    variant="solid"
+                    icon="i-lucide-triangle-alert"
+                    label="Delete all leads"
+                    @click="confirmingLeadDelete = true"
+                />
+            </template>
+        </UCard>
+
+        <UCard class="border-error/60 bg-error/5">
+            <template #header>
+                <h2 class="flex items-center gap-1.5 font-medium text-error">
+                    <UIcon
+                        name="i-lucide-triangle-alert"
+                        class="size-4"
+                    />
                     Delete this project
                 </h2>
             </template>
@@ -176,13 +240,70 @@ const AUTONOMY = [
             <template #footer>
                 <UButton
                     color="error"
-                    variant="soft"
+                    variant="solid"
+                    icon="i-lucide-triangle-alert"
                     label="Delete project"
                     @click="confirmingDelete = true"
                 />
             </template>
         </UCard>
     </div>
+
+    <UModal
+        v-model:open="confirmingCompanyDelete"
+        title="Delete all companies"
+    >
+        <template #body>
+            <p class="text-sm text-muted">
+                Every company found for <strong>{{ project.name }}</strong>
+                will be deleted. Leads are untouched.
+            </p>
+        </template>
+
+        <template #footer>
+            <div class="flex w-full justify-end gap-2">
+                <UButton
+                    label="Cancel"
+                    color="neutral"
+                    variant="ghost"
+                    @click="confirmingCompanyDelete = false"
+                />
+                <UButton
+                    label="Delete all companies"
+                    color="error"
+                    @click="router.delete(companyRoutes.destroyAll.url({ project: project.slug }))"
+                />
+            </div>
+        </template>
+    </UModal>
+
+    <UModal
+        v-model:open="confirmingLeadDelete"
+        title="Delete all leads"
+    >
+        <template #body>
+            <p class="text-sm text-muted">
+                Every lead found for <strong>{{ project.name }}</strong>
+                will be deleted. Companies are untouched.
+            </p>
+        </template>
+
+        <template #footer>
+            <div class="flex w-full justify-end gap-2">
+                <UButton
+                    label="Cancel"
+                    color="neutral"
+                    variant="ghost"
+                    @click="confirmingLeadDelete = false"
+                />
+                <UButton
+                    label="Delete all leads"
+                    color="error"
+                    @click="router.delete(contactRoutes.destroyAll.url({ project: project.slug }))"
+                />
+            </div>
+        </template>
+    </UModal>
 
     <UModal
         v-model:open="confirmingDelete"

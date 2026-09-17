@@ -2,6 +2,8 @@
 
 use App\Enums\AutonomyLevel;
 use App\Jobs\AnalyzeProject;
+use App\Models\Company;
+use App\Models\Lead;
 use App\Models\Organization;
 use App\Models\Project;
 use App\Models\TargetProfile;
@@ -146,6 +148,35 @@ it('deletes the current project and falls back to the next one', function () {
 
     $this->actingAs($user)->get(route('dashboard'))
         ->assertInertia(fn ($page) => $page->where('currentProject.id', $kept->id));
+});
+
+it('deletes every company for the current project, scoped away from another project\'s', function () {
+    $user = member();
+    $project = Project::factory()->for($user->organizations()->sole())->create();
+    $company = Company::factory()->create(['project_id' => $project->id]);
+    $foreign = Company::factory()->create();
+
+    $this->actingAs($user)->delete(route('settings.companies.destroy-all'))->assertRedirect();
+
+    // fresh() bypasses the `BelongsToProject` scope (it queries without
+    // scopes), which matters here: the request above left `CurrentProject`
+    // pointed at $project for the rest of this test process, so a plain
+    // `Company::query()` below would silently scope $foreign out too and
+    // read as "deleted" whether or not it actually was.
+    expect($company->fresh())->toBeNull()
+        ->and($foreign->fresh())->not->toBeNull();
+});
+
+it('deletes every lead for the current project, scoped away from another project\'s', function () {
+    $user = member();
+    $project = Project::factory()->for($user->organizations()->sole())->create();
+    $lead = Lead::factory()->create(['project_id' => $project->id]);
+    $foreign = Lead::factory()->create();
+
+    $this->actingAs($user)->delete(route('settings.contacts.destroy-all'))->assertRedirect();
+
+    expect($lead->fresh())->toBeNull()
+        ->and($foreign->fresh())->not->toBeNull();
 });
 
 it('404s on a project outside the user\'s organizations, named directly in the URL', function () {

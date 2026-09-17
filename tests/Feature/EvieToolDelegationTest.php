@@ -4,6 +4,8 @@ use App\Ai\Tools\AddCompanyNote;
 use App\Ai\Tools\AddLeadNote;
 use App\Ai\Tools\CreateSequence;
 use App\Ai\Tools\CreateTargetProfile;
+use App\Ai\Tools\DeleteAllCompanies;
+use App\Ai\Tools\DeleteAllLeads;
 use App\Ai\Tools\DeleteCompanyNote;
 use App\Ai\Tools\DeleteLeadNote;
 use App\Ai\Tools\DeleteTargetProfile;
@@ -612,4 +614,36 @@ it('refuses delete_target_profile for a profile from another project', function 
 
     expect($result)->toContain('No target profile with that id')
         ->and(TargetProfile::query()->count())->toBe(1);
+});
+
+it('deletes every company for the project, scoped away from another project, leaving leads untouched', function () {
+    $project = Project::factory()->create();
+    $company = Company::factory()->create(['project_id' => $project->id]);
+    CompanyTargetEvaluation::factory()->create(['company_id' => $company->id]);
+    $lead = Lead::factory()->create(['project_id' => $project->id, 'company_id' => $company->id]);
+    $foreign = Company::factory()->create();
+
+    $result = (new DeleteAllCompanies($project))->handle(new Request);
+
+    expect($result)->toBe('Deleted 1 company.')
+        ->and(Company::query()->where('project_id', $project->id)->count())->toBe(0)
+        ->and(CompanyTargetEvaluation::query()->count())->toBe(0)
+        ->and($lead->fresh()->company_id)->toBeNull()
+        ->and(Company::query()->whereKey($foreign->id)->exists())->toBeTrue();
+});
+
+it('deletes every lead for the project, scoped away from another project, leaving companies untouched', function () {
+    $project = Project::factory()->create();
+    $company = Company::factory()->create(['project_id' => $project->id]);
+    $lead = Lead::factory()->create(['project_id' => $project->id, 'company_id' => $company->id]);
+    LeadNote::factory()->create(['lead_id' => $lead->id]);
+    $foreign = Lead::factory()->create();
+
+    $result = (new DeleteAllLeads($project))->handle(new Request);
+
+    expect($result)->toBe('Deleted 1 lead.')
+        ->and(Lead::query()->where('project_id', $project->id)->count())->toBe(0)
+        ->and(LeadNote::query()->count())->toBe(0)
+        ->and(Company::query()->whereKey($company->id)->exists())->toBeTrue()
+        ->and(Lead::query()->whereKey($foreign->id)->exists())->toBeTrue();
 });

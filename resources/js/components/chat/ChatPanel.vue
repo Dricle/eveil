@@ -10,7 +10,7 @@ defineProps<{ open: boolean }>()
 
 const input = ref('')
 
-const { messages, status, error, loadingHistory, sendMessage, regenerate, stop, clear, approve } = useEvieChat()
+const { messages, status, error, loadingHistory, sendMessage, regenerate, stop, clear, approve, pendingDecisions } = useEvieChat()
 
 // useChat() mutates its messages array in place (push/index-assign) rather
 // than replacing it, so the array's own reference never changes across a
@@ -117,7 +117,10 @@ function renderMarkdown (text: string): string {
                             :text="getToolName(part)"
                             variant="card"
                             :streaming="part.state === 'input-streaming'"
-                            :actions="part.state === 'approval-requested' ? [
+                            :suffix="part.state === 'approval-requested' && pendingDecisions[part.toolCallId] !== undefined
+                                ? (pendingDecisions[part.toolCallId] ? 'Approved — waiting on the rest' : 'Denied — waiting on the rest')
+                                : undefined"
+                            :actions="part.state === 'approval-requested' && pendingDecisions[part.toolCallId] === undefined ? [
                                 { label: 'Approve', size: 'xs', onClick: () => approve(part.toolCallId, true) },
                                 { label: 'Deny', size: 'xs', color: 'neutral', variant: 'soft', onClick: () => approve(part.toolCallId, false) }
                             ] : undefined"

@@ -33,10 +33,12 @@ use App\Http\Controllers\CampaignStepController;
 use App\Http\Controllers\CampaignStepOrderController;
 use App\Http\Controllers\CodeRepositoryController;
 use App\Http\Controllers\CompanyApprovalController;
+use App\Http\Controllers\CompanyBulkDeleteController;
 use App\Http\Controllers\CompanyBulkStatusController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\CompanyNoteController;
 use App\Http\Controllers\CompanyStatusController;
+use App\Http\Controllers\ContactBulkDeleteController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ContactSearchController;
 use App\Http\Controllers\ContactStatusController;
@@ -160,6 +162,18 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             Route::get('project', [ProjectController::class, 'edit'])->name('project.edit');
             Route::put('project', [ProjectController::class, 'update'])->name('project.update');
             Route::delete('project', [ProjectController::class, 'destroy'])->name('project.destroy');
+
+            /*
+             * The same danger zone, one size down from `project.destroy`:
+             * every company, or every contact, gone at once so discovery can
+             * start over without losing the project itself. Two routes, not
+             * one, because they are two separate confirmations in the UI -
+             * see `settings/Project.vue`.
+             */
+            Route::delete('companies', [CompanyBulkDeleteController::class, 'destroy'])
+                ->name('companies.destroy-all');
+            Route::delete('contacts', [ContactBulkDeleteController::class, 'destroy'])
+                ->name('contacts.destroy-all');
 
             /*
              * Both writing-tone boxes together - see `AiInstructionsController`.

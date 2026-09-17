@@ -52,6 +52,24 @@ function sendSuggestion (text: string) {
     sendMessage({ text })
 }
 
+// The only tools that ever reach `approval-requested` and start with
+// "Delete" (DeleteTargetProfile, DeleteAllCompanies, DeleteAllLeads):
+// DeleteCompanyNote/DeleteLeadNote are plain CRUD, never gated - see
+// `app/Ai/Agents/Evie.php`. Cheap enough to name-match rather than carry a
+// second "is destructive" flag through the wire for three tools.
+function isDestructiveTool (name: string): boolean {
+    return name.startsWith('Delete')
+}
+
+// `reason` is the exact string the tool itself passed to
+// `requireApproval('...')` server-side (`Laravel\Ai`'s Vercel protocol
+// bridge maps it to `approval.requestReason` on the client) - shown as-is
+// rather than a generic "this cannot be undone" line so each tool explains
+// its own blast radius.
+function approvalReason (part: unknown): string | undefined {
+    return (part as { approval?: { requestReason?: string } }).approval?.requestReason
+}
+
 marked.setOptions({ breaks: true, gfm: true })
 
 function renderMarkdown (text: string): string {
@@ -117,14 +135,40 @@ function renderMarkdown (text: string): string {
                             :text="getToolName(part)"
                             variant="card"
                             :streaming="part.state === 'input-streaming'"
+                            :ui="part.state === 'approval-requested' && isDestructiveTool(getToolName(part))
+                                ? { root: 'border-error/60 bg-error/5' }
+                                : undefined"
                             :suffix="part.state === 'approval-requested' && pendingDecisions[part.toolCallId] !== undefined
                                 ? (pendingDecisions[part.toolCallId] ? 'Approved — waiting on the rest' : 'Denied — waiting on the rest')
                                 : undefined"
                             :actions="part.state === 'approval-requested' && pendingDecisions[part.toolCallId] === undefined ? [
-                                { label: 'Approve', size: 'xs', onClick: () => approve(part.toolCallId, true) },
+                                isDestructiveTool(getToolName(part))
+                                    ? { label: 'Approve', size: 'xs', color: 'error', variant: 'solid', icon: 'i-lucide-triangle-alert', onClick: () => approve(part.toolCallId, true) }
+                                    : { label: 'Approve', size: 'xs', onClick: () => approve(part.toolCallId, true) },
                                 { label: 'Deny', size: 'xs', color: 'neutral', variant: 'soft', onClick: () => approve(part.toolCallId, false) }
                             ] : undefined"
-                        />
+                        >
+                            <!-- `v-if` on the slot's own `<template>`, not on
+                                 the element inside it: UChatTool only shows its
+                                 expand chevron and body region when a default
+                                 slot was actually PASSED (`!!slots.default`),
+                                 not when it was passed-but-empty. Nesting the
+                                 `v-if` one level in would give every tool call
+                                 card - not just a destructive approval with a
+                                 reason - a chevron toggling an empty body. -->
+                            <template
+                                v-if="part.state === 'approval-requested' && isDestructiveTool(getToolName(part)) && approvalReason(part)"
+                                #default
+                            >
+                                <p class="flex items-start gap-1.5 text-sm text-error">
+                                    <UIcon
+                                        name="i-lucide-triangle-alert"
+                                        class="mt-0.5 size-4 shrink-0"
+                                    />
+                                    {{ approvalReason(part) }}
+                                </p>
+                            </template>
+                        </UChatTool>
                     </template>
                 </template>
             </UChatMessages>

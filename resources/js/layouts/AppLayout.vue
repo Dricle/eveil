@@ -434,7 +434,14 @@ const userMenu = computed<DropdownMenuItem[][]>(() => [
                      mentions mailboxes, so it gets a permanent pill here on
                      top of the full alert below. -->
                 <div class="ml-auto flex items-center gap-2">
-                    <ChatToggleButton v-model:open="chatOpen" />
+                    <!-- Evie is a project's chat, not the app's: every chat
+                         route lives under `{project:slug}`, so the panel has
+                         nothing to talk to on a page reachable with none
+                         selected (`projects/create`, `account/*`, `app-settings/*`). -->
+                    <ChatToggleButton
+                        v-if="page.props.currentProject"
+                        v-model:open="chatOpen"
+                    />
 
                     <UButton
                         v-if="page.props.setup?.broken?.length"
@@ -516,6 +523,9 @@ const userMenu = computed<DropdownMenuItem[][]>(() => [
             </div>
         </div>
 
-        <ChatPanel :open="chatOpen" />
+        <ChatPanel
+            v-if="page.props.currentProject"
+            :open="chatOpen"
+        />
     </div>
 </template>

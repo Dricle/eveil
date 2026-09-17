@@ -8,6 +8,7 @@ use App\Actions\Fortify\UpdateUserPassword;
 use App\Actions\Fortify\UpdateUserProfileInformation;
 use App\Http\Responses\LogoutResponse;
 use App\Models\User;
+use Illuminate\Auth\Middleware\RedirectIfAuthenticated;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -51,6 +52,15 @@ class FortifyServiceProvider extends ServiceProvider
         RateLimiter::for('two-factor', function (Request $request) {
             return Limit::perMinute(5)->by($request->session()->get('login.id'));
         });
+
+        // Laravel's own `guest` middleware (`RedirectIfAuthenticated`) bounces
+        // an already-signed-in user off a page like `/app/login` by defaulting
+        // to `route('dashboard')` with no parameters the moment that route
+        // name exists - and `dashboard` sits behind `{project:slug}` now, so
+        // the framework default throws `UrlGenerationException` instead of
+        // redirecting. `app.home` is the one route that never needs a project
+        // named up front.
+        RedirectIfAuthenticated::redirectUsing(fn () => route('app.home'));
 
         $this->registerViews();
     }

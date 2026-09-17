@@ -86,6 +86,16 @@ it('logs in with the right password and rejects the wrong one', function () {
     $this->assertAuthenticatedAs($user);
 });
 
+it('bounces an already-signed-in user off the login screen without erroring', function () {
+    // Laravel's own `guest` middleware defaults to `route('dashboard')` with
+    // no parameters here, and `dashboard` sits behind `{project:slug}` now -
+    // `FortifyServiceProvider` overrides that default to `app.home` for
+    // exactly this reason (`RedirectIfAuthenticated::redirectUsing()`).
+    $this->actingAs(User::factory()->create())
+        ->get(route('login'))
+        ->assertRedirect(route('app.home'));
+});
+
 it('logs out', function () {
     $this->actingAs(User::factory()->create())
         ->post(route('logout'))

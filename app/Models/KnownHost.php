@@ -53,10 +53,23 @@ class KnownHost extends Model
             || $this->last_verified_at->gt(now()->subDays(app(Settings::class)->int('sources.host_registry.ttl_days')));
     }
 
+    /**
+     * `Blocked` alone is not a life sentence either: a host can start
+     * answering again after a CDN change, so it is retried once the same TTL
+     * that re-judges `kind` has passed since the last attempt.
+     */
     public function isWorthHarvesting(): bool
     {
-        return $this->kind->isHarvestable()
-            && ($this->harvest_status?->worthRetrying() ?? true);
+        if (! $this->kind->isHarvestable()) {
+            return false;
+        }
+
+        if ($this->harvest_status?->worthRetrying() ?? true) {
+            return true;
+        }
+
+        return $this->last_harvested_at === null
+            || $this->last_harvested_at->lt(now()->subDays(app(Settings::class)->int('sources.host_registry.ttl_days')));
     }
 
     /**

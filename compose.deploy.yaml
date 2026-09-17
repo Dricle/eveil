@@ -118,6 +118,17 @@ services:
                 condition: service_healthy
         restart: 'no'
 
+    # Optional headless renderer for a page that came back a shell (a
+    # Cloudflare JS challenge, for example), off by default:
+    # `docker compose -f compose.deploy.yaml --profile flaresolverr up -d`.
+    # No first-run setup needed, ready as soon as it is healthy. Never a
+    # dependency of `app`: `PageFetcher` falls back to the plain fetch when
+    # it is not running.
+    flaresolverr:
+        image: 'flaresolverr/flaresolverr:latest'
+        profiles: ['flaresolverr']
+        restart: unless-stopped
+
 volumes:
     pgsql:
     redis:

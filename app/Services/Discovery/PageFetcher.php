@@ -18,6 +18,16 @@ use Throwable;
  */
 class PageFetcher
 {
+    /**
+     * Below this many characters of real text, the server sent a shell
+     * rather than a page - the one case `FlareSolverrRenderer` can fix.
+     * Deliberately NOT shared with `Harvest::READABLE_TEXT`: the two serve
+     * different layers (page-level "was this real" vs. listing-level "was
+     * this a directory") and happen to agree on the number today, not by a
+     * dependency between them.
+     */
+    private const SHELL_TEXT_LENGTH = 500;
+
     /** @var array<string, int> host => last fetch, in milliseconds */
     private array $lastFetchedAt = [];
 
@@ -88,6 +98,15 @@ class PageFetcher
         }
 
         $parsed = (new HtmlText)->parse($body, $url);
+
+        if (mb_strlen(trim($parsed->text)) < self::SHELL_TEXT_LENGTH) {
+            $rendered = app(FlareSolverrRenderer::class)->render($url);
+
+            if ($rendered !== null) {
+                $body = $rendered;
+                $parsed = (new HtmlText)->parse($body, $url);
+            }
+        }
 
         return CrawledPage::updateOrCreate(
             ['url_hash' => CrawledPage::hashFor($url)],

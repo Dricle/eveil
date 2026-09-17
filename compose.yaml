@@ -155,6 +155,19 @@ services:
         networks:
             - sail
         restart: 'no'
+    # Optional headless renderer for a page that came back a shell (a
+    # Cloudflare JS challenge, for example) - off by default:
+    # `docker compose --profile flaresolverr up`. No first-run setup needed,
+    # ready as soon as it is healthy. Never a dependency of laravel.test or
+    # horizon: `PageFetcher` falls back to the plain fetch when it is not
+    # running.
+    flaresolverr:
+        image: 'flaresolverr/flaresolverr:latest'
+        profiles: ['flaresolverr']
+        ports:
+            - '${FORWARD_FLARESOLVERR_PORT:-8191}:8191'
+        networks:
+            - sail
 networks:
     sail:
         driver: bridge

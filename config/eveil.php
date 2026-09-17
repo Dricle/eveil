@@ -41,6 +41,16 @@ return [
             'url' => env('DEGOOG_URL', 'http://degoog:4444'),
             'timeout' => 20,
         ],
+
+        // Optional headless renderer for a page `PageFetcher` fetched fine
+        // but came back a shell (a Cloudflare JS challenge, for example).
+        // Off by default: `docker compose --profile flaresolverr up`. A dead
+        // or unconfigured renderer fails fast and `PageFetcher` falls back to
+        // the plain fetch it already had, so nothing else needs it running.
+        'flaresolverr' => [
+            'url' => env('FLARESOLVERR_URL', 'http://flaresolverr:8191'),
+            'max_timeout_ms' => 60_000,
+        ],
         'overpass' => [
             'url' => env('OVERPASS_URL', 'https://overpass-api.de/api/interpreter'),
             'timeout' => 60,

@@ -166,3 +166,26 @@ it('leaves a locked row alone even when recording a harvest', function () {
 
     expect($host->fresh()->harvest_status)->toBeNull();
 });
+
+it('retries a blocked host once the harvest verdict has gone stale', function () {
+    // A CDN change or a lifted rate limit can make a genuinely blocked host
+    // answer again; without an expiry `blocked` is a life sentence, the same
+    // trap `kind`'s own `isAuthoritative()` already guards against.
+    $host = KnownHost::factory()->index()->create([
+        'host' => 'annuaire.test',
+        'harvest_status' => HarvestStatus::Blocked,
+        'last_harvested_at' => now()->subYear(),
+    ]);
+
+    expect($host->isWorthHarvesting())->toBeTrue();
+});
+
+it('does not retry a host blocked within the harvest TTL window', function () {
+    $host = KnownHost::factory()->index()->create([
+        'host' => 'annuaire.test',
+        'harvest_status' => HarvestStatus::Blocked,
+        'last_harvested_at' => now(),
+    ]);
+
+    expect($host->isWorthHarvesting())->toBeFalse();
+});

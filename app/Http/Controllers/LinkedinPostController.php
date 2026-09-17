@@ -63,7 +63,7 @@ class LinkedinPostController extends Controller
     public function approve(LinkedinPostApproveRequest $request, PublishLinkedinPost $publish, int $linkedinPost): RedirectResponse
     {
         $post = LinkedinPost::query()->findOrFail($linkedinPost);
-        $account = LinkedinAccount::query()->findOrFail($request->validated('linkedin_account_id'));
+        $account = LinkedinAccount::query()->findOrFail((int) $request->validated('linkedin_account_id'));
 
         $post->update(['linkedin_account_id' => $account->id]);
 

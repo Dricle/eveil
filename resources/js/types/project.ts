@@ -117,6 +117,7 @@ export type TargetProfile = {
         trigger_signals?: string[]
         search_queries?: string[]
         confidence?: number
+        subreddits?: { name: string, subscribers: number, description: string }[]
     }
 }
 

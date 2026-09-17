@@ -296,6 +296,39 @@ watch(() => props.profile, (profile) => {
                             add-label="add a signal…"
                         />
                     </UFormField>
+
+                    <!-- Resolved automatically, not typed: read-only here, and
+                         never bound into `draftList` alongside the fields
+                         above. -->
+                    <UFormField
+                        v-if="profile"
+                        label="Reddit communities"
+                        help="Resolved automatically from the segment above. Re-run with `eveil:find-subreddits` after editing sectors by hand."
+                    >
+                        <div
+                            v-if="profile.criteria.subreddits?.length"
+                            class="flex flex-wrap gap-2"
+                        >
+                            <UButton
+                                v-for="subreddit in profile.criteria.subreddits"
+                                :key="subreddit.name"
+                                :to="`https://reddit.com/r/${subreddit.name}`"
+                                external
+                                target="_blank"
+                                variant="soft"
+                                color="neutral"
+                                size="sm"
+                                icon="i-lucide-message-circle"
+                                :label="`r/${subreddit.name} · ${subreddit.subscribers.toLocaleString()}`"
+                            />
+                        </div>
+                        <p
+                            v-else
+                            class="text-sm text-muted"
+                        >
+                            None resolved yet.
+                        </p>
+                    </UFormField>
                 </div>
             </UCard>
 

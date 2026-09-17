@@ -84,14 +84,24 @@ class TargetProfileDeriver extends EveilAgent implements HasStructuredOutput
         unless the market is English-speaking.
 
         For each profile, also name a few Reddit topics worth checking for real
-        communities - keywords, never subreddit names: you cannot be trusted to name a
-        real one from memory, so a mechanical lookup resolves these afterwards. Name the
-        BUYER'S world, never the product's own: a profile of founders launching
-        publicly wants "startups", "indie hackers", "side projects", never the product's
-        own category - a company selling outbound automation does not want other
-        outbound-automation vendors, the same way a shoe seller does not want other shoe
-        sellers. Empty when the profile has no real community angle at all (most
-        B2B/local-service profiles do not).
+        communities - keywords, never subreddit names: a mechanical, name-only lookup
+        resolves these afterwards, and a phrase of two or more words ("cold outreach")
+        is tried one word at a time as well as whole, since a subreddit name never
+        contains a space. Name the BUYER'S world, never the product's own: a profile of
+        founders launching publicly wants "startups", "indie hackers", "side projects",
+        never the product's own category - a company selling outbound automation does
+        not want other outbound-automation vendors, the same way a shoe seller does not
+        want other shoe sellers. Empty when the profile has no real community angle at
+        all (most B2B/local-service profiles do not).
+
+        Also, separately, name any ACTUAL subreddits you recognise as real, existing
+        communities the buyer hangs out in - r/sales, r/Entrepreneur, r/smallbusiness,
+        that kind of thing, without the "r/". Only ones you are genuinely confident
+        exist; a wrong guess costs nothing (every name is checked against Reddit before
+        it is ever used, and a guess that turns out fake or dead is silently dropped),
+        but naming ones you are unsure about defeats the point of asking. Same buyer,
+        never competitor, rule as the topics above. Empty when you cannot name a real
+        one with confidence.
         PROMPT;
     }
 
@@ -160,6 +170,10 @@ class TargetProfileDeriver extends EveilAgent implements HasStructuredOutput
 
                 'subreddit_topics' => $schema->array()->items($schema->string())
                     ->description('Keywords describing the BUYER\'s communities, never subreddit names and never the product\'s own competitors. Empty when the profile has no real community angle.')
+                    ->required(),
+
+                'subreddit_guesses' => $schema->array()->items($schema->string())
+                    ->description('Real subreddit names you are genuinely confident exist (no "r/"), for the BUYER\'s communities, never the product\'s own competitors. Every name is verified against Reddit afterwards, so a wrong or dead one is silently dropped - only name ones you actually recognise. Empty when you cannot name a real one with confidence.')
                     ->required(),
             ]))->required(),
         ];

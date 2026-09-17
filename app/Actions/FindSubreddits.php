@@ -21,11 +21,14 @@ class FindSubreddits
     public function handle(TargetProfile $targetProfile): TargetProfile
     {
         $topics = $this->topics($targetProfile);
+        $guesses = $this->strings($targetProfile, 'subreddit_guesses');
 
         $targetProfile->update([
             'criteria' => [
                 ...$targetProfile->criteria,
-                'subreddits' => $topics === [] ? [] : $this->finder->find($topics),
+                'subreddits' => $topics === [] && $guesses === []
+                    ? []
+                    : $this->finder->find($topics, $guesses),
             ],
         ]);
 
@@ -42,14 +45,22 @@ class FindSubreddits
      */
     private function topics(TargetProfile $targetProfile): array
     {
-        $topics = $targetProfile->criteria['subreddit_topics'] ?? null;
+        $topics = $this->strings($targetProfile, 'subreddit_topics');
 
-        if (is_array($topics) && $topics !== []) {
-            return array_values(array_filter($topics, is_string(...)));
+        if ($topics !== []) {
+            return $topics;
         }
 
-        $sectors = $targetProfile->criteria['sectors'] ?? [];
+        return $this->strings($targetProfile, 'sectors');
+    }
 
-        return is_array($sectors) ? array_values(array_filter($sectors, is_string(...))) : [];
+    /**
+     * @return array<int, string>
+     */
+    private function strings(TargetProfile $targetProfile, string $key): array
+    {
+        $values = $targetProfile->criteria[$key] ?? [];
+
+        return is_array($values) ? array_values(array_filter($values, is_string(...))) : [];
     }
 }

@@ -11,9 +11,13 @@ use Illuminate\Support\Facades\Http;
 
 beforeEach(function () {
     // `DeriveTargetProfiles` resolves subreddits for every profile it stores
-    // (`FindSubreddits`) - empty by default here so tests that do not care
-    // about Reddit never make a real network call.
-    Http::fake(['arctic-shift.photon-reddit.com/*' => Http::response(['data' => []])]);
+    // (`FindSubreddits`, which also always fires a web search via SearXNG) -
+    // empty by default here so tests that do not care about Reddit never
+    // make a real network call.
+    Http::fake([
+        'arctic-shift.photon-reddit.com/*' => Http::response(['data' => []]),
+        'searxng:8080/*' => Http::response(['results' => []]),
+    ]);
 });
 
 function profile(string $name): array
@@ -203,6 +207,7 @@ it('resolves real subreddits for a derived profile, once, at creation time', fun
         'arctic-shift.photon-reddit.com/*' => Http::response(['data' => [
             ['display_name' => 'SaaS', 'subscribers' => 200_000, 'public_description' => 'For SaaS founders.', 'over18' => false, 'quarantine' => false],
         ]]),
+        'searxng:8080/*' => Http::response(['results' => []]),
     ]);
 
     TargetProfileDeriver::fake([['profiles' => [[

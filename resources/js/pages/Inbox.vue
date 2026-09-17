@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Form, Head, router } from '@inertiajs/vue3'
+import { Form, Head, router, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import ActivityTimeline from '@/components/ActivityTimeline.vue'
@@ -21,6 +21,9 @@ const props = defineProps<{
     filters: { campaign: number | null, folder: string }
 }>()
 
+const page = usePage()
+const projectSlug = computed(() => page.props.currentProject!.slug)
+
 // `0` rather than an empty string: reka reserves '' for clearing a select, and
 // a SelectItem carrying it throws on mount.
 const campaign = ref(props.filters.campaign ?? 0)
@@ -37,7 +40,7 @@ function go (next: { campaign?: number, folder?: string, page?: number } = {}) {
     const folder = next.folder ?? props.filters.folder
     const id = next.campaign ?? campaign.value
 
-    router.get(inbox.url(folder), {
+    router.get(inbox.url({ project: projectSlug.value, folder }), {
         ...(id ? { campaign: id } : {}),
         ...(next.page ? { page: next.page } : {})
     }, { preserveState: true, preserveScroll: true })
@@ -90,7 +93,7 @@ const togglingAttention = ref(false)
 function toggleAttention (conversation: Conversation) {
     togglingAttention.value = true
 
-    router.put(attentionRoute.url(conversation.id), { resolved: !conversation.resolved }, {
+    router.put(attentionRoute.url({ project: projectSlug.value, conversation: conversation.id }), { resolved: !conversation.resolved }, {
         preserveScroll: true,
         onFinish: () => { togglingAttention.value = false }
     })
@@ -335,7 +338,7 @@ function delivery (conversation: Conversation) {
                         </span>
 
                         <ULink
-                            :href="relativeUrl(contactRoutes.show.url(activeConversation.lead.id))"
+                            :href="relativeUrl(contactRoutes.show.url({ project: projectSlug, contact: activeConversation.lead.id }))"
                             class="min-w-0 truncate font-medium text-highlighted"
                         >{{ activeConversation.lead.name ?? activeConversation.lead.email }}</ULink>
                     </div>
@@ -395,7 +398,7 @@ function delivery (conversation: Conversation) {
                                 <StatusSelect
                                     :status="activeConversation.lead.status"
                                     :options="OUTREACH_STATUSES"
-                                    :url="contactRoutes.status.url(activeConversation.lead.id)"
+                                    :url="contactRoutes.status.url({ project: projectSlug, contact: activeConversation.lead.id })"
                                 />
                             </div>
                         </dl>
@@ -407,8 +410,8 @@ function delivery (conversation: Conversation) {
 
                             <ActivityTimeline
                                 :notes="activeConversation.lead.notes"
-                                :store-url="contactRoutes.notes.store.url(activeConversation.lead.id)"
-                                :destroy-url="note => contactRoutes.notes.destroy.url({ contact: activeConversation!.lead.id, note: note.id })"
+                                :store-url="contactRoutes.notes.store.url({ project: projectSlug, contact: activeConversation.lead.id })"
+                                :destroy-url="note => contactRoutes.notes.destroy.url({ project: projectSlug, contact: activeConversation!.lead.id, note: note.id })"
                             />
                         </div>
                     </div>
@@ -440,7 +443,7 @@ function delivery (conversation: Conversation) {
                              receive the follow-up queued behind them. -->
                         <Form
                             v-slot="{ errors, processing }"
-                            v-bind="replyRoute.form(activeConversation.id)"
+                            v-bind="replyRoute.form({ project: projectSlug, conversation: activeConversation.id })"
                             class="shrink-0 space-y-2 border-t border-default p-4"
                             :options="{ preserveScroll: true }"
                         >

@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Ai\Contracts\SpendGuardInterface;
 use App\Ai\ProviderCredentials;
 use App\Ai\UnmeteredSpend;
+use App\Models\Project;
 use App\Models\User;
 use App\Services\Discovery\PageFetcher;
 use App\Services\Discovery\RobotsPolicy;
@@ -17,6 +18,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -69,6 +71,15 @@ class AppServiceProvider extends ServiceProvider
         // calls, with whose key, and what it believes about a host. Nobody is
         // granted this through an organization.
         Gate::define('manage-app-settings', fn (User $user): bool => $user->is_super_admin === true);
+
+        // Explicit, not implicit: no controller behind `{project:slug}`
+        // (`routes/app.php`) type-hints a `Project $project` parameter -
+        // every one of them reads `CurrentProject::getOrFail()` instead, which
+        // is what lets `SetCurrentProject` be the one place that resolves it.
+        // Implicit binding only fires when a controller action itself asks
+        // for the model, so without this the route parameter would stay the
+        // raw slug string and never become a `Project` at all.
+        Route::bind('project', fn (string $slug) => Project::where('slug', $slug)->firstOrFail());
     }
 
     /**

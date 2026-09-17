@@ -35,7 +35,7 @@ export function useEvieChat () {
     const page = usePage()
 
     const transport = new DefaultChatTransport({
-        api: chatRoutes.store.url(),
+        api: chatRoutes.store.url({ project: page.props.currentProject!.slug }),
         headers: () => ({ 'X-XSRF-TOKEN': xsrfToken() }),
         prepareSendMessagesRequest ({ messages, body }) {
             // A resume (Approve/Deny) calls regenerate({ body: { decisions } })
@@ -60,7 +60,7 @@ export function useEvieChat () {
         loadingHistory.value = true
 
         try {
-            const response = await fetch(chatRoutes.show.url(), {
+            const response = await fetch(chatRoutes.show.url({ project: page.props.currentProject!.slug }), {
                 headers: { Accept: 'application/json' }
             })
 
@@ -79,7 +79,7 @@ export function useEvieChat () {
     function clear () {
         chat.messages.value = []
 
-        void fetch(chatRoutes.destroy.url(), {
+        void fetch(chatRoutes.destroy.url({ project: page.props.currentProject!.slug }), {
             method: 'DELETE',
             headers: { 'X-XSRF-TOKEN': xsrfToken() }
         })

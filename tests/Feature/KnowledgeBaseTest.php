@@ -39,6 +39,7 @@ function portrait(): array
 it('shows the knowledge base on the project page', function () {
     $user = owner();
     $project = Project::factory()->for($user->organizations()->sole())->create(['knowledge_base' => portrait()]);
+    forProject($project);
 
     ProjectAnalysis::factory()->create([
         'project_id' => $project->id,
@@ -58,6 +59,7 @@ it('shows the knowledge base on the project page', function () {
 it('renders a project whose analysis has not landed yet', function () {
     $user = owner();
     $project = Project::factory()->for($user->organizations()->sole())->create(['knowledge_base' => null]);
+    forProject($project);
 
     $this->actingAs($user)->get(route('settings.knowledge-base.edit'))
         ->assertOk()
@@ -69,6 +71,7 @@ it('renders a project whose analysis has not landed yet', function () {
 it('shows how far a running crawl has got', function () {
     $user = owner();
     $project = Project::factory()->for($user->organizations()->sole())->create(['knowledge_base' => null]);
+    forProject($project);
 
     ProjectAnalysis::factory()->create([
         'project_id' => $project->id,
@@ -89,6 +92,7 @@ it('shows how far a running crawl has got', function () {
 it('names the pages a partial crawl could not read', function () {
     $user = owner();
     $project = Project::factory()->for($user->organizations()->sole())->create(['knowledge_base' => portrait()]);
+    forProject($project);
 
     ProjectAnalysis::factory()->create([
         'project_id' => $project->id,
@@ -109,6 +113,7 @@ it('names the pages a partial crawl could not read', function () {
 it('saves a correction and splits the list fields on newlines', function () {
     $user = owner();
     $project = Project::factory()->for($user->organizations()->sole())->create(['knowledge_base' => portrait()]);
+    forProject($project);
 
     $this->actingAs($user)
         ->put(route('settings.knowledge-base.update'), [
@@ -132,6 +137,7 @@ it('saves a correction and splits the list fields on newlines', function () {
 it('refuses a correction that empties a required field', function () {
     $user = owner();
     $project = Project::factory()->for($user->organizations()->sole())->create(['knowledge_base' => portrait()]);
+    forProject($project);
 
     $this->actingAs($user)
         ->put(route('settings.knowledge-base.update'), [...portrait(), 'what_it_does' => ''])
@@ -155,25 +161,36 @@ it('keeps a correction through a later analysis', function () {
     expect($project->fresh()->knowledge_base['what_it_does'])->toBe(portrait()['what_it_does']);
 });
 
-it('only ever writes the knowledge base of the current project', function () {
+it('only ever writes the knowledge base of the project named in the URL', function () {
     $user = owner();
-    $own = Project::factory()->for($user->organizations()->sole())->create(['knowledge_base' => portrait()]);
-    $someoneElses = Project::factory()->create(['knowledge_base' => portrait()]);
+    $organization = $user->organizations()->sole();
+    $own = Project::factory()->for($organization)->create(['knowledge_base' => portrait()]);
+    $otherTab = Project::factory()->for($organization)->create(['knowledge_base' => portrait()]);
 
-    // There is no project id to tamper with: the session picks the project,
-    // and the session only ever holds one this user may see.
-    $this->actingAs($user)
-        ->withSession(['current_project_id' => $someoneElses->id])
-        ->put(route('settings.knowledge-base.update'), [...portrait(), 'what_it_does' => 'Written by a stranger.'])
+    // The two-tab bug this route exists to close: session is shared across
+    // every tab of a browser, so a save must never trust it. `$own` is the
+    // project named in the request's own URL; `current_project_id` is forged
+    // to a DIFFERENT project this same user can also see, simulating a
+    // second tab that switched projects between page load and submit.
+    //
+    // `forProject()` after `actingAs()`, not before: `actingAs()` itself
+    // binds a default from whichever project sorts first for this user
+    // (`tests/TestCase.php`), and would otherwise silently win over this.
+    $this->actingAs($user);
+    forProject($own);
+
+    $this->withSession(['current_project_id' => $otherTab->id])
+        ->put(route('settings.knowledge-base.update'), [...portrait(), 'what_it_does' => 'Written from the wrong tab.'])
         ->assertSessionHasNoErrors();
 
-    expect($someoneElses->fresh()->knowledge_base_edited_by_user)->toBeFalse()
-        ->and($own->fresh()->knowledge_base['what_it_does'])->toBe('Written by a stranger.');
+    expect($otherTab->fresh()->knowledge_base_edited_by_user)->toBeFalse()
+        ->and($own->fresh()->knowledge_base['what_it_does'])->toBe('Written from the wrong tab.');
 });
 
 it('answers a question the site never did, without freezing the portrait', function () {
     $user = owner();
     $project = Project::factory()->for($user->organizations()->sole())->create(['knowledge_base' => portrait()]);
+    forProject($project);
 
     $this->actingAs($user)
         ->putJson(route('settings.knowledge-base.answers'), [
@@ -197,6 +214,7 @@ it('clears an answer typed by mistake', function () {
             'gaps' => [['key' => 'refrigerated_loads', 'question' => 'Cold chain?', 'answer' => 'Wrong.']],
         ],
     ]);
+    forProject($project);
 
     $this->actingAs($user)
         ->putJson(route('settings.knowledge-base.answers'), ['answers' => ['refrigerated_loads' => '   ']])
@@ -207,11 +225,12 @@ it('clears an answer typed by mistake', function () {
 
 it('sends the open questions to the page in one shape, whatever was stored', function () {
     $user = owner();
-    Project::factory()->for($user->organizations()->sole())->create([
+    $project = Project::factory()->for($user->organizations()->sole())->create([
         // The shape an earlier reading wrote: a sentence, with no key to file an
         // answer under.
         'knowledge_base' => [...portrait(), 'gaps' => ['Whether it does refrigerated loads']],
     ]);
+    forProject($project);
 
     $this->actingAs($user)->get(route('settings.knowledge-base.edit'))
         ->assertInertia(fn ($page) => $page
@@ -278,6 +297,7 @@ it('leaves the questions alone when the portrait is corrected', function () {
             'gaps' => [['key' => 'refrigerated_loads', 'question' => 'Cold chain?', 'answer' => 'Yes.']],
         ],
     ]);
+    forProject($project);
 
     $this->actingAs($user)
         ->putJson(route('settings.knowledge-base.update'), [
@@ -290,15 +310,18 @@ it('leaves the questions alone when the portrait is corrected', function () {
     expect($project->fresh()->knowledge_base['gaps'][0]['answer'])->toBe('Yes.');
 });
 
-it('only ever answers for the current project', function () {
+it('404s rather than answering for a project outside their organization', function () {
     $user = owner();
     $someoneElses = Project::factory()->create(['knowledge_base' => portrait()]);
 
+    // A project the URL names but this user cannot see must not even confirm
+    // it exists - `Response::denyAsNotFound()` in `ProjectPolicy::view()`,
+    // enforced by `SetCurrentProject` for every route under `{project:slug}`.
     $this->actingAs($user)
-        ->withSession(['current_project_id' => $someoneElses->id])
-        ->putJson(route('settings.knowledge-base.answers'), [
+        ->putJson(route('settings.knowledge-base.answers', ['project' => $someoneElses->slug]), [
             'answers' => ['refrigerated_loads' => 'Written by a stranger.'],
-        ]);
+        ])
+        ->assertNotFound();
 
     expect($someoneElses->fresh()->knowledge_base['gaps'][0]['answer'] ?? null)->toBeNull();
 });

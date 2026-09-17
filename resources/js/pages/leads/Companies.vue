@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Form, Head, router, usePoll } from '@inertiajs/vue3'
+import { Form, Head, router, usePage, usePoll } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import LeadsLayout from '@/layouts/LeadsLayout.vue'
@@ -39,6 +39,8 @@ const props = defineProps<{
     knownClients: { companies: number, leads: number } | null
 }>()
 
+const page = usePage()
+
 // Anything in flight, not just a contact search: a discovery run fills this
 // list for minutes, and a page that sits still meanwhile reads as an empty
 // market rather than as one still being searched.
@@ -53,7 +55,7 @@ const minScore = ref(props.filters.min_score ?? 0)
 const view = ref<View>(props.filters.view ?? 'all')
 
 const table = useTableQuery(
-    companyRoutes.index.url(),
+    companyRoutes.index.url({ project: page.props.currentProject!.slug }),
     props.filters,
     ['companies', 'filters', 'total', 'unsearched', 'unapproved', 'counts'],
     () => ({
@@ -203,7 +205,7 @@ function toggleAll () {
 
 function bulkApprove () {
     router.put(
-        companyRoutes.approval.url(),
+        companyRoutes.approval.url({ project: page.props.currentProject!.slug }),
         { companies: selected.value, approved: true },
         { preserveScroll: true, onSuccess: clearSelection }
     )
@@ -211,7 +213,7 @@ function bulkApprove () {
 
 function bulkFindContacts () {
     router.post(
-        contactRoutes.search.url(),
+        contactRoutes.search.url({ project: page.props.currentProject!.slug }),
         { companies: selected.value },
         { preserveScroll: true, onSuccess: clearSelection }
     )
@@ -219,7 +221,7 @@ function bulkFindContacts () {
 
 function bulkSetAside () {
     router.put(
-        companyRoutes.status.bulk.url(),
+        companyRoutes.status.bulk.url({ project: page.props.currentProject!.slug }),
         { companies: selected.value, status: 'rejected' },
         { preserveScroll: true, onSuccess: clearSelection }
     )
@@ -227,22 +229,22 @@ function bulkSetAside () {
 
 function approve (company: Company) {
     router.put(
-        companyRoutes.approval.url(),
+        companyRoutes.approval.url({ project: page.props.currentProject!.slug }),
         { companies: [company.id], approved: true },
         { preserveScroll: true, preserveState: true }
     )
 }
 
 function setAside (company: Company) {
-    router.put(companyRoutes.status.url(company.id), { status: 'rejected' }, { preserveScroll: true, preserveState: true })
+    router.put(companyRoutes.status.url({ project: page.props.currentProject!.slug, company: company.id }), { status: 'rejected' }, { preserveScroll: true, preserveState: true })
 }
 
 function putBack (company: Company) {
-    router.put(companyRoutes.status.url(company.id), { status: 'new' }, { preserveScroll: true, preserveState: true })
+    router.put(companyRoutes.status.url({ project: page.props.currentProject!.slug, company: company.id }), { status: 'new' }, { preserveScroll: true, preserveState: true })
 }
 
 function findContacts (company: Company) {
-    router.post(contactRoutes.search.url(), { company: company.id }, { preserveScroll: true })
+    router.post(contactRoutes.search.url({ project: page.props.currentProject!.slug }), { company: company.id }, { preserveScroll: true })
 }
 </script>
 
@@ -307,7 +309,7 @@ function findContacts (company: Company) {
                         color="neutral"
                         variant="subtle"
                         :label="`Find contacts (${unsearched})`"
-                        @click="router.post(contactRoutes.search.url(), {}, { preserveScroll: true })"
+                        @click="router.post(contactRoutes.search.url({ project: page.props.currentProject!.slug }), {}, { preserveScroll: true })"
                     />
 
                     <!-- A lead somebody already had. One way companies
@@ -435,7 +437,7 @@ function findContacts (company: Company) {
                 <div class="min-w-0 space-y-1.5">
                     <div class="flex flex-wrap items-baseline gap-2">
                         <ULink
-                            :href="relativeUrl(companyRoutes.show.url(company.id))"
+                            :href="relativeUrl(companyRoutes.show.url({ project: page.props.currentProject!.slug, company: company.id }))"
                             class="font-semibold text-highlighted"
                         >{{ company.name }}</ULink>
 
@@ -554,7 +556,7 @@ function findContacts (company: Company) {
                         </span>
                         <ULink
                             v-else-if="contactState(company) === 'found'"
-                            :href="relativeUrl(contactRoutes.index.url({ query: { company: company.id } }))"
+                            :href="relativeUrl(contactRoutes.index.url({ project: page.props.currentProject!.slug }, { query: { company: company.id } }))"
                             class="flex items-center gap-1 text-xs"
                         >
                             <UIcon
@@ -602,7 +604,7 @@ function findContacts (company: Company) {
                                 size="xs"
                                 color="neutral"
                                 variant="ghost"
-                                @click="router.get(companyRoutes.show.url(company.id))"
+                                @click="router.get(companyRoutes.show.url({ project: page.props.currentProject!.slug, company: company.id }))"
                             />
                             <UButton
                                 v-else-if="contactState(company) !== 'looking'"
@@ -648,7 +650,7 @@ function findContacts (company: Company) {
         <template #body>
             <Form
                 v-slot="{ errors, processing }"
-                v-bind="companyRoutes.links.store.form()"
+                v-bind="companyRoutes.links.store.form({ project: page.props.currentProject!.slug })"
                 class="space-y-4"
                 @success="addingLinks = false; links = ''"
             >
@@ -707,7 +709,7 @@ function findContacts (company: Company) {
         <template #body>
             <Form
                 v-slot="{ errors, processing }"
-                v-bind="companyRoutes.knownClients.store.form()"
+                v-bind="companyRoutes.knownClients.store.form({ project: page.props.currentProject!.slug })"
                 class="space-y-4"
                 @success="addingKnownClients = false; knownClientEntries = ''"
             >

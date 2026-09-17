@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { usePage } from '@inertiajs/vue3'
 import StatusSelect from '@/components/StatusSelect.vue'
 import { SOURCES, VERIFICATION } from '@/lib/contacts'
 import { OUTREACH_STATUSES } from '@/lib/status'
@@ -14,6 +15,8 @@ defineProps<{
     // empty list does not read as "nobody works here".
     searching?: boolean
 }>()
+
+const page = usePage()
 
 function verdict (contact: Contact) {
     return contact.email_status === null ? null : VERIFICATION[contact.email_status]
@@ -33,7 +36,7 @@ function origin (contact: Contact) {
         >
             <div class="min-w-0 flex-1">
                 <ULink
-                    :href="relativeUrl(contactRoutes.show.url(contact.id))"
+                    :href="relativeUrl(contactRoutes.show.url({ project: page.props.currentProject!.slug, contact: contact.id }))"
                     class="block truncate font-medium"
                 >{{ contact.name ?? contact.email ?? 'No name' }}</ULink>
                 <p
@@ -73,7 +76,7 @@ function origin (contact: Contact) {
             <StatusSelect
                 :status="contact.status"
                 :options="OUTREACH_STATUSES"
-                :url="contactRoutes.status.url(contact.id)"
+                :url="contactRoutes.status.url({ project: page.props.currentProject!.slug, contact: contact.id })"
             />
         </div>
 

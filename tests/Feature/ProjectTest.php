@@ -31,9 +31,9 @@ beforeEach(function () {
 });
 
 it('sends a user with no project to the create screen', function () {
-    $this->get(route('dashboard'))->assertRedirect(route('login'));
+    $this->get(route('app.home'))->assertRedirect(route('login'));
 
-    $this->actingAs(member())->get(route('dashboard'))->assertRedirect(route('projects.create'));
+    $this->actingAs(member())->get(route('app.home'))->assertRedirect(route('projects.create'));
 });
 
 it('opens straight into a project once one exists', function () {
@@ -61,15 +61,17 @@ it('prefills the create screen with a pasted URL once, then forgets it', functio
 it('creates a project, starts its analysis and selects it', function () {
     reachable();
 
-    $this->actingAs(member())
+    $response = $this->actingAs(member())
         ->post(route('projects.store'), ['name' => 'Acme', 'url' => 'acme.test'])
-        // Into the guided run rather than the dashboard: the site is being read
-        // at this moment, and watching that happen is the whole first
-        // impression.
-        ->assertRedirect(route('onboarding'))
         ->assertSessionHasNoErrors();
 
     $project = Project::sole();
+
+    // Into the guided run rather than the dashboard: the site is being read
+    // at this moment, and watching that happen is the whole first
+    // impression. Named explicitly: `projects.store` carries no project of
+    // its own to have bound a `URL::defaults()` fallback from.
+    $response->assertRedirect(route('onboarding', ['project' => $project->slug]));
 
     // The scheme is added for the user rather than demanded from them.
     expect($project->url)->toBe('https://acme.test/');
@@ -136,8 +138,8 @@ it('deletes the current project and falls back to the next one', function () {
     $deleted = Project::factory()->for($organization)->create(['name' => 'Aaa']);
     $kept = Project::factory()->for($organization)->create(['name' => 'Bbb']);
 
-    // 'Aaa' sorts first, so it is what the session lands on unasked.
-    $this->actingAs($user)->delete(route('settings.project.destroy'))->assertRedirect(route('dashboard'));
+    // 'Aaa' sorts first, so it is what `actingAs()` lands on unasked.
+    $this->actingAs($user)->delete(route('settings.project.destroy'))->assertRedirect(route('app.home'));
 
     expect(Project::query()->whereKey($deleted->getKey())->exists())->toBeFalse();
 
@@ -145,34 +147,34 @@ it('deletes the current project and falls back to the next one', function () {
         ->assertInertia(fn ($page) => $page->where('currentProject.id', $kept->id));
 });
 
-it('never switches to a project outside the user\'s organizations', function () {
+it('404s on a project outside the user\'s organizations, named directly in the URL', function () {
     $stranger = member();
-    $theirs = Project::factory()->for($stranger->organizations()->sole())->create();
     $someoneElses = Project::factory()->create();
 
+    // No switcher to tamper with any more: the URL itself is the only thing
+    // that says which project a request acts on, so this is the whole
+    // access-control surface - `Response::denyAsNotFound()` in
+    // `ProjectPolicy::view()`, enforced by `SetCurrentProject` for every
+    // route under `{project:slug}`.
     $this->actingAs($stranger)
-        ->put(route('current-project.update', $someoneElses))
+        ->get(route('dashboard', ['project' => $someoneElses->slug]))
         ->assertNotFound();
-
-    // A tampered session falls back to something the user may actually see.
-    $this->actingAs($stranger)
-        ->withSession(['current_project_id' => $someoneElses->id])
-        ->get(route('dashboard'))
-        ->assertInertia(fn ($page) => $page->where('currentProject.id', $theirs->id));
 });
 
-it('switches the current project', function () {
+it('updates the "last visited" session hint from ordinary navigation, with no switch action of its own', function () {
     $user = member();
     $organization = $user->organizations()->sole();
-    Project::factory()->for($organization)->create(['name' => 'Aaa']);
-    $other = Project::factory()->for($organization)->create(['name' => 'Bbb']);
+    $first = Project::factory()->for($organization)->create(['name' => 'Aaa']);
+    $second = Project::factory()->for($organization)->create(['name' => 'Bbb']);
 
-    $this->actingAs($user)
-        ->from(route('dashboard'))
-        ->put(route('current-project.update', $other))
-        ->assertRedirect(route('dashboard'));
+    // Visiting a project's URL is the whole "switch": `SetCurrentProject`
+    // updates the hint as a side effect of resolving whatever project the
+    // request already named, not through a dedicated endpoint.
+    $this->actingAs($user)->get(route('dashboard', ['project' => $first->slug]));
+    expect(session('current_project_id'))->toBe($first->id);
 
-    expect(session('current_project_id'))->toBe($other->id);
+    $this->actingAs($user)->get(route('dashboard', ['project' => $second->slug]));
+    expect(session('current_project_id'))->toBe($second->id);
 });
 
 it('lets a user with no project still reach their account', function () {

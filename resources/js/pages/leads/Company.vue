@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, usePoll } from '@inertiajs/vue3'
+import { Head, router, usePage, usePoll } from '@inertiajs/vue3'
 import { computed, watch } from 'vue'
 import ContactList from '@/components/ContactList.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
@@ -18,6 +18,8 @@ const props = defineProps<{
     company: CompanySheet
     activity: Activity
 }>()
+
+const page = usePage()
 
 // Only while this company's own search is out: the contacts appear one by one
 // as the site is read, and a page that sits still looks like it found nobody.
@@ -44,7 +46,7 @@ function day (value: string | null) {
             variant="ghost"
             size="xs"
             label="Companies"
-            @click="router.get(companyRoutes.index.url())"
+            @click="router.get(companyRoutes.index.url({ project: page.props.currentProject!.slug }))"
         />
 
         <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -85,7 +87,7 @@ function day (value: string | null) {
                             <StatusSelect
                                 :status="company.status"
                                 :options="OUTREACH_STATUSES"
-                                :url="companyRoutes.status.url(company.id)"
+                                :url="companyRoutes.status.url({ project: page.props.currentProject!.slug, company: company.id })"
                             />
                         </div>
                     </div>
@@ -188,8 +190,8 @@ function day (value: string | null) {
 
                     <ActivityTimeline
                         :notes="company.notes"
-                        :store-url="companyRoutes.notes.store.url(company.id)"
-                        :destroy-url="note => companyRoutes.notes.destroy.url({ company: company.id, note: note.id })"
+                        :store-url="companyRoutes.notes.store.url({ project: page.props.currentProject!.slug, company: company.id })"
+                        :destroy-url="note => companyRoutes.notes.destroy.url({ project: page.props.currentProject!.slug, company: company.id, note: note.id })"
                     />
                 </div>
 
@@ -206,7 +208,7 @@ function day (value: string | null) {
                             variant="ghost"
                             size="xs"
                             :label="company.contacts.length ? 'Look again' : 'Look for contacts'"
-                            @click="router.post(contactRoutes.search.url(), { company: company.id }, { preserveScroll: true })"
+                            @click="router.post(contactRoutes.search.url({ project: page.props.currentProject!.slug }), { company: company.id }, { preserveScroll: true })"
                         />
                     </div>
 

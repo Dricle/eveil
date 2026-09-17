@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { router } from '@inertiajs/vue3'
+import { router, usePage } from '@inertiajs/vue3'
 import companyRoutes from '@/routes/companies'
 
 // The go-ahead on one company. Saying yes is also what starts the search for
@@ -10,9 +10,11 @@ const props = defineProps<{
     size?: 'xs' | 'sm' | 'md'
 }>()
 
+const page = usePage()
+
 function flip () {
     router.put(
-        companyRoutes.approval.url(),
+        companyRoutes.approval.url({ project: page.props.currentProject!.slug }),
         { companies: [props.company.id], approved: !props.company.approved },
         { preserveScroll: true, preserveState: true }
     )

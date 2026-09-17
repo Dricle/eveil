@@ -5,12 +5,12 @@ import { computed, ref } from 'vue'
 import ChatPanel from '@/components/chat/ChatPanel.vue'
 import ChatToggleButton from '@/components/chat/ChatToggleButton.vue'
 import { relativeUrl } from '@/lib/utils'
+import { switchProjectUrl } from '@/lib/switchProjectUrl'
 import { dashboard, inbox, logout } from '@/routes'
 import campaigns from '@/routes/campaigns'
 import companies from '@/routes/companies'
 import linkedinPosts from '@/routes/linkedin/posts'
 import { profile } from '@/routes/account'
-import { update as switchProject } from '@/routes/current-project'
 import appSettings from '@/routes/app-settings/provider'
 import { create as createProject } from '@/routes/projects'
 import { create as createOrganization } from '@/routes/organizations'
@@ -51,78 +51,89 @@ function isCurrent (path: string): boolean {
 // not as empty.
 const navCounts = computed(() => page.props.navCounts)
 
-const items = computed<NavigationMenuItem[]>(() => [
-    {
-        label: 'Dashboard',
-        icon: 'i-lucide-house',
-        to: relativeUrl(dashboard.url()),
-        active: page.url === relativeUrl(dashboard.url())
-    },
-    {
-        label: 'Email',
-        icon: 'i-lucide-mail',
-        defaultOpen: true,
-        children: [
-            {
-                label: 'Targets',
-                icon: 'i-lucide-crosshair',
-                to: relativeUrl(targets.index.url()),
-                active: isCurrent(targets.index.url()) || page.url.startsWith('/app/discovery-runs'),
-                badge: navCounts.value?.targets
-                    ? { label: navCounts.value.targets, color: 'neutral', variant: 'ghost' }
-                    : undefined
-            },
-            {
-                label: 'Leads',
-                icon: 'i-lucide-building-2',
-                to: relativeUrl(companies.index.url()),
-                active: isCurrent(companies.index.url()),
-                badge: navCounts.value?.leads
-                    ? { label: navCounts.value.leads, color: 'neutral', variant: 'ghost' }
-                    : undefined
-            },
-            {
-                label: 'Campaigns',
-                icon: 'i-lucide-send',
-                to: relativeUrl(campaigns.index.url()),
-                active: isCurrent(campaigns.index.url())
-            },
-            {
-                label: 'Inbox',
-                icon: 'i-lucide-inbox',
-                to: relativeUrl(inbox.url()),
-                active: isCurrent(inbox.url()),
-                badge: navCounts.value?.inbox
-                    ? { label: navCounts.value.inbox, color: 'primary', variant: 'solid' }
-                    : undefined
-            }
-        ]
-    },
+// Every item below needs a project to link into, so there is nothing to show
+// until one is selected (the create-project and account/app-settings screens
+// render this layout too, with `currentProject` null).
+const items = computed<NavigationMenuItem[]>(() => {
+    const project = page.props.currentProject
 
-    {
-        label: 'LinkedIn',
-        // No brand icon available (only the `lucide` icon set is installed,
-        // and it carries no LinkedIn glyph): a generic one rather than a
-        // broken reference.
-        icon: 'i-lucide-share-2',
-        to: relativeUrl(linkedinPosts.index.url()),
-        // Broad on purpose: covers both the posts queue and the account
-        // page, same reasoning as Settings' prefix check below.
-        active: page.url.startsWith('/app/linkedin'),
-        badge: navCounts.value?.linkedin
-            ? { label: navCounts.value.linkedin, color: 'primary', variant: 'solid' }
-            : undefined
-    },
-
-    {
-        label: 'Settings',
-        icon: 'i-lucide-settings',
-        to: relativeUrl(projectSettings.edit.url()),
-        // Broad on purpose: mailboxes, billing, members and other settings
-        // pages all live under this one prefix, not just the project-edit page.
-        active: page.url.startsWith('/app/settings')
+    if (project === null) {
+        return []
     }
-])
+
+    return [
+        {
+            label: 'Dashboard',
+            icon: 'i-lucide-house',
+            to: relativeUrl(dashboard.url({ project: project.slug })),
+            active: page.url === relativeUrl(dashboard.url({ project: project.slug }))
+        },
+        {
+            label: 'Email',
+            icon: 'i-lucide-mail',
+            defaultOpen: true,
+            children: [
+                {
+                    label: 'Targets',
+                    icon: 'i-lucide-crosshair',
+                    to: relativeUrl(targets.index.url({ project: project.slug })),
+                    active: isCurrent(targets.index.url({ project: project.slug })) || page.url.startsWith(`/app/${project.slug}/discovery-runs`),
+                    badge: navCounts.value?.targets
+                        ? { label: navCounts.value.targets, color: 'neutral', variant: 'ghost' }
+                        : undefined
+                },
+                {
+                    label: 'Leads',
+                    icon: 'i-lucide-building-2',
+                    to: relativeUrl(companies.index.url({ project: project.slug })),
+                    active: isCurrent(companies.index.url({ project: project.slug })),
+                    badge: navCounts.value?.leads
+                        ? { label: navCounts.value.leads, color: 'neutral', variant: 'ghost' }
+                        : undefined
+                },
+                {
+                    label: 'Campaigns',
+                    icon: 'i-lucide-send',
+                    to: relativeUrl(campaigns.index.url({ project: project.slug })),
+                    active: isCurrent(campaigns.index.url({ project: project.slug }))
+                },
+                {
+                    label: 'Inbox',
+                    icon: 'i-lucide-inbox',
+                    to: relativeUrl(inbox.url({ project: project.slug })),
+                    active: isCurrent(inbox.url({ project: project.slug })),
+                    badge: navCounts.value?.inbox
+                        ? { label: navCounts.value.inbox, color: 'primary', variant: 'solid' }
+                        : undefined
+                }
+            ]
+        },
+
+        {
+            label: 'LinkedIn',
+            // No brand icon available (only the `lucide` icon set is installed,
+            // and it carries no LinkedIn glyph): a generic one rather than a
+            // broken reference.
+            icon: 'i-lucide-share-2',
+            to: relativeUrl(linkedinPosts.index.url({ project: project.slug })),
+            // Broad on purpose: covers both the posts queue and the account
+            // page, same reasoning as Settings' prefix check below.
+            active: page.url.startsWith(`/app/${project.slug}/linkedin`),
+            badge: navCounts.value?.linkedin
+                ? { label: navCounts.value.linkedin, color: 'primary', variant: 'solid' }
+                : undefined
+        },
+
+        {
+            label: 'Settings',
+            icon: 'i-lucide-settings',
+            to: relativeUrl(projectSettings.edit.url({ project: project.slug })),
+            // Broad on purpose: mailboxes, billing, members and other settings
+            // pages all live under this one prefix, not just the project-edit page.
+            active: page.url.startsWith(`/app/${project.slug}/settings`)
+        }
+    ]
+})
 
 // The project list is the switcher, not a nav entry: every screen below the
 // dashboard belongs to one project, so choosing it is context, not navigation.
@@ -170,7 +181,7 @@ const orgMenu = computed<DropdownMenuItem[][]>(() => [
             current: isCurrent,
             class: isCurrent ? 'bg-primary/10' : '',
             to: (!isCurrent && !project) ? relativeUrl(createProject.url({ query: { organization_id: organization.id } })) : undefined,
-            onSelect: (!isCurrent && project) ? () => router.put(switchProject.url(project.id)) : undefined
+            onSelect: (!isCurrent && project) ? () => router.visit(switchProjectUrl(project.slug)) : undefined
         }
     }),
     [
@@ -193,7 +204,7 @@ const projectMenu = computed<DropdownMenuItem[][]>(() => [
             current: isCurrent,
             analyzing: !project.analyzed,
             class: isCurrent ? 'bg-primary/10' : '',
-            onSelect: () => router.put(switchProject.url(project.id))
+            onSelect: () => router.visit(switchProjectUrl(project.slug))
         }
     }),
     [
@@ -427,7 +438,7 @@ const userMenu = computed<DropdownMenuItem[][]>(() => [
 
                     <UButton
                         v-if="page.props.setup?.broken?.length"
-                        :to="relativeUrl(mailboxes.index.url())"
+                        :to="relativeUrl(mailboxes.index.url({ project: page.props.currentProject!.slug }))"
                         :label="page.props.setup.broken.length === 1
                             ? '1 mailbox paused'
                             : `${page.props.setup.broken.length} mailboxes paused`"
@@ -440,7 +451,7 @@ const userMenu = computed<DropdownMenuItem[][]>(() => [
 
                     <UButton
                         v-if="page.props.wallet"
-                        :href="relativeUrl(organizationBilling.edit.url())"
+                        :href="relativeUrl(organizationBilling.edit.url({ project: page.props.currentProject!.slug }))"
                         :label="`${page.props.wallet.balance.toLocaleString()} credits`"
                         icon="i-lucide-coins"
                         color="neutral"
@@ -476,7 +487,7 @@ const userMenu = computed<DropdownMenuItem[][]>(() => [
                         icon="i-lucide-mail"
                         title="No mailbox connected to this project"
                         description="Everything up to writing a sequence works, but nothing can be sent: a campaign will activate and then sit there. Connect one, and tick this project."
-                        :actions="[{ label: 'Connect a mailbox', to: relativeUrl(mailboxes.index.url()), color: 'warning', variant: 'solid' }]"
+                        :actions="[{ label: 'Connect a mailbox', to: relativeUrl(mailboxes.index.url({ project: page.props.currentProject!.slug })), color: 'warning', variant: 'solid' }]"
                     />
 
                     <!-- A mailbox that stopped itself is not missing, it is
@@ -497,7 +508,7 @@ const userMenu = computed<DropdownMenuItem[][]>(() => [
                         :description="mailbox.error
                             ? `The mail server said: ${mailbox.error}`
                             : 'Nothing leaves this address until it is switched back on. Sequences using it stay where they are.'"
-                        :actions="[{ label: 'Fix the mailbox', to: relativeUrl(mailboxes.index.url()), color: 'error', variant: 'solid' }]"
+                        :actions="[{ label: 'Fix the mailbox', to: relativeUrl(mailboxes.index.url({ project: page.props.currentProject!.slug })), color: 'error', variant: 'solid' }]"
                     />
                 </div>
 

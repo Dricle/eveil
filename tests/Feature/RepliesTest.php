@@ -670,14 +670,15 @@ it('never lets one project resolve another project\'s conversation', function ()
     $user = User::query()->firstOrFail();
 
     // A second project of the SAME organization the user legitimately owns:
-    // the scope has something real to filter against, rather than a user
-    // with no project at all, who never reaches the controller in the first
-    // place (`project.require` redirects them before this route does).
+    // the scope has something real to filter against, rather than a project
+    // this user cannot see at all, which 404s before the scope is even reached.
     $other = Project::factory()->for($user->organizations()->sole())->create();
 
+    // Named directly in the URL: `$other` is a project this user CAN reach,
+    // but the conversation belongs to a different one - `BelongsToProject`
+    // must still 404 rather than resolve it across projects.
     $this->actingAs($user)
-        ->withSession(['current_project_id' => $other->id])
-        ->put(route('inbox.attention', $membership->id), ['resolved' => true])
+        ->put(route('inbox.attention', ['project' => $other->slug, 'conversation' => $membership->id]), ['resolved' => true])
         ->assertNotFound();
 
     expect($membership->fresh()->attention_resolved_at)->toBeNull();
@@ -795,9 +796,10 @@ it('never shows another project\'s replies', function () {
     // A second project of the same organization, with its own empty inbox.
     $other = Project::factory()->for($user->organizations()->sole())->create();
 
-    $this->actingAs($user)
-        ->withSession(['current_project_id' => $other->id])
-        ->get(route('inbox'))
+    $this->actingAs($user);
+    forProject($other);
+
+    $this->get(route('inbox'))
         ->assertInertia(fn ($page) => $page->has('conversations.data', 0));
 });
 

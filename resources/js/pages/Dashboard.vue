@@ -116,13 +116,13 @@ const topupPercent = computed(() => {
 
             <div class="flex shrink-0 gap-2">
                 <UButton
-                    :to="relativeUrl(campaignRoutes.index.url())"
+                    :to="relativeUrl(campaignRoutes.index.url({ project: page.props.currentProject!.slug }))"
                     color="neutral"
                     variant="subtle"
                     label="New campaign"
                 />
                 <UButton
-                    :to="relativeUrl(targets.index.url())"
+                    :to="relativeUrl(targets.index.url({ project: page.props.currentProject!.slug }))"
                     icon="i-lucide-radar"
                     label="Run discovery"
                 />
@@ -137,7 +137,7 @@ const topupPercent = computed(() => {
             icon="i-lucide-compass"
             title="Finish setting up"
             description="Your site has been read, or is being read. Agree with what it understood and the search starts. That is the whole setup."
-            :actions="[{ label: 'Continue', to: relativeUrl(onboardingRoute.url()), color: 'primary', variant: 'solid' }]"
+            :actions="[{ label: 'Continue', to: relativeUrl(onboardingRoute.url({ project: page.props.currentProject!.slug })), color: 'primary', variant: 'solid' }]"
         />
 
         <div class="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
@@ -162,7 +162,7 @@ const topupPercent = computed(() => {
                         </p>
                     </div>
                     <UButton
-                        :to="relativeUrl(companies.index.url({ query: { view: 'awaiting' } }))"
+                        :to="relativeUrl(companies.index.url({ project: page.props.currentProject!.slug }, { query: { view: 'awaiting' } }))"
                         color="neutral"
                         variant="subtle"
                         size="sm"
@@ -235,7 +235,7 @@ const topupPercent = computed(() => {
                                 variant="ghost"
                                 size="xs"
                                 label="Cancel"
-                                @click="router.post(discoveryRuns.cancel.url(runningDiscoveryRun.id), {}, { preserveScroll: true })"
+                                @click="router.post(discoveryRuns.cancel.url({ project: page.props.currentProject!.slug, discovery_run: runningDiscoveryRun.id }), {}, { preserveScroll: true })"
                             />
                         </div>
                     </template>
@@ -285,7 +285,7 @@ const topupPercent = computed(() => {
                                 Campaigns
                             </h3>
                             <ULink
-                                :href="relativeUrl(campaignRoutes.index.url())"
+                                :href="relativeUrl(campaignRoutes.index.url({ project: page.props.currentProject!.slug }))"
                                 class="ms-auto text-xs font-medium"
                             >All campaigns</ULink>
                         </div>
@@ -303,7 +303,7 @@ const topupPercent = computed(() => {
                         :key="campaign.id"
                     >
                         <ULink
-                            :href="relativeUrl(campaignRoutes.show.url(campaign.id))"
+                            :href="relativeUrl(campaignRoutes.show.url({ project: page.props.currentProject!.slug, campaign: campaign.id }))"
                             class="grid grid-cols-[minmax(0,1fr)_44px_44px_44px_74px] items-center gap-2.5 border-t border-default px-5 py-3 text-sm first:border-t-0"
                         >
                             <span class="min-w-0">
@@ -336,7 +336,7 @@ const topupPercent = computed(() => {
                                 Autonomy
                             </h3>
                             <ULink
-                                :href="relativeUrl(projectSettings.edit.url())"
+                                :href="relativeUrl(projectSettings.edit.url({ project: page.props.currentProject!.slug }))"
                                 class="text-xs font-medium"
                             >Change</ULink>
                         </div>
@@ -369,7 +369,7 @@ const topupPercent = computed(() => {
                                 Mailboxes
                             </h3>
                             <ULink
-                                :href="relativeUrl(mailboxSettings.index.url())"
+                                :href="relativeUrl(mailboxSettings.index.url({ project: page.props.currentProject!.slug }))"
                                 class="ms-auto text-xs font-medium"
                             >Manage</ULink>
                         </div>
@@ -405,7 +405,7 @@ const topupPercent = computed(() => {
                                 Latest replies
                             </h3>
                             <ULink
-                                :href="relativeUrl(inbox.url())"
+                                :href="relativeUrl(inbox.url({ project: page.props.currentProject!.slug }))"
                                 class="ms-auto text-xs font-medium"
                             >Inbox</ULink>
                         </div>
@@ -414,7 +414,7 @@ const topupPercent = computed(() => {
                     <ULink
                         v-for="reply in latestReplies"
                         :key="reply.id"
-                        :href="relativeUrl(inbox.url())"
+                        :href="relativeUrl(inbox.url({ project: page.props.currentProject!.slug }))"
                         class="flex items-start gap-2.5 rounded-lg px-2.5 py-2"
                     >
                         <span class="grid size-6 shrink-0 place-items-center rounded-full bg-elevated text-[10px] font-semibold text-toned">
@@ -464,7 +464,7 @@ const topupPercent = computed(() => {
                         Auto top-up fires at {{ page.props.wallet.auto_topup_threshold.toLocaleString() }}.
                     </p>
                     <UButton
-                        :to="relativeUrl(organizationBilling.edit.url())"
+                        :to="relativeUrl(organizationBilling.edit.url({ project: page.props.currentProject!.slug }))"
                         color="neutral"
                         variant="subtle"
                         block

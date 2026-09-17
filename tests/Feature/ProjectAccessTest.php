@@ -19,7 +19,7 @@ it('404s a member with no grant on the project directly', function () {
     $member = organizationMember($organization, OrganizationRole::Member);
 
     $this->actingAs($member)
-        ->put(route('current-project.update', $project))
+        ->get(route('dashboard', ['project' => $project->slug]))
         ->assertNotFound();
 });
 

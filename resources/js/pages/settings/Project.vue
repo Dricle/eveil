@@ -66,7 +66,7 @@ const AUTONOMY = [
 
             <Form
                 v-slot="{ errors, processing, recentlySuccessful }"
-                v-bind="projectRoutes.update.form()"
+                v-bind="projectRoutes.update.form({ project: project.slug })"
                 class="space-y-4"
             >
                 <UFormField
@@ -206,7 +206,7 @@ const AUTONOMY = [
                 <UButton
                     label="Delete"
                     color="error"
-                    @click="router.delete(projectRoutes.destroy.url())"
+                    @click="router.delete(projectRoutes.destroy.url({ project: project.slug }))"
                 />
             </div>
         </template>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, usePoll } from '@inertiajs/vue3'
+import { Head, router, usePage, usePoll } from '@inertiajs/vue3'
 import { computed, watch } from 'vue'
 import OpenQuestions from '@/components/OpenQuestions.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
@@ -22,6 +22,9 @@ const props = defineProps<{
     deriving: boolean
     searches: number
 }>()
+
+const page = usePage()
+const projectSlug = computed(() => page.props.currentProject!.slug)
 
 // Where the run has actually got to. Derived rather than stored: every one of
 // these is a fact about the project, and a column saying "step 3" would be one
@@ -145,7 +148,7 @@ const LISTS = ['key_features', 'competitors', 'proof_points'] as const
                     color="neutral"
                     variant="subtle"
                     label="Project settings"
-                    @click="router.get(knowledgeBaseRoutes.edit.url())"
+                    @click="router.get(knowledgeBaseRoutes.edit.url({ project: projectSlug }))"
                 />
             </template>
         </UAlert>
@@ -203,13 +206,13 @@ const LISTS = ['key_features', 'competitors', 'proof_points'] as const
                 <UButton
                     icon="i-lucide-check"
                     label="That's right, find who buys it"
-                    @click="router.post(targetRoutes.derive.url(), {}, { preserveScroll: true })"
+                    @click="router.post(targetRoutes.derive.url({ project: projectSlug }), {}, { preserveScroll: true })"
                 />
                 <UButton
                     color="neutral"
                     variant="ghost"
                     label="Correct it first"
-                    @click="router.get(knowledgeBaseRoutes.edit.url())"
+                    @click="router.get(knowledgeBaseRoutes.edit.url({ project: projectSlug }))"
                 />
             </div>
 
@@ -279,13 +282,13 @@ const LISTS = ['key_features', 'competitors', 'proof_points'] as const
                 <UButton
                     icon="i-lucide-radar"
                     label="Start looking for them"
-                    @click="router.post(searchRoutes.searches.url(), {}, { preserveScroll: true })"
+                    @click="router.post(searchRoutes.searches.url({ project: projectSlug }), {}, { preserveScroll: true })"
                 />
                 <UButton
                     color="neutral"
                     variant="ghost"
                     label="Edit the segments"
-                    @click="router.get(targetRoutes.index.url())"
+                    @click="router.get(targetRoutes.index.url({ project: projectSlug }))"
                 />
             </div>
 
@@ -313,13 +316,13 @@ const LISTS = ['key_features', 'competitors', 'proof_points'] as const
             <div class="flex flex-wrap items-center gap-2">
                 <UButton
                     label="See what has been found"
-                    @click="router.get(companyRoutes.index.url())"
+                    @click="router.get(companyRoutes.index.url({ project: projectSlug }))"
                 />
                 <UButton
                     color="neutral"
                     variant="ghost"
                     label="Watch the search"
-                    @click="router.get(targetRoutes.index.url())"
+                    @click="router.get(targetRoutes.index.url({ project: projectSlug }))"
                 />
             </div>
         </div>

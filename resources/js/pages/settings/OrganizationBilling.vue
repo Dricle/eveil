@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3'
+import { Form, Head, usePage } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import SettingsLayout from '@/layouts/SettingsLayout.vue'
@@ -7,6 +7,8 @@ import billingRoutes from '@/routes/settings/organization/billing'
 import type { CreditTransactionRow, ProjectCreditRow } from '@/types'
 
 defineOptions({ layout: [AppLayout, [SettingsLayout, { title: 'Billing' }]] })
+
+const page = usePage()
 
 const props = defineProps<{
     checkout: string | null
@@ -92,7 +94,7 @@ function describe (row: CreditTransactionRow): string {
                          since no top-up has gone through Stripe. -->
                     <UButton
                         v-if="!onTrial"
-                        :href="billingRoutes.portal.url()"
+                        :href="billingRoutes.portal.url({ project: page.props.currentProject!.slug })"
                         external
                         size="sm"
                         variant="link"
@@ -134,7 +136,7 @@ function describe (row: CreditTransactionRow): string {
 
             <Form
                 v-slot="{ processing }"
-                v-bind="billingRoutes.checkout.form()"
+                v-bind="billingRoutes.checkout.form({ project: page.props.currentProject!.slug })"
                 class="flex flex-wrap items-end gap-3"
             >
                 <UFormField label="Amount ($)">
@@ -187,7 +189,7 @@ function describe (row: CreditTransactionRow): string {
                     Add a payment method to turn this on.
                 </p>
                 <UButton
-                    :href="billingRoutes.paymentMethod.create.url()"
+                    :href="billingRoutes.paymentMethod.create.url({ project: page.props.currentProject!.slug })"
                     external
                     variant="soft"
                     label="Add payment method"
@@ -197,7 +199,7 @@ function describe (row: CreditTransactionRow): string {
             <Form
                 v-else
                 v-slot="{ errors, processing, recentlySuccessful }"
-                v-bind="billingRoutes.autoTopup.form()"
+                v-bind="billingRoutes.autoTopup.form({ project: page.props.currentProject!.slug })"
                 class="space-y-4"
             >
                 <UCheckbox
@@ -307,7 +309,7 @@ function describe (row: CreditTransactionRow): string {
 
             <UButton
                 v-if="hasPaymentMethod"
-                :href="billingRoutes.paymentMethod.create.url()"
+                :href="billingRoutes.paymentMethod.create.url({ project: page.props.currentProject!.slug })"
                 external
                 class="mt-3"
                 color="neutral"

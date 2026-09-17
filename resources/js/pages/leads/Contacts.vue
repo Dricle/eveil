@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, usePoll } from '@inertiajs/vue3'
+import { Head, router, usePage, usePoll } from '@inertiajs/vue3'
 import type { TableColumn } from '@nuxt/ui'
 import { computed, ref, watch } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
@@ -39,6 +39,8 @@ const props = defineProps<{
     } | null
 }>()
 
+const page = usePage()
+
 // `all` rather than an empty string: reka reserves '' for clearing a select, and
 // a SelectItem carrying it throws on mount.
 const status = ref(props.filters.email_status ?? 'all')
@@ -54,7 +56,7 @@ const poll = usePoll(4000, { only: ['contacts', 'activity', 'counts'] }, { autoS
 watch(searching, busy => busy ? poll.start() : poll.stop())
 
 const table = useTableQuery(
-    contactRoutes.index.url(),
+    contactRoutes.index.url({ project: page.props.currentProject!.slug }),
     props.filters,
     ['contacts', 'filters', 'counts'],
     () => ({
@@ -216,7 +218,7 @@ function sourceLabel (contact: Contact) {
                     color="neutral"
                     variant="subtle"
                     label="One company, show all"
-                    @click="router.get(contactRoutes.index.url())"
+                    @click="router.get(contactRoutes.index.url({ project: page.props.currentProject!.slug }))"
                 />
             </div>
 
@@ -275,7 +277,7 @@ function sourceLabel (contact: Contact) {
 
             <template #name-cell="{ row }">
                 <ULink
-                    :href="relativeUrl(contactRoutes.show.url(row.original.id))"
+                    :href="relativeUrl(contactRoutes.show.url({ project: page.props.currentProject!.slug, contact: row.original.id }))"
                     class="font-medium"
                 >{{ row.original.name ?? row.original.email ?? 'No name' }}</ULink>
                 <ULink
@@ -325,7 +327,7 @@ function sourceLabel (contact: Contact) {
                 <StatusSelect
                     :status="row.original.status"
                     :options="OUTREACH_STATUSES"
-                    :url="contactRoutes.status.url(row.original.id)"
+                    :url="contactRoutes.status.url({ project: page.props.currentProject!.slug, contact: row.original.id })"
                 />
             </template>
 
@@ -347,7 +349,7 @@ function sourceLabel (contact: Contact) {
             <template #company-cell="{ row }">
                 <ULink
                     v-if="row.original.company"
-                    :href="relativeUrl(contactRoutes.index.url({ query: { company: row.original.company.id } }))"
+                    :href="relativeUrl(contactRoutes.index.url({ project: page.props.currentProject!.slug }, { query: { company: row.original.company.id } }))"
                 >{{ row.original.company.name }}</ULink>
                 <span
                     v-if="row.original.company?.location"

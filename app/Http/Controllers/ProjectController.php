@@ -17,7 +17,8 @@ use Inertia\Response;
  * address of its site, and everything else about it is derived from there.
  *
  * There is no index: the project list lives in the sidebar switcher, and the
- * project being edited is always the current one, from the session.
+ * project being edited is always the current one, from the `{project:slug}`
+ * segment of the URL.
  */
 class ProjectController extends Controller
 {
@@ -63,7 +64,11 @@ class ProjectController extends Controller
         // Straight into the guided run: the site is being read right now, and
         // watching that happen is the whole first impression. A dashboard of
         // zeroes at this moment reads as a product that does nothing.
-        return to_route('onboarding');
+        //
+        // Explicit `project` param: this request's own URL is project-agnostic
+        // (`projects.store`), so there is no `URL::defaults()` bound yet to
+        // fill it in - unlike every route inside `{project:slug}`.
+        return to_route('onboarding', ['project' => $project->slug]);
     }
 
     public function edit(): Response
@@ -102,6 +107,6 @@ class ProjectController extends Controller
         // The next request picks whatever is left, or the create screen.
         $request->session()->forget('current_project_id');
 
-        return to_route('dashboard');
+        return to_route('app.home');
     }
 }

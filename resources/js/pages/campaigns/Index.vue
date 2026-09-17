@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, usePoll } from '@inertiajs/vue3'
+import { Head, router, usePage, usePoll } from '@inertiajs/vue3'
 import { ref, watch } from 'vue'
 import CampaignSwitch from '@/components/CampaignSwitch.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
@@ -10,6 +10,8 @@ import campaignRoutes from '@/routes/campaigns'
 import type { CampaignStatus, TargetProfile } from '@/types'
 
 defineOptions({ layout: AppLayout })
+
+const page = usePage()
 
 type Campaign = {
     id: number
@@ -95,7 +97,7 @@ function due (campaign: Campaign): string {
                     :loading="writing"
                     :disabled="writing || !profile"
                     :label="writing ? 'Writing…' : 'Write a sequence'"
-                    @click="router.post(campaignRoutes.generate.url(), { target_profile: profile })"
+                    @click="router.post(campaignRoutes.generate.url({ project: page.props.currentProject!.slug }), { target_profile: profile })"
                 />
 
                 <!-- One click for every segment that has none. Doing it one
@@ -107,7 +109,7 @@ function due (campaign: Campaign): string {
                     variant="subtle"
                     :disabled="writing"
                     :label="`Write the ${uncovered.length} missing`"
-                    @click="router.post(campaignRoutes.generate.missing.url())"
+                    @click="router.post(campaignRoutes.generate.missing.url({ project: page.props.currentProject!.slug }))"
                 />
             </div>
         </div>
@@ -132,7 +134,7 @@ function due (campaign: Campaign): string {
                     :loading="writing"
                     :disabled="writing"
                     :label="writing ? 'Writing…' : 'Write them now'"
-                    @click="router.post(campaignRoutes.generate.missing.url())"
+                    @click="router.post(campaignRoutes.generate.missing.url({ project: page.props.currentProject!.slug }))"
                 />
             </template>
         </UAlert>
@@ -167,7 +169,7 @@ function due (campaign: Campaign): string {
             class="flex flex-wrap items-center gap-3 rounded-lg p-4 ring ring-default"
         >
             <ULink
-                :href="relativeUrl(campaignRoutes.show.url(campaign.id))"
+                :href="relativeUrl(campaignRoutes.show.url({ project: page.props.currentProject!.slug, campaign: campaign.id }))"
                 class="min-w-0 flex-1 font-medium"
             >
                 {{ campaign.name }}
@@ -194,7 +196,7 @@ function due (campaign: Campaign): string {
                 color="neutral"
                 variant="ghost"
                 label="Add people now"
-                @click="router.post(campaignRoutes.enrol.url(campaign.id), {}, { preserveScroll: true })"
+                @click="router.post(campaignRoutes.enrol.url({ project: page.props.currentProject!.slug, campaign: campaign.id }), {}, { preserveScroll: true })"
             />
 
             <CampaignSwitch :campaign="campaign" />

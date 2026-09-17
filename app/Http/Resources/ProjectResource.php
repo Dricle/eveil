@@ -22,6 +22,7 @@ class ProjectResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'slug' => $this->slug,
             'url' => $this->url,
             'analyzed' => $this->knowledge_base !== null,
             // For the sidebar switcher, which groups projects by the

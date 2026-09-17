@@ -22,6 +22,7 @@ function makeProject(): int
     return DB::table('projects')->insertGetId([
         'organization_id' => $organizationId,
         'name' => 'Dricle',
+        'slug' => 'dricle-'.fake()->unique()->slug(2),
         'url' => 'https://dricle.be',
         'created_at' => now(),
         'updated_at' => now(),

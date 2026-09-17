@@ -20,7 +20,7 @@ it('creates the super admin and their organization at setup', function () {
         'email' => 'ada@example.test',
         'password' => 'correct-horse-battery',
         'password_confirmation' => 'correct-horse-battery',
-    ])->assertRedirect(route('dashboard'));
+    ])->assertRedirect(route('app.home'));
 
     $user = User::query()->sole();
 
@@ -81,7 +81,7 @@ it('logs in with the right password and rejects the wrong one', function () {
     $this->post(route('login.store'), [
         'email' => $user->email,
         'password' => 'correct-horse-battery',
-    ])->assertRedirect(route('dashboard'));
+    ])->assertRedirect(route('app.home'));
 
     $this->assertAuthenticatedAs($user);
 });
@@ -109,7 +109,7 @@ it('sends an Inertia location visit on logout, not a redirect the SPA would try 
 });
 
 it('keeps guests off the application', function () {
-    $this->get(route('dashboard'))->assertRedirect(route('login'));
+    $this->get(route('app.home'))->assertRedirect(route('login'));
     $this->get(route('account.profile'))->assertRedirect(route('login'));
 });
 
@@ -135,7 +135,7 @@ it('emails a reset link and lets the user set a new password', function () {
     $this->post(route('login.store'), [
         'email' => $user->email,
         'password' => 'new-correct-horse-battery',
-    ])->assertRedirect(route('dashboard'));
+    ])->assertRedirect(route('app.home'));
 
     $this->assertAuthenticatedAs($user->fresh());
 });
@@ -177,7 +177,7 @@ it('challenges for a second factor once two-factor is confirmed', function () {
     // refused on purpose.
     $this->post(route('two-factor.login.store'), [
         'recovery_code' => $user->fresh()->recoveryCodes()[0],
-    ])->assertRedirect(route('dashboard'));
+    ])->assertRedirect(route('app.home'));
 
     $this->assertAuthenticatedAs($user->fresh());
 });
@@ -190,8 +190,15 @@ it('does not register the sign-up routes when sign-ups are closed', function () 
 
         expect(Route::has('register'))->toBeFalse();
 
-        $this->get('/app/register')->assertNotFound();
-        $this->post('/app/register')->assertNotFound();
+        // Both fall through to `dashboard` (`/app/{project:slug}`, a
+        // single-segment catch-all) rather than 404ing directly, now that
+        // the literal `/app/register` route doesn't exist: GET matches that
+        // shape and hits the `auth` middleware first (redirect to login);
+        // POST matches the same URI but not the GET-only route, so the
+        // router answers 405 rather than 404. Guest access is refused
+        // either way - neither response is "found".
+        $this->get('/app/register')->assertRedirect(route('login'));
+        $this->post('/app/register')->assertStatus(405);
     } finally {
         $_SERVER['REGISTRATION_ENABLED'] = 'true';
     }
@@ -206,7 +213,7 @@ it('registers a user with their own organization when sign-ups are open', functi
         'email' => 'ada@example.test',
         'password' => 'correct-horse-battery',
         'password_confirmation' => 'correct-horse-battery',
-    ])->assertRedirect(route('dashboard'));
+    ])->assertRedirect(route('app.home'));
 
     $user = User::query()->sole();
     $organization = Organization::query()->sole();
@@ -266,7 +273,7 @@ it('stashes a URL pasted before registering, for the project-create screen to pi
         'password' => 'correct-horse-battery',
         'password_confirmation' => 'correct-horse-battery',
         'url' => 'https://acme.test',
-    ])->assertRedirect(route('dashboard'));
+    ])->assertRedirect(route('app.home'));
 
     expect(session('pending_project_url'))->toBe('https://acme.test');
 });
@@ -281,7 +288,7 @@ it('never stashes a malformed URL, and registration succeeds regardless', functi
         'password' => 'correct-horse-battery',
         'password_confirmation' => 'correct-horse-battery',
         'url' => 'not a url',
-    ])->assertRedirect(route('dashboard'))->assertSessionHasNoErrors();
+    ])->assertRedirect(route('app.home'))->assertSessionHasNoErrors();
 
     expect(session('pending_project_url'))->toBeNull();
 });
@@ -299,7 +306,7 @@ it('keeps a freshly registered, unverified user off the app until they verify', 
 
     $user = User::query()->sole();
 
-    $this->get(route('dashboard'))->assertRedirect(route('verification.notice'));
+    $this->get(route('app.home'))->assertRedirect(route('verification.notice'));
 
     // Resending doesn't verify anything by itself, just proves the guard
     // above didn't block the one route an unverified user needs.
@@ -318,13 +325,13 @@ it('keeps a freshly registered, unverified user off the app until they verify', 
     // stored it as the session's "intended" URL (`Redirect::guest()` does
     // that), and `redirect()->intended()` prefers it over Fortify's own
     // fallback.
-    $this->get($verifyUrl)->assertRedirect(route('dashboard'));
+    $this->get($verifyUrl)->assertRedirect(route('app.home'));
 
     expect($user->fresh()->hasVerifiedEmail())->toBeTrue();
 
     // Past the `verified` gate now: a fresh organization with no project of
     // its own yet redirects to create one, a different reason than before.
-    $this->get(route('dashboard'))->assertRedirect(route('projects.create'));
+    $this->get(route('app.home'))->assertRedirect(route('projects.create'));
 });
 
 it('gives two organizations of the same name distinct slugs', function () {

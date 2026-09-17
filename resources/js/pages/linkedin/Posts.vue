@@ -89,7 +89,7 @@ function submitApprove (post: LinkedinPost, linkedinAccountId: number | null) {
     }
 
     approving.value = post.id
-    router.post(linkedinPostRoutes.approve.url(post.id), { linkedin_account_id: linkedinAccountId }, {
+    router.post(linkedinPostRoutes.approve.url({ project: page.props.currentProject!.slug, linkedin_post: post.id }), { linkedin_account_id: linkedinAccountId }, {
         preserveScroll: true,
         onSuccess: () => toast.add({ title: 'Publishing to LinkedIn…', color: 'success' }),
         onFinish: () => approving.value = null
@@ -108,7 +108,7 @@ function confirmReject () {
     }
 
     rejecting.value = post.id
-    router.post(linkedinPostRoutes.reject.url(post.id), { reason: rejectReason.value }, {
+    router.post(linkedinPostRoutes.reject.url({ project: page.props.currentProject!.slug, linkedin_post: post.id }), { reason: rejectReason.value }, {
         preserveScroll: true,
         onSuccess: () => {
             toast.add({ title: 'Draft rejected', color: 'neutral' })
@@ -120,7 +120,7 @@ function confirmReject () {
 
 function destroy (post: LinkedinPost) {
     deleting.value = post.id
-    router.delete(linkedinPostRoutes.destroy.url(post.id), {
+    router.delete(linkedinPostRoutes.destroy.url({ project: page.props.currentProject!.slug, linkedin_post: post.id }), {
         preserveScroll: true,
         onSuccess: () => toast.add({ title: 'Draft deleted', color: 'neutral' }),
         onFinish: () => deleting.value = null
@@ -129,7 +129,7 @@ function destroy (post: LinkedinPost) {
 
 function promote (post: LinkedinPost) {
     promoting.value = post.id
-    router.post(linkedinPostRoutes.promote.url(post.id), {}, {
+    router.post(linkedinPostRoutes.promote.url({ project: page.props.currentProject!.slug, linkedin_post: post.id }), {}, {
         preserveScroll: true,
         onSuccess: () => toast.add({
             title: 'Marked as successful',
@@ -158,7 +158,7 @@ function promote (post: LinkedinPost) {
 
             <Form
                 v-slot="{ processing }"
-                v-bind="linkedinPostRoutes.cadence.form()"
+                v-bind="linkedinPostRoutes.cadence.form({ project: page.props.currentProject!.slug })"
                 class="flex items-end gap-3"
             >
                 <UFormField label="New post">
@@ -185,7 +185,7 @@ function promote (post: LinkedinPost) {
             icon="i-lucide-plug"
             title="No LinkedIn account connected to this project"
             description="Drafts can still be written, but nothing can be approved until an account is connected."
-            :actions="[{ label: 'Connect LinkedIn', to: relativeUrl(linkedinAccountRoutes.index.url()), color: 'warning', variant: 'solid' }]"
+            :actions="[{ label: 'Connect LinkedIn', to: relativeUrl(linkedinAccountRoutes.index.url({ project: page.props.currentProject!.slug })), color: 'warning', variant: 'solid' }]"
         />
 
         <UAlert
@@ -290,7 +290,7 @@ function promote (post: LinkedinPost) {
             <Form
                 v-if="editing === post.id"
                 v-slot="{ processing }"
-                v-bind="linkedinPostRoutes.update.form(post.id)"
+                v-bind="linkedinPostRoutes.update.form({ project: page.props.currentProject!.slug, linkedin_post: post.id })"
                 class="space-y-2"
                 @success="editing = null"
             >

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3'
+import { Head, router, usePage } from '@inertiajs/vue3'
 import ActivityTimeline from '@/components/ActivityTimeline.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import LeadsLayout from '@/layouts/LeadsLayout.vue'
@@ -13,6 +13,8 @@ import type { ContactSheet } from '@/types'
 defineOptions({ layout: [AppLayout, LeadsLayout] })
 
 const props = defineProps<{ contact: ContactSheet }>()
+
+const page = usePage()
 
 function verification () {
     return props.contact.email_status === null ? null : VERIFICATION[props.contact.email_status]
@@ -41,7 +43,7 @@ function day (value: string | null) {
             variant="ghost"
             size="xs"
             label="Contacts"
-            @click="router.get(contactRoutes.index.url())"
+            @click="router.get(contactRoutes.index.url({ project: page.props.currentProject!.slug }))"
         />
 
         <div class="space-y-3 rounded-lg p-4 ring ring-default">
@@ -59,7 +61,7 @@ function day (value: string | null) {
                 <StatusSelect
                     :status="contact.status"
                     :options="OUTREACH_STATUSES"
-                    :url="contactRoutes.status.url(contact.id)"
+                    :url="contactRoutes.status.url({ project: page.props.currentProject!.slug, contact: contact.id })"
                 />
             </div>
 
@@ -158,7 +160,7 @@ function day (value: string | null) {
                 <StatusSelect
                     :status="contact.company_detail.status"
                     :options="OUTREACH_STATUSES"
-                    :url="companyRoutes.status.url(contact.company_detail.id)"
+                    :url="companyRoutes.status.url({ project: page.props.currentProject!.slug, company: contact.company_detail.id })"
                 />
             </div>
 
@@ -219,8 +221,8 @@ function day (value: string | null) {
             <ActivityTimeline
                 :notes="contact.notes"
                 :messages="contact.messages"
-                :store-url="contactRoutes.notes.store.url(contact.id)"
-                :destroy-url="note => contactRoutes.notes.destroy.url({ contact: contact.id, note: note.id })"
+                :store-url="contactRoutes.notes.store.url({ project: page.props.currentProject!.slug, contact: contact.id })"
+                :destroy-url="note => contactRoutes.notes.destroy.url({ project: page.props.currentProject!.slug, contact: contact.id, note: note.id })"
             />
         </div>
     </div>

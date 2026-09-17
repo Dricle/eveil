@@ -32,23 +32,23 @@ function withActive (item: NavigationMenuItem): NavigationMenuItem {
 // belongs to the organization behind it - a mailbox or a LinkedIn account is
 // often shared across several products, project name/knowledge never is.
 const projectItems = computed<NavigationMenuItem[]>(() => [
-    { label: 'Project', icon: 'i-lucide-folder-cog', to: relativeUrl(project.edit.url()) },
-    { label: 'Project knowledge', icon: 'i-lucide-book-open', to: relativeUrl(knowledgeBase.edit.url()) },
-    { label: 'AI instructions', icon: 'i-lucide-sparkles', to: relativeUrl(aiInstructions.edit.url()) }
+    { label: 'Project', icon: 'i-lucide-folder-cog', to: relativeUrl(project.edit.url({ project: page.props.currentProject!.slug })) },
+    { label: 'Project knowledge', icon: 'i-lucide-book-open', to: relativeUrl(knowledgeBase.edit.url({ project: page.props.currentProject!.slug })) },
+    { label: 'AI instructions', icon: 'i-lucide-sparkles', to: relativeUrl(aiInstructions.edit.url({ project: page.props.currentProject!.slug })) }
 ].map(withActive))
 
 const organizationItems = computed<NavigationMenuItem[]>(() => [
-    { label: 'Organization', icon: 'i-lucide-building-2', to: relativeUrl(general.edit.url()) },
-    { label: 'Mailboxes', icon: 'i-lucide-mail', to: relativeUrl(mailboxes.index.url()) },
+    { label: 'Organization', icon: 'i-lucide-building-2', to: relativeUrl(general.edit.url({ project: page.props.currentProject!.slug })) },
+    { label: 'Mailboxes', icon: 'i-lucide-mail', to: relativeUrl(mailboxes.index.url({ project: page.props.currentProject!.slug })) },
     // No brand icon available (only the `lucide` icon set is installed, and
     // it carries no LinkedIn glyph): a generic one rather than a broken
     // reference.
-    { label: 'LinkedIn', icon: 'i-lucide-share-2', to: relativeUrl(linkedin.index.url()) },
-    { label: 'Members', icon: 'i-lucide-users', to: relativeUrl(members.index.url()) },
+    { label: 'LinkedIn', icon: 'i-lucide-share-2', to: relativeUrl(linkedin.index.url({ project: page.props.currentProject!.slug })) },
+    { label: 'Members', icon: 'i-lucide-users', to: relativeUrl(members.index.url({ project: page.props.currentProject!.slug })) },
     // Cloud only: self-hosted has no wallet, no plan, nothing this screen
     // would show.
     ...(page.props.edition === 'cloud'
-        ? [{ label: 'Billing', icon: 'i-lucide-credit-card', to: relativeUrl(billing.edit.url()) }]
+        ? [{ label: 'Billing', icon: 'i-lucide-credit-card', to: relativeUrl(billing.edit.url({ project: page.props.currentProject!.slug })) }]
         : [])
 ].map(withActive))
 </script>

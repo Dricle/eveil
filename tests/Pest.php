@@ -61,6 +61,22 @@ use App\Services\Outreach\SendFailure;
 use App\Support\CurrentProject;
 
 /**
+ * Binds the project a `route()`/`to_route()` call resolves `{project}` to
+ * when none is passed explicitly - the test equivalent of what
+ * `SetCurrentProject` binds per-request in production
+ * (`app/Http/Middleware/SetCurrentProject.php`). Call it again with a
+ * different project mid-test to simulate a stale/forged session pointing
+ * elsewhere while a request's own URL still names the right one.
+ */
+function forProject(Project $project): void
+{
+    // `project:slug`, matching `{project:slug}` in `routes/app.php` - see the
+    // comment in `SetCurrentProject` for why the plain `project` key silently
+    // never matches.
+    URL::defaults(['project:slug' => $project->slug]);
+}
+
+/**
  * @return array{0: User, 1: Project, 2: EmailAccount}
  */
 function sender(): array

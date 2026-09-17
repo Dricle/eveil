@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { usePage } from '@inertiajs/vue3'
 import type { NavigationMenuItem } from '@nuxt/ui'
 import { computed } from 'vue'
 import { relativeUrl } from '@/lib/utils'
@@ -10,6 +11,8 @@ const props = defineProps<{
     tab: 'profile' | 'searches'
 }>()
 
+const page = usePage()
+
 // Two pages about one profile: what we are looking for, and what came of
 // looking. They stay inside the content area, because the bar at the top of the app
 // belongs to the app, not to whichever section is open.
@@ -19,13 +22,13 @@ const items = computed<NavigationMenuItem[]>(() => props.profile === null
             {
                 label: 'Profile',
                 icon: 'i-lucide-file-text',
-                to: relativeUrl(targets.show.url(props.profile.id)),
+                to: relativeUrl(targets.show.url({ project: page.props.currentProject!.slug, target: props.profile.id })),
                 active: props.tab === 'profile'
             },
             {
                 label: 'Searches',
                 icon: 'i-lucide-radar',
-                to: relativeUrl(targets.searches.url(props.profile.id)),
+                to: relativeUrl(targets.searches.url({ project: page.props.currentProject!.slug, target: props.profile.id })),
                 active: props.tab === 'searches'
             }
         ])

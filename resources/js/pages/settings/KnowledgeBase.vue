@@ -56,7 +56,7 @@ function retryRepo (repo: CodeRepositoryRow) {
     retryingRepoId.value = repo.id
     retryingFromAnalysisId.value = repo.last_analysis?.id ?? null
     poll.start()
-    router.post(repositories.retry.url(repo.id), {}, {
+    router.post(repositories.retry.url({ project: props.project.slug, codeRepository: repo.id }), {}, {
         preserveScroll: true,
         onError: () => { retryingRepoId.value = null }
     })
@@ -191,7 +191,7 @@ watch(() => props.project, fill, { immediate: true, deep: true })
 
             <Form
                 v-slot="{ errors, processing, recentlySuccessful }"
-                v-bind="projectRoutes.update.form()"
+                v-bind="projectRoutes.update.form({ project: project.slug })"
                 class="mb-4 flex items-start gap-3 border-b border-default pb-4"
                 @success="githubToken = ''"
             >
@@ -303,7 +303,7 @@ watch(() => props.project, fill, { immediate: true, deep: true })
                             variant="ghost"
                             icon="i-lucide-trash-2"
                             size="sm"
-                            @click="router.delete(repositories.destroy.url(repo.id))"
+                            @click="router.delete(repositories.destroy.url({ project: project.slug, codeRepository: repo.id }))"
                         />
                     </div>
                 </div>
@@ -382,7 +382,7 @@ watch(() => props.project, fill, { immediate: true, deep: true })
 
             <Form
                 v-slot="{ errors, processing, recentlySuccessful }"
-                v-bind="knowledgeBase.update.form()"
+                v-bind="knowledgeBase.update.form({ project: project.slug })"
                 class="space-y-4"
             >
                 <UCard>
@@ -449,7 +449,7 @@ watch(() => props.project, fill, { immediate: true, deep: true })
         <template #body>
             <Form
                 v-slot="{ errors, processing }"
-                v-bind="repositories.store.form()"
+                v-bind="repositories.store.form({ project: project.slug })"
                 @success="() => { repoUrl = ''; confirmingLink = false }"
             >
                 <UFormField

@@ -93,7 +93,7 @@ const STATUS = {
                         color="error"
                         variant="ghost"
                         size="xs"
-                        @click="router.delete(linkedinRoutes.destroy.url(account.id))"
+                        @click="router.delete(linkedinRoutes.destroy.url({ project: page.props.currentProject!.slug, linkedinAccount: account.id }))"
                     />
                 </div>
 
@@ -124,7 +124,7 @@ const STATUS = {
                     variant="outline"
                     size="xs"
                     label="Connect performance polling"
-                    :href="linkedinRoutes.stats.connect.url(account.id)"
+                    :href="linkedinRoutes.stats.connect.url({ project: page.props.currentProject!.slug, linkedinAccount: account.id })"
                     external
                 />
             </div>
@@ -139,7 +139,7 @@ const STATUS = {
             <UButton
                 icon="i-lucide-plug"
                 label="Connect a LinkedIn account"
-                :href="linkedinRoutes.connect.url()"
+                :href="linkedinRoutes.connect.url({ project: page.props.currentProject!.slug })"
                 external
             />
         </div>
@@ -154,7 +154,7 @@ const STATUS = {
             <Form
                 v-if="editing"
                 v-slot="{ processing }"
-                v-bind="linkedinRoutes.update.form(editing.id)"
+                v-bind="linkedinRoutes.update.form({ project: page.props.currentProject!.slug, linkedinAccount: editing.id })"
                 class="space-y-4"
                 @success="editingOpen = false"
             >

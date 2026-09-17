@@ -55,7 +55,7 @@ const deriveOptions = computed<DropdownMenuItem[][]>(() => [[
 function derive (replace: boolean): void {
     confirmingReplace.value = false
 
-    router.post(targets.derive.url(), { replace }, { preserveScroll: true })
+    router.post(targets.derive.url({ project: page.props.currentProject!.slug }), { replace }, { preserveScroll: true })
 }
 
 const derivedCount = computed(() => profiles.value.filter(profile => profile.source === 'agent').length)
@@ -103,7 +103,7 @@ const subtitle = computed(() => {
                         :class="profile.id === props.current
                             ? 'bg-primary/10 ring ring-primary/25'
                             : 'hover:bg-elevated'"
-                        @click.prevent="router.visit(targets.show.url(profile.id))"
+                        @click.prevent="router.visit(targets.show.url({ project: page.props.currentProject!.slug, target: profile.id }))"
                     >
                         <span
                             v-if="profile.id === props.current"
@@ -150,7 +150,7 @@ const subtitle = computed(() => {
                     block
                     class="justify-start"
                     label="New profile"
-                    :to="relativeUrl(targets.create.url())"
+                    :to="relativeUrl(targets.create.url({ project: page.props.currentProject!.slug }))"
                 />
 
                 <!-- Last in the list, because the ordinary reason to open

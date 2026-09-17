@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { router } from '@inertiajs/vue3'
+import { router, usePage } from '@inertiajs/vue3'
 import type { NavigationMenuItem } from '@nuxt/ui'
 import { computed, ref } from 'vue'
 import CampaignSwitch from '@/components/CampaignSwitch.vue'
 import { relativeUrl } from '@/lib/utils'
 import campaignRoutes from '@/routes/campaigns'
 import type { CampaignStatus } from '@/types'
+
+const page = usePage()
 
 // One campaign, two pages: the mails it sends, and what is happening to the
 // people in it. The tabs stay inside the content area, because the bar at the
@@ -26,13 +28,13 @@ const items = computed<NavigationMenuItem[]>(() => [
     {
         label: 'Sequence',
         icon: 'i-lucide-file-text',
-        to: relativeUrl(campaignRoutes.show.url(props.campaign.id)),
+        to: relativeUrl(campaignRoutes.show.url({ project: page.props.currentProject!.slug, campaign: props.campaign.id })),
         active: props.tab === 'sequence'
     },
     {
         label: 'Delivery',
         icon: 'i-lucide-send',
-        to: relativeUrl(campaignRoutes.delivery.url(props.campaign.id)),
+        to: relativeUrl(campaignRoutes.delivery.url({ project: page.props.currentProject!.slug, campaign: props.campaign.id })),
         active: props.tab === 'delivery'
     }
 ])
@@ -44,7 +46,7 @@ const items = computed<NavigationMenuItem[]>(() => [
             <UInput
                 v-model="name"
                 class="w-80"
-                @blur="router.put(campaignRoutes.update.url(campaign.id), { name }, { preserveScroll: true })"
+                @blur="router.put(campaignRoutes.update.url({ project: page.props.currentProject!.slug, campaign: campaign.id }), { name }, { preserveScroll: true })"
             />
 
             <CampaignSwitch :campaign="campaign" />
@@ -63,7 +65,7 @@ const items = computed<NavigationMenuItem[]>(() => [
                 variant="ghost"
                 icon="i-lucide-trash-2"
                 label="Delete"
-                @click="router.delete(campaignRoutes.destroy.url(campaign.id))"
+                @click="router.delete(campaignRoutes.destroy.url({ project: page.props.currentProject!.slug, campaign: campaign.id }))"
             />
         </div>
 

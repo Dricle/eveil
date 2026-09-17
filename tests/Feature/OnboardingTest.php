@@ -31,9 +31,10 @@ function newcomer(): array
 
 function visiting(User $user, Project $project): TestResponse
 {
-    return test()->actingAs($user)
-        ->withSession(['current_project_id' => $project->id])
-        ->get(route('onboarding'));
+    test()->actingAs($user);
+    forProject($project);
+
+    return test()->get(route('onboarding'));
 }
 
 beforeEach(function () {
@@ -50,11 +51,12 @@ it('sends somebody who just created a project into the guided run, not to an emp
     $user = User::factory()->create();
     Organization::factory()->create()->users()->attach($user, ['role' => 'owner']);
 
-    $this->actingAs($user)
-        ->post(route('projects.store'), ['name' => 'Acme', 'url' => 'https://acme.test'])
-        // A dashboard of zeroes at this moment reads as a product that does
-        // nothing; the site is being read right now and that is worth watching.
-        ->assertRedirect(route('onboarding'));
+    $response = $this->actingAs($user)
+        ->post(route('projects.store'), ['name' => 'Acme', 'url' => 'https://acme.test']);
+
+    // A dashboard of zeroes at this moment reads as a product that does
+    // nothing; the site is being read right now and that is worth watching.
+    $response->assertRedirect(route('onboarding', ['project' => Project::sole()->slug]));
 });
 
 it('shows the crawl running, then what it understood, and nothing else', function () {

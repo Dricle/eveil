@@ -47,7 +47,7 @@ watch(deriving, busy => busy ? poll.start() : poll.stop())
                     :loading="deriving"
                     :disabled="deriving"
                     :label="deriving ? 'Reading your product…' : 'Derive from my product'"
-                    @click="router.post(targets.derive.url())"
+                    @click="router.post(targets.derive.url({ project: page.props.currentProject!.slug }))"
                 />
 
                 <UButton
@@ -55,7 +55,7 @@ watch(deriving, busy => busy ? poll.start() : poll.stop())
                     variant="subtle"
                     icon="i-lucide-plus"
                     label="Write one myself"
-                    :to="relativeUrl(targets.create.url())"
+                    :to="relativeUrl(targets.create.url({ project: page.props.currentProject!.slug }))"
                 />
             </div>
 

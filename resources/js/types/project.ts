@@ -1,6 +1,7 @@
 export type Project = {
     id: number
     name: string
+    slug: string
     url: string
     analyzed: boolean
     organization_id: number

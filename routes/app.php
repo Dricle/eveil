@@ -8,6 +8,7 @@ use App\Cloud\Http\Controllers\PaymentMethodController;
 use App\Http\Controllers\Account\AccountDeletionController;
 use App\Http\Controllers\Account\TwoFactorController;
 use App\Http\Controllers\AiInstructionsController;
+use App\Http\Controllers\AppHomeController;
 use App\Http\Controllers\AppSettings\AgentController;
 use App\Http\Controllers\AppSettings\BillingController;
 use App\Http\Controllers\AppSettings\CreditPriceController;
@@ -41,7 +42,6 @@ use App\Http\Controllers\ContactSearchController;
 use App\Http\Controllers\ContactStatusController;
 use App\Http\Controllers\ConversationAttentionController;
 use App\Http\Controllers\ConversationReplyController;
-use App\Http\Controllers\CurrentProjectController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DiscoveryLinkController;
 use App\Http\Controllers\DiscoveryRunCancellationController;
@@ -99,22 +99,34 @@ Route::middleware('guest')->group(function (): void {
 Route::get('invitations/accept', [InvitationController::class, 'show'])->name('invitations.accept');
 Route::post('invitations/accept', [InvitationController::class, 'store']);
 
-Route::middleware(['auth', 'verified', 'project.set'])->group(function (): void {
+Route::middleware(['auth', 'verified'])->group(function (): void {
     /*
-     * Switching projects and creating one are the two things reachable without
-     * a project already selected. Everything else would have nothing to show.
+     * The bare app entry point: picks whichever project was last visited (a
+     * hint only, never re-read as authority - see `SetCurrentProject`) or the
+     * first one visible, else sends a projectless user to create one.
      */
-    Route::put('current-project/{project}', [CurrentProjectController::class, 'update'])
-        ->middleware('can:view,project')
-        ->name('current-project.update');
+    // Named `app.home`, not `home`: `routes/web.php` already owns that name
+    // for the marketing site's root.
+    Route::get('/', [AppHomeController::class, 'index'])->name('app.home');
 
+    /*
+     * Creating a project is the other thing reachable without one already
+     * selected. Everything else would have nothing to show.
+     */
     Route::get('projects/create', [ProjectController::class, 'create'])->name('projects.create');
     Route::post('projects', [ProjectController::class, 'store'])->name('projects.store');
 
     Route::get('organizations/create', [OrganizationController::class, 'create'])->name('organizations.create');
     Route::post('organizations', [OrganizationController::class, 'store'])->name('organizations.store');
 
-    Route::middleware('project.require')->group(function (): void {
+    /*
+     * Everything below belongs to one project, named in the URL rather than
+     * carried in session: two tabs pointed at two different projects must
+     * never be able to make one save into the other's data. `project.set`
+     * (`SetCurrentProject`) resolves and authorizes `{project}` (404, not a
+     * silent fallback, if this user cannot see it) before anything below runs.
+     */
+    Route::prefix('{project:slug}')->middleware('project.set')->group(function (): void {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
         /*
@@ -139,8 +151,8 @@ Route::middleware(['auth', 'verified', 'project.set'])->group(function (): void 
         Route::delete('chat', [EvieChatController::class, 'destroy'])->name('chat.destroy');
 
         /*
-         * The current project comes from the session, so none of these carry it
-         * in the URL: switching projects leaves you on the page you were on.
+         * The current project is already the `{project:slug}` segment every
+         * route in this group sits under, so none of these need to repeat it.
          */
         Route::prefix('settings')->name('settings.')->group(function (): void {
             Route::redirect('/', '/app/settings/project');
@@ -521,7 +533,7 @@ Route::middleware(['auth', 'verified', 'project.set'])->group(function (): void 
 
     /*
      * App settings: instance scope. One install, one operator, never granted through an
-     * organization. Outside `project.require` on purpose: which model an agent
+     * organization. Outside `{project:slug}` on purpose: which model an agent
      * runs on has nothing to do with whichever project is selected.
      */
     Route::prefix('app-settings')->name('app-settings.')->middleware('can:manage-app-settings')->group(function (): void {
@@ -588,7 +600,7 @@ Route::middleware(['auth', 'verified', 'project.set'])->group(function (): void 
     /*
      * Account management. The forms post to Fortify's own update routes, so
      * most of these only need to render a page. Deliberately outside
-     * `project.require`: somebody with no project still has an account.
+     * `{project:slug}`: somebody with no project still has an account.
      */
     Route::prefix('account')->name('account.')->group(function (): void {
         Route::redirect('/', '/app/account/profile');

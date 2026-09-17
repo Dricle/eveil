@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Form, Head, router } from '@inertiajs/vue3'
+import { Form, Head, router, usePage } from '@inertiajs/vue3'
 import { ref, watch } from 'vue'
 import ListRows from '@/components/ListRows.vue'
 import TagChips from '@/components/TagChips.vue'
@@ -11,6 +11,8 @@ import targets from '@/routes/targets'
 import type { TargetProfile } from '@/types'
 
 const props = defineProps<{ profile: TargetProfile | null }>()
+
+const page = usePage()
 
 // A function, not a plain array: `defineOptions()` hoists its argument out of
 // setup(), so it cannot reference the local `props` binding. Called with this
@@ -85,7 +87,7 @@ watch(() => props.profile, (profile) => {
 
         <Form
             v-slot="{ errors, processing, recentlySuccessful }"
-            v-bind="profile ? targets.update.form(profile.id) : targets.store.form()"
+            v-bind="profile ? targets.update.form({ project: page.props.currentProject!.slug, target: profile.id }) : targets.store.form({ project: page.props.currentProject!.slug })"
             class="space-y-5"
         >
             <UCard variant="subtle">
@@ -331,7 +333,7 @@ watch(() => props.profile, (profile) => {
                     variant="subtle"
                     icon="i-lucide-radar"
                     label="Search with this profile"
-                    @click="router.post(discoveryRuns.store.url(), { target_profile: profile.id })"
+                    @click="router.post(discoveryRuns.store.url({ project: page.props.currentProject!.slug }), { target_profile: profile.id })"
                 />
 
                 <UButton
@@ -341,7 +343,7 @@ watch(() => props.profile, (profile) => {
                     variant="ghost"
                     icon="i-lucide-trash-2"
                     label="Delete"
-                    @click="router.delete(targets.destroy.url(profile.id))"
+                    @click="router.delete(targets.destroy.url({ project: page.props.currentProject!.slug, target: profile.id }))"
                 />
             </div>
         </Form>

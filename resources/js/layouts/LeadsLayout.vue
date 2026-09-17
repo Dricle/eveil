@@ -12,8 +12,8 @@ const page = usePage()
 // you move between them constantly.
 const items = computed<NavigationMenuItem[]>(() =>
     [
-        { label: 'Companies', icon: 'i-lucide-building-2', to: relativeUrl(companies.index.url()) },
-        { label: 'Contacts', icon: 'i-lucide-users', to: relativeUrl(contacts.index.url()) }
+        { label: 'Companies', icon: 'i-lucide-building-2', to: relativeUrl(companies.index.url({ project: page.props.currentProject!.slug })) },
+        { label: 'Contacts', icon: 'i-lucide-users', to: relativeUrl(contacts.index.url({ project: page.props.currentProject!.slug })) }
     ].map(item => ({ ...item, active: page.url.startsWith(item.to) }))
 )
 
@@ -53,7 +53,7 @@ const importing = ref(false)
             <Form
                 id="import-contacts"
                 v-slot="{ errors, processing }"
-                v-bind="contacts.import.form()"
+                v-bind="contacts.import.form({ project: page.props.currentProject!.slug })"
                 class="space-y-4"
                 @success="importing = false"
             >
@@ -74,7 +74,7 @@ const importing = ref(false)
                 <p class="text-sm text-muted">
                     Columns: email, first_name, last_name, title,
                     linkedin_url, company_name, company_domain.
-                    <ULink :href="contacts.template.url()">Download the template</ULink>.
+                    <ULink :href="contacts.template.url({ project: page.props.currentProject!.slug })">Download the template</ULink>.
                 </p>
 
                 <UButton

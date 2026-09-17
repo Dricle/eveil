@@ -46,6 +46,9 @@ class SetupController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect()->route('dashboard');
+        // No project exists yet for a brand new instance: `app.home` sends
+        // this fresh super admin to create one rather than assuming
+        // `dashboard` has anything to show.
+        return redirect()->route('app.home');
     }
 }

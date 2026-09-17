@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, usePoll } from '@inertiajs/vue3'
+import { Head, router, usePage, usePoll } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import { regenerate as regenerateVariant, store as generateVariant } from '@/actions/App/Http/Controllers/StepVariantGenerationController'
 import CampaignHeader from '@/components/CampaignHeader.vue'
@@ -49,6 +49,9 @@ const props = defineProps<{
     writingVariantError: string | null
 }>()
 
+const page = usePage()
+const projectSlug = computed(() => page.props.currentProject!.slug)
+
 const previewing = ref<number | null>(null)
 const savingVariant = ref<number | null>(null)
 
@@ -64,7 +67,7 @@ const poll = usePoll(
 watch(() => props.writingVariant, busy => busy ? poll.start() : poll.stop())
 
 function saveStep (step: Step) {
-    router.put(stepRoutes.update.url([props.campaign.id, step.id]), {
+    router.put(stepRoutes.update.url([projectSlug.value, props.campaign.id, step.id]), {
         type: step.type,
         delay_hours: step.delay_hours,
         intent: step.intent
@@ -78,7 +81,7 @@ function saveVariant (step: Step, variant: Variant) {
 
     savingVariant.value = variant.id
 
-    router.put(stepVariantRoutes.update.url([props.campaign.id, step.id, variant.id]), {
+    router.put(stepVariantRoutes.update.url([projectSlug.value, props.campaign.id, step.id, variant.id]), {
         subject: variant.subject,
         body: variant.body,
         weight: variant.weight
@@ -113,7 +116,7 @@ function generateVariantFromModal () {
 
     const { step, guidance } = variantPrompt.value
 
-    router.post(generateVariant.url([props.campaign.id, step.id]), {
+    router.post(generateVariant.url([projectSlug.value, props.campaign.id, step.id]), {
         guidance: guidance.trim() || null
     }, {
         preserveScroll: true,
@@ -146,7 +149,7 @@ function regenerateVariantFromModal () {
 
     const { step, variant, guidance } = regeneratePrompt.value
 
-    router.post(regenerateVariant.url([props.campaign.id, step.id, variant.id]), {
+    router.post(regenerateVariant.url([projectSlug.value, props.campaign.id, step.id, variant.id]), {
         guidance: guidance.trim() || null
     }, {
         preserveScroll: true,
@@ -155,11 +158,11 @@ function regenerateVariantFromModal () {
 }
 
 function removeVariant (step: Step, variant: Variant) {
-    router.delete(stepVariantRoutes.destroy.url([props.campaign.id, step.id, variant.id]), { preserveScroll: true })
+    router.delete(stepVariantRoutes.destroy.url([projectSlug.value, props.campaign.id, step.id, variant.id]), { preserveScroll: true })
 }
 
 function add (type: 'email' | 'wait') {
-    router.post(stepRoutes.store.url(props.campaign.id), {
+    router.post(stepRoutes.store.url([projectSlug.value, props.campaign.id]), {
         type,
         delay_hours: type === 'wait' ? 72 : null,
         subject: type === 'email' ? 'follow-up' : null,
@@ -181,7 +184,7 @@ function move (index: number, by: number) {
 
     ;[ids[index], ids[target]] = [ids[target], ids[index]]
 
-    router.put(campaignRoutes.stepOrder.url(props.campaign.id), { steps: ids }, { preserveScroll: true })
+    router.put(campaignRoutes.stepOrder.url([projectSlug.value, props.campaign.id]), { steps: ids }, { preserveScroll: true })
 }
 
 // A partial reload: personalising costs a model call per lead, so it happens
@@ -250,7 +253,7 @@ function preview (step: Step) {
                             size="xs"
                             icon="i-lucide-x"
                             aria-label="Remove this step"
-                            @click="router.delete(stepRoutes.destroy.url([campaign.id, step.id]), { preserveScroll: true })"
+                            @click="router.delete(stepRoutes.destroy.url([projectSlug, campaign.id, step.id]), { preserveScroll: true })"
                         />
                     </div>
 

@@ -41,7 +41,7 @@ watch(() => props.members, (members) => {
 })
 
 function removeMember (member: Member) {
-    router.delete(memberRoutes.destroy.url(member.id), { preserveScroll: true })
+    router.delete(memberRoutes.destroy.url({ project: page.props.currentProject!.slug, user: member.id }), { preserveScroll: true })
 }
 </script>
 
@@ -75,7 +75,7 @@ function removeMember (member: Member) {
             >
                 <Form
                     v-slot="{ errors, processing }"
-                    v-bind="memberRoutes.update.form(member.id)"
+                    v-bind="memberRoutes.update.form({ project: page.props.currentProject!.slug, user: member.id })"
                     class="space-y-2"
                 >
                     <div class="flex flex-wrap items-center gap-3">
@@ -177,7 +177,7 @@ function removeMember (member: Member) {
         <template #body>
             <Form
                 v-slot="{ errors, processing }"
-                v-bind="memberRoutes.store.form()"
+                v-bind="memberRoutes.store.form({ project: page.props.currentProject!.slug })"
                 class="space-y-4"
                 @success="inviting = false"
             >

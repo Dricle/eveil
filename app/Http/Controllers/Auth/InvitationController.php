@@ -71,6 +71,9 @@ class InvitationController extends Controller
             $request->session()->regenerate();
         }
 
-        return redirect()->route('dashboard');
+        // A member invite grants no project by itself: `app.home` picks one
+        // this user can actually see, or sends them to create one, the same
+        // fallback a stale/absent session hint already goes through.
+        return redirect()->route('app.home');
     }
 }

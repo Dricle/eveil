@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, usePoll } from '@inertiajs/vue3'
+import { Head, router, usePage, usePoll } from '@inertiajs/vue3'
 import { computed, watch } from 'vue'
 import TargetHeader from '@/components/TargetHeader.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
@@ -13,6 +13,8 @@ const props = defineProps<{
     profile: TargetProfile
     runs: DiscoveryRun[]
 }>()
+
+const page = usePage()
 
 // A function, not a plain array: `defineOptions()` hoists its argument out of
 // setup(), so it cannot reference the local `props` binding. Called with this
@@ -62,7 +64,7 @@ function status (run: DiscoveryRun) {
                     :color="profile.is_active ? 'warning' : 'primary'"
                     variant="subtle"
                     :label="profile.is_active ? 'Pause' : 'Resume'"
-                    @click="router.post(targets.activation.url(profile.id))"
+                    @click="router.post(targets.activation.url({ project: page.props.currentProject!.slug, target: profile.id }))"
                 />
 
                 <UButton
@@ -70,7 +72,7 @@ function status (run: DiscoveryRun) {
                     color="neutral"
                     variant="subtle"
                     label="New search"
-                    @click="router.post(discoveryRuns.store.url(), { target_profile: profile.id })"
+                    @click="router.post(discoveryRuns.store.url({ project: page.props.currentProject!.slug }), { target_profile: profile.id })"
                 />
             </div>
         </div>
@@ -86,7 +88,7 @@ function status (run: DiscoveryRun) {
         <ULink
             v-for="run in runs"
             :key="run.id"
-            :href="relativeUrl(discoveryRuns.show.url(run.id))"
+            :href="relativeUrl(discoveryRuns.show.url({ project: page.props.currentProject!.slug, discovery_run: run.id }))"
             class="flex items-center gap-3 rounded-lg p-4 ring ring-default hover:bg-elevated/50"
         >
             <UIcon

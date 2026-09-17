@@ -6,6 +6,7 @@ use App\Casts\EncryptedCredential;
 use App\Enums\AutonomyLevel;
 use App\Enums\LinkedinPostFrequency;
 use App\Enums\OrganizationRole;
+use App\Models\Concerns\HasSlug;
 use Database\Factories\ProjectFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -25,6 +26,7 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $organization_id
  * @property string $name
+ * @property string $slug
  * @property string $url
  * @property string|null $github_token
  * @property array<string, mixed>|null $knowledge_base
@@ -40,12 +42,25 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['organization_id', 'name', 'url', 'github_token', 'knowledge_base', 'knowledge_base_edited_by_user', 'default_language', 'prompt_instructions', 'linkedin_prompt_instructions', 'autonomy_level', 'daily_lead_limit', 'lead_limit', 'linkedin_post_frequency', 'linkedin_next_post_at'])]
+#[Fillable(['organization_id', 'name', 'slug', 'url', 'github_token', 'knowledge_base', 'knowledge_base_edited_by_user', 'default_language', 'prompt_instructions', 'linkedin_prompt_instructions', 'autonomy_level', 'daily_lead_limit', 'lead_limit', 'linkedin_post_frequency', 'linkedin_next_post_at'])]
 #[Hidden(['github_token'])]
 class Project extends Model
 {
     /** @use HasFactory<ProjectFactory> */
-    use HasFactory;
+    use HasFactory, HasSlug {
+        HasSlug::slugExists as private slugTakenInDatabase;
+    }
+
+    /**
+     * Top-level `/app/...` path segments registered outside the
+     * `{project:slug}` route group (`routes/app.php`) - a project slugged to
+     * match one of these would be indistinguishable from that literal route.
+     * Treating them as taken routes the normal `-2`/`-3` suffix around the
+     * collision instead of needing a second validation path.
+     *
+     * @var list<string>
+     */
+    private const RESERVED_SLUGS = ['projects', 'organizations', 'app-settings', 'account', 'setup', 'invitations'];
 
     /**
      * What a new project starts with in its writing instructions.
@@ -276,6 +291,11 @@ class Project extends Model
     public function hasGithubToken(): bool
     {
         return $this->github_token !== null;
+    }
+
+    protected function slugExists(string $slug): bool
+    {
+        return in_array($slug, self::RESERVED_SLUGS, true) || $this->slugTakenInDatabase($slug);
     }
 
     /**

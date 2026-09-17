@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, usePoll } from '@inertiajs/vue3'
+import { Head, router, usePage, usePoll } from '@inertiajs/vue3'
 import { computed, watch } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import TargetsLayout from '@/layouts/TargetsLayout.vue'
@@ -10,6 +10,8 @@ import targets from '@/routes/targets'
 import type { DiscoveryRun, DiscoveryTask } from '@/types'
 
 const props = defineProps<{ run: DiscoveryRun }>()
+
+const page = usePage()
 
 // A plain array here would be hoisted with `props` out of scope (Vue rejects
 // any local-variable reference in `defineOptions()`) - a function is the
@@ -83,7 +85,7 @@ function outcome (task: DiscoveryTask): string {
             <div class="min-w-0">
                 <ULink
                     v-if="run.profile_id"
-                    :href="relativeUrl(targets.searches.url(run.profile_id))"
+                    :href="relativeUrl(targets.searches.url({ project: page.props.currentProject!.slug, target: run.profile_id }))"
                     class="text-sm text-muted"
                 >
                     ← Searches for {{ run.profile }}
@@ -100,7 +102,7 @@ function outcome (task: DiscoveryTask): string {
                 variant="subtle"
                 icon="i-lucide-square"
                 label="Stop"
-                @click="router.post(discoveryRuns.cancel.url(run.id))"
+                @click="router.post(discoveryRuns.cancel.url({ project: page.props.currentProject!.slug, discovery_run: run.id }))"
             />
         </div>
 
@@ -222,7 +224,7 @@ function outcome (task: DiscoveryTask): string {
                     icon="i-lucide-rotate-ccw"
                     size="xs"
                     aria-label="Run this step again"
-                    @click="router.post(discoveryTasks.replay.url(task.id))"
+                    @click="router.post(discoveryTasks.replay.url({ project: page.props.currentProject!.slug, discovery_task: task.id }))"
                 />
             </div>
         </div>

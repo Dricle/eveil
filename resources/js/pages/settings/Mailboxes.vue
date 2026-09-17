@@ -101,7 +101,7 @@ const PRESET_OPTIONS: { label: string, value: string }[] = PROVIDER_PRESETS.map(
 
 function test (mailbox: Mailbox) {
     testing.value = mailbox.id
-    router.post(mailboxRoutes.test.url(mailbox.id), {}, {
+    router.post(mailboxRoutes.test.url({ project: page.props.currentProject!.slug, mailbox: mailbox.id }), {}, {
         preserveScroll: true,
         onFinish: () => testing.value = null
     })
@@ -113,7 +113,7 @@ function test (mailbox: Mailbox) {
 // is for.
 function reactivate (mailbox: Mailbox) {
     reactivating.value = mailbox.id
-    router.post(mailboxRoutes.reactivate.url(mailbox.id), {}, {
+    router.post(mailboxRoutes.reactivate.url({ project: page.props.currentProject!.slug, mailbox: mailbox.id }), {}, {
         preserveScroll: true,
         onFinish: () => reactivating.value = null
     })
@@ -273,7 +273,7 @@ function note () {
         <template #body>
             <Form
                 v-slot="{ errors, processing }"
-                v-bind="editing ? mailboxRoutes.update.form(editing.id) : mailboxRoutes.store.form()"
+                v-bind="editing ? mailboxRoutes.update.form({ project: page.props.currentProject!.slug, mailbox: editing.id }) : mailboxRoutes.store.form({ project: page.props.currentProject!.slug })"
                 class="space-y-4"
                 @success="creating = false"
             >
@@ -560,7 +560,7 @@ function note () {
                         color="error"
                         variant="ghost"
                         label="Remove"
-                        @click="router.delete(mailboxRoutes.destroy.url(editing.id), { onSuccess: () => creating = false })"
+                        @click="router.delete(mailboxRoutes.destroy.url({ project: page.props.currentProject!.slug, mailbox: editing.id }), { onSuccess: () => creating = false })"
                     />
                 </div>
             </Form>

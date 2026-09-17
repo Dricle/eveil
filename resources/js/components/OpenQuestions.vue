@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { Form } from '@inertiajs/vue3'
+import { Form, usePage } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import knowledgeBaseRoutes from '@/routes/settings/knowledge-base'
 import type { OpenQuestion } from '@/types'
+
+const page = usePage()
 
 // What the site never said, asked of the one person who knows. Answering is
 // worth more than any other minute the user spends here, and it is still never
@@ -47,7 +49,7 @@ const answered = computed(() => Object.values(draft.value).filter(answer => answ
 
         <Form
             v-slot="{ processing, recentlySuccessful }"
-            v-bind="knowledgeBaseRoutes.answers.form()"
+            v-bind="knowledgeBaseRoutes.answers.form({ project: page.props.currentProject!.slug })"
             :options="{ preserveScroll: true }"
             class="space-y-4"
         >

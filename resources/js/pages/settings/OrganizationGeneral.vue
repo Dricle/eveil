@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3'
+import { Form, Head, usePage } from '@inertiajs/vue3'
 import { ref, watch } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import SettingsLayout from '@/layouts/SettingsLayout.vue'
@@ -7,6 +7,8 @@ import organizationRoutes from '@/routes/settings/organization/general'
 import type { Organization } from '@/types'
 
 defineOptions({ layout: [AppLayout, [SettingsLayout, { title: 'Organization' }]] })
+
+const page = usePage()
 
 const props = defineProps<{ organization: Organization }>()
 
@@ -34,7 +36,7 @@ watch(() => props.organization, (organization) => {
 
             <Form
                 v-slot="{ errors, processing, recentlySuccessful }"
-                v-bind="organizationRoutes.update.form()"
+                v-bind="organizationRoutes.update.form({ project: page.props.currentProject!.slug })"
                 class="space-y-4"
             >
                 <UFormField

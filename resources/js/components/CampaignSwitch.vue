@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { router } from '@inertiajs/vue3'
+import { router, usePage } from '@inertiajs/vue3'
 import { computed } from 'vue'
 import campaignRoutes from '@/routes/campaigns'
 import type { CampaignStatus } from '@/types'
@@ -10,6 +10,8 @@ import type { CampaignStatus } from '@/types'
 const props = defineProps<{
     campaign: { id: number, status: CampaignStatus }
 }>()
+
+const page = usePage()
 
 const CONTROLS = {
     draft: { label: 'Start sending', icon: 'i-lucide-play', color: 'primary', next: 'active' },
@@ -22,7 +24,7 @@ const control = computed(() => CONTROLS[props.campaign.status as keyof typeof CO
 function flip () {
     if (control.value) {
         router.put(
-            campaignRoutes.status.url(props.campaign.id),
+            campaignRoutes.status.url({ project: page.props.currentProject!.slug, campaign: props.campaign.id }),
             { status: control.value.next },
             { preserveScroll: true }
         )

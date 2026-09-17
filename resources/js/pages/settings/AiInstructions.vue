@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3'
+import { Form, Head, usePage } from '@inertiajs/vue3'
 import { ref, watch } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import SettingsLayout from '@/layouts/SettingsLayout.vue'
@@ -12,6 +12,8 @@ const props = defineProps<{
     promptInstructions: string | null
     linkedinPromptInstructions: string | null
 }>()
+
+const page = usePage()
 
 // Local drafts synced from the props, not `default-value`: Nuxt UI's textarea
 // reads that once and every re-render (this page's own redirect after
@@ -40,7 +42,7 @@ watch(() => props.linkedinPromptInstructions, value => linkedinInstructions.valu
 
             <Form
                 v-slot="{ errors, processing, recentlySuccessful }"
-                v-bind="emailInstructionsRoutes.update.form()"
+                v-bind="emailInstructionsRoutes.update.form({ project: page.props.currentProject!.slug })"
                 class="space-y-4"
             >
                 <UFormField
@@ -85,7 +87,7 @@ watch(() => props.linkedinPromptInstructions, value => linkedinInstructions.valu
 
             <Form
                 v-slot="{ errors, processing, recentlySuccessful }"
-                v-bind="linkedinInstructionsRoutes.update.form()"
+                v-bind="linkedinInstructionsRoutes.update.form({ project: page.props.currentProject!.slug })"
                 class="space-y-4"
             >
                 <UFormField

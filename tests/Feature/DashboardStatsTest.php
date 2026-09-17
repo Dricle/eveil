@@ -101,9 +101,10 @@ it('scopes cloud credit spend to the current project only', function () {
         'agent_run_id' => $otherRun->id,
     ]);
 
-    $this->actingAs($user)
-        ->withSession(['current_project_id' => $project->id])
-        ->get(route('dashboard'))
+    $this->actingAs($user);
+    forProject($project);
+
+    $this->get(route('dashboard'))
         ->assertInertia(fn ($page) => $page->where('stats.credits_spent', 50));
 });
 
@@ -122,9 +123,12 @@ it('never counts another project\'s mail in sent, replies or the reply feed', fu
     Message::factory()->count(5)->create(['lead_id' => $otherLead->id, 'direction' => MessageDirection::Outbound]);
     Message::factory()->count(5)->create(['lead_id' => $otherLead->id, 'direction' => MessageDirection::Inbound]);
 
-    $this->actingAs($user)
-        ->withSession(['current_project_id' => $project->id])
-        ->get(route('dashboard'))
+    // Both projects belong to the same organization, so `actingAs()`'s
+    // auto-picked default could land on either - pin it explicitly.
+    $this->actingAs($user);
+    forProject($project);
+
+    $this->get(route('dashboard'))
         ->assertInertia(fn ($page) => $page
             ->where('stats.sent', 1)
             ->where('stats.replies', 1)

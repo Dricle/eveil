@@ -143,12 +143,15 @@ abstract class DiscoveryJob implements ShouldQueue
 
             // No site of its own, which is ordinary on a directory listing and
             // the norm for a registry record. Worth qualifying only when the
-            // source also published an address or an email: with nothing to
-            // fetch and nothing to send, reading it is a model call spent on a
-            // row that can never be contacted.
+            // source also published an address or an email - or, for a
+            // source with nothing that concrete (a Reddit mention with no
+            // resolvable link), explicitly marked `evidence`: a deliberately
+            // generic key any no-website source can set, so the next one of
+            // these does not need a fourth named fact checked here by hand.
             if ($domain === null
                 && ($payload['facts']['email'] ?? null) === null
-                && ($payload['facts']['address'] ?? null) === null) {
+                && ($payload['facts']['address'] ?? null) === null
+                && ($payload['facts']['evidence'] ?? null) === null) {
                 continue;
             }
 

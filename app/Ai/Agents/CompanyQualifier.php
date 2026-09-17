@@ -127,7 +127,29 @@ class CompanyQualifier extends EveilAgent implements HasStructuredOutput
     {
         $criteria = (string) json_encode($this->targetProfile->criteria, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
-        return "Target profile [{$this->targetProfile->name}]:\n{$criteria}\n\n{$this->evidence()}";
+        return "{$this->productContext()}Target profile [{$this->targetProfile->name}]:\n{$criteria}\n\n{$this->evidence()}";
+    }
+
+    /**
+     * What we ourselves sell, so "rule out a competitor of the product
+     * itself" above has something to check a candidate against - without
+     * this the instruction exists but the model has never been told what the
+     * product is. Empty until the project has been analysed.
+     */
+    private function productContext(): string
+    {
+        $knowledgeBase = $this->project->knowledge_base;
+
+        if (! is_array($knowledgeBase) || empty($knowledgeBase['what_it_does'])) {
+            return '';
+        }
+
+        $competitors = empty($knowledgeBase['competitors'])
+            ? ''
+            : ' Named competitors: '.implode(', ', $knowledgeBase['competitors']).'.';
+
+        return "What we are selling, so you can recognise a competitor of it:\n"
+            ."{$knowledgeBase['what_it_does']}{$competitors}\n\n";
     }
 
     /**

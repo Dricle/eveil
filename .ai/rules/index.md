@@ -18,6 +18,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | database/** | .ai/rules/database.md |
 | compose.yaml,compose.deploy.yaml,docker/degoog/** | .ai/rules/degoog.md |
 | deploy/** | .ai/rules/deploy.md |
+| app/Actions/FindSubreddits.php,app/Services/Discovery/SubredditFinder.php,app/Ai/Agents/DiscoveryPlanner.php | .ai/rules/discovery-ai-agents.md |
 | app/Services/Discovery/** | .ai/rules/discovery.md |
 | app/Models/LinkedinPost.php,app/Http/Controllers/LinkedinPostController.php,app/Enums/LinkedinPostStatus.php | .ai/rules/enums.md |
 | **, composer.json, README.md | .ai/rules/general.md |

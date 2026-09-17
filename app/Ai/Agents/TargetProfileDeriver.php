@@ -82,6 +82,16 @@ class TargetProfileDeriver extends EveilAgent implements HasStructuredOutput
 
         Write the profiles in the language of the product's own market, not in English,
         unless the market is English-speaking.
+
+        For each profile, also name a few Reddit topics worth checking for real
+        communities - keywords, never subreddit names: you cannot be trusted to name a
+        real one from memory, so a mechanical lookup resolves these afterwards. Name the
+        BUYER'S world, never the product's own: a profile of founders launching
+        publicly wants "startups", "indie hackers", "side projects", never the product's
+        own category - a company selling outbound automation does not want other
+        outbound-automation vendors, the same way a shoe seller does not want other shoe
+        sellers. Empty when the profile has no real community angle at all (most
+        B2B/local-service profiles do not).
         PROMPT;
     }
 
@@ -146,6 +156,10 @@ class TargetProfileDeriver extends EveilAgent implements HasStructuredOutput
 
                 'confidence' => $schema->integer()->min(0)->max(100)
                     ->description('0-100. Would someone who knows this market recognise it as correct and searchable today? Not whether the site literally names the buyer.')
+                    ->required(),
+
+                'subreddit_topics' => $schema->array()->items($schema->string())
+                    ->description('Keywords describing the BUYER\'s communities, never subreddit names and never the product\'s own competitors. Empty when the profile has no real community angle.')
                     ->required(),
             ]))->required(),
         ];

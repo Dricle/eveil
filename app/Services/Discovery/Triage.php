@@ -36,15 +36,29 @@ class Triage
             return ['candidates' => $candidates, 'listings' => $listings];
         }
 
+        // Classified by the candidate's OWN site, never `sourceUrl`: the
+        // question here is "what kind of host would we be crawling", which
+        // `sourceUrl` (where the candidate was FOUND, not what it IS) cannot
+        // answer. A registry record and a Reddit mention with no confirmed
+        // link both have no website to judge - `known_hosts` never even sees
+        // them, so a locked verdict on wherever they were found (a registry
+        // API, a Reddit permalink) can never wrongly drop one.
         $kinds = $this->hosts->classify(
-            $found->map(fn (Candidate $candidate): string => (string) ($candidate->sourceUrl ?? $candidate->website)),
+            $found->filter(fn (Candidate $candidate): bool => $candidate->website !== null)
+                ->map(fn (Candidate $candidate): string => (string) $candidate->website),
             $project,
         );
 
         $seen = [];
 
         foreach ($found as $candidate) {
-            $url = (string) ($candidate->sourceUrl ?? $candidate->website);
+            if ($candidate->website === null) {
+                $candidates->push($candidate);
+
+                continue;
+            }
+
+            $url = $candidate->website;
             $host = Url::host($url);
             $kind = $kinds[$host] ?? HostKind::Entity;
 

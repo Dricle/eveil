@@ -221,6 +221,11 @@ it('keeps a registry record with no website, judged on its registered address al
             'registered_address' => 'Rue Jules Delhaize 51 1080 Molenbeek-Saint-Jean',
             'jurisdiction_data' => ['enterpriseNo' => '0821017106'],
         ]]]),
+        // No website out there, for the `WebsiteFinder` search this run makes
+        // trying to enrich the record: without this, the unmatched call
+        // escapes to the real SearXNG container in this stack and returns
+        // real, non-deterministic results.
+        '*' => Http::response(['results' => []]),
     ]);
 
     $this->artisan('eveil:discover-companies')->assertSuccessful();

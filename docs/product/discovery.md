@@ -14,6 +14,7 @@ A plan comes first — Eveil reads the target profile and decides where to look 
 
 - **OpenStreetMap**, for anything with a physical address — shops, clinics, agencies, workshops. It's exhaustive and free: every business with a front door in the area searched, not just the ones that rank well on Google.
 - **Web search**, for everything OpenStreetMap can't see — online-only businesses, professions, anything defined by what it sells rather than where it sits.
+- **Reddit**, for a target profile whose buyers gather in a specific, real community — a launch-stage SaaS founder posting in r/SaaS, for example. Narrower than web search on purpose: only used when the profile genuinely points at a well-known subreddit, never guessed at. Reads posts and comment replies alike: a product mentioned three replies down a thread counts as much as one in the post itself, and a mention with no link in it gets a check of the author's own recent posts before it's kept anyway — with no confirmed site, but with the thread as evidence you can read and judge yourself.
 - **Official business registries** (Belgium's KBO/BCE, France's SIRENE, the UK's Companies House and others), for a legal-entity search with no SEO bias at all — every registered company, not just the ones with a website. A registry record has a name, address and status, never an email or a site: the contact-finding step that follows spends one search of its own trying to find the company's actual website before giving up on it.
 
 ::: info Self-hosted only
@@ -33,6 +34,10 @@ SearXNG ships with the stack by default, and a second engine is an optional Dock
 ## Directories count as leads too
 
 A result pointing at a business directory (a "friteries in Namur" listing page, an industry association's member list) isn't discarded — Eveil reads it and treats every business it lists as its own candidate. For a business with no site of its own, a directory listing is often the only place its details are published at all. The directory itself can also be worth contacting: an agency selling to "launch platforms" wants Product Hunt as a lead, not just as a source of other leads.
+
+## When a source proves unusually good
+
+Sometimes a run stumbles onto a source that turns out to be a goldmine for the profile it's searching for — a launch directory, a community, a listing page — without having gone looking for it specifically. When several companies from the same source score well, Eveil notices mid-run and spends the rest of that run's budget going deeper there — other pages, other listings, other angles on the same source — rather than treating it as one more result among many and drifting on to something unrelated. This never affects what counts as a good match: it only decides where to keep looking once something is clearly working.
 
 ## When a search comes up empty
 

@@ -42,6 +42,14 @@ return [
             'timeout' => 20,
         ],
 
+        // Reddit itself is a locked `other` host (RedditSource never fetches
+        // it directly): Arctic Shift is a free, key-less mirror of Reddit's
+        // own search API that reads public submissions instead.
+        'reddit' => [
+            'url' => env('ARCTIC_SHIFT_URL', 'https://arctic-shift.photon-reddit.com'),
+            'timeout' => 20,
+        ],
+
         // Optional headless renderer for a page `PageFetcher` fetched fine
         // but came back a shell (a Cloudflare JS challenge, for example).
         // Off by default: `docker compose --profile flaresolverr up`. A dead

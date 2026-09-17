@@ -140,6 +140,7 @@ it('lists every agent it finds in the code, not a hand-kept list', function () {
         'linkedin-post-writer',
         'listing-extractor',
         'message-personalizer',
+        'reddit-thread-triage',
         'reply-handler',
         'repo-explorer',
         'result-triage',

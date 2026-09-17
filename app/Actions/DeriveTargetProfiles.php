@@ -19,7 +19,7 @@ use RuntimeException;
  */
 class DeriveTargetProfiles
 {
-    public function __construct(private Settings $settings) {}
+    public function __construct(private Settings $settings, private FindSubreddits $findSubreddits) {}
 
     /**
      * @return Collection<int, TargetProfile>
@@ -83,7 +83,7 @@ class DeriveTargetProfiles
         $confidence = $profile['confidence'] ?? null;
         $minConfidence = $this->settings->array('discovery')['min_profile_confidence'];
 
-        return TargetProfile::create([
+        $targetProfile = TargetProfile::create([
             'project_id' => $project->id,
             'name' => $name,
             'type' => TargetProfileType::tryFrom((string) ($profile['type'] ?? '')) ?? TargetProfileType::Customer,
@@ -101,5 +101,9 @@ class DeriveTargetProfiles
             // worth more than one they have to catch mid-run.
             'is_active' => $confidence === null || $confidence >= $minConfidence,
         ]);
+
+        // Resolved once, here, rather than guessed fresh by the planner on
+        // every run: mechanical, no-AI, and cheap enough to do unconditionally.
+        return $this->findSubreddits->handle($targetProfile);
     }
 }

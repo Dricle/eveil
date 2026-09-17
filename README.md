@@ -5,7 +5,7 @@
 <h1 align="center">Eveil</h1>
 
 <p align="center">
-  Cold outreach that finds its own leads.
+  Organic, automated AI marketing that finds its own customers.
 </p>
 
 <p align="center">

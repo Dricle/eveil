@@ -8,7 +8,9 @@ use App\Enums\DiscoveryRunStatus;
 use App\Enums\DiscoveryTaskKind;
 use App\Enums\DiscoveryTaskStatus;
 use App\Jobs\Discovery\PlanDiscovery;
+use App\Jobs\Discovery\ReflectAndExpand;
 use App\Models\Concerns\BelongsToProject;
+use App\Support\Url;
 use Database\Factories\DiscoveryRunFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -18,6 +20,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -60,6 +63,19 @@ class DiscoveryRun extends Model
         'max_pages' => 'pages_used',
         'max_qualified' => 'qualified_count',
     ];
+
+    /**
+     * The bar a host clears before a mid-run focused follow-up is worth an
+     * extra model call: several well-scoring companies off the SAME host,
+     * chosen loosely on purpose the same way `Harvest::READABLE_TEXT` is -
+     * one or two could be luck, three off one host past a 70 fit
+     * (`CompanyQualifier`'s own "a salesperson would be glad to have it" bar)
+     * usually means the host behaves like a directory for this profile
+     * specifically.
+     */
+    private const MIN_QUALIFIED_FROM_HOST = 3;
+
+    private const MIN_AVG_FIT_SCORE = 70;
 
     /**
      * @return BelongsTo<TargetProfile, $this>
@@ -137,15 +153,24 @@ class DiscoveryRun extends Model
      * this on its way out, so whichever one happens to be last closes the run:
      * no supervising job to keep alive, and nothing to poll.
      *
-     * Before closing, a run that found nothing at all gets one chance to try a
-     * different source with whatever probe budget is left (`mayPivotSource()`):
-     * exactly `wrong_source`'s own fix, "switch tool, not criteria", applied
-     * inside the run that hit it rather than waiting for a brand new one days
-     * later, once `ContinueDiscovery`'s cadence gets around to it.
+     * Before closing: a run that stumbled onto a host unusually productive for
+     * THIS profile gets one focused follow-up wave (`mayReflectAndExpand()`),
+     * checked first since it is the success case. Failing that, a run that
+     * found nothing at all gets one chance to try a different source with
+     * whatever probe budget is left (`mayPivotSource()`): exactly
+     * `wrong_source`'s own fix, "switch tool, not criteria", applied inside the
+     * run that hit it rather than waiting for a brand new one days later, once
+     * `ContinueDiscovery`'s cadence gets around to it.
      */
     public function finishIfIdle(): void
     {
         if ($this->status->isTerminal() || $this->tasks()->open()->exists()) {
+            return;
+        }
+
+        if ($this->mayReflectAndExpand()) {
+            $this->reflectAndExpand();
+
             return;
         }
 
@@ -206,6 +231,69 @@ class DiscoveryRun extends Model
             'kind' => DiscoveryTaskKind::Plan,
             'status' => DiscoveryTaskStatus::Pending,
         ]));
+    }
+
+    /**
+     * Whether this run gets one focused follow-up wave instead of closing:
+     * only an AI search has anything to deepen, only once per run (a second
+     * reflection is left to `ContinueDiscovery`'s ordinary cadence rather than
+     * chained indefinitely), and only when a host actually cleared the bar.
+     */
+    private function mayReflectAndExpand(): bool
+    {
+        return $this->origin === DiscoveryRunOrigin::Search
+            && $this->queries_used < $this->limit('max_queries')
+            && $this->tasks()->where('kind', DiscoveryTaskKind::Reflect)->doesntExist()
+            && $this->productiveHosts()->isNotEmpty();
+    }
+
+    /**
+     * One more planning wave, same run, same budget row, focused on whatever
+     * proved productive - not a new `DiscoveryRun`, same shape as
+     * `pivotSource()`.
+     */
+    private function reflectAndExpand(): void
+    {
+        ReflectAndExpand::dispatch(DiscoveryTask::create([
+            'project_id' => $this->project_id,
+            'discovery_run_id' => $this->id,
+            'kind' => DiscoveryTaskKind::Reflect,
+            'status' => DiscoveryTaskStatus::Pending,
+        ]));
+    }
+
+    /**
+     * Hosts THIS run already found unusually productive for THIS profile,
+     * grouped by host because a harvested listing's own candidates share a
+     * directory, not a URL: several well-scoring companies off the same host
+     * is the site behaving like a directory, whether or not it was searched as
+     * one.
+     *
+     * Never written to `known_hosts`: whether a host is productive is a fact
+     * about this target profile, and the registry is deliberately profile-blind
+     * (ADR-033) - a directory that is gold for one profile is noise for
+     * another. This stays a live read of THIS run's own evaluations, nothing
+     * stored.
+     *
+     * @return Collection<string, array{qualified: int, avg_fit: float}>
+     */
+    public function productiveHosts(): Collection
+    {
+        /** @var Collection<string, array{qualified: int, avg_fit: float}> $hosts */
+        $hosts = CompanyTargetEvaluation::query()
+            ->where('discovery_run_id', $this->id)
+            ->with('company')
+            ->get()
+            ->filter(fn (CompanyTargetEvaluation $evaluation): bool => $evaluation->company?->source_url !== null)
+            ->groupBy(fn (CompanyTargetEvaluation $evaluation): string => Url::host($evaluation->company->source_url) ?? '')
+            ->filter(fn (Collection $group): bool => $group->count() >= self::MIN_QUALIFIED_FROM_HOST
+                && $group->avg('fit_score') >= self::MIN_AVG_FIT_SCORE)
+            ->map(fn (Collection $group): array => [
+                'qualified' => $group->count(),
+                'avg_fit' => round($group->avg('fit_score'), 1),
+            ]);
+
+        return $hosts;
     }
 
     /**

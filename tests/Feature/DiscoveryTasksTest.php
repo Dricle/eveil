@@ -3,21 +3,27 @@
 use App\Actions\RunDiscovery;
 use App\Ai\Agents\CompanyQualifier;
 use App\Ai\Agents\DiscoveryPlanner;
+use App\Ai\Agents\RedditThreadTriage;
 use App\Enums\AutonomyLevel;
 use App\Enums\ContactSearchStatus;
 use App\Enums\DiscoveryDiagnosis;
 use App\Enums\DiscoveryRunStatus;
 use App\Enums\DiscoveryTaskKind;
 use App\Enums\DiscoveryTaskStatus;
+use App\Enums\HostKind;
 use App\Jobs\Discovery\QualifyCandidate;
 use App\Jobs\Discovery\RunProbe;
 use App\Jobs\FindCompanyContacts;
 use App\Models\Company;
 use App\Models\DiscoveryRun;
 use App\Models\DiscoveryTask;
+use App\Models\KnownHost;
+use App\Models\Project;
 use App\Models\TargetProfile;
 use App\Support\CurrentProject;
 use App\Support\Settings;
+use Database\Seeders\KnownHostSeeder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Ai\Prompts\AgentPrompt;
@@ -334,6 +340,135 @@ it('never pivots a run that already found something - that is too_narrow\'s job,
         ->and($run->tasks()->where('kind', DiscoveryTaskKind::Plan)->count())->toBe(1);
 });
 
+it('reflects mid-run: a host that produced several well-scoring companies gets a focused follow-up wave', function () {
+    $targetProfile = discoveryProfile();
+
+    // Locked and pre-classified as `index`, so Triage routes it to a harvest
+    // rather than asking the model - this test is about the reflect wiring,
+    // not host classification.
+    KnownHost::factory()->create([
+        'host' => 'producthunt.test',
+        'kind' => HostKind::Index,
+        'is_locked' => true,
+    ]);
+
+    DiscoveryPlanner::fake([
+        [
+            'plan' => 'One web query, aimed at a launch directory.',
+            'overpass_probes' => [],
+            'web_queries' => [['query' => 'site:producthunt.test products', 'language' => 'en', 'why' => 'Launch directory.']],
+        ],
+        [
+            'plan' => 'producthunt.test proved productive, nothing more to add.',
+            'overpass_probes' => [],
+            'web_queries' => [],
+        ],
+    ]);
+
+    // Three businesses harvested off the SAME listing page, each on its own
+    // domain, then the listing host itself as a fourth candidate
+    // (`Triage::sort()`'s "an index is also an entity") - ruled out as a
+    // directory, the realistic verdict `CompanyQualifier`'s own instructions
+    // already call for.
+    CompanyQualifier::fake([
+        ['is_a_prospect' => true, 'fit_score' => 80, 'fit_reason' => 'Fits.', 'company_name' => 'Acme One', 'industry' => 'SaaS', 'size' => 'unknown', 'location' => 'unknown', 'language' => 'en'],
+        ['is_a_prospect' => true, 'fit_score' => 85, 'fit_reason' => 'Fits.', 'company_name' => 'Acme Two', 'industry' => 'SaaS', 'size' => 'unknown', 'location' => 'unknown', 'language' => 'en'],
+        ['is_a_prospect' => true, 'fit_score' => 75, 'fit_reason' => 'Fits.', 'company_name' => 'Acme Three', 'industry' => 'SaaS', 'size' => 'unknown', 'location' => 'unknown', 'language' => 'en'],
+        ['is_a_prospect' => false, 'fit_score' => 20, 'fit_reason' => 'A directory, not a company.', 'company_name' => 'producthunt.test', 'industry' => 'Directory', 'size' => 'unknown', 'location' => 'unknown', 'language' => 'en'],
+    ]);
+
+    Http::fake([
+        '*/robots.txt' => Http::response('', 404),
+        'searxng:8080/search*' => Http::response(['results' => [
+            ['url' => 'https://producthunt.test/', 'title' => 'Product Hunt', 'content' => 'Launch directory.'],
+        ]]),
+        'https://producthunt.test/' => Http::response(
+            '<!doctype html><html lang="en"><body>'
+            .'<script type="application/ld+json">{"@type":"Organization","name":"Acme One","url":"https://acme1.test/"}</script>'
+            .'<script type="application/ld+json">{"@type":"Organization","name":"Acme Two","url":"https://acme2.test/"}</script>'
+            .'<script type="application/ld+json">{"@type":"Organization","name":"Acme Three","url":"https://acme3.test/"}</script>'
+            .'</body></html>',
+        ),
+        '*' => Http::response('<!doctype html><html lang="en"><body><p>A real company page.</p></body></html>'),
+    ]);
+
+    $run = discover($targetProfile, ['max_queries' => 10]);
+
+    expect($run->tasks()->where('kind', DiscoveryTaskKind::Reflect)->count())->toBe(1)
+        ->and($run->productiveHosts()->keys()->all())->toBe(['producthunt.test']);
+
+    DiscoveryPlanner::assertPrompted(fn (AgentPrompt $prompt): bool => str_contains(
+        (string) $prompt->prompt,
+        'producthunt.test: 3 qualified so far this run',
+    ));
+});
+
+it('keeps a Reddit mention with no confirmed link as evidence, through the real Triage step', function () {
+    // The real thing this guards: `reddit.com` is a LOCKED `other` host
+    // (KnownHostSeeder), and a Reddit candidate's `sourceUrl` always points
+    // at a reddit.com permalink. Triage used to classify by `sourceUrl` first,
+    // which would have silently dropped every Reddit candidate, resolved
+    // link or not, the moment this ran through the real pipeline instead of
+    // RedditSource in isolation.
+    $this->seed(KnownHostSeeder::class);
+
+    $targetProfile = discoveryProfile();
+
+    DiscoveryPlanner::fake([[
+        'plan' => 'One subreddit, aimed at founders talking about their own product.',
+        'overpass_probes' => [],
+        'web_queries' => [],
+        'reddit_probes' => [['subreddit' => 'SaaS', 'query' => 'launched', 'why' => 'Founders posting launches.']],
+    ]]);
+
+    RedditThreadTriage::fake([['items' => [[
+        'permalink' => 'https://www.reddit.com/r/SaaS/comments/abc123/launched_my_saas_today/',
+        'is_candidate' => true,
+        'product_identifier' => 'an AI email tool',
+        'reason' => 'Author says they built an AI email tool, no link given.',
+    ]]]]);
+
+    CompanyQualifier::fake([[
+        'is_a_prospect' => true,
+        'fit_score' => 72,
+        'fit_reason' => 'Author says they built an AI email tool, no link given.',
+        'company_name' => 'an AI email tool',
+        'industry' => 'SaaS',
+        'size' => 'unknown',
+        'location' => 'unknown',
+        'language' => 'en',
+    ]]);
+
+    Http::fake([
+        'arctic-shift.photon-reddit.com/api/posts/search*' => function ($request) {
+            parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+
+            // No link in the thread itself, and none in the author's own
+            // recent posts either: the case that only survives if `evidence`
+            // keeps it past `queueQualifications()`.
+            return Http::response(['data' => (($query['author'] ?? null) !== null) ? [] : [[
+                'title' => 'Launched my SaaS today',
+                'permalink' => '/r/SaaS/comments/abc123/launched_my_saas_today/',
+                'subreddit' => 'SaaS',
+                'author' => 'founder123',
+                'is_self' => true,
+                'selftext' => 'Built an AI email tool, DM me if curious.',
+            ]]]);
+        },
+        'arctic-shift.photon-reddit.com/api/comments/search*' => Http::response(['data' => []]),
+        '*/robots.txt' => Http::response('', 404),
+    ]);
+
+    $run = discover($targetProfile, ['max_queries' => 12]);
+
+    $company = Company::sole();
+
+    expect($run->refresh()->candidates_found)->toBe(1)
+        ->and($company->website)->toBeNull()
+        ->and($company->domain)->toBeNull()
+        ->and($company->facts['evidence'] ?? null)->not->toBeNull();
+});
+
 it('says which ceiling stopped a step, in the numbers the run was given', function () {
     $targetProfile = discoveryProfile();
 
@@ -423,4 +558,20 @@ it('never queues the same company for contacts twice', function () {
     QualifyCandidate::dispatch($task);
 
     Queue::assertPushed(FindCompanyContacts::class, 1);
+});
+
+it('tells the planner to only ever probe a subreddit from the profile\'s own verified list', function () {
+    $agent = new DiscoveryPlanner(
+        Project::factory()->create(),
+        TargetProfile::factory()->make(),
+        maxProbes: 10,
+        guidance: null,
+        isPivot: false,
+        history: new Collection,
+        productiveHosts: new Collection,
+    );
+
+    expect((string) $agent->instructions())
+        ->toContain('Only ever probe a name from THAT list')
+        ->toContain('never asked to name a subreddit from memory');
 });

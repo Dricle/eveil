@@ -51,6 +51,7 @@ class DiscoveryTaskResource extends JsonResource
             DiscoveryTaskKind::Harvest => (string) ($payload['host'] ?? ''),
             DiscoveryTaskKind::Qualify => (string) ($payload['domain'] ?? $payload['name'] ?? ''),
             DiscoveryTaskKind::Classify => (string) ($payload['url'] ?? ''),
+            DiscoveryTaskKind::Reflect => 'Focused follow-up on what worked',
         };
     }
 }

@@ -6,6 +6,15 @@ use App\Enums\TargetProfileType;
 use App\Models\AgentRun;
 use App\Models\Project;
 use App\Models\TargetProfile;
+use Illuminate\Http\Client\Factory;
+use Illuminate\Support\Facades\Http;
+
+beforeEach(function () {
+    // `DeriveTargetProfiles` resolves subreddits for every profile it stores
+    // (`FindSubreddits`) - empty by default here so tests that do not care
+    // about Reddit never make a real network call.
+    Http::fake(['arctic-shift.photon-reddit.com/*' => Http::response(['data' => []])]);
+});
 
 function profile(string $name): array
 {
@@ -184,4 +193,28 @@ it('derives partner profiles alongside customers, with the angles the email will
         ->and($partner->criteria)->not->toHaveKey('type')
         ->and($partner->criteria['access_angle'])->toBe('Their reps deliver to 3,000 friteries every week.')
         ->and($partner->criteria['partnership_angle'])->toBe('A revenue share on every restaurant that signs up.');
+});
+
+it('resolves real subreddits for a derived profile, once, at creation time', function () {
+    projectWithKnowledgeBase();
+
+    Http::swap(new Factory);
+    Http::fake([
+        'arctic-shift.photon-reddit.com/*' => Http::response(['data' => [
+            ['display_name' => 'SaaS', 'subscribers' => 200_000, 'public_description' => 'For SaaS founders.', 'over18' => false, 'quarantine' => false],
+        ]]),
+    ]);
+
+    TargetProfileDeriver::fake([['profiles' => [[
+        ...profile('Friteries wallonnes'),
+        'subreddit_topics' => ['saas'],
+    ]]]]);
+
+    $this->artisan('eveil:derive-targets')->assertSuccessful();
+
+    $stored = TargetProfile::sole()->criteria['subreddits'];
+
+    expect($stored)->toHaveCount(1)
+        ->and($stored[0]['name'])->toBe('SaaS')
+        ->and($stored[0]['subscribers'])->toBe(200_000);
 });

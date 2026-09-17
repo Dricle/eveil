@@ -8,6 +8,7 @@ use App\Models\DiscoveryTask;
 use App\Services\Discovery\Sources\DegoogSearchSource;
 use App\Services\Discovery\Sources\DiscoverySourceInterface;
 use App\Services\Discovery\Sources\OverpassSource;
+use App\Services\Discovery\Sources\RedditSource;
 use App\Services\Discovery\Sources\RegistrySource;
 use App\Services\Discovery\Sources\WebSearchSource;
 use App\Services\Discovery\Triage;
@@ -59,6 +60,7 @@ class RunProbe extends DiscoveryJob
             'overpass' => app(OverpassSource::class),
             'degoog' => app(DegoogSearchSource::class),
             'registry' => app(RegistrySource::class),
+            'reddit' => app(RedditSource::class),
             default => app(WebSearchSource::class),
         };
     }

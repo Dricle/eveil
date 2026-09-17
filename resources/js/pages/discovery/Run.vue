@@ -29,7 +29,8 @@ const KINDS = {
     probe: { icon: 'i-lucide-search', label: 'Search' },
     harvest: { icon: 'i-lucide-list', label: 'Directory' },
     qualify: { icon: 'i-lucide-building-2', label: 'Company' },
-    classify: { icon: 'i-lucide-link', label: 'Link' }
+    classify: { icon: 'i-lucide-link', label: 'Link' },
+    reflect: { icon: 'i-lucide-sparkles', label: 'Focus' }
 }
 
 const STATUS = {

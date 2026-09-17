@@ -450,6 +450,16 @@ function findContacts (company: Company) {
                             v-else-if="company.domain"
                             class="min-w-0 truncate font-mono text-xs text-dimmed"
                         >{{ company.domain }}</span>
+                        <!-- No site of its own: the source is the only place
+                             to go check this one out, e.g. a registry record
+                             or a Reddit thread with no confirmed link yet. -->
+                        <ULink
+                            v-else-if="company.source_url"
+                            :href="company.source_url"
+                            target="_blank"
+                            rel="noopener"
+                            class="min-w-0 truncate font-mono text-xs text-dimmed"
+                        >View source</ULink>
 
                         <span
                             v-if="company.fit_score !== null"

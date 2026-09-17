@@ -20,21 +20,37 @@ debt - acceptable as an intermediate step, never as the end state. The primary p
 paste-URL → watch → approve, not a campaign builder; the step builder is the escape
 hatch, not the home screen.
 
-**Category anchor**: the open-source alternative to lemlist. Multichannel outreach
-sequencer with AI personalisation, deliverability, and a unified inbox - not a data
-provider, not a CRM, not marketing automation. The whole category (lemlist, Instantly,
-Smartlead, Saleshandy, Reply.io) is proprietary SaaS billed per seat and per mailbox,
-with prospect data hosted by the vendor. Self-hosting unlocks: unlimited mailboxes at no
-cost (exactly what Instantly/Smartlead charge for), data sovereignty, no per-seat
-billing (organizations and multi-user live in core, not behind cloud), zero-config
-targeting derived from the product URL, and end-to-end shared context (discovery,
-qualification and personalisation all read the same knowledge base).
+**Category anchor**: organic, automated AI marketing for a founder or small team with no
+growth headcount to spare - not a data provider, not a CRM, and not a paid-ads platform
+on its own. Eveil finds real companies itself, from the product's own site and repo,
+never a purchased list, and turns that into outbound across the channels a small team
+cannot staff for manually. Three pillars, built in this order:
+- **Cold email** (shipped end to end): discovery, qualification, contact-finding,
+  verified sending from the user's own mailbox, reply handling.
+- **Content** (LinkedIn shipped, more platforms planned): agent-drafted posts on the
+  founder's own profile, approval workflow.
+- **Ad management** (roadmap): the same knowledge base and target profiles driving paid
+  channels.
 
-[Linki](https://github.com/moaljumaa/linki) already claims "open source lemlist
-alternative" - cite it honestly rather than claiming the slot is empty, but it evaluates
-poorly (LinkedIn-first, manual targeting, effectively a lead-gen funnel for managed
-hosting). The slot is claimed, not occupied. Eveil's defensible claim: *"the only one
-that's email-first and derives targeting from the product."*
+"Organic" describes how the first two pillars find and reach people - never a purchased
+list, never rented data - not a claim that ad spend itself is organic; ad management is a
+paid channel built on the same engine, added deliberately rather than pretended away.
+
+No single competitor spans all three: lemlist/Instantly/Smartlead cover cold email,
+Linki/Taplio/AuthoredUp cover LinkedIn content, and none of them derive targeting from
+the product URL the way Eveil does. That combination, not any one pillar, is the
+defensible slot - state it as such rather than borrowing one competitor's category.
+
+Self-hosting unlocks: unlimited mailboxes at no cost (exactly what Instantly/Smartlead
+charge for), data sovereignty, no per-seat billing (organizations and multi-user live in
+core, not behind cloud), zero-config targeting derived from the product URL, and
+end-to-end shared context (discovery, qualification, content and personalisation all read
+the same knowledge base).
+
+[Linki](https://github.com/moaljumaa/linki) claims "open source lemlist alternative" and
+is LinkedIn-first - cite it honestly as covering the content pillar specifically
+(manual targeting, effectively a lead-gen funnel for managed hosting), not the whole
+product.
 
 **Personas**: solo-founder technical (self-hosted, wants operational in 15 minutes, no
 third-party API key to sign up for), small growth team (cloud, wants multi-user and

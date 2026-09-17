@@ -44,6 +44,11 @@ class DiscoveryPlanner extends EveilAgent implements HasStructuredOutput
      *                                                  eager-loaded - what the planner
      *                                                  reads to avoid repeating ground
      *                                                  already covered
+     * @param  Collection<string, array{qualified: int, avg_fit: float}>  $productiveHosts  hosts THIS run already
+     *                                                                                      found unusually productive partway through
+     *                                                                                      (`DiscoveryRun::productiveHosts()`), told so the model
+     *                                                                                      deepens them before opening a new area - empty on every
+     *                                                                                      call except a `ReflectAndExpand` one
      */
     public function __construct(
         Project $project,
@@ -52,6 +57,7 @@ class DiscoveryPlanner extends EveilAgent implements HasStructuredOutput
         private ?string $guidance,
         private bool $isPivot,
         private Collection $history,
+        private Collection $productiveHosts,
     ) {
         parent::__construct($project);
     }
@@ -59,7 +65,7 @@ class DiscoveryPlanner extends EveilAgent implements HasStructuredOutput
     public function instructions(): Stringable|string
     {
         return <<<'PROMPT'
-        You plan where to hunt for companies matching a target profile. You have three
+        You plan where to hunt for companies matching a target profile. You have four
         sources and they are good at different things.
 
         Decide the geographic scope from the profile itself, before anything else.
@@ -107,6 +113,19 @@ class DiscoveryPlanner extends EveilAgent implements HasStructuredOutput
         market's own language, and aim them at the companies themselves rather than at
         directories. A query that mostly returns Tripadvisor or Yellow Pages is wasted.
 
+        Reddit (through Arctic Shift, a public mirror of Reddit's search) finds people
+        publicly launching or discussing a product inside one specific community - the
+        exact moment a founder is still choosing tooling and easiest to reach. You are
+        never asked to name a subreddit from memory: when the profile has already been
+        resolved against real Reddit data, its own criteria carries a `subreddits` list -
+        real, currently-existing communities, verified mechanically before you ever saw
+        them. Only ever probe a name from THAT list. An empty list is a real answer (no
+        real community fits this profile) and means skip Reddit entirely this run, not
+        invent one - the same discipline as never guessing a company that was not
+        actually found. When the profile carries no `subreddits` key at all (it predates
+        this and was never resolved), you may name one well-known community you are
+        genuinely confident exists as a stopgap, but prefer every other source first.
+
         Official business registries (KBO/BCE in Belgium, SIRENE in France, Companies
         House in the UK, and similar registers across most of Europe plus a handful of
         other countries) enumerate every legally registered company, free and with no
@@ -127,14 +146,15 @@ class DiscoveryPlanner extends EveilAgent implements HasStructuredOutput
         helps. Using every source when only one fits spends the operator's budget on
         noise.
 
-        You are told how many probes this run may make. Map probes, web queries and
-        registry probes are all counted together against that one number, and anything
-        past it will not run, so planning eighty probes for a run that allows twelve does
-        not search harder, it just leaves sixty-eight lines nobody executes. Each web
-        query runs against two search sources and so counts DOUBLE against that number -
-        a map probe and a registry probe each count once. Plan up to the number given and
-        spend it on the areas and queries most likely to produce, in the order you would
-        want them run: the first ones are the ones that will actually happen.
+        You are told how many probes this run may make. Map probes, web queries, Reddit
+        probes and registry probes are all counted together against that one number, and
+        anything past it will not run, so planning eighty probes for a run that allows
+        twelve does not search harder, it just leaves sixty-eight lines nobody executes.
+        Each web query runs against two search sources and so counts DOUBLE against that
+        number - a map probe, a Reddit probe and a registry probe each count once. Plan
+        up to the number given and spend it on the areas and queries most likely to
+        produce, in the order you would want them run: the first ones are the ones that
+        will actually happen.
 
         You may be shown what earlier runs for this same profile already tried and what
         each one found. Read it as a record of ground already covered, not a template:
@@ -185,6 +205,12 @@ class DiscoveryPlanner extends EveilAgent implements HasStructuredOutput
                 'jurisdiction' => $schema->string()->description('ISO 3166-1 alpha-2 code, or a regional variant like CA-BC.')->required(),
                 'why' => $schema->string()->description('What this probe is expected to surface.')->required(),
             ]))->description('Empty unless a legal-entity registry search genuinely fits the profile.')->required(),
+
+            'reddit_probes' => $schema->array()->items($schema->object([
+                'subreddit' => $schema->string()->description('The community name only, no "r/" prefix.')->required(),
+                'query' => $schema->string()->description('Optional keywords to narrow the search within the subreddit.')->required(),
+                'why' => $schema->string()->description('What this probe is expected to surface.')->required(),
+            ]))->description('Empty unless a real, well-known subreddit genuinely fits the profile.')->required(),
         ];
     }
 
@@ -210,10 +236,34 @@ class DiscoveryPlanner extends EveilAgent implements HasStructuredOutput
                 JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
             )
             .$this->historyText()
+            .$this->productiveHostsText()
             .($this->guidance === null || $this->guidance === '' ? '' : "\n\nThe user asked specifically, for this run only: {$this->guidance}")
             .($this->isPivot ? "\n\nThe first attempt in THIS run just found nothing at all worth qualifying. "
                 .'Reach for a genuinely different source or approach with the probes left below - not a '
                 .'variation on what was just tried, that source or angle did not work.' : '');
+    }
+
+    /**
+     * A host THIS run already found unusually productive partway through -
+     * several well-scoring companies off the same host, which usually means
+     * it behaves like a directory whether or not it was searched as one.
+     * Worth deepening before opening a new area: a founder-tools profile
+     * stumbling onto Product Hunt while searching something else should not
+     * treat it as one more result and move on.
+     */
+    private function productiveHostsText(): string
+    {
+        if ($this->productiveHosts->isEmpty()) {
+            return '';
+        }
+
+        $lines = $this->productiveHosts
+            ->map(fn (array $stats, string $host): string => "- {$host}: {$stats['qualified']} qualified so far this run, average fit {$stats['avg_fit']}")
+            ->implode("\n");
+
+        return "\n\nThis run already found these hosts unusually productive partway through. Spend the probes "
+            .'below deepening them first - other pages, categories or listings on the SAME host - before '
+            ."opening a new area:\n{$lines}";
     }
 
     /**
@@ -279,6 +329,8 @@ class DiscoveryPlanner extends EveilAgent implements HasStructuredOutput
             'degoog' => 'web (degoog): "'.($payload['probe']['query'] ?? '').'"',
             'registry' => 'registry: "'.($payload['probe']['query'] ?? '').'" ('
                 .($payload['probe']['jurisdiction'] ?? '?').')',
+            'reddit' => 'reddit: r/'.($payload['probe']['subreddit'] ?? '?')
+                .(($payload['probe']['query'] ?? '') === '' ? '' : ' "'.$payload['probe']['query'].'"'),
             default => null,
         };
     }
@@ -297,6 +349,7 @@ class DiscoveryPlanner extends EveilAgent implements HasStructuredOutput
         $overpass = [];
         $web = [];
         $registry = [];
+        $reddit = [];
 
         foreach ($plan['overpass_probes'] ?? [] as $probe) {
             $tags = [];
@@ -338,9 +391,16 @@ class DiscoveryPlanner extends EveilAgent implements HasStructuredOutput
             ]];
         }
 
+        foreach ($plan['reddit_probes'] ?? [] as $probe) {
+            $reddit[] = ['source' => 'reddit', 'probe' => [
+                'subreddit' => $probe['subreddit'] ?? '',
+                'query' => $probe['query'] ?? '',
+            ]];
+        }
+
         $probes = [];
 
-        $rounds = max(count($overpass), count($plan['web_queries'] ?? []), count($registry));
+        $rounds = max(count($overpass), count($plan['web_queries'] ?? []), count($registry), count($reddit));
 
         for ($i = 0; $i < $rounds; $i++) {
             $probes = array_merge($probes, array_filter([
@@ -348,6 +408,7 @@ class DiscoveryPlanner extends EveilAgent implements HasStructuredOutput
                 $web[$i * 2] ?? null,
                 $web[$i * 2 + 1] ?? null,
                 $registry[$i] ?? null,
+                $reddit[$i] ?? null,
             ]));
         }
 

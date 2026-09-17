@@ -7,6 +7,7 @@ use App\Jobs\Discovery\DiscoveryJob;
 use App\Jobs\Discovery\HarvestListing;
 use App\Jobs\Discovery\PlanDiscovery;
 use App\Jobs\Discovery\QualifyCandidate;
+use App\Jobs\Discovery\ReflectAndExpand;
 use App\Jobs\Discovery\RunProbe;
 
 /**
@@ -30,6 +31,9 @@ enum DiscoveryTaskKind: string
     /** One user-submitted URL, sorted into a company site or a directory. One model call. */
     case Classify = 'classify';
 
+    /** Mid-run: a host that produced several well-scoring companies gets one focused follow-up wave. One model call. */
+    case Reflect = 'reflect';
+
     /**
      * What runs this node: which is also what a replay dispatches, since the
      * row already carries everything the job needs to start again.
@@ -44,6 +48,7 @@ enum DiscoveryTaskKind: string
             self::Harvest => HarvestListing::class,
             self::Qualify => QualifyCandidate::class,
             self::Classify => ClassifyLink::class,
+            self::Reflect => ReflectAndExpand::class,
         };
     }
 }

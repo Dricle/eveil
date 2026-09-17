@@ -15,6 +15,7 @@ use App\Models\EmailAccount;
 use App\Models\LinkedinPost;
 use App\Models\Project;
 use App\Models\TargetProfile;
+use App\Models\User;
 use App\Support\CurrentProject;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\ResourceCollection;
@@ -66,8 +67,8 @@ class HandleInertiaRequests extends Middleware
             // Closures, not values: this middleware is in the `web` group and
             // so runs BEFORE the route middleware that picks the project.
             // Resolving here would read the project as it was one request ago.
-            'currentProject' => function () {
-                $project = app(CurrentProject::class)->get();
+            'currentProject' => function () use ($user) {
+                $project = $this->resolvedProject($user);
 
                 return $project === null ? null : ProjectResource::make($project);
             },
@@ -87,7 +88,7 @@ class HandleInertiaRequests extends Middleware
             // above: the route middleware that picks it has not run yet here.
             // Absent on self-hosted and while no project is selected, so a page
             // can tell "not cloud" from "cloud, zero credits".
-            'wallet' => fn (): ?array => $this->currentWallet(),
+            'wallet' => fn (): ?array => $this->currentWallet($user),
             // A URL rather than a flag: with sign-ups closed the route is not
             // registered at all, so neither Wayfinder nor `route()` can name
             // it and pages have nothing to link to.
@@ -99,18 +100,45 @@ class HandleInertiaRequests extends Middleware
             // screen rather than discovered when a run dies in the queue an hour
             // later. A closure for the same reason as the project above: the
             // route middleware that picks it has not run yet.
-            'setup' => fn (): array => $this->missingSetup($request),
+            'setup' => fn (): array => $this->missingSetup($user),
             // The badge on each sidebar entry: on every page, not just the
             // section it names, because the sidebar itself is on every page.
             // A closure for the same reason as `currentProject` above: the
             // route middleware that picks the project has not run yet here.
-            'navCounts' => fn (): ?array => $this->navCounts(),
+            'navCounts' => fn (): ?array => $this->navCounts($user),
             // What the chat panel polls for while a discovery run it (or
             // anything else) triggered is still going: a closure for the
             // same reason as `currentProject` above, and `usePoll`'d the
             // same way every other in-flight job already is in this app.
-            'chatJobs' => fn (): ?array => $this->chatJobs(),
+            'chatJobs' => fn (): ?array => $this->chatJobs($user),
         ];
+    }
+
+    /**
+     * `CurrentProject` is only ever set inside `{project:slug}` (`project.set`
+     * only runs there) - deliberately not on `account/*` or `app-settings/*`,
+     * which a projectless user can still reach. But a user who DOES have a
+     * project should not lose the sidebar, its badges, the credits chip or
+     * the setup warnings just because they clicked into Account: every prop
+     * below reads THIS instead of the singleton directly, so all of them stay
+     * in step with what the sidebar itself is showing. Display-only - never
+     * the query-scoping `CurrentProject` singleton, and it never overrides
+     * what a route inside `{project:slug}` already resolved, since that path
+     * always short-circuits here first. Same "last visited, else first
+     * visible" fallback as `AppHomeController`.
+     */
+    private function resolvedProject(?User $user): ?Project
+    {
+        $project = app(CurrentProject::class)->get();
+
+        if ($project !== null || $user === null) {
+            return $project;
+        }
+
+        $hint = (int) session('current_project_id');
+
+        return Project::visibleTo($user)->whereKey($hint)->first()
+            ?? Project::visibleTo($user)->orderBy('name')->first();
     }
 
     /**
@@ -118,15 +146,24 @@ class HandleInertiaRequests extends Middleware
      *                                                                         null while no project is selected, so the sidebar shows no
      *                                                                         badge rather than one for the wrong project
      */
-    private function navCounts(): ?array
+    private function navCounts(?User $user): ?array
     {
-        $project = app(CurrentProject::class);
+        $project = $this->resolvedProject($user);
 
-        if (! $project->isSet()) {
+        if ($project === null) {
             return null;
         }
 
-        return [
+        // These are plain unscoped queries (`TargetProfile::query()->count()`,
+        // not `$project->targetProfiles()->count()`) that only come out right
+        // because `BelongsToProject`'s global scope is active - which needs
+        // `CurrentProject` to actually BE set, not just resolved for display.
+        // On `account/*`/`app-settings/*` the singleton is genuinely unset
+        // (`project.set` never runs there), so counting without this would
+        // silently sum every project on the instance instead of just this
+        // one. `CurrentProject::run()` is the same scoped-and-restored
+        // pattern jobs and console commands already use for exactly this.
+        return app(CurrentProject::class)->run($project, fn (): array => [
             'targets' => TargetProfile::query()->count(),
             'leads' => Company::query()->contactable()->count(),
             // Todos, not a running total of everyone who ever replied: the
@@ -137,7 +174,7 @@ class HandleInertiaRequests extends Middleware
             // Same reasoning as inbox: drafts awaiting a decision, not a
             // running total of every post ever drafted.
             'linkedin' => LinkedinPost::query()->where('status', LinkedinPostStatus::Draft)->count(),
-        ];
+        ]);
     }
 
     /**
@@ -153,16 +190,16 @@ class HandleInertiaRequests extends Middleware
      *
      * @return array<int, array{type: string, id: int, status: string}>|null
      */
-    private function chatJobs(): ?array
+    private function chatJobs(?User $user): ?array
     {
-        $project = app(CurrentProject::class);
+        $project = $this->resolvedProject($user);
 
-        if (! $project->isSet()) {
+        if ($project === null) {
             return null;
         }
 
         return DiscoveryRun::query()
-            ->where('project_id', $project->id())
+            ->where('project_id', $project->id)
             ->whereNotIn('status', [
                 DiscoveryRunStatus::Succeeded,
                 DiscoveryRunStatus::Exhausted,
@@ -187,19 +224,19 @@ class HandleInertiaRequests extends Middleware
      *
      * @return array{balance: int, auto_topup_threshold: int|null}|null
      */
-    private function currentWallet(): ?array
+    private function currentWallet(?User $user): ?array
     {
         if (config('eveil.edition') !== 'cloud') {
             return null;
         }
 
-        $project = app(CurrentProject::class);
+        $project = $this->resolvedProject($user);
 
-        if (! $project->isSet()) {
+        if ($project === null) {
             return null;
         }
 
-        $organization = $project->organization();
+        $organization = $project->organization;
 
         return [
             'balance' => $organization->credits_balance,
@@ -222,10 +259,9 @@ class HandleInertiaRequests extends Middleware
      *
      * @return array{provider: bool, mailbox: bool, broken: array<int, array{id: int, email: string, status: string, error: string|null}>}
      */
-    private function missingSetup(Request $request): array
+    private function missingSetup(?User $user): array
     {
-        $user = $request->user();
-        $project = app(CurrentProject::class)->get();
+        $project = $this->resolvedProject($user);
 
         if ($user === null) {
             return ['provider' => false, 'mailbox' => false, 'broken' => []];

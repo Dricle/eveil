@@ -4,6 +4,7 @@ use App\Enums\AutonomyLevel;
 use App\Jobs\AnalyzeProject;
 use App\Models\Organization;
 use App\Models\Project;
+use App\Models\TargetProfile;
 use App\Models\User;
 use App\Support\Settings;
 use Illuminate\Support\Facades\Http;
@@ -179,6 +180,35 @@ it('updates the "last visited" session hint from ordinary navigation, with no sw
 
 it('lets a user with no project still reach their account', function () {
     $this->actingAs(member())->get(route('account.profile'))->assertOk();
+});
+
+it('keeps the sidebar\'s current project on account pages, though the route is outside {project:slug}', function () {
+    $user = member();
+    $project = Project::factory()->for($user->organizations()->sole())->create();
+
+    // `project.set` never runs on `account.*` - deliberately, a projectless
+    // user still has an account - but a user who DOES have one must not lose
+    // the sidebar's project switcher just because they clicked into Account.
+    $this->actingAs($user)->get(route('account.profile'))
+        ->assertInertia(fn ($page) => $page->where('currentProject.id', $project->id));
+});
+
+it('scopes the sidebar badge counts to the displayed project on account pages, not every project', function () {
+    $user = member();
+    $organization = $user->organizations()->sole();
+    $own = Project::factory()->for($organization)->create(['name' => 'Aaa']);
+    $other = Project::factory()->for($organization)->create(['name' => 'Bbb']);
+
+    TargetProfile::factory()->for($own)->create();
+    TargetProfile::factory()->count(3)->for($other)->create();
+
+    // `navCounts()` runs plain unscoped queries that only come out right
+    // while `CurrentProject` is actually set (`BelongsToProject`'s global
+    // scope) - `HandleInertiaRequests::resolvedProject()` resolving a
+    // project for DISPLAY on `account.*` must not leave those queries
+    // unscoped, or this would read 4 (both projects) instead of 1.
+    $this->actingAs($user)->get(route('account.profile'))
+        ->assertInertia(fn ($page) => $page->where('navCounts.targets', 1));
 });
 
 it('sets how much the project does on its own', function () {

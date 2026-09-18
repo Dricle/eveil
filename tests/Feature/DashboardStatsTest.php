@@ -1,9 +1,14 @@
 <?php
 
 use App\Cloud\Models\CreditTransaction;
+use App\Enums\DiscoveryRunStatus;
+use App\Enums\DiscoveryTaskKind;
+use App\Enums\DiscoveryTaskStatus;
 use App\Enums\MessageDirection;
 use App\Models\AgentRun;
 use App\Models\Company;
+use App\Models\DiscoveryRun;
+use App\Models\DiscoveryTask;
 use App\Models\Lead;
 use App\Models\Message;
 use App\Models\Organization;
@@ -134,4 +139,29 @@ it('never counts another project\'s mail in sent, replies or the reply feed', fu
             ->where('stats.replies', 1)
             ->has('latestReplies', 1)
             ->where('latestReplies.0.lead.name', 'Marcel Dupont'));
+});
+
+it('summarizes a running discovery run into its three stages', function () {
+    [, $project, $user] = dashboardUser();
+
+    $run = DiscoveryRun::factory()->for($project)->create(['status' => DiscoveryRunStatus::Running]);
+
+    // One kind per stage bucket (`SummarizeRunningDiscovery::STAGES`), so
+    // `$counts->only(...)` below actually has more than one group to pick
+    // from - the collapsed single-group case would not have caught the
+    // `groupBy('kind')` bug this test guards against.
+    DiscoveryTask::factory()->for($project)->for($run, 'discoveryRun')->create([
+        'kind' => DiscoveryTaskKind::Plan,
+        'status' => DiscoveryTaskStatus::Succeeded,
+    ]);
+    DiscoveryTask::factory()->for($project)->for($run, 'discoveryRun')->create([
+        'kind' => DiscoveryTaskKind::Probe,
+        'status' => DiscoveryTaskStatus::Running,
+    ]);
+
+    $this->actingAs($user)->get(route('dashboard'))
+        ->assertInertia(fn ($page) => $page
+            ->where('runningDiscoveryRun.id', $run->id)
+            ->where('runningDiscoveryRun.stages.0.state', 'done')
+            ->where('runningDiscoveryRun.stages.1.state', 'running'));
 });

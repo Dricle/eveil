@@ -53,10 +53,17 @@ class SummarizeRunningDiscovery
             'Qualifying' => [DiscoveryTaskKind::Qualify],
         ];
 
+        // `->toBase()` before grouping: `get()` returns an Eloquent
+        // Collection, so `groupBy('kind')` on it would produce another
+        // Eloquent Collection whose items are plain Collections (the
+        // groups), not models - then `only()` below tries `getKey()` on
+        // each and blows up. Plain Collection first, then group/only stay
+        // array-keyed.
         $counts = $run->tasks()
             ->selectRaw('kind, status, count(*) as total')
             ->groupBy('kind', 'status')
             ->get()
+            ->toBase()
             ->groupBy('kind');
 
         return [

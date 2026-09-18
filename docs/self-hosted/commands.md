@@ -18,6 +18,8 @@ The scheduler (part of the `app` container, under supervisord) already runs thes
 | `eveil:write-missing` | hourly | Writes a sequence for every segment that has none, on autonomous projects. |
 | `eveil:discover-due` | every 6 hours | Starts the next discovery run for every target profile ready for one. |
 | `eveil:promote-proven-emails` | daily | Adds any campaign step that's earned it to the shared examples bank. |
+| `eveil:reddit-scan-due` | daily | Scans every project's tracked subreddits and buyer-intent search results for reply opportunities, on the cadence set from the Reddit page. |
+| `eveil:reddit-fetch-stats` | daily | Checks the real score on any self-reported-posted Reddit reply, and promotes it to the shared examples bank once it crosses the threshold. Needs the `flaresolverr` compose profile running — see [Configuration](configuration.md). |
 
 ## Run by hand
 

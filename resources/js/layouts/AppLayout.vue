@@ -10,6 +10,7 @@ import { dashboard, inbox, logout } from '@/routes'
 import campaigns from '@/routes/campaigns'
 import companies from '@/routes/companies'
 import linkedinPosts from '@/routes/linkedin/posts'
+import redditReplies from '@/routes/reddit/replies'
 import { profile } from '@/routes/account'
 import appSettings from '@/routes/app-settings/provider'
 import { create as createProject } from '@/routes/projects'
@@ -121,6 +122,20 @@ const items = computed<NavigationMenuItem[]>(() => {
             active: page.url.startsWith(`/app/${project.slug}/linkedin`),
             badge: navCounts.value?.linkedin
                 ? { label: navCounts.value.linkedin, color: 'primary', variant: 'solid' }
+                : undefined
+        },
+
+        {
+            label: 'Reddit',
+            // Same reasoning as LinkedIn above: rereads on its own schedule
+            // (the scan cadence), new drafts appear on their own - the one
+            // kind of screen that earns a top-level nav entry rather than a
+            // tab inside Settings.
+            icon: 'i-lucide-message-square',
+            to: relativeUrl(redditReplies.index.url({ project: project.slug })),
+            active: page.url.startsWith(`/app/${project.slug}/reddit`),
+            badge: navCounts.value?.reddit
+                ? { label: navCounts.value.reddit, color: 'primary', variant: 'solid' }
                 : undefined
         },
 

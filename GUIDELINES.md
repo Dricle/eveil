@@ -79,9 +79,12 @@ by role puts unrelated jobs on one settings/pricing line):
   suggestions as a free by-product of the same call. Not an SEO audit tool.
 - **Sales**: knowledge base + target profile → qualified companies, verified contacts,
   outreach sequences, handled replies.
-- **Inbound** (later): target profile + knowledge base → anchored channel opportunities
-  (Reddit, articles, X/Bluesky, LinkedIn), published per the autonomy setting; companies
-  crossed along the way feed back into discovery.
+- **Inbound** (Reddit shipped, articles/X/Bluesky/LinkedIn later): target profile +
+  knowledge base → anchored channel opportunities, drafted for review; companies crossed
+  along the way feed back into discovery. Reddit shipped in a more conservative shape
+  than "published per the autonomy setting" implies: always draft-and-copy, never an
+  autonomous publish, since there is no API path at all right now, not merely an
+  autonomy-level choice.
 
 A target profile can target a *customer* or a *partner* - whoever already touches the
 customer (an accountant serving 50 restaurants is a partner profile with far better
@@ -362,13 +365,19 @@ detection → auto-pause → unified inbox) and the "cloud edition" backbone (or
 roles, invitations, per-project access, pay-as-you-go billing) are both built. What's
 still ahead, tracked as [GitHub Issues](https://github.com/Dricle/eveil/issues):
 
-- The **inbound half**: agents publishing to Reddit, SEO articles, X/Bluesky, LinkedIn -
+- The **inbound half**: agents publishing to SEO articles, X/Bluesky, LinkedIn -
   driven by the target profile, not a content calendar (that's the one thing no
-  competitor doing "AI CMO" content generation can copy). Blocked until the outbound
-  loop above is airtight: inbound is the *cheap* half of the problem (an LLM drafts, a
-  human publishes - no deliverability, no address verification, no IMAP, no consequence
-  for a mediocre draft), and shipping it before outbound would produce a worse clone of
-  an existing competitor that additionally can't send an email.
+  competitor doing "AI CMO" content generation can copy). The Reddit slice of this
+  shipped first, exactly in the shape this section anticipated: an LLM drafts (both
+  live subreddit threads and evergreen "best X" search results, tagged by target
+  profile), a human copies and publishes - no OAuth needed for that shape at all, which
+  turned out to matter directly: Reddit is currently blocking new API app registration,
+  so the alternative (agents publishing outbound) is not even available right now.
+  Everything else here stays blocked until the outbound loop above is airtight, same
+  reasoning as before: inbound is otherwise the *cheap* half of the problem (no
+  deliverability, no address verification, no IMAP, no consequence for a mediocre
+  draft), and shipping it before outbound would produce a worse clone of an existing
+  competitor that additionally can't send an email.
 - LinkedIn outbound (its own container, real anti-detection cost - a product in itself).
 - A public API, an MCP server, CRM webhooks.
 - Third-party lead-provider drivers (Apollo, Hunter), third-party email verification

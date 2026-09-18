@@ -22,6 +22,8 @@ use App\Http\Controllers\AppSettings\LinkedinPostExampleController;
 use App\Http\Controllers\AppSettings\LinkedinStatsCredentialsController;
 use App\Http\Controllers\AppSettings\ProviderController;
 use App\Http\Controllers\AppSettings\ProviderTestController;
+use App\Http\Controllers\AppSettings\RedditReplyExampleController;
+use App\Http\Controllers\AppSettings\RedditReplyExampleThresholdController;
 use App\Http\Controllers\AppSettings\SendingController;
 use App\Http\Controllers\Auth\InvitationController;
 use App\Http\Controllers\Auth\SetupController;
@@ -69,6 +71,8 @@ use App\Http\Controllers\OnboardingSearchController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectKnowledgeBaseController;
+use App\Http\Controllers\RedditCadenceController;
+use App\Http\Controllers\RedditReplyController;
 use App\Http\Controllers\Settings\MemberController;
 use App\Http\Controllers\StepVariantController;
 use App\Http\Controllers\StepVariantGenerationController;
@@ -335,6 +339,33 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
              */
             Route::post('posts/{linkedin_post}/promote', [LinkedinPostController::class, 'promote'])
                 ->name('posts.promote');
+        });
+
+        /*
+         * The queue every drafted reply lands in - one page, since there is
+         * no account to manage separately (Reddit is currently blocking new
+         * OAuth app registration, so this feature has no account at all).
+         * Nothing posts on its own: the user copies the body and posts it
+         * on reddit.com themselves.
+         */
+        Route::prefix('reddit')->name('reddit.')->group(function (): void {
+            Route::get('replies', [RedditReplyController::class, 'index'])->name('replies.index');
+            /*
+             * Literal segment before {reddit_reply} below, same trap as
+             * `linkedin.posts.cadence`.
+             */
+            Route::put('replies/cadence', [RedditCadenceController::class, 'update'])
+                ->name('replies.cadence');
+            Route::post('replies/scan', [RedditReplyController::class, 'scan'])
+                ->name('replies.scan');
+            Route::post('replies/{reddit_reply}/approve', [RedditReplyController::class, 'approve'])
+                ->name('replies.approve');
+            Route::post('replies/{reddit_reply}/reject', [RedditReplyController::class, 'reject'])
+                ->name('replies.reject');
+            Route::delete('replies/{reddit_reply}', [RedditReplyController::class, 'destroy'])
+                ->name('replies.destroy');
+            Route::post('replies/{reddit_reply}/promote', [RedditReplyController::class, 'promote'])
+                ->name('replies.promote');
         });
 
         /*
@@ -618,6 +649,15 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             ->name('linkedin-post-examples.destroy');
         Route::put('linkedin-post-examples/threshold', [LinkedinExampleThresholdController::class, 'update'])
             ->name('linkedin-post-examples.threshold');
+
+        Route::get('reddit-reply-examples', [RedditReplyExampleController::class, 'index'])
+            ->name('reddit-reply-examples.index');
+        Route::post('reddit-reply-examples', [RedditReplyExampleController::class, 'store'])
+            ->name('reddit-reply-examples.store');
+        Route::delete('reddit-reply-examples/{redditReplyExample}', [RedditReplyExampleController::class, 'destroy'])
+            ->name('reddit-reply-examples.destroy');
+        Route::put('reddit-reply-examples/threshold', [RedditReplyExampleThresholdController::class, 'update'])
+            ->name('reddit-reply-examples.threshold');
     });
 
     /*

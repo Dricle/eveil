@@ -6,6 +6,7 @@ use App\Casts\EncryptedCredential;
 use App\Enums\AutonomyLevel;
 use App\Enums\LinkedinPostFrequency;
 use App\Enums\OrganizationRole;
+use App\Enums\RedditScanFrequency;
 use App\Models\Concerns\HasSlug;
 use Database\Factories\ProjectFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -39,10 +40,12 @@ use Illuminate\Support\Carbon;
  * @property int|null $lead_limit
  * @property LinkedinPostFrequency $linkedin_post_frequency
  * @property Carbon|null $linkedin_next_post_at
+ * @property RedditScanFrequency $reddit_scan_frequency
+ * @property Carbon|null $reddit_next_scan_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['organization_id', 'name', 'slug', 'url', 'github_token', 'knowledge_base', 'knowledge_base_edited_by_user', 'default_language', 'prompt_instructions', 'linkedin_prompt_instructions', 'autonomy_level', 'daily_lead_limit', 'lead_limit', 'linkedin_post_frequency', 'linkedin_next_post_at'])]
+#[Fillable(['organization_id', 'name', 'slug', 'url', 'github_token', 'knowledge_base', 'knowledge_base_edited_by_user', 'default_language', 'prompt_instructions', 'linkedin_prompt_instructions', 'autonomy_level', 'daily_lead_limit', 'lead_limit', 'linkedin_post_frequency', 'linkedin_next_post_at', 'reddit_scan_frequency', 'reddit_next_scan_at'])]
 #[Hidden(['github_token'])]
 class Project extends Model
 {
@@ -217,6 +220,14 @@ class Project extends Model
     }
 
     /**
+     * @return HasMany<RedditReply, $this>
+     */
+    public function redditReplies(): HasMany
+    {
+        return $this->hasMany(RedditReply::class);
+    }
+
+    /**
      * @return HasMany<AgentRun, $this>
      */
     public function agentRuns(): HasMany
@@ -310,6 +321,8 @@ class Project extends Model
             'github_token' => EncryptedCredential::class,
             'linkedin_post_frequency' => LinkedinPostFrequency::class,
             'linkedin_next_post_at' => 'datetime',
+            'reddit_scan_frequency' => RedditScanFrequency::class,
+            'reddit_next_scan_at' => 'datetime',
         ];
     }
 }

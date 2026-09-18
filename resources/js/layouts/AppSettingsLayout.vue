@@ -11,6 +11,7 @@ import limits from '@/routes/app-settings/limits'
 import linkedin from '@/routes/app-settings/linkedin'
 import linkedinPostExamples from '@/routes/app-settings/linkedin-post-examples'
 import provider from '@/routes/app-settings/provider'
+import redditReplyExamples from '@/routes/app-settings/reddit-reply-examples'
 import sending from '@/routes/app-settings/sending'
 
 defineProps<{
@@ -33,6 +34,7 @@ const items = computed<NavigationMenuItem[]>(() =>
         { label: 'Host registry', icon: 'i-lucide-globe', to: relativeUrl(hosts.index.url()) },
         { label: 'Email examples', icon: 'i-lucide-mail-plus', to: relativeUrl(emailExamples.index.url()) },
         { label: 'LinkedIn post examples', icon: 'i-lucide-thumbs-up', to: relativeUrl(linkedinPostExamples.index.url()) },
+        { label: 'Reddit reply examples', icon: 'i-lucide-thumbs-up', to: relativeUrl(redditReplyExamples.index.url()) },
         // `billing.*` is never read on self-hosted (`.ai/rules/cloud.md`), so
         // the tab itself only exists where the settings would do anything.
         ...(page.props.edition === 'cloud'

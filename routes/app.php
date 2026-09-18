@@ -75,6 +75,7 @@ use App\Http\Controllers\StepVariantGenerationController;
 use App\Http\Controllers\TargetProfileActivationController;
 use App\Http\Controllers\TargetProfileController;
 use App\Http\Controllers\TargetProfileDerivationController;
+use App\Http\Controllers\TargetProfileSubredditsController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -365,6 +366,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
                 ->only(['index', 'create', 'store', 'show', 'update', 'destroy']);
             Route::post('targets/{target}/activation', [TargetProfileActivationController::class, 'store'])
                 ->name('targets.activation');
+            Route::post('targets/{target}/subreddits', [TargetProfileSubredditsController::class, 'store'])
+                ->name('targets.subreddits');
 
             /*
              * One flag stops a run and one dispatch replays a single node,

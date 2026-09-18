@@ -9,6 +9,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Ai/Agents/EveilAgent.php,app/Ai/Agents/LinkedinPostWriter.php,app/Models/Project.php | .ai/rules/agents-models.md |
 | app/Ai/Agents/** | .ai/rules/agents.md |
 | app/Models/DiscoveryRun.php,app/Jobs/Discovery/ReflectAndExpand.php,app/Ai/Agents/DiscoveryPlanner.php | .ai/rules/ai-agents.md |
+| app/Http/Controllers/TargetProfileController.php,app/Http/Controllers/TargetProfileSubredditsController.php,app/Ai/Tools/CreateTargetProfile.php,app/Ai/Tools/UpdateTargetProfile.php | .ai/rules/ai-tools.md |
 | app/Ai/** | .ai/rules/ai.md |
 | app/Ai/**,app/Http/Controllers/AppSettings/** | .ai/rules/app-settings.md |
 | app/Cloud/** | .ai/rules/cloud.md |

@@ -43,6 +43,22 @@ const ANGLES = [
 ] as const
 
 const type = ref(props.profile?.type ?? 'customer')
+const resolvingSubreddits = ref(false)
+const toast = useToast()
+
+function resolveSubreddits (): void {
+    if (!props.profile) {
+        return
+    }
+
+    resolvingSubreddits.value = true
+
+    router.post(targets.subreddits.url({ project: page.props.currentProject!.slug, target: props.profile.id }), {}, {
+        preserveScroll: true,
+        onSuccess: () => toast.add({ title: 'Reddit communities updated', color: 'success' }),
+        onFinish: () => { resolvingSubreddits.value = false }
+    })
+}
 
 // Every field is bound, never left to `default-value`: Nuxt UI reads that prop
 // once at mount, and Vue then patches a form element's value against what the
@@ -303,12 +319,9 @@ watch(() => props.profile, (profile) => {
                     <UFormField
                         v-if="profile"
                         label="Reddit communities"
-                        help="Resolved automatically from the segment above. Re-run with `eveil:find-subreddits` after editing sectors by hand."
+                        help="Looked up from the segment above - never typed by hand, so a wrong name can't slip in unverified."
                     >
-                        <div
-                            v-if="profile.criteria.subreddits?.length"
-                            class="flex flex-wrap gap-2"
-                        >
+                        <div class="flex flex-wrap items-center gap-2">
                             <UButton
                                 v-for="subreddit in profile.criteria.subreddits"
                                 :key="subreddit.name"
@@ -321,13 +334,23 @@ watch(() => props.profile, (profile) => {
                                 icon="i-lucide-message-circle"
                                 :label="`r/${subreddit.name} · ${subreddit.subscribers.toLocaleString()}`"
                             />
+                            <p
+                                v-if="!profile.criteria.subreddits?.length"
+                                class="text-sm text-muted"
+                            >
+                                None resolved yet.
+                            </p>
+                            <UButton
+                                type="button"
+                                variant="ghost"
+                                color="neutral"
+                                size="sm"
+                                icon="i-lucide-refresh-cw"
+                                :loading="resolvingSubreddits"
+                                :label="profile.criteria.subreddits?.length ? 'Re-check' : 'Find subreddits'"
+                                @click="resolveSubreddits"
+                            />
                         </div>
-                        <p
-                            v-else
-                            class="text-sm text-muted"
-                        >
-                            None resolved yet.
-                        </p>
                     </UFormField>
                 </div>
             </UCard>

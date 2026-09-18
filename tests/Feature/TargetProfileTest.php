@@ -10,6 +10,7 @@ use App\Models\Organization;
 use App\Models\Project;
 use App\Models\TargetProfile;
 use App\Models\User;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use RuntimeException;
 
@@ -278,6 +279,13 @@ it('keeps the profiles already derived unless replacing was asked for', function
         ['profiles' => [['name' => 'After the replacement', 'sectors' => ['food wholesale']]]],
     ]);
 
+    // Every stored profile runs through `FindSubreddits` - empty by default
+    // here, this test is about which profiles survive a replace.
+    Http::fake([
+        'arctic-shift.photon-reddit.com/*' => Http::response(['data' => []]),
+        'searxng:8080/*' => Http::response(['results' => []]),
+    ]);
+
     // The test queue is synchronous, so each dispatch runs the job here and now.
     DeriveTargets::dispatch($project, pendingDerivation($project), replace: false);
 
@@ -358,6 +366,11 @@ it('claims the queued run instead of opening a second one', function () {
 
     TargetProfileDeriver::fake([['profiles' => [['name' => 'Regional wholesalers', 'sectors' => ['food wholesale']]]]]);
 
+    Http::fake([
+        'arctic-shift.photon-reddit.com/*' => Http::response(['data' => []]),
+        'searxng:8080/*' => Http::response(['results' => []]),
+    ]);
+
     // The test queue is synchronous, so this runs the job here and now.
     DeriveTargets::dispatch($project, $run);
 
@@ -401,6 +414,48 @@ it('does not let a project pause another project\'s profile', function () {
         ->assertNotFound();
 
     expect($other->fresh()->is_active)->toBeTrue();
+});
+
+it('resolves subreddits by hand for a profile that never got them - the manual form and Evie both skip FindSubreddits at creation', function () {
+    $user = targeter();
+    $project = Project::factory()->for($user->organizations()->sole())->create();
+
+    $profile = TargetProfile::factory()->create([
+        'project_id' => $project->id,
+        'source' => TargetProfileSource::Human,
+        'criteria' => ['sectors' => ['saas'], 'confidence' => 90],
+    ]);
+
+    Http::fake([
+        'arctic-shift.photon-reddit.com/*' => function ($request) {
+            parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+
+            return Http::response(['data' => ($query['subreddit_prefix'] ?? null) === 'saas'
+                ? [['display_name' => 'SaaS', 'subscribers' => 200_000, 'public_description' => '', 'over18' => false, 'quarantine' => false]]
+                : []]);
+        },
+        'searxng:8080/*' => Http::response(['results' => []]),
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('targets.subreddits', $profile))
+        ->assertRedirect();
+
+    expect($profile->refresh()->criteria['subreddits'])->toHaveCount(1)
+        ->and($profile->criteria['subreddits'][0]['name'])->toBe('SaaS');
+});
+
+it('does not let a project resolve subreddits on another project\'s profile', function () {
+    $user = targeter();
+    Project::factory()->for($user->organizations()->sole())->create();
+
+    $other = TargetProfile::factory()->create(['criteria' => ['sectors' => ['saas']]]);
+
+    $this->actingAs($user)
+        ->post(route('targets.subreddits', $other))
+        ->assertNotFound();
+
+    expect($other->fresh()->criteria)->not->toHaveKey('subreddits');
 });
 
 it('keeps the two angles a partner profile is written to on', function () {

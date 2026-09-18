@@ -14,7 +14,7 @@
                 </svg>
                 <span class="font-[Sora,sans-serif] font-semibold text-[17px]">eveil.cloud</span>
             </div>
-            <p class="text-[13.5px] text-[rgba(232,236,242,.5)] max-w-[36ch]">Organic, automated AI marketing. Auto cold email and auto LinkedIn content today, no purchased lists, no ad spend required to start.</p>
+            <p class="text-[13.5px] text-[rgba(232,236,242,.5)] max-w-[36ch]">Organic, automated AI marketing. Auto cold email, auto LinkedIn content, and Reddit reply drafts today, no purchased lists, no ad spend required to start.</p>
         </div>
         <div class="flex flex-col gap-[10px] text-[14px]">
             <div class="font-[Geist_Mono,monospace] text-[10.5px] tracking-[.08em] uppercase text-[rgba(232,236,242,.38)] mb-[2px]">Product</div>

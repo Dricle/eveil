@@ -1,0 +1,101 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Actions\MarkRedditReplyPosted;
+use App\Enums\RedditReplyStatus;
+use App\Http\Requests\RedditReplyApproveRequest;
+use App\Http\Requests\RedditReplyRejectRequest;
+use App\Http\Resources\RedditReplyResource;
+use App\Jobs\ScanRedditOpportunities;
+use App\Models\RedditReply;
+use App\Support\CurrentProject;
+use Illuminate\Http\RedirectResponse;
+use Inertia\Inertia;
+use Inertia\Response;
+
+/**
+ * The queue every drafted reply lands in - one page, since there is no
+ * account to manage separately. Nothing posts on its own: the user copies
+ * the body, posts it on reddit.com themselves, and comes back to mark it
+ * posted. `RedditReply` is project-scoped (`BelongsToProject`), so per
+ * `.ai/rules/controllers.md` it is never route-model-bound: `SubstituteBindings`
+ * runs before `project.set`, so a bound model would be fetched with the
+ * scope not yet applied. Take the id and look it up here instead.
+ */
+class RedditReplyController extends Controller
+{
+    public function index(CurrentProject $currentProject): Response
+    {
+        $project = $currentProject->getOrFail();
+
+        return Inertia::render('reddit/Replies', [
+            'replies' => RedditReplyResource::collection(RedditReply::query()->latest()->get()),
+            'scanFrequency' => $project->reddit_scan_frequency->value,
+        ]);
+    }
+
+    public function scan(CurrentProject $currentProject): RedirectResponse
+    {
+        ScanRedditOpportunities::dispatch($currentProject->getOrFail());
+
+        return to_route('reddit.replies.index')->with('status', 'Scanning for opportunities. New drafts will appear here shortly.');
+    }
+
+    /**
+     * "Mark as posted": the only publish step this feature has, since there
+     * is no API to publish through. Rejects the sibling angles for the same
+     * thread first - only one angle per thread can ever be posted.
+     */
+    public function approve(RedditReplyApproveRequest $request, MarkRedditReplyPosted $mark, int $redditReply): RedirectResponse
+    {
+        $reply = RedditReply::query()->findOrFail($redditReply);
+
+        $reply->sibling()->update([
+            'status' => RedditReplyStatus::Rejected,
+            'rejection_reason' => 'Superseded by another angle.',
+        ]);
+
+        $mark->handle($reply, $request->validated('comment_permalink'));
+
+        return to_route('reddit.replies.index');
+    }
+
+    /**
+     * Keeps the row, with an optional reason - same "reject vs delete"
+     * distinction as `LinkedinPostController::reject()`.
+     */
+    public function reject(RedditReplyRejectRequest $request, int $redditReply): RedirectResponse
+    {
+        RedditReply::query()->findOrFail($redditReply)->update([
+            'status' => RedditReplyStatus::Rejected,
+            'rejection_reason' => $request->validated('reason'),
+        ]);
+
+        return to_route('reddit.replies.index');
+    }
+
+    public function destroy(int $redditReply): RedirectResponse
+    {
+        RedditReply::query()->findOrFail($redditReply)->delete();
+
+        return to_route('reddit.replies.index');
+    }
+
+    /**
+     * Project-scoped only: stamps `promoted_at` so this project's own
+     * future drafts treat it as a proven example. Never touches the shared
+     * instance-wide pool - see `LinkedinPostController::promote()` for the
+     * same reasoning.
+     */
+    public function promote(int $redditReply): RedirectResponse
+    {
+        $reply = RedditReply::query()->findOrFail($redditReply);
+
+        if ($reply->status === RedditReplyStatus::Published && $reply->promoted_at === null) {
+            $reply->update(['promoted_at' => now()]);
+        }
+
+        return to_route('reddit.replies.index');
+    }
+}

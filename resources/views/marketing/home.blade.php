@@ -1,7 +1,7 @@
 @php use Illuminate\Support\Facades\Route; @endphp
 <x-marketing-layout
     :title="config('app.name') . ' - open-source outreach'"
-    description="Give a URL and what you sell. Eveil finds the companies that need it, writes the outreach, and drafts your LinkedIn posts. Open source, self-hostable."
+    description="Give a URL and what you sell. Eveil finds the companies that need it, writes the outreach, drafts your LinkedIn posts, and finds Reddit threads worth replying to. Open source, self-hostable."
 >
     <div class="border-b border-[rgba(232,236,242,.08)] px-4 py-2.5 flex flex-wrap justify-center items-center gap-3 text-[13px] text-[rgba(232,236,242,.72)] text-center">
         <span class="font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[#6fd3ec] border border-[rgba(111,211,236,.35)] rounded-full px-[9px] py-[2px]">Free trial</span>
@@ -18,8 +18,9 @@
                 You don't have time to run marketing.<br>Now you don't need to.</h1>
             <p class="text-[16px] sm:text-[18.5px] leading-[1.6] max-w-[64ch] mx-auto mb-[18px] text-[rgba(232,236,242,.66)] [text-wrap:pretty]">
                 Paste your product URL. Eveil reads the site, works out who buys it, finds those companies and the
-                people at them, writes and sends the outreach from your own mailbox, reads the replies, and drafts
-                LinkedIn posts about what you're building. You approve as much or as little as you want.</p>
+                people at them, writes and sends the outreach from your own mailbox, reads the replies, drafts
+                LinkedIn posts about what you're building, and finds Reddit threads worth replying to. You approve
+                as much or as little as you want.</p>
 
             <p class="text-[14px] sm:text-[15px] leading-[1.6] max-w-[58ch] mx-auto mb-8 sm:mb-10 text-[rgba(232,236,242,.48)] [text-wrap:pretty]">
                 Not a purchased contact list, and not a pool of pre-warmed inboxes sending on your behalf. It
@@ -220,6 +221,16 @@
                     <p class="text-[14.5px] text-[rgba(232,236,242,.6)]">Official API, personal profile.
                         A knowledge-base fact, a client you just won, or relevant industry news, drafted and queued
                         for your approval. No automation of connection requests or messages.</p>
+                </div>
+                <div class="bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-6 pt-[26px] pb-7">
+                    <div class="font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[rgba(232,236,242,.45)] mb-3">
+                        Channels
+                    </div>
+                    <h4 class="font-[Sora,sans-serif] font-semibold text-[20px] tracking-[-.02em] mb-[10px]">
+                        Reddit replies</h4>
+                    <p class="text-[14.5px] text-[rgba(232,236,242,.6)]">Finds live subreddit threads and evergreen
+                        "best X" discussions already ranking on Google, drafts a genuinely useful reply in the
+                        thread's own tone, and queues it for you to copy and post yourself.</p>
                 </div>
                 <div class="bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-6 pt-[26px] pb-7">
                     <div class="font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[rgba(232,236,242,.45)] mb-3">

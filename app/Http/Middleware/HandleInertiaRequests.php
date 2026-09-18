@@ -7,6 +7,7 @@ use App\Ai\ProviderCredentials;
 use App\Enums\DiscoveryRunStatus;
 use App\Enums\EmailAccountStatus;
 use App\Enums\LinkedinPostStatus;
+use App\Enums\RedditReplyStatus;
 use App\Http\Resources\OrganizationResource;
 use App\Http\Resources\ProjectResource;
 use App\Models\Company;
@@ -14,6 +15,7 @@ use App\Models\DiscoveryRun;
 use App\Models\EmailAccount;
 use App\Models\LinkedinPost;
 use App\Models\Project;
+use App\Models\RedditReply;
 use App\Models\TargetProfile;
 use App\Models\User;
 use App\Support\CurrentProject;
@@ -142,9 +144,9 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * @return array{targets: int, leads: int, inbox: int, linkedin: int}|null
-     *                                                                         null while no project is selected, so the sidebar shows no
-     *                                                                         badge rather than one for the wrong project
+     * @return array{targets: int, leads: int, inbox: int, linkedin: int, reddit: int}|null
+     *                                                                                      null while no project is selected, so the sidebar shows no
+     *                                                                                      badge rather than one for the wrong project
      */
     private function navCounts(?User $user): ?array
     {
@@ -174,6 +176,9 @@ class HandleInertiaRequests extends Middleware
             // Same reasoning as inbox: drafts awaiting a decision, not a
             // running total of every post ever drafted.
             'linkedin' => LinkedinPost::query()->where('status', LinkedinPostStatus::Draft)->count(),
+            // Same reasoning: drafts awaiting a decision, not a running
+            // total of every reply ever drafted.
+            'reddit' => RedditReply::query()->where('status', RedditReplyStatus::Draft)->count(),
         ]);
     }
 

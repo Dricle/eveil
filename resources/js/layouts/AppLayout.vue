@@ -10,6 +10,7 @@ import { dashboard, inbox, logout } from '@/routes'
 import campaigns from '@/routes/campaigns'
 import companies from '@/routes/companies'
 import linkedinPosts from '@/routes/linkedin/posts'
+import redditReplies from '@/routes/reddit/replies'
 import { profile } from '@/routes/account'
 import appSettings from '@/routes/app-settings/provider'
 import { create as createProject } from '@/routes/projects'
@@ -111,16 +112,23 @@ const items = computed<NavigationMenuItem[]>(() => {
 
         {
             label: 'LinkedIn',
-            // No brand icon available (only the `lucide` icon set is installed,
-            // and it carries no LinkedIn glyph): a generic one rather than a
-            // broken reference.
-            icon: 'i-lucide-share-2',
+            icon: 'line-md:linkedin',
             to: relativeUrl(linkedinPosts.index.url({ project: project.slug })),
             // Broad on purpose: covers both the posts queue and the account
             // page, same reasoning as Settings' prefix check below.
             active: page.url.startsWith(`/app/${project.slug}/linkedin`),
             badge: navCounts.value?.linkedin
                 ? { label: navCounts.value.linkedin, color: 'primary', variant: 'solid' }
+                : undefined
+        },
+
+        {
+            label: 'Reddit',
+            icon: 'line-md:reddit',
+            to: relativeUrl(redditReplies.index.url({ project: project.slug })),
+            active: page.url.startsWith(`/app/${project.slug}/reddit`),
+            badge: navCounts.value?.reddit
+                ? { label: navCounts.value.reddit, color: 'primary', variant: 'solid' }
                 : undefined
         },
 

@@ -134,22 +134,19 @@ class CompanyQualifier extends EveilAgent implements HasStructuredOutput
      * What we ourselves sell, so "rule out a competitor of the product
      * itself" above has something to check a candidate against - without
      * this the instruction exists but the model has never been told what the
-     * product is. Empty until the project has been analysed.
+     * product is. The full portrait, not just `what_it_does`: positioning
+     * and proof points help tell a genuine competitor from a merely-adjacent
+     * business too. Empty until the project has been analysed.
      */
     private function productContext(): string
     {
-        $knowledgeBase = $this->project->knowledge_base;
+        $portrait = $this->productPortrait();
 
-        if (! is_array($knowledgeBase) || empty($knowledgeBase['what_it_does'])) {
+        if ($portrait === 'Not analyzed yet.') {
             return '';
         }
 
-        $competitors = empty($knowledgeBase['competitors'])
-            ? ''
-            : ' Named competitors: '.implode(', ', $knowledgeBase['competitors']).'.';
-
-        return "What we are selling, so you can recognise a competitor of it:\n"
-            ."{$knowledgeBase['what_it_does']}{$competitors}\n\n";
+        return "What we are selling, so you can recognise a competitor of it:\n{$portrait}\n\n";
     }
 
     /**

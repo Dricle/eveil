@@ -53,6 +53,12 @@ class WebsiteAnalyst extends EveilAgent implements HasStructuredOutput
         product actually does, for whom, and what it replaces. Prefer the words the
         company uses about itself over your own paraphrase.
 
+        Also name the product's category as a buyer would type it into a search engine -
+        "CRM", "invoicing software", "project management tool" - short and generic, never
+        the product's own name or a marketing phrase. This is used to find "best X" and
+        "Y alternative" discussions worth answering, so it has to be the term a stranger
+        actually searches, not how the site brands itself.
+
         You are also given, when it exists, a short digest of what a linked code repository
         actually contains: its tech stack and the capabilities found there. Source code
         often reveals something the site never mentions, or contradicts something it
@@ -89,6 +95,10 @@ class WebsiteAnalyst extends EveilAgent implements HasStructuredOutput
 
             'positioning' => $schema->string()
                 ->description('How it frames itself against the alternatives, including doing nothing.')
+                ->required(),
+
+            'product_category' => $schema->string()
+                ->description('Short, generic category a buyer would search for - "CRM", "invoicing software" - never the product\'s own name.')
                 ->required(),
 
             'key_features' => $schema->array()

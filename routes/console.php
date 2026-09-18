@@ -53,3 +53,14 @@ Schedule::command('eveil:linkedin-generate-due')->daily();
 // Management app is skipped outright, and most never will - LinkedIn grants
 // `r_member_social_feed` selectively.
 Schedule::command('eveil:linkedin-fetch-stats')->daily();
+
+// Same cadence granularity as LinkedIn's own generate-due check above.
+// Nothing to do for a project whose next scan is not due yet, and the
+// shortest Reddit scan cadence is also daily.
+Schedule::command('eveil:reddit-scan-due')->daily();
+
+// A comment's score settles quickly, so daily is enough to catch it. Cheap
+// either way: a reply with no self-reported `comment_permalink` is skipped
+// outright, and `FlareSolverrRenderer` already no-ops when the profile
+// isn't configured.
+Schedule::command('eveil:reddit-fetch-stats')->daily();

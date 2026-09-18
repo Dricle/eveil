@@ -20,8 +20,9 @@ looking for those companies, finds the people at them, writes the email
 sequence, sends it from your own mailbox, and reads the replies.
 
 Your own AI CMO, running its own army of agents. Lead discovery and outreach
-are B2B; LinkedIn posting (personal-profile content, evidence-driven) already
-works for anyone building an online presence, B2C solo founders included.
+are B2B; LinkedIn posting and Reddit reply drafting (both evidence-driven)
+already work for anyone building an online presence, B2C solo founders
+included.
 
 That's automation of the same work a human researcher would do by hand:
 searching the web for the right companies and people, then writing to them one
@@ -36,8 +37,10 @@ unlimited mailboxes, unlimited leads, your data on your own machine.
 > **Status: v0 + cloud backbone.** The whole outbound loop works end to end:
 > site analysis, lead discovery, sequences, sending, replies, plus
 > organizations, roles, and pay-as-you-go billing for the cloud edition.
-> LinkedIn posting (personal profile, official API) is in too. Not built yet:
-> Reddit, a public API, commenting on someone else's LinkedIn post. See
+> LinkedIn posting (personal profile, official API) is in too, and so is
+> Reddit reply drafting - manual-publish only for now, since Reddit is
+> currently blocking new API app registration. Not built yet: a public API,
+> commenting on someone else's LinkedIn post. See
 > [Issues](https://github.com/Dricle/eveil/issues) for exactly what's left.
 
 ---
@@ -69,6 +72,10 @@ unlimited mailboxes, unlimited leads, your data on your own machine.
   you just won, or relevant industry news, drafted and queued for your
   approval before anything goes out - official API, personal profile, no
   automation of connection requests or messages.
+- **Finds Reddit threads worth replying to.** Live subreddits and evergreen
+  "best X" threads already ranking on Google, drafted in the thread's own
+  tone. Copy, post it yourself, mark it posted - no OAuth, since Reddit is
+  currently blocking new API app registration.
 - **Reads and threads replies itself**, over IMAP, matched on the mail's own
   `Message-ID` so a reply always attaches to the lead it answers.
 - **A bounce circuit breaker**, scoped per mailbox, that pauses sending before

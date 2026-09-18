@@ -18,7 +18,7 @@ function statsOauthSetup(): array
 
     $account = LinkedinAccount::factory()->create(['organization_id' => $organization->id]);
 
-    return [$user, $account];
+    return [$user, $account, $project];
 }
 
 it('redirects to LinkedIn with the stats app client id and scope', function () {
@@ -42,7 +42,7 @@ it('refuses to start the stats connection for another organization\'s account', 
 });
 
 it('attaches the stats tokens to the account on a verified callback', function () {
-    [$user, $account] = statsOauthSetup();
+    [$user, $account, $project] = statsOauthSetup();
     app(LinkedinCredentials::class)->saveStats('stats-client-id', 'stats-secret');
     Http::fake(['linkedin.com/oauth/v2/accessToken' => Http::response([
         'access_token' => 'stats-access-token',
@@ -55,22 +55,22 @@ it('attaches the stats tokens to the account on a verified callback', function (
     $state = session('linkedin_stats_oauth_state');
 
     $this->actingAs($user)
-        ->get(route('linkedin.stats.oauth.callback', ['code' => 'abc', 'state' => $state]))
-        ->assertRedirect(route('settings.linkedin.index'));
+        ->get(route('oauth.linkedin.stats.callback', ['code' => 'abc', 'state' => $state]))
+        ->assertRedirect(route('settings.linkedin.index', $project));
 
     expect($account->fresh()->stats_access_token)->toBe('stats-access-token')
         ->and($account->fresh()->hasStatsAccess())->toBeTrue();
 });
 
 it('refuses a callback whose state does not match', function () {
-    [$user, $account] = statsOauthSetup();
+    [$user, $account, $project] = statsOauthSetup();
     app(LinkedinCredentials::class)->saveStats('stats-client-id', 'stats-secret');
 
     $this->actingAs($user)->get(route('settings.linkedin.stats.connect', $account));
 
     $this->actingAs($user)
-        ->get(route('linkedin.stats.oauth.callback', ['code' => 'abc', 'state' => 'wrong']))
-        ->assertRedirect(route('settings.linkedin.index'));
+        ->get(route('oauth.linkedin.stats.callback', ['code' => 'abc', 'state' => 'wrong']))
+        ->assertRedirect(route('settings.linkedin.index', $project));
 
     expect($account->fresh()->hasStatsAccess())->toBeFalse();
 });

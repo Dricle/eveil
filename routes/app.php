@@ -335,16 +335,6 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
              */
             Route::post('posts/{linkedin_post}/promote', [LinkedinPostController::class, 'promote'])
                 ->name('posts.promote');
-
-            /*
-             * Reached from LinkedIn itself, not from a link in the app:
-             * the redirect_uri given at authorize time. Not a settings
-             * page a user navigates to, so it stays outside that prefix.
-             */
-            Route::get('oauth/callback', [LinkedinOAuthController::class, 'callback'])
-                ->name('oauth.callback');
-            Route::get('stats/oauth/callback', [LinkedinStatsOAuthController::class, 'callback'])
-                ->name('stats.oauth.callback');
         });
 
         /*
@@ -546,6 +536,22 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
          */
         Route::put('companies/status', [CompanyBulkStatusController::class, 'update'])
             ->name('companies.status.bulk');
+    });
+
+    /*
+     * Every OAuth redirect_uri, grouped under one reserved top-level segment
+     * rather than one per provider: each is registered as a fixed URL on the
+     * provider's side, so none can carry a `{project:slug}` segment - that
+     * would make it a different URL per project, and a provider only
+     * whitelists one static value. Which organization/account/project a
+     * callback belongs to travels through the session instead (set by each
+     * `redirect()`, itself still reached from inside a project).
+     */
+    Route::prefix('oauth')->name('oauth.')->group(function (): void {
+        Route::get('linkedin/callback', [LinkedinOAuthController::class, 'callback'])
+            ->name('linkedin.callback');
+        Route::get('linkedin/stats/callback', [LinkedinStatsOAuthController::class, 'callback'])
+            ->name('linkedin.stats.callback');
     });
 
     /*

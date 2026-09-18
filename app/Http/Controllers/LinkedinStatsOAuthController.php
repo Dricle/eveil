@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\LinkedinAccount;
+use App\Models\Project;
+use App\Support\CurrentProject;
 use App\Support\LinkedinCredentials;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,18 +25,19 @@ use Illuminate\Support\Str;
  */
 class LinkedinStatsOAuthController extends Controller
 {
-    public function redirect(Request $request, int $linkedinAccount, LinkedinCredentials $credentials): RedirectResponse
+    public function redirect(Request $request, int $linkedinAccount, CurrentProject $currentProject, LinkedinCredentials $credentials): RedirectResponse
     {
         $account = LinkedinAccount::query()->ownedBy($request->user())->findOrFail($linkedinAccount);
 
         $state = Str::random(40);
         $request->session()->put('linkedin_stats_oauth_state', $state);
         $request->session()->put('linkedin_stats_oauth_account_id', $account->id);
+        $request->session()->put('linkedin_stats_oauth_project_id', $currentProject->getOrFail()->id);
 
         $query = http_build_query([
             'response_type' => 'code',
             'client_id' => $credentials->statsClientId(),
-            'redirect_uri' => route('linkedin.stats.oauth.callback'),
+            'redirect_uri' => route('oauth.linkedin.stats.callback'),
             'scope' => 'r_member_social_feed',
             'state' => $state,
         ]);
@@ -46,27 +49,34 @@ class LinkedinStatsOAuthController extends Controller
     {
         $state = $request->session()->pull('linkedin_stats_oauth_state');
         $accountId = $request->session()->pull('linkedin_stats_oauth_account_id');
+        $projectId = $request->session()->pull('linkedin_stats_oauth_project_id');
+
+        $project = $projectId !== null ? Project::query()->find((int) $projectId) : null;
+
+        if ($project === null) {
+            return to_route('app.home')->with('status', 'LinkedIn connection failed: the request could not be verified.');
+        }
 
         if ($state === null || ! hash_equals($state, (string) $request->query('state')) || $accountId === null) {
-            return to_route('settings.linkedin.index')->with('status', 'LinkedIn connection failed: the request could not be verified.');
+            return to_route('settings.linkedin.index', ['project' => $project])->with('status', 'LinkedIn connection failed: the request could not be verified.');
         }
 
         $account = LinkedinAccount::query()->find((int) $accountId);
 
         if ($account === null) {
-            return to_route('settings.linkedin.index')->with('status', 'That LinkedIn account no longer exists.');
+            return to_route('settings.linkedin.index', ['project' => $project])->with('status', 'That LinkedIn account no longer exists.');
         }
 
         $token = Http::asForm()->post('https://www.linkedin.com/oauth/v2/accessToken', [
             'grant_type' => 'authorization_code',
             'code' => (string) $request->query('code'),
-            'redirect_uri' => route('linkedin.stats.oauth.callback'),
+            'redirect_uri' => route('oauth.linkedin.stats.callback'),
             'client_id' => $credentials->statsClientId(),
             'client_secret' => $credentials->statsClientSecret(),
         ]);
 
         if (! $token->successful()) {
-            return to_route('settings.linkedin.index')->with('status', 'LinkedIn did not grant performance-polling access. LinkedIn grants r_member_social_feed selectively - this may simply be refused.');
+            return to_route('settings.linkedin.index', ['project' => $project])->with('status', 'LinkedIn did not grant performance-polling access. LinkedIn grants r_member_social_feed selectively - this may simply be refused.');
         }
 
         $account->update([
@@ -78,6 +88,6 @@ class LinkedinStatsOAuthController extends Controller
                 : null,
         ]);
 
-        return to_route('settings.linkedin.index')->with('status', 'Performance polling connected.');
+        return to_route('settings.linkedin.index', ['project' => $project])->with('status', 'Performance polling connected.');
     }
 }

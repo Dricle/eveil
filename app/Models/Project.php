@@ -60,7 +60,7 @@ class Project extends Model
      *
      * @var list<string>
      */
-    private const RESERVED_SLUGS = ['projects', 'organizations', 'app-settings', 'account', 'setup', 'invitations'];
+    private const RESERVED_SLUGS = ['projects', 'organizations', 'app-settings', 'account', 'setup', 'invitations', 'oauth'];
 
     /**
      * What a new project starts with in its writing instructions.

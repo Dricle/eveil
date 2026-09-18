@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\LinkedinAccountStatus;
+use App\Models\Project;
 use App\Support\CurrentProject;
 use App\Support\LinkedinCredentials;
 use Illuminate\Http\RedirectResponse;
@@ -26,11 +27,12 @@ class LinkedinOAuthController extends Controller
     {
         $state = Str::random(40);
         $request->session()->put('linkedin_oauth_state', $state);
+        $request->session()->put('linkedin_oauth_project_id', $currentProject->getOrFail()->id);
 
         $query = http_build_query([
             'response_type' => 'code',
             'client_id' => $credentials->clientId(),
-            'redirect_uri' => route('linkedin.oauth.callback'),
+            'redirect_uri' => route('oauth.linkedin.callback'),
             'scope' => 'openid profile w_member_social',
             'state' => $state,
         ]);
@@ -38,34 +40,41 @@ class LinkedinOAuthController extends Controller
         return redirect("https://www.linkedin.com/oauth/v2/authorization?{$query}");
     }
 
-    public function callback(Request $request, CurrentProject $currentProject, LinkedinCredentials $credentials): RedirectResponse
+    public function callback(Request $request, LinkedinCredentials $credentials): RedirectResponse
     {
         $state = $request->session()->pull('linkedin_oauth_state');
+        $projectId = $request->session()->pull('linkedin_oauth_project_id');
+
+        $project = $projectId !== null ? Project::query()->find((int) $projectId) : null;
+
+        if ($project === null) {
+            return to_route('app.home')->with('status', 'LinkedIn connection failed: the request could not be verified.');
+        }
 
         if ($state === null || ! hash_equals($state, (string) $request->query('state'))) {
-            return to_route('settings.linkedin.index')->with('status', 'LinkedIn connection failed: the request could not be verified.');
+            return to_route('settings.linkedin.index', ['project' => $project])->with('status', 'LinkedIn connection failed: the request could not be verified.');
         }
 
         $token = Http::asForm()->post('https://www.linkedin.com/oauth/v2/accessToken', [
             'grant_type' => 'authorization_code',
             'code' => (string) $request->query('code'),
-            'redirect_uri' => route('linkedin.oauth.callback'),
+            'redirect_uri' => route('oauth.linkedin.callback'),
             'client_id' => $credentials->clientId(),
             'client_secret' => $credentials->clientSecret(),
         ]);
 
         if (! $token->successful()) {
-            return to_route('settings.linkedin.index')->with('status', 'LinkedIn did not grant access. Try connecting again.');
+            return to_route('settings.linkedin.index', ['project' => $project])->with('status', 'LinkedIn did not grant access. Try connecting again.');
         }
 
         $identity = Http::withToken((string) $token->json('access_token'))
             ->get('https://api.linkedin.com/v2/userinfo');
 
         if (! $identity->successful()) {
-            return to_route('settings.linkedin.index')->with('status', 'Connected, but LinkedIn did not return the profile.');
+            return to_route('settings.linkedin.index', ['project' => $project])->with('status', 'Connected, but LinkedIn did not return the profile.');
         }
 
-        $organization = $currentProject->organization();
+        $organization = $project->organization;
 
         $organization->linkedinAccounts()->updateOrCreate(
             ['member_urn' => 'urn:li:person:'.$identity->json('sub')],
@@ -82,6 +91,6 @@ class LinkedinOAuthController extends Controller
             ],
         );
 
-        return to_route('settings.linkedin.index')->with('status', 'LinkedIn account connected.');
+        return to_route('settings.linkedin.index', ['project' => $project])->with('status', 'LinkedIn account connected.');
     }
 }

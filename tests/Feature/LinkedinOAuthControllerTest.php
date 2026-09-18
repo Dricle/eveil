@@ -26,7 +26,7 @@ function linkedinOauthUser(): array
 }
 
 it('connects a LinkedIn account on a valid callback', function () {
-    [$user, , $organization] = linkedinOauthUser();
+    [$user, $project, $organization] = linkedinOauthUser();
 
     Http::fake([
         'https://www.linkedin.com/oauth/v2/accessToken' => Http::response([
@@ -41,9 +41,10 @@ it('connects a LinkedIn account on a valid callback', function () {
         ]),
     ]);
 
-    $this->actingAs($user)->withSession(['linkedin_oauth_state' => 'the-state'])
-        ->get(route('linkedin.oauth.callback', ['code' => 'a-code', 'state' => 'the-state']))
-        ->assertRedirect(route('settings.linkedin.index'));
+    $this->actingAs($user)
+        ->withSession(['linkedin_oauth_state' => 'the-state', 'linkedin_oauth_project_id' => $project->id])
+        ->get(route('oauth.linkedin.callback', ['code' => 'a-code', 'state' => 'the-state']))
+        ->assertRedirect(route('settings.linkedin.index', $project));
 
     $account = LinkedinAccount::query()->where('organization_id', $organization->id)->sole();
 
@@ -54,13 +55,27 @@ it('connects a LinkedIn account on a valid callback', function () {
 });
 
 it('refuses a callback whose state does not match', function () {
+    [$user, $project] = linkedinOauthUser();
+
+    Http::fake();
+
+    $this->actingAs($user)
+        ->withSession(['linkedin_oauth_state' => 'expected', 'linkedin_oauth_project_id' => $project->id])
+        ->get(route('oauth.linkedin.callback', ['code' => 'a-code', 'state' => 'tampered']))
+        ->assertRedirect(route('settings.linkedin.index', $project));
+
+    expect(LinkedinAccount::count())->toBe(0);
+    Http::assertNothingSent();
+});
+
+it('sends a callback with no project in session to the app home', function () {
     [$user] = linkedinOauthUser();
 
     Http::fake();
 
-    $this->actingAs($user)->withSession(['linkedin_oauth_state' => 'expected'])
-        ->get(route('linkedin.oauth.callback', ['code' => 'a-code', 'state' => 'tampered']))
-        ->assertRedirect(route('settings.linkedin.index'));
+    $this->actingAs($user)->withSession(['linkedin_oauth_state' => 'the-state'])
+        ->get(route('oauth.linkedin.callback', ['code' => 'a-code', 'state' => 'the-state']))
+        ->assertRedirect(route('app.home'));
 
     expect(LinkedinAccount::count())->toBe(0);
     Http::assertNothingSent();

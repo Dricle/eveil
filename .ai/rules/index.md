@@ -15,6 +15,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Cloud/** | .ai/rules/cloud.md |
 | app/Models/LinkedinPost.php,app/Models/LinkedinPostExample.php,app/Http/Controllers/LinkedinPostController.php,app/Actions/FetchLinkedinPostStats.php | .ai/rules/controllers-actions.md |
 | app/Http/Controllers/AiInstructionsController.php,app/Http/Controllers/EmailInstructionsController.php,app/Http/Controllers/LinkedinInstructionsController.php,app/Http/Controllers/ProjectController.php | .ai/rules/controllers-http-controllers.md |
+| routes/app.php,app/Http/Controllers/Linkedin*OAuthController.php,app/Models/Project.php | .ai/rules/controllers-models.md |
 | app/Http/Controllers/** | .ai/rules/controllers.md |
 | database/** | .ai/rules/database.md |
 | compose.yaml,compose.deploy.yaml,docker/degoog/** | .ai/rules/degoog.md |

@@ -147,6 +147,58 @@ it('never re-drafts a thread that already has a reply row', function () {
         ->and(RedditReply::count())->toBe(1);
 });
 
+it('feeds the full product portrait, not just what_it_does, into both agent prompts', function () {
+    $project = Project::factory()->create([
+        'knowledge_base' => [
+            'what_it_does' => 'A tool that does the thing.',
+            'who_it_is_for' => 'Small agencies.',
+            'value_proposition' => 'Ten times faster than a spreadsheet.',
+            'positioning' => 'The honest alternative to doing it by hand.',
+            'pricing_model' => 'Flat monthly fee.',
+            'key_features' => ['Widgets', 'Gadgets'],
+            'competitors' => ['Acme'],
+            'proof_points' => ['500 customers'],
+        ],
+    ]);
+    TargetProfile::factory()->create([
+        'project_id' => $project->id,
+        'criteria' => ['subreddits' => [['name' => 'SaaS', 'subscribers' => 10_000, 'description' => '']]],
+    ]);
+
+    RedditOpportunityTriage::fake([[
+        'items' => [[
+            'permalink' => 'https://www.reddit.com/r/SaaS/comments/xyz789/what_do_you_use/def456/',
+            'is_opportunity' => true,
+            'reason' => 'e',
+        ]],
+    ]]);
+    RedditReplyWriter::fake([[
+        'body_value_comment' => 'A reply.',
+        'body_soft_mention' => '',
+        'body_dm_invite' => '',
+    ]]);
+
+    ScanRedditOpportunities::dispatchSync($project);
+
+    $expectedFragments = [
+        'Who it is for: Small agencies.',
+        'Value proposition: Ten times faster than a spreadsheet.',
+        'Positioning: The honest alternative to doing it by hand.',
+        'Pricing model: Flat monthly fee.',
+        'Key features: Widgets, Gadgets',
+        'Competitors: Acme',
+        'Proof points: 500 customers',
+    ];
+
+    $triagePrompt = AgentRun::where('agent', RedditOpportunityTriage::slug())->sole()->input['prompt'];
+    $writerPrompt = AgentRun::where('agent', RedditReplyWriter::slug())->sole()->input['prompt'];
+
+    foreach ($expectedFragments as $fragment) {
+        expect($triagePrompt)->toContain($fragment);
+        expect($writerPrompt)->toContain($fragment);
+    }
+});
+
 it('feeds this project\'s own promoted replies into the writer prompt', function () {
     $project = scannableProject();
     RedditReply::factory()->create([

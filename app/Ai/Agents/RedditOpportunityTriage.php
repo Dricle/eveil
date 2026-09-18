@@ -113,13 +113,7 @@ class RedditOpportunityTriage extends EveilAgent implements HasStructuredOutput
 
     private function buildPrompt(): string
     {
-        $knowledgeBase = $this->project->knowledge_base ?? [];
-        $competitors = empty($knowledgeBase['competitors'])
-            ? ''
-            : ' Named competitors: '.implode(', ', $knowledgeBase['competitors']).'.';
-
-        $product = "## What this product is\n\n"
-            .($knowledgeBase['what_it_does'] ?? 'Not analyzed yet.').$competitors;
+        $product = "## What this product is\n\n{$this->productPortrait()}";
 
         $lines = $this->items->map(function (OpportunityCandidate $item): string {
             $query = $item->searchQuery !== null ? "\nsearch_query: {$item->searchQuery}" : '';

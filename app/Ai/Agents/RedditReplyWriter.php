@@ -105,10 +105,8 @@ class RedditReplyWriter extends EveilAgent implements HasStructuredOutput
 
     private function buildPrompt(): string
     {
-        $knowledgeBase = $this->project->knowledge_base ?? [];
-
         $sections = [
-            "## What this product is\n\n".($knowledgeBase['what_it_does'] ?? 'Not analyzed yet.'),
+            "## What this product is\n\n{$this->productPortrait()}",
         ];
 
         $subreddit = $this->subreddit !== null ? "r/{$this->subreddit}" : 'an unknown subreddit';

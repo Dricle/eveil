@@ -143,6 +143,51 @@ abstract class EveilAgent implements Agent, HasMiddleware
             PROMPT;
     }
 
+    /**
+     * The full product portrait, the same fields and order as the
+     * Knowledge Base settings screen (`resources/js/pages/settings/KnowledgeBase.vue`):
+     * what it does, who it is for, value proposition, positioning, pricing
+     * model, key features, competitors, proof points. `what_it_does` alone
+     * is not enough context for a judgment or a piece of writing about the
+     * product - a reader who only sees that field is missing exactly the
+     * fields (positioning, proof points, who buys it) that make a product
+     * decision or a piece of copy actually specific rather than generic.
+     */
+    protected function productPortrait(): string
+    {
+        $knowledgeBase = $this->project->knowledge_base ?? [];
+
+        if (empty($knowledgeBase)) {
+            return 'Not analyzed yet.';
+        }
+
+        $lines = [];
+
+        foreach ([
+            'what_it_does' => 'What it does',
+            'who_it_is_for' => 'Who it is for',
+            'value_proposition' => 'Value proposition',
+            'positioning' => 'Positioning',
+            'pricing_model' => 'Pricing model',
+        ] as $key => $label) {
+            if (! empty($knowledgeBase[$key])) {
+                $lines[] = "{$label}: {$knowledgeBase[$key]}";
+            }
+        }
+
+        foreach ([
+            'key_features' => 'Key features',
+            'competitors' => 'Competitors',
+            'proof_points' => 'Proof points',
+        ] as $key => $label) {
+            if (! empty($knowledgeBase[$key]) && is_array($knowledgeBase[$key])) {
+                $lines[] = "{$label}: ".implode(', ', $knowledgeBase[$key]);
+            }
+        }
+
+        return $lines === [] ? 'Not analyzed yet.' : implode("\n", $lines);
+    }
+
     public function recordInto(AgentRun $run): static
     {
         $this->run = $run;

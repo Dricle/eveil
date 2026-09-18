@@ -112,10 +112,7 @@ const items = computed<NavigationMenuItem[]>(() => {
 
         {
             label: 'LinkedIn',
-            // No brand icon available (only the `lucide` icon set is installed,
-            // and it carries no LinkedIn glyph): a generic one rather than a
-            // broken reference.
-            icon: 'i-lucide-share-2',
+            icon: 'line-md:linkedin',
             to: relativeUrl(linkedinPosts.index.url({ project: project.slug })),
             // Broad on purpose: covers both the posts queue and the account
             // page, same reasoning as Settings' prefix check below.
@@ -127,11 +124,7 @@ const items = computed<NavigationMenuItem[]>(() => {
 
         {
             label: 'Reddit',
-            // Same reasoning as LinkedIn above: rereads on its own schedule
-            // (the scan cadence), new drafts appear on their own - the one
-            // kind of screen that earns a top-level nav entry rather than a
-            // tab inside Settings.
-            icon: 'i-lucide-message-square',
+            icon: 'line-md:reddit',
             to: relativeUrl(redditReplies.index.url({ project: project.slug })),
             active: page.url.startsWith(`/app/${project.slug}/reddit`),
             badge: navCounts.value?.reddit

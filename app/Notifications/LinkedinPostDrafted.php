@@ -18,11 +18,11 @@ class LinkedinPostDrafted extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(public string $projectName) {}
+    public function __construct(public string $projectName, public string $projectSlug) {}
 
     public static function for(Project $project): self
     {
-        return new self($project->name);
+        return new self($project->name, $project->slug);
     }
 
     /**
@@ -38,7 +38,7 @@ class LinkedinPostDrafted extends Notification implements ShouldQueue
         return (new MailMessage)
             ->subject("A new LinkedIn post is ready to review for {$this->projectName}")
             ->line("Eveil drafted a new LinkedIn post for **{$this->projectName}**.")
-            ->action('Review it', route('linkedin.posts.index'))
+            ->action('Review it', route('linkedin.posts.index', $this->projectSlug))
             ->line('Nothing publishes until you approve it.');
     }
 

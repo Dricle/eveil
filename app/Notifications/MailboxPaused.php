@@ -16,11 +16,16 @@ class MailboxPaused extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(public string $mailboxEmail, public string $reason) {}
+    public function __construct(public string $mailboxEmail, public string $reason, public ?string $projectSlug) {}
 
     public static function for(EmailAccount $account): self
     {
-        return new self($account->from_email, (string) $account->last_error);
+        // The mailbox itself belongs to no single project (see EmailAccount),
+        // so any project the organization owns gets us to the same
+        // organization-scoped mailboxes screen.
+        $projectSlug = $account->organization->projects()->value('slug');
+
+        return new self($account->from_email, (string) $account->last_error, $projectSlug);
     }
 
     /**
@@ -37,7 +42,9 @@ class MailboxPaused extends Notification implements ShouldQueue
             ->subject("Sending paused for {$this->mailboxEmail}")
             ->line("**{$this->mailboxEmail}** has stopped sending automatically.")
             ->line($this->reason)
-            ->action('Review mailbox', route('settings.mailboxes.index'))
+            ->action('Review mailbox', $this->projectSlug !== null
+                ? route('settings.mailboxes.index', $this->projectSlug)
+                : route('app.home'))
             ->line('Nothing else queued for it will go out until you reactivate it.');
     }
 

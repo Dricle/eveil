@@ -43,6 +43,14 @@ const STATUS = {
     rejected: { color: 'neutral' as const, label: 'Rejected' }
 }
 
+const TABS = [
+    { label: 'Drafts', value: 'draft' },
+    { label: 'Posted', value: 'published' },
+    { label: 'Rejected', value: 'rejected' }
+]
+
+const activeTab = ref('draft')
+
 type Thread = {
     permalink: string
     subreddit: string | null
@@ -54,10 +62,13 @@ type Thread = {
 }
 
 // Grouped client-side: up to 3 angle drafts share one thread_permalink.
+// Filtered by tab first, so a thread only shows the replies matching the
+// active status - a thread can otherwise mix a draft, a posted and a
+// rejected angle.
 const threads = computed<Thread[]>(() => {
     const byPermalink = new Map<string, Thread>()
 
-    for (const reply of props.replies) {
+    for (const reply of props.replies.filter(reply => reply.status === activeTab.value)) {
         let thread = byPermalink.get(reply.thread_permalink)
 
         if (!thread) {
@@ -83,6 +94,7 @@ const scanning = ref(false)
 const approving = ref<number | null>(null)
 const rejecting = ref<number | null>(null)
 const deleting = ref<number | null>(null)
+const deletingThread = ref<string | null>(null)
 const promoting = ref<number | null>(null)
 const rejectingReply = ref<RedditReply | null>(null)
 const rejectReason = ref('')
@@ -161,6 +173,15 @@ function destroy (reply: RedditReply) {
     })
 }
 
+function destroyThread (thread: Thread) {
+    deletingThread.value = thread.permalink
+    router.delete(redditReplyRoutes.destroyThread.url({ project: page.props.currentProject!.slug }, { query: { thread_permalink: thread.permalink } }), {
+        preserveScroll: true,
+        onSuccess: () => toast.add({ title: 'Drafts deleted', color: 'neutral' }),
+        onFinish: () => deletingThread.value = null
+    })
+}
+
 function promote (reply: RedditReply) {
     promoting.value = reply.id
     router.post(redditReplyRoutes.promote.url({ project: page.props.currentProject!.slug, reddit_reply: reply.id }), {}, {
@@ -232,6 +253,12 @@ function promote (reply: RedditReply) {
             :description="String(page.props.status)"
         />
 
+        <UTabs
+            v-model="activeTab"
+            :items="TABS"
+            :content="false"
+        />
+
         <div
             v-for="thread in threads"
             :key="thread.permalink"
@@ -256,6 +283,18 @@ function promote (reply: RedditReply) {
                     rel="noopener"
                     class="text-sm text-primary"
                 >{{ thread.threadTitle ?? 'Open thread on Reddit' }} ↗</a>
+
+                <UButton
+                    v-if="activeTab === 'draft'"
+                    icon="i-lucide-trash"
+                    color="error"
+                    variant="ghost"
+                    size="xs"
+                    label="Delete drafts"
+                    class="ml-auto"
+                    :loading="deletingThread === thread.permalink"
+                    @click="destroyThread(thread)"
+                />
             </div>
 
             <p class="text-sm text-dimmed">
@@ -368,7 +407,7 @@ function promote (reply: RedditReply) {
             v-if="!threads.length"
             class="rounded-lg p-6 text-sm text-muted ring ring-default"
         >
-            No drafts yet. Turn on scanning above, or scan now.
+            {{ activeTab === 'draft' ? 'No drafts yet. Turn on scanning above, or scan now.' : `No ${STATUS[activeTab as keyof typeof STATUS].label.toLowerCase()} replies.` }}
         </p>
 
         <UModal

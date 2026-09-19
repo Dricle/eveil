@@ -150,3 +150,50 @@ it('rejects an invalid cadence value', function () {
         ->put(route('reddit.replies.cadence'), ['reddit_scan_frequency' => 'hourly'])
         ->assertInvalid('reddit_scan_frequency');
 });
+
+it('deletes every draft angle sharing a thread, leaving other threads and other statuses alone', function () {
+    [$user, $project] = redditSetup();
+
+    $valueComment = RedditReply::factory()->create([
+        'project_id' => $project->id,
+        'thread_permalink' => 'https://www.reddit.com/r/selfhosted/comments/abc/',
+        'angle' => RedditReplyAngle::ValueComment,
+    ]);
+    $softMention = RedditReply::factory()->create([
+        'project_id' => $project->id,
+        'thread_permalink' => 'https://www.reddit.com/r/selfhosted/comments/abc/',
+        'angle' => RedditReplyAngle::SoftMention,
+    ]);
+    $publishedSibling = RedditReply::factory()->create([
+        'project_id' => $project->id,
+        'thread_permalink' => 'https://www.reddit.com/r/selfhosted/comments/abc/',
+        'angle' => RedditReplyAngle::DmInvite,
+        'status' => RedditReplyStatus::Published,
+    ]);
+    $otherThread = RedditReply::factory()->create([
+        'project_id' => $project->id,
+        'thread_permalink' => 'https://www.reddit.com/r/selfhosted/comments/xyz/',
+    ]);
+
+    $this->actingAs($user)
+        ->delete(route('reddit.replies.destroyThread', ['thread_permalink' => 'https://www.reddit.com/r/selfhosted/comments/abc/']))
+        ->assertRedirect(route('reddit.replies.index'));
+
+    expect(RedditReply::find($valueComment->id))->toBeNull()
+        ->and(RedditReply::find($softMention->id))->toBeNull()
+        ->and(RedditReply::find($publishedSibling->id))->not->toBeNull()
+        ->and(RedditReply::find($otherThread->id))->not->toBeNull();
+});
+
+it('cannot delete another project drafts by thread permalink', function () {
+    [$user] = redditSetup();
+    $theirs = RedditReply::factory()->for(Project::factory())->create([
+        'thread_permalink' => 'https://www.reddit.com/r/selfhosted/comments/abc/',
+    ]);
+
+    $this->actingAs($user)
+        ->delete(route('reddit.replies.destroyThread', ['thread_permalink' => 'https://www.reddit.com/r/selfhosted/comments/abc/']))
+        ->assertRedirect(route('reddit.replies.index'));
+
+    expect(RedditReply::withoutGlobalScopes()->find($theirs->id))->not->toBeNull();
+});

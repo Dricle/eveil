@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\MarkRedditReplyPosted;
 use App\Enums\RedditReplyStatus;
 use App\Http\Requests\RedditReplyApproveRequest;
+use App\Http\Requests\RedditReplyDestroyThreadRequest;
 use App\Http\Requests\RedditReplyRejectRequest;
 use App\Http\Resources\RedditReplyResource;
 use App\Jobs\ScanRedditOpportunities;
@@ -78,6 +79,23 @@ class RedditReplyController extends Controller
     public function destroy(int $redditReply): RedirectResponse
     {
         RedditReply::query()->findOrFail($redditReply)->delete();
+
+        return to_route('reddit.replies.index');
+    }
+
+    /**
+     * Deletes every drafted angle sharing a thread in one go - the thread
+     * itself is sometimes already removed by moderators, so nothing in it
+     * can ever be posted. Scoped to `Draft`: a published or rejected sibling
+     * for the same thread is left alone, since it already has a real outcome
+     * worth keeping.
+     */
+    public function destroyThread(RedditReplyDestroyThreadRequest $request): RedirectResponse
+    {
+        RedditReply::query()
+            ->where('thread_permalink', $request->validated('thread_permalink'))
+            ->where('status', RedditReplyStatus::Draft)
+            ->delete();
 
         return to_route('reddit.replies.index');
     }

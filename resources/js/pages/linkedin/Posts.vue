@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, router, usePage, usePoll } from '@inertiajs/vue3'
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { relativeUrl } from '@/lib/utils'
 import linkedinPostRoutes from '@/routes/linkedin/posts'
@@ -53,6 +53,15 @@ const STATUS = {
     published: { color: 'success' as const, label: 'Published' },
     rejected: { color: 'neutral' as const, label: 'Rejected' }
 }
+
+const TABS = [
+    { label: 'Drafts', value: 'draft' },
+    { label: 'Published', value: 'published' },
+    { label: 'Rejected', value: 'rejected' }
+]
+
+const activeTab = ref('draft')
+const filteredPosts = computed(() => props.posts.filter(post => post.status === activeTab.value))
 
 const SOURCE = {
     knowledge_base: 'Knowledge base',
@@ -196,8 +205,14 @@ function promote (post: LinkedinPost) {
             :description="String(page.props.status)"
         />
 
+        <UTabs
+            v-model="activeTab"
+            :items="TABS"
+            :content="false"
+        />
+
         <div
-            v-for="post in posts"
+            v-for="post in filteredPosts"
             :key="post.id"
             class="space-y-3 rounded-lg p-4 ring ring-default"
         >
@@ -338,10 +353,10 @@ function promote (post: LinkedinPost) {
         </div>
 
         <p
-            v-if="!posts.length"
+            v-if="!filteredPosts.length"
             class="rounded-lg p-6 text-sm text-muted ring ring-default"
         >
-            No drafts yet.
+            No {{ STATUS[activeTab as keyof typeof STATUS].label.toLowerCase() }} posts.
         </p>
 
         <UModal

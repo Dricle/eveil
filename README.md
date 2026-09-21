@@ -34,7 +34,7 @@ Slower to start than buying a list. Honest the whole way through.
 Self-hostable, AGPL-3.0, and the free edition has no artificial limits:
 unlimited mailboxes, unlimited leads, your data on your own machine.
 
-> **Status: v0 + cloud backbone.** The whole outbound loop works end to end:
+> **Status: v1** The whole outbound loop works end to end:
 > site analysis, lead discovery, sequences, sending, replies, plus
 > organizations, roles, and pay-as-you-go billing for the cloud edition.
 > LinkedIn posting (personal profile, official API) is in too, and so is

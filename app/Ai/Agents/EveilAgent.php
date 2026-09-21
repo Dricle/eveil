@@ -206,6 +206,8 @@ abstract class EveilAgent implements Agent, HasMiddleware
      * one - a model id belongs to the provider that publishes it. Which
      * provider gets picked is whichever configured one isn't the primary;
      * there is no priority order beyond that.
+     *
+     * @return Lab|string|array<string, ?string>
      */
     public function provider(): Lab|array|string
     {

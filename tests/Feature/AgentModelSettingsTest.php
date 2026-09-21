@@ -2,6 +2,7 @@
 
 use App\Ai\Agents\WebsiteAnalyst;
 use App\Ai\AgentSettings;
+use App\Ai\ProviderCredentials;
 use App\Models\Project;
 use App\Support\Settings;
 use Laravel\Ai\Enums\Lab;
@@ -112,6 +113,30 @@ it('feeds the mapping straight into the agent laravel/ai asks', function () {
         // `Promptable` expects back.
         ->and($agent->provider())->toBe(Lab::Anthropic)
         ->and($agent->timeout())->toBe(200);
+});
+
+it('adds a failover entry when another provider has a key stored', function () {
+    app(ProviderCredentials::class)->save('openai', 'sk-test');
+    app(Settings::class)->set('agents.website-analyst', ['provider' => 'openai', 'model' => 'gpt-5.4']);
+
+    $agent = new WebsiteAnalyst(Project::factory()->create(), collect());
+
+    // The primary keeps its configured model; the fallback (only anthropic
+    // is configured in this suite, via the dummy env key) runs on its own
+    // default rather than a model id that belongs to a different provider.
+    expect($agent->provider())->toBe([
+        'openai' => 'gpt-5.4',
+        'anthropic' => null,
+    ]);
+});
+
+it('has nothing to fail over to when no other provider has a key stored', function () {
+    // The suite's only configured provider is anthropic (the dummy env key),
+    // and the seeded default is already anthropic, so there is no "other"
+    // provider to add - this must stay the plain scalar `Promptable` expects.
+    $agent = new WebsiteAnalyst(Project::factory()->create(), collect());
+
+    expect($agent->provider())->toBe(Lab::Anthropic);
 });
 
 it('keeps an unknown provider as a plain string', function () {

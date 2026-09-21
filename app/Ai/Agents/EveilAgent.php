@@ -195,13 +195,49 @@ abstract class EveilAgent implements Agent, HasMiddleware
         return $this;
     }
 
-    public function provider(): Lab|string
+    /**
+     * The configured provider, plus a failover entry when another provider
+     * has a key stored: `Promptable` only retries on a `FailoverableException`
+     * (rate limit, overload, insufficient credits, and connection failures
+     * like the OpenAI timeout that prompted this), so a dead provider with no
+     * fallback configured still throws exactly as before.
+     *
+     * The fallback runs on ITS default model, never the primary's configured
+     * one - a model id belongs to the provider that publishes it. Which
+     * provider gets picked is whichever configured one isn't the primary;
+     * there is no priority order beyond that.
+     */
+    public function provider(): Lab|array|string
     {
         // The key the provider is called with is a stored secret, and this is
         // the last moment before `laravel/ai` builds the driver from config.
         app(ProviderCredentials::class)->apply();
 
-        return $this->settings()->provider(static::slug());
+        $primary = $this->settings()->provider(static::slug());
+        $fallback = $this->fallbackProvider($primary);
+
+        if ($fallback === null) {
+            return $primary;
+        }
+
+        return [
+            ($primary instanceof Lab ? $primary->value : $primary) => $this->model(),
+            $fallback->value => null,
+        ];
+    }
+
+    private function fallbackProvider(Lab|string $primary): ?Lab
+    {
+        $primary = $primary instanceof Lab ? $primary->value : $primary;
+        $credentials = app(ProviderCredentials::class);
+
+        foreach (Lab::cases() as $lab) {
+            if ($lab->value !== $primary && $credentials->isConfigured($lab->value)) {
+                return $lab;
+            }
+        }
+
+        return null;
     }
 
     public function model(): ?string

@@ -67,6 +67,55 @@ it('refuses an invalid comment link', function () {
     expect($reply->fresh()->status)->toBe(RedditReplyStatus::Draft);
 });
 
+it('submits a manually written reply, marks it posted, and rejects the drafted angles for the thread', function () {
+    [$user, $project] = redditSetup();
+
+    $valueComment = RedditReply::factory()->create([
+        'project_id' => $project->id,
+        'thread_permalink' => 'https://www.reddit.com/r/selfhosted/comments/abc/',
+        'angle' => RedditReplyAngle::ValueComment,
+    ]);
+    $softMention = RedditReply::factory()->create([
+        'project_id' => $project->id,
+        'thread_permalink' => 'https://www.reddit.com/r/selfhosted/comments/abc/',
+        'angle' => RedditReplyAngle::SoftMention,
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('reddit.replies.manual'), [
+            'thread_permalink' => 'https://www.reddit.com/r/selfhosted/comments/abc/',
+            'body' => 'My own reply, written by hand.',
+            'comment_permalink' => 'https://www.reddit.com/r/selfhosted/comments/abc/comment/xyz/',
+        ])
+        ->assertRedirect(route('reddit.replies.index'));
+
+    $manual = RedditReply::query()->where('angle', RedditReplyAngle::UserWritten)->sole();
+
+    expect($manual->status)->toBe(RedditReplyStatus::Published)
+        ->and($manual->body)->toBe('My own reply, written by hand.')
+        ->and($manual->comment_permalink)->toBe('https://www.reddit.com/r/selfhosted/comments/abc/comment/xyz/')
+        ->and($manual->published_at)->not->toBeNull()
+        ->and($manual->project_id)->toBe($project->id)
+        ->and($valueComment->fresh()->status)->toBe(RedditReplyStatus::Rejected)
+        ->and($softMention->fresh()->status)->toBe(RedditReplyStatus::Rejected);
+});
+
+it('refuses a manual submission missing the comment link or body', function () {
+    [$user, $project] = redditSetup();
+    RedditReply::factory()->create([
+        'project_id' => $project->id,
+        'thread_permalink' => 'https://www.reddit.com/r/selfhosted/comments/abc/',
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('reddit.replies.manual'), [
+            'thread_permalink' => 'https://www.reddit.com/r/selfhosted/comments/abc/',
+            'body' => '',
+            'comment_permalink' => '',
+        ])
+        ->assertSessionHasErrors(['body', 'comment_permalink']);
+});
+
 it('rejects a draft with an optional reason, keeping the row', function () {
     [$user, $project] = redditSetup();
     $reply = RedditReply::factory()->create(['project_id' => $project->id]);

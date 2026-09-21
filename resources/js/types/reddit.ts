@@ -11,7 +11,7 @@ export type RedditReply = {
     source: 'subreddit_scan' | 'seo_thread'
     /** Which buyer-intent query surfaced it, seo_thread only. */
     search_query: string | null
-    angle: 'value_comment' | 'soft_mention' | 'dm_invite'
+    angle: 'value_comment' | 'soft_mention' | 'dm_invite' | 'user_written'
     /** What grounds this draft, shown beside the body. */
     evidence: string
     body: string

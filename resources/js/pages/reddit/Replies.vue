@@ -34,7 +34,8 @@ const FREQUENCIES = [
 const ANGLE_LABEL = {
     value_comment: 'Value comment',
     soft_mention: 'Soft mention',
-    dm_invite: 'DM invite'
+    dm_invite: 'DM invite',
+    user_written: 'Written by you'
 }
 
 const STATUS = {
@@ -100,6 +101,10 @@ const rejectingReply = ref<RedditReply | null>(null)
 const rejectReason = ref('')
 const markingPosted = ref<RedditReply | null>(null)
 const commentPermalink = ref('')
+const writingManual = ref<Thread | null>(null)
+const manualBody = ref('')
+const manualPermalink = ref('')
+const submittingManual = ref(false)
 
 function scan () {
     scanning.value = true
@@ -139,6 +144,33 @@ function confirmMarkPosted () {
             approving.value = null
             markingPosted.value = null
         }
+    })
+}
+
+function openWriteManual (thread: Thread) {
+    writingManual.value = thread
+    manualBody.value = ''
+    manualPermalink.value = ''
+}
+
+function confirmWriteManual () {
+    const thread = writingManual.value
+    if (!thread) {
+        return
+    }
+
+    submittingManual.value = true
+    router.post(redditReplyRoutes.manual.url({ project: page.props.currentProject!.slug }), {
+        thread_permalink: thread.permalink,
+        body: manualBody.value,
+        comment_permalink: manualPermalink.value
+    }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            toast.add({ title: 'Marked as posted', color: 'success' })
+            writingManual.value = null
+        },
+        onFinish: () => submittingManual.value = false
     })
 }
 
@@ -284,17 +316,28 @@ function promote (reply: RedditReply) {
                     class="text-sm text-primary"
                 >{{ thread.threadTitle ?? 'Open thread on Reddit' }} ↗</a>
 
-                <UButton
+                <div
                     v-if="activeTab === 'draft'"
-                    icon="i-lucide-trash"
-                    color="error"
-                    variant="ghost"
-                    size="xs"
-                    label="Delete drafts"
-                    class="ml-auto"
-                    :loading="deletingThread === thread.permalink"
-                    @click="destroyThread(thread)"
-                />
+                    class="ml-auto flex items-center gap-2"
+                >
+                    <UButton
+                        icon="i-lucide-pencil"
+                        color="neutral"
+                        variant="subtle"
+                        size="xs"
+                        label="I wrote my own"
+                        @click="openWriteManual(thread)"
+                    />
+                    <UButton
+                        icon="i-lucide-trash"
+                        color="error"
+                        variant="ghost"
+                        size="xs"
+                        label="Delete drafts"
+                        :loading="deletingThread === thread.permalink"
+                        @click="destroyThread(thread)"
+                    />
+                </div>
             </div>
 
             <p class="text-sm text-dimmed">
@@ -440,6 +483,55 @@ function promote (reply: RedditReply) {
                     label="Mark as posted"
                     :loading="approving === markingPosted?.id"
                     @click="confirmMarkPosted"
+                />
+            </template>
+        </UModal>
+
+        <UModal
+            :open="writingManual !== null"
+            title="I wrote my own reply"
+            @update:open="(value: boolean) => { if (!value) writingManual = null }"
+        >
+            <template #body>
+                <div class="space-y-4">
+                    <UFormField
+                        label="What you posted"
+                        description="The actual text you posted, not one of the three drafts - this is what Eveil learns from once it earns enough upvotes."
+                    >
+                        <UTextarea
+                            v-model="manualBody"
+                            :rows="5"
+                            class="w-full"
+                            placeholder="Paste the reply you actually posted..."
+                        />
+                    </UFormField>
+
+                    <UFormField
+                        label="Link to the comment"
+                        description="Required - it's what lets Eveil check its score later."
+                    >
+                        <UInput
+                            v-model="manualPermalink"
+                            class="w-full"
+                            placeholder="https://www.reddit.com/r/.../comment/..."
+                        />
+                    </UFormField>
+                </div>
+            </template>
+
+            <template #footer>
+                <UButton
+                    color="neutral"
+                    variant="ghost"
+                    label="Cancel"
+                    @click="writingManual = null"
+                />
+                <UButton
+                    color="success"
+                    label="Mark as posted"
+                    :disabled="!manualBody || !manualPermalink"
+                    :loading="submittingManual"
+                    @click="confirmWriteManual"
                 />
             </template>
         </UModal>

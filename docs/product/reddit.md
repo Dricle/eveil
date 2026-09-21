@@ -27,6 +27,10 @@ Nothing posts on its own. Each drafted angle shows the body with a **Copy** butt
 
 **Reject vs. delete** work the same way they do everywhere else in Eveil: delete removes the draft with no trace, reject keeps it with an optional reason ("too pushy", "wrong tone") that's fed back to the writer so it doesn't repeat the mistake next time.
 
+## Writing your own reply
+
+If none of the three drafts feel right, click **I wrote my own** on the thread itself (not on one of the three cards) instead of copying a draft. Paste in what you actually posted plus a link to the comment — both are required here, since the whole point is giving Eveil something real to track. It's stored as its own posted reply, and posting it rejects the three drafted angles for that thread the same way approving one of them would.
+
 ## Teaching the writer what works
 
 "Mark as posted" has one optional field: paste back the link to the comment you actually posted. Skipping it is fine — it's just what makes score tracking possible for that reply at all, the same way an account with no performance-polling connection is simply skipped on the LinkedIn side.

@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Actions\MarkRedditReplyPosted;
+use App\Actions\SubmitManualRedditReply;
 use App\Enums\RedditReplyStatus;
 use App\Http\Requests\RedditReplyApproveRequest;
 use App\Http\Requests\RedditReplyDestroyThreadRequest;
+use App\Http\Requests\RedditReplyManualRequest;
 use App\Http\Requests\RedditReplyRejectRequest;
 use App\Http\Resources\RedditReplyResource;
 use App\Jobs\ScanRedditOpportunities;
@@ -58,6 +60,23 @@ class RedditReplyController extends Controller
         ]);
 
         $mark->handle($reply, $request->validated('comment_permalink'));
+
+        return to_route('reddit.replies.index');
+    }
+
+    /**
+     * "I wrote my own": the user skipped all three drafted angles and
+     * posted their own reply instead. Creates a fourth, already-published
+     * row rather than overwriting a draft - see `SubmitManualRedditReply`.
+     */
+    public function manual(RedditReplyManualRequest $request, SubmitManualRedditReply $submit, CurrentProject $currentProject): RedirectResponse
+    {
+        $submit->handle(
+            $currentProject->getOrFail(),
+            $request->validated('thread_permalink'),
+            $request->validated('body'),
+            $request->validated('comment_permalink'),
+        );
 
         return to_route('reddit.replies.index');
     }

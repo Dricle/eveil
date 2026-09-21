@@ -360,6 +360,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
                 ->name('replies.scan');
             Route::delete('replies/thread', [RedditReplyController::class, 'destroyThread'])
                 ->name('replies.destroyThread');
+            Route::post('replies/manual', [RedditReplyController::class, 'manual'])
+                ->name('replies.manual');
             Route::post('replies/{reddit_reply}/approve', [RedditReplyController::class, 'approve'])
                 ->name('replies.approve');
             Route::post('replies/{reddit_reply}/reject', [RedditReplyController::class, 'reject'])

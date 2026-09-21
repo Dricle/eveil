@@ -2,65 +2,67 @@
     :title="config('app.name') . ' - Contact'"
     description="Reach the Eveil team for support, privacy and erasure requests, or self-hosted bugs and issues."
 >
-    <div style="max-width:1180px;margin:0 auto;padding:72px 24px 88px;display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:start">
+    <div class="mx-auto grid max-w-[1180px] grid-cols-2 items-start gap-16 px-6 pt-[72px] pb-[88px]">
         <div>
-            <div style="font-family:'Geist Mono',monospace;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:#6fd3ec;margin-bottom:14px">Contact</div>
-            <h1 style="font-family:'Sora',sans-serif;font-weight:600;font-size:44px;line-height:1.1;letter-spacing:-.035em;margin:0 0 16px">Talk to a person, not a bot.</h1>
-            <p style="margin:0 0 36px;color:rgba(232,236,242,.66);max-width:52ch">Placeholder. Set expectations here: who answers, in which languages, and how quickly. Technical questions about the self-hosted edition belong on GitHub, where the answer helps the next person too.</p>
+            <div class="mb-[14px] font-[Geist_Mono,monospace] text-[11.5px] tracking-[.1em] text-[#6fd3ec] uppercase">Contact</div>
+            <h1 class="mb-4 font-[Sora,sans-serif] text-[44px] leading-[1.1] font-semibold tracking-[-.035em]">Talk to a person, not a bot.</h1>
+            <p class="mb-9 max-w-[52ch] text-[rgba(232,236,242,.66)]">A real person on the Eveil team reads and answers every message, in English. Technical questions about the self-hosted edition belong on GitHub, where the answer helps the next person too.</p>
 
-            <div style="display:grid;gap:12px;margin-bottom:36px">
-                <div style="background:#101520;border:1px solid rgba(232,236,242,.09);border-radius:12px;padding:20px 22px">
-                    <div style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(232,236,242,.42);margin-bottom:8px">Support</div>
-                    <a href="mailto:placeholder@eveil.cloud" style="font-family:'Sora',sans-serif;font-weight:600;font-size:19px;letter-spacing:-.02em">placeholder@eveil.cloud</a>
-                    <p style="margin:6px 0 0;font-size:14px;color:rgba(232,236,242,.55)">Placeholder response time.</p>
+            <div class="mb-9 grid gap-3">
+                <div class="rounded-xl border border-[rgba(232,236,242,.09)] bg-[#101520] px-[22px] py-5">
+                    <div class="mb-2 font-[Geist_Mono,monospace] text-[10.5px] tracking-[.08em] text-[rgba(232,236,242,.42)] uppercase">Support</div>
+                    <a href="mailto:support@eveil.cloud" class="font-[Sora,sans-serif] text-[19px] font-semibold tracking-[-.02em]">support@eveil.cloud</a>
+                    <p class="mt-1.5 text-sm text-[rgba(232,236,242,.55)]">We reply within 24 hours.</p>
                 </div>
-                <div style="background:#101520;border:1px solid rgba(232,236,242,.09);border-radius:12px;padding:20px 22px">
-                    <div style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(232,236,242,.42);margin-bottom:8px">Privacy and erasure requests</div>
-                    <a href="mailto:privacy@eveil.cloud" style="font-family:'Sora',sans-serif;font-weight:600;font-size:19px;letter-spacing:-.02em">privacy@eveil.cloud</a>
-                    <p style="margin:6px 0 0;font-size:14px;color:rgba(232,236,242,.55)">Placeholder statutory deadline.</p>
-                </div>
-                <div style="background:#101520;border:1px solid rgba(232,236,242,.09);border-radius:12px;padding:20px 22px">
-                    <div style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(232,236,242,.42);margin-bottom:8px">Bugs and self-hosting</div>
-                    <a href="https://github.com/Dricle/eveil" style="font-family:'Sora',sans-serif;font-weight:600;font-size:19px;letter-spacing:-.02em">github.com/Dricle/eveil</a>
-                    <p style="margin:6px 0 0;font-size:14px;color:rgba(232,236,242,.55)">Issues and discussions, in the open.</p>
+                <div class="rounded-xl border border-[rgba(232,236,242,.09)] bg-[#101520] px-[22px] py-5">
+                    <div class="mb-2 font-[Geist_Mono,monospace] text-[10.5px] tracking-[.08em] text-[rgba(232,236,242,.42)] uppercase">Bugs and self-hosting</div>
+                    <a href="https://github.com/Dricle/eveil" class="font-[Sora,sans-serif] text-[19px] font-semibold tracking-[-.02em]">github.com/Dricle/eveil</a>
+                    <p class="mt-1.5 text-sm text-[rgba(232,236,242,.55)]">Issues and discussions, in the open.</p>
                 </div>
             </div>
 
-            <div style="border-top:1px solid rgba(232,236,242,.08);padding-top:22px;font-size:14px;color:rgba(232,236,242,.5)">
-                <div style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(232,236,242,.38);margin-bottom:8px">Registered entity</div>
-                <p style="margin:0">Placeholder company name<br>Placeholder street address<br>Placeholder city, placeholder country<br>Placeholder company registration number</p>
+            <div class="border-t border-[rgba(232,236,242,.08)] pt-[22px] text-sm text-[rgba(232,236,242,.5)]">
+                <div class="mb-2 font-[Geist_Mono,monospace] text-[10.5px] tracking-[.08em] text-[rgba(232,236,242,.38)] uppercase">Registered entity</div>
+                <p>DRICLE LLP<br>5 Brayford Square<br>London, E1 0SG<br>United Kingdom<br>Registration OC453390</p>
             </div>
         </div>
 
-        <div style="background:linear-gradient(180deg,rgba(232,236,242,.055),rgba(232,236,242,.02));border:1px solid rgba(232,236,242,.12);border-radius:14px;padding:28px">
-            <h2 style="font-family:'Sora',sans-serif;font-weight:600;font-size:24px;letter-spacing:-.025em;margin:0 0 6px">Send a message</h2>
-            <p style="margin:0 0 24px;font-size:14px;color:rgba(232,236,242,.55)">Placeholder. This form is a mockup and does not submit anywhere yet.</p>
-            <div style="display:grid;gap:16px">
-                <div style="display:grid;gap:7px">
-                    <label for="c-name" style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(232,236,242,.5)">Name</label>
-                    <input id="c-name" type="text" placeholder="Your name" class="field">
+        <div class="rounded-[14px] border border-[rgba(232,236,242,.12)] bg-gradient-to-b from-[rgba(232,236,242,.055)] to-[rgba(232,236,242,.02)] p-7">
+            <h2 class="mb-1.5 font-[Sora,sans-serif] text-2xl font-semibold tracking-[-.025em]">Send a message</h2>
+            <p class="mb-6 text-sm text-[rgba(232,236,242,.55)]">Goes straight to support@eveil.cloud. We reply to the email address you give below.</p>
+
+            @if (session('status'))
+                <div class="mb-4 rounded-[9px] border border-[rgba(111,211,236,.35)] bg-[rgba(111,211,236,.12)] px-4 py-[13px] text-sm text-[#a8e6f6]">{{ session('status') }}</div>
+            @endif
+
+            <form method="POST" action="{{ route('contact.store') }}" class="grid gap-4">
+                @csrf
+                <div class="grid gap-[7px]">
+                    <label for="c-name" class="font-[Geist_Mono,monospace] text-[10.5px] tracking-[.08em] text-[rgba(232,236,242,.5)] uppercase">Name</label>
+                    <input id="c-name" name="name" type="text" placeholder="Your name" class="field" value="{{ old('name') }}" required>
+                    @error('name') <p class="text-[13px] text-[#f0a0a0]">{{ $message }}</p> @enderror
                 </div>
-                <div style="display:grid;gap:7px">
-                    <label for="c-email" style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(232,236,242,.5)">Email</label>
-                    <input id="c-email" type="email" placeholder="you@company.com" class="field" style="font-family:'Geist Mono',monospace">
+                <div class="grid gap-[7px]">
+                    <label for="c-email" class="font-[Geist_Mono,monospace] text-[10.5px] tracking-[.08em] text-[rgba(232,236,242,.5)] uppercase">Email</label>
+                    <input id="c-email" name="email" type="email" placeholder="you@company.com" class="field font-[Geist_Mono,monospace]" value="{{ old('email') }}" required>
+                    @error('email') <p class="text-[13px] text-[#f0a0a0]">{{ $message }}</p> @enderror
                 </div>
-                <div style="display:grid;gap:7px">
-                    <label for="c-topic" style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(232,236,242,.5)">Topic</label>
-                    <select id="c-topic" class="field">
-                        <option>Getting started</option>
-                        <option>Billing and credits</option>
-                        <option>Deliverability</option>
-                        <option>Privacy or erasure request</option>
-                        <option>Self-hosting</option>
+                <div class="grid gap-[7px]">
+                    <label for="c-topic" class="font-[Geist_Mono,monospace] text-[10.5px] tracking-[.08em] text-[rgba(232,236,242,.5)] uppercase">Topic</label>
+                    <select id="c-topic" name="topic" class="field">
+                        @foreach (\App\Http\Requests\ContactMessageRequest::TOPICS as $topic)
+                            <option value="{{ $topic }}" @selected(old('topic') === $topic)>{{ $topic }}</option>
+                        @endforeach
                     </select>
                 </div>
-                <div style="display:grid;gap:7px">
-                    <label for="c-msg" style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(232,236,242,.5)">Message</label>
-                    <textarea id="c-msg" rows="6" placeholder="What do you need?" class="field" style="resize:vertical"></textarea>
+                <div class="grid gap-[7px]">
+                    <label for="c-msg" class="font-[Geist_Mono,monospace] text-[10.5px] tracking-[.08em] text-[rgba(232,236,242,.5)] uppercase">Message</label>
+                    <textarea id="c-msg" name="message" rows="6" placeholder="What do you need?" class="field resize-y" required>{{ old('message') }}</textarea>
+                    @error('message') <p class="text-[13px] text-[#f0a0a0]">{{ $message }}</p> @enderror
                 </div>
-                <button type="button" class="cta-btn" style="border:0;border-radius:9px;font-family:'Sora',sans-serif;font-weight:600;font-size:15px;padding:13px 22px;cursor:pointer">Send message</button>
-                <p style="margin:0;font-size:13px;color:rgba(232,236,242,.45)">Placeholder. Note here what happens to what they type and how long it is kept.</p>
-            </div>
+                <button type="submit" class="cta-btn cursor-pointer rounded-[9px] border-0 px-[22px] py-[13px] font-[Sora,sans-serif] text-[15px] font-semibold">Send message</button>
+                <p class="text-[13px] text-[rgba(232,236,242,.45)]">Used only to answer this message.</p>
+            </form>
         </div>
     </div>
 </x-marketing-layout>

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ContactFormController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -35,3 +36,7 @@ Route::get('/data-retention', fn () => config('eveil.edition') === 'cloud'
 Route::get('/contact', fn () => config('eveil.edition') === 'cloud'
     ? view('marketing.contact')
     : response('', 302, ['Location' => '/app']))->name('contact');
+
+Route::post('/contact', [ContactFormController::class, 'store'])
+    ->middleware('throttle:5,1')
+    ->name('contact.store');

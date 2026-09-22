@@ -39,6 +39,7 @@ function flip () {
         :icon="control.icon"
         :label="control.label"
         variant="subtle"
+        size="sm"
         @click.stop.prevent="flip"
     />
 

@@ -10,6 +10,8 @@ use App\Ai\Agents\SequenceWriter;
 use App\Ai\Agents\VariantWriter;
 use App\Enums\AgentRunStatus;
 use App\Enums\CampaignLeadStatus;
+use App\Enums\MessageDirection;
+use App\Enums\ReplyClassification;
 use App\Http\Requests\CampaignRequest;
 use App\Http\Resources\CampaignLeadResource;
 use App\Http\Resources\CampaignResource;
@@ -17,6 +19,8 @@ use App\Http\Resources\TargetProfileResource;
 use App\Http\Resources\TargetProfileSummaryResource;
 use App\Models\AgentRun;
 use App\Models\Campaign;
+use App\Models\CampaignLead;
+use App\Models\Message;
 use App\Models\TargetProfile;
 use App\Support\CurrentProject;
 use Illuminate\Http\RedirectResponse;
@@ -46,8 +50,18 @@ class CampaignController extends Controller
             'campaigns' => CampaignResource::collection(
                 Campaign::query()
                     ->with('targetProfile')
-                    ->withCount(['steps', 'campaignLeads as live_leads_count' => fn ($leads) => $leads
-                        ->whereIn('status', CampaignLeadStatus::live())])
+                    ->withCount([
+                        'steps',
+                        'campaignLeads as live_leads_count' => fn ($leads) => $leads
+                            ->whereIn('status', CampaignLeadStatus::live()),
+                        // What the footer reports: everyone ever enrolled who
+                        // got at least one message each way, same aggregates
+                        // the dashboard's own campaign list already counts.
+                        'campaignLeads as sent_leads_count' => fn ($leads) => $leads
+                            ->whereHas('messages', fn ($messages) => $messages->where('direction', MessageDirection::Outbound)),
+                        'campaignLeads as replied_leads_count' => fn ($leads) => $leads
+                            ->whereHas('messages', fn ($messages) => $messages->where('direction', MessageDirection::Inbound)),
+                    ])
                     // The list is where the switch is thrown, so it has to say
                     // what the switch did: a campaign nobody is in reads exactly
                     // like one that started fine.
@@ -68,6 +82,32 @@ class CampaignController extends Controller
             // with no sequence is one the searches keep filling with companies
             // nobody will ever be written to.
             'uncovered' => TargetProfileSummaryResource::collection($missing->missing()),
+            // The same facts the dashboard shows, narrowed to what belongs on a
+            // list of sequences: sends counted from `messages` rather than
+            // campaign state, because a mail that left is a fact and a status
+            // is a summary.
+            'stats' => [
+                'sent_this_week' => Message::query()->whereHas('lead')
+                    ->where('direction', MessageDirection::Outbound)
+                    ->whereNotNull('sent_at')
+                    ->where('sent_at', '>=', now()->startOfWeek())
+                    ->count(),
+                'replies' => Message::query()->whereHas('lead')
+                    ->where('direction', MessageDirection::Inbound)
+                    ->count(),
+                'positive' => Message::query()->whereHas('lead')
+                    ->where('direction', MessageDirection::Inbound)
+                    ->where('classification', ReplyClassification::Interested)
+                    ->count(),
+                'awaiting' => CampaignLead::query()->whereHas('campaign')
+                    ->where('pause_reason', 'awaiting_human')
+                    ->count(),
+            ],
+            // `eveil:enrol-due` skips a supervised project on purpose: the
+            // manual "add people now" button only earns a place on the page
+            // for that one autonomy level, everyone else already gets it for
+            // free on the tick.
+            'autonomyLevel' => $this->currentProject->getOrFail()->autonomy_level,
         ]);
     }
 

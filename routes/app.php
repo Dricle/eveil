@@ -599,7 +599,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
         Route::get('provider', [ProviderController::class, 'edit'])->name('provider.edit');
         Route::put('provider', [ProviderController::class, 'update'])->name('provider.update');
-        Route::delete('provider/{provider}', [ProviderController::class, 'destroy'])->name('provider.destroy');
+        Route::delete('provider/{provider}/{index}', [ProviderController::class, 'destroy'])->name('provider.destroy');
         Route::post('provider/{provider}/test', [ProviderTestController::class, 'store'])->name('provider.test');
 
         Route::get('linkedin', [LinkedinCredentialsController::class, 'edit'])->name('linkedin.edit');

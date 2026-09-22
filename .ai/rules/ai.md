@@ -1,6 +1,7 @@
 ---
 paths:
   - 'app/Ai/**'
+  - app/Ai/ProviderCredentials.php
 ---
 
 # Ai
@@ -107,3 +108,10 @@ That is the only correct place. One discovery run queues dozens of qualification
 Self-hosted binds `App\Ai\UnmeteredSpend`, which always allows: the operator's own provider key pays and their provider says when the money is gone. Refusing there would contradict the "core stays free with no artificial limits" promise. Cloud binds its own implementation over it from `app/Cloud/`, which is exactly the seam this interface exists for; the credit tables themselves are still deliberately absent (ADR-019).
 
 The row must be marked before throwing. Screens poll `agent_runs` to know whether work is still coming, so a run left `pending` spins a spinner for ever. `OutOfCredit` is a distinct class because it is not an outage: nothing is worth retrying, and a queue retrying it would burn attempts on a wallet that is still empty.
+
+## Provider keys are named, list-stored as one encrypted JSON blob; random pick memoized per process
+Updated shape: `ai.keys.<provider>` holds a JSON array of `{name, key}`, not bare strings. `ProviderCredentials::keys()` normalises on read and names every legacy shape "default" — the original single plain-string secret, AND this feature's first cut (a plain array of key strings, no names). No migration exists or is needed; the next `add()`/`remove()` persists the named shape.
+
+`add($provider, $key, $name = 'default')` appends; `remove($provider, $index)` deletes by array position (indices come from a fresh render each time, never cached client-side). `apply()` picks one `{name,key}` entry per provider with `Arr::random()`, pushes `['key']` into `config('ai.providers.*.key')`. It only actually runs once per process (`$applied` flag) — the random pick is per request/queued job, not per individual `prompt()` call; several prompts in one job share the pick.
+
+Provider settings screen (`ProviderController`, `Provider.vue`) shows key NAMES per provider (never the keys themselves), names an unnamed add "default", and deletes by index (`DELETE provider/{provider}/{index}`).

@@ -20,6 +20,7 @@ class ProviderKeyRequest extends FormRequest
         return [
             'provider' => ['required', 'string', Rule::in(collect(Lab::cases())->map(fn (Lab $lab): string => $lab->value))],
             'key' => ['required', 'string', 'max:500'],
+            'name' => ['nullable', 'string', 'max:100'],
         ];
     }
 }

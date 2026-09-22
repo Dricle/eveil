@@ -10,7 +10,7 @@ defineOptions({ layout: [AppLayout, [AppSettingsLayout, { title: 'AI provider' }
 const props = defineProps<{
     providers: {
         name: string
-        stored: boolean
+        keys: string[]
         configured: boolean
         agents: string[]
     }[]
@@ -31,8 +31,9 @@ const selected = ref(props.providers[0]?.name ?? 'anthropic')
                 </h2>
                 <p class="mt-1 text-sm text-muted">
                     Encrypted with <code>CREDENTIALS_KEY</code> and never
-                    sent back to this page. A key set in the environment
-                    keeps working until you save one here.
+                    sent back to this page. Several keys can be stored per
+                    provider; each call picks one at random. A key set in
+                    the environment keeps working until you save one here.
                 </p>
             </template>
 
@@ -40,57 +41,71 @@ const selected = ref(props.providers[0]?.name ?? 'anthropic')
                 <div
                     v-for="entry in providers"
                     :key="entry.name"
-                    class="flex flex-wrap items-center gap-3 rounded-lg p-3 ring ring-default"
+                    class="rounded-lg p-3 ring ring-default"
                 >
-                    <div class="min-w-0 flex-1">
-                        <p class="font-medium">
-                            {{ entry.name }}
-                        </p>
-                        <p class="truncate text-sm text-muted">
-                            {{ entry.agents.length
-                                ? `${entry.agents.length} agents: ${entry.agents.join(', ')}`
-                                : 'No agent runs on it right now.' }}
-                        </p>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <div class="min-w-0 flex-1">
+                            <p class="font-medium">
+                                {{ entry.name }}
+                            </p>
+                            <p class="truncate text-sm text-muted">
+                                {{ entry.agents.length
+                                    ? `${entry.agents.length} agents: ${entry.agents.join(', ')}`
+                                    : 'No agent runs on it right now.' }}
+                            </p>
+                        </div>
+
+                        <UBadge
+                            v-if="entry.keys.length > 0"
+                            color="success"
+                            variant="subtle"
+                            :label="entry.keys.length === 1 ? '1 key stored' : `${entry.keys.length} keys stored`"
+                        />
+                        <UBadge
+                            v-else-if="entry.configured"
+                            color="neutral"
+                            variant="subtle"
+                            label="From the environment"
+                        />
+                        <UBadge
+                            v-else
+                            color="error"
+                            variant="subtle"
+                            label="No key"
+                        />
+
+                        <UButton
+                            color="neutral"
+                            variant="subtle"
+                            size="xs"
+                            icon="i-lucide-plug-zap"
+                            label="Test"
+                            :disabled="!entry.configured"
+                            @click="router.post(providerRoutes.test.url(entry.name), {}, { preserveScroll: true })"
+                        />
                     </div>
 
-                    <UBadge
-                        v-if="entry.stored"
-                        color="success"
-                        variant="subtle"
-                        label="Key stored"
-                    />
-                    <UBadge
-                        v-else-if="entry.configured"
-                        color="neutral"
-                        variant="subtle"
-                        label="From the environment"
-                    />
-                    <UBadge
-                        v-else
-                        color="error"
-                        variant="subtle"
-                        label="No key"
-                    />
+                    <ul
+                        v-if="entry.keys.length > 0"
+                        class="mt-2 space-y-1"
+                    >
+                        <li
+                            v-for="(keyName, index) in entry.keys"
+                            :key="index"
+                            class="flex items-center justify-between gap-2 rounded px-2 py-1 text-sm text-muted ring ring-default"
+                        >
+                            <span>{{ keyName }}</span>
 
-                    <UButton
-                        color="neutral"
-                        variant="subtle"
-                        size="xs"
-                        icon="i-lucide-plug-zap"
-                        label="Test"
-                        :disabled="!entry.configured"
-                        @click="router.post(providerRoutes.test.url(entry.name), {}, { preserveScroll: true })"
-                    />
-
-                    <UButton
-                        v-if="entry.stored"
-                        color="error"
-                        variant="ghost"
-                        size="xs"
-                        icon="i-lucide-trash-2"
-                        aria-label="Remove the stored key"
-                        @click="router.delete(providerRoutes.destroy.url(entry.name), { preserveScroll: true })"
-                    />
+                            <UButton
+                                color="error"
+                                variant="ghost"
+                                size="xs"
+                                icon="i-lucide-trash-2"
+                                aria-label="Remove this key"
+                                @click="router.delete(providerRoutes.destroy.url({ provider: entry.name, index }), { preserveScroll: true })"
+                            />
+                        </li>
+                    </ul>
                 </div>
             </div>
         </UCard>
@@ -98,7 +113,7 @@ const selected = ref(props.providers[0]?.name ?? 'anthropic')
         <UCard>
             <template #header>
                 <h2 class="font-medium">
-                    Save a key
+                    Add a key
                 </h2>
             </template>
 
@@ -128,6 +143,19 @@ const selected = ref(props.providers[0]?.name ?? 'anthropic')
                 </UFormField>
 
                 <UFormField
+                    label="Name"
+                    name="name"
+                    description="Defaults to “default” when left blank."
+                    :error="errors.name"
+                >
+                    <UInput
+                        name="name"
+                        placeholder="default"
+                        class="w-full max-w-md"
+                    />
+                </UFormField>
+
+                <UFormField
                     label="API key"
                     name="key"
                     :error="errors.key"
@@ -144,7 +172,7 @@ const selected = ref(props.providers[0]?.name ?? 'anthropic')
                 <UButton
                     type="submit"
                     :loading="processing"
-                    label="Save key"
+                    label="Add key"
                 />
             </Form>
         </UCard>

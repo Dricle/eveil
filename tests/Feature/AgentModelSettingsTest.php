@@ -116,7 +116,7 @@ it('feeds the mapping straight into the agent laravel/ai asks', function () {
 });
 
 it('adds a failover entry when another provider has a key stored', function () {
-    app(ProviderCredentials::class)->save('openai', 'sk-test');
+    app(ProviderCredentials::class)->add('openai', 'sk-test');
     app(Settings::class)->set('agents.website-analyst', ['provider' => 'openai', 'model' => 'gpt-5.4']);
 
     $agent = new WebsiteAnalyst(Project::factory()->create(), collect());

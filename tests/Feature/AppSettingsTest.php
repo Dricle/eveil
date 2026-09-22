@@ -57,18 +57,76 @@ it('stores a provider key encrypted and never sends it back', function () {
 
     expect($stored->value)->not->toContain('sk-secret-value')
         ->and($stored->is_encrypted)->toBeTrue()
-        ->and(app(Settings::class)->secret('ai.keys.anthropic'))->toBe('sk-secret-value');
+        ->and(app(ProviderCredentials::class)->keys('anthropic'))->toBe([
+            ['name' => 'default', 'key' => 'sk-secret-value'],
+        ]);
 
     $this->actingAs(superAdmin())->get(route('app-settings.provider.edit'))
         ->assertOk()
         ->assertDontSee('sk-secret-value')
-        ->assertInertia(fn ($page) => $page->where('providers.0.stored', true));
+        ->assertInertia(fn ($page) => $page->where('providers.0.keys', ['default']));
+});
+
+it('names a key when one is given, and defaults to "default" otherwise', function () {
+    $this->actingAs(superAdmin())
+        ->put(route('app-settings.provider.update'), ['provider' => 'anthropic', 'key' => 'sk-a', 'name' => 'Burner account'])
+        ->assertRedirect(route('app-settings.provider.edit'));
+
+    $this->actingAs(superAdmin())
+        ->put(route('app-settings.provider.update'), ['provider' => 'anthropic', 'key' => 'sk-b'])
+        ->assertRedirect(route('app-settings.provider.edit'));
+
+    expect(app(ProviderCredentials::class)->keys('anthropic'))->toBe([
+        ['name' => 'Burner account', 'key' => 'sk-a'],
+        ['name' => 'default', 'key' => 'sk-b'],
+    ]);
+});
+
+it('names a legacy key, stored before this feature existed, "default"', function () {
+    // The original, pre-multi-key format: the secret IS the plain key string.
+    app(Settings::class)->set('ai.keys.anthropic', 'sk-legacy', encrypted: true);
+
+    expect(app(ProviderCredentials::class)->keys('anthropic'))->toBe([
+        ['name' => 'default', 'key' => 'sk-legacy'],
+    ]);
+});
+
+it('names every key from this feature\'s unnamed first cut "default"', function () {
+    // This feature's first cut: a plain JSON array of key strings, no names.
+    app(Settings::class)->set('ai.keys.anthropic', ['sk-one', 'sk-two'], encrypted: true);
+
+    expect(app(ProviderCredentials::class)->keys('anthropic'))->toBe([
+        ['name' => 'default', 'key' => 'sk-one'],
+        ['name' => 'default', 'key' => 'sk-two'],
+    ]);
+});
+
+it('adds a second key for the same provider instead of replacing the first', function () {
+    app(ProviderCredentials::class)->add('anthropic', 'sk-first');
+
+    $this->actingAs(superAdmin())
+        ->put(route('app-settings.provider.update'), ['provider' => 'anthropic', 'key' => 'sk-second'])
+        ->assertRedirect(route('app-settings.provider.edit'));
+
+    expect(app(ProviderCredentials::class)->keys('anthropic'))->toBe([
+        ['name' => 'default', 'key' => 'sk-first'],
+        ['name' => 'default', 'key' => 'sk-second'],
+    ]);
+});
+
+it('picks one of several stored keys at random when calling the provider', function () {
+    app(ProviderCredentials::class)->add('anthropic', 'sk-first');
+    app(ProviderCredentials::class)->add('anthropic', 'sk-second');
+
+    app(ProviderCredentials::class)->apply();
+
+    expect(config('ai.providers.anthropic.key'))->toBeIn(['sk-first', 'sk-second']);
 });
 
 it('hands the stored key to laravel/ai instead of the env', function () {
     config(['ai.providers.anthropic.key' => 'from-the-env']);
 
-    app(ProviderCredentials::class)->save('anthropic', 'from-the-database');
+    app(ProviderCredentials::class)->add('anthropic', 'from-the-database');
     app(ProviderCredentials::class)->apply();
 
     expect(config('ai.providers.anthropic.key'))->toBe('from-the-database');
@@ -85,13 +143,26 @@ it('leaves the env key in place when nothing is stored', function () {
 });
 
 it('removes a stored key without claiming the provider is unreachable', function () {
-    app(ProviderCredentials::class)->save('anthropic', 'sk-secret-value');
+    app(ProviderCredentials::class)->add('anthropic', 'sk-secret-value');
 
     $this->actingAs(superAdmin())
-        ->delete(route('app-settings.provider.destroy', 'anthropic'))
+        ->delete(route('app-settings.provider.destroy', ['anthropic', 0]))
         ->assertRedirect(route('app-settings.provider.edit'));
 
     expect(app(ProviderCredentials::class)->isStored('anthropic'))->toBeFalse();
+});
+
+it('removes only the targeted key, keeping the rest', function () {
+    app(ProviderCredentials::class)->add('anthropic', 'sk-first');
+    app(ProviderCredentials::class)->add('anthropic', 'sk-second');
+
+    $this->actingAs(superAdmin())
+        ->delete(route('app-settings.provider.destroy', ['anthropic', 0]))
+        ->assertRedirect(route('app-settings.provider.edit'));
+
+    expect(app(ProviderCredentials::class)->keys('anthropic'))->toBe([
+        ['name' => 'default', 'key' => 'sk-second'],
+    ]);
 });
 
 it('changes what an agent runs on, from the screen', function () {

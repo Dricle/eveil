@@ -37,7 +37,11 @@ class ProviderController extends Controller
                 ->values()
                 ->map(fn (string $provider): array => [
                     'name' => $provider,
-                    'stored' => $credentials->isStored($provider),
+                    // Names only: the keys themselves never travel to the
+                    // browser, and the array position is enough to delete one.
+                    'keys' => collect($credentials->keys($provider))
+                        ->map(fn (array $entry): string => $entry['name'])
+                        ->all(),
                     'configured' => $credentials->isConfigured($provider),
                     'agents' => collect($agents->known())
                         ->filter(fn (string $agent): bool => $agents->providerName($agent) === $provider)
@@ -51,14 +55,18 @@ class ProviderController extends Controller
 
     public function update(ProviderKeyRequest $request, ProviderCredentials $credentials): RedirectResponse
     {
-        $credentials->save($request->string('provider')->value(), $request->string('key')->value());
+        $credentials->add(
+            $request->string('provider')->value(),
+            $request->string('key')->value(),
+            $request->string('name')->value(),
+        );
 
         return to_route('app-settings.provider.edit')->with('status', 'Key saved.');
     }
 
-    public function destroy(string $provider, ProviderCredentials $credentials): RedirectResponse
+    public function destroy(string $provider, int $index, ProviderCredentials $credentials): RedirectResponse
     {
-        $credentials->forget($provider);
+        $credentials->remove($provider, $index);
 
         // Not the same as having no key: the env may still supply one, and the
         // page says so on the next render rather than claiming the provider is

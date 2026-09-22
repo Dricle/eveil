@@ -64,7 +64,7 @@ and every outreach mail goes to that address instead of the lead's, with the int
 
 ## AI provider
 
-Self-hosted instances bring their own AI provider key; cloud instances get one supplied. Configure it from the instance/organization AI settings screen. [`eveil:agent-model`](/self-hosted/commands#eveil-agent-model) lets you change which model each agent runs on from the command line.
+Self-hosted instances bring their own AI provider key; cloud instances get one supplied. Configure it from the instance/organization AI settings screen, which accepts several keys per provider (pooled rate limits, multiple accounts) — each call picks one at random. [`eveil:agent-model`](/self-hosted/commands#eveil-agent-model) lets you change which model each agent runs on from the command line.
 
 ## LinkedIn posting
 

@@ -25,6 +25,11 @@ const githubToken = ref('')
 
 const analysing = computed(() => props.project.last_analysis?.running === true)
 
+// A done or archived idea is decided; this screen is the portrait, not the
+// idea's history, so it shows the same open set as the Dashboard card.
+const openRecommendations = computed(() =>
+    (props.project.knowledge_base?.recommendations ?? []).filter(recommendation => recommendation.status === 'proposed'))
+
 // Any repo still reading, not just the site: the same "reading X" banner
 // language, shown for whichever kind is actually in flight.
 const analysingRepo = computed(() =>
@@ -319,20 +324,21 @@ watch(() => props.project, fill, { immediate: true, deep: true })
             </template>
         </UCard>
 
-        <UCard v-if="project.knowledge_base?.recommendations?.length">
+        <UCard v-if="openRecommendations.length">
             <template #header>
                 <h2 class="font-medium">
                     Acquisition ideas
                 </h2>
                 <p class="mt-1 text-sm text-muted">
                     Levers the product is missing, each grounded in something specific
-                    the portrait or the repo actually shows.
+                    the portrait or the repo actually shows. Still open ones only - the
+                    Dashboard is where you mark one done or discuss it with Evie.
                 </p>
             </template>
 
             <div class="space-y-3">
                 <div
-                    v-for="idea in project.knowledge_base.recommendations"
+                    v-for="idea in openRecommendations"
                     :key="idea.key"
                     class="rounded-lg bg-elevated p-3"
                 >

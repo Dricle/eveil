@@ -71,6 +71,7 @@ use App\Http\Controllers\OnboardingSearchController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectKnowledgeBaseController;
+use App\Http\Controllers\RecommendationStatusController;
 use App\Http\Controllers\RedditCadenceController;
 use App\Http\Controllers\RedditReplyController;
 use App\Http\Controllers\Settings\MemberController;
@@ -135,6 +136,14 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
      */
     Route::prefix('{project:slug}')->middleware('project.set')->group(function (): void {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+
+        /*
+         * Where one acquisition idea stands, said by the user or by Evie on
+         * their behalf: the Dashboard card only ever shows the open ones,
+         * so this is the only status the idea's row can move to by hand.
+         */
+        Route::put('recommendations/{key}/status', [RecommendationStatusController::class, 'update'])
+            ->name('recommendations.status');
 
         /*
          * The first ten minutes. Somebody who has just given the address of

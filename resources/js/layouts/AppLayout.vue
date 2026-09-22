@@ -4,6 +4,7 @@ import type { DropdownMenuItem, NavigationMenuItem } from '@nuxt/ui'
 import { computed, ref } from 'vue'
 import ChatPanel from '@/components/chat/ChatPanel.vue'
 import ChatToggleButton from '@/components/chat/ChatToggleButton.vue'
+import { chatOpen } from '@/composables/useChatPanel'
 import { relativeUrl } from '@/lib/utils'
 import { switchProjectUrl } from '@/lib/switchProjectUrl'
 import { dashboard, inbox, logout } from '@/routes'
@@ -24,10 +25,12 @@ const page = usePage()
 
 const open = ref(true)
 
-// A plain local ref, not a shared module: AppLayout is a single persistent
-// instance now (the layout-stack migration), so this survives every
-// navigation on its own, the same way `open` above does for the sidebar.
-const chatOpen = ref(false)
+// `chatOpen` itself lives in `useChatPanel` (a module-scoped singleton, not a
+// local ref): a page outside this layout - the Dashboard's "Discuss with
+// Evie" button - opens the panel and queues a message without reaching into
+// `ChatPanel`'s own chat instance. AppLayout is still a single persistent
+// instance across navigations (the layout-stack migration), so nothing here
+// needed to change for that reason.
 
 // AppServiceProvider forces an absolute root URL for the whole app in prod
 // (needed so a password-reset email doesn't link to plain http), and

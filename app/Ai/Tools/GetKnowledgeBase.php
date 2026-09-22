@@ -10,9 +10,10 @@ use Stringable;
 
 /**
  * Read-only: the product portrait target profiles and sequences are written
- * from - what it does, who it's for, its features, positioning. Read this
- * before proposing anything to `UpdateKnowledgeBase`, same reasoning as
- * `GetCampaign` before `UpdateSequence`: never guess what it currently says.
+ * from - what it does, who it's for, its features, positioning - plus the
+ * acquisition ideas still awaiting a decision. Read this before proposing
+ * anything to `UpdateKnowledgeBase` or `UpdateRecommendation`, same reasoning
+ * as `GetCampaign` before `UpdateSequence`: never guess what it currently says.
  */
 class GetKnowledgeBase implements Tool
 {
@@ -41,6 +42,7 @@ class GetKnowledgeBase implements Tool
             'competitors' => $knowledgeBase['competitors'] ?? [],
             'proof_points' => $knowledgeBase['proof_points'] ?? [],
             'open_questions' => $this->project->openQuestions(),
+            'open_recommendations' => $this->project->openRecommendations(),
         ]);
     }
 

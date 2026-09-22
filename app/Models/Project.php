@@ -6,6 +6,7 @@ use App\Casts\EncryptedCredential;
 use App\Enums\AutonomyLevel;
 use App\Enums\LinkedinPostFrequency;
 use App\Enums\OrganizationRole;
+use App\Enums\RecommendationStatus;
 use App\Enums\RedditScanFrequency;
 use App\Models\Concerns\HasSlug;
 use Database\Factories\ProjectFactory;
@@ -272,6 +273,80 @@ class Project extends Model
             })
             ->filter()
             ->all());
+    }
+
+    /**
+     * Every acquisition idea the Website agent has ever proposed, normalised:
+     * a row written before `status` existed reads as `proposed`, the same
+     * default a fresh idea gets. Identity is `key`, same as `openQuestions()`.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function recommendations(): array
+    {
+        $recommendations = $this->knowledge_base['recommendations'] ?? [];
+
+        if (! is_array($recommendations)) {
+            return [];
+        }
+
+        return array_values(collect($recommendations)
+            ->filter(fn (mixed $r): bool => is_array($r) && isset($r['key'], $r['idea']))
+            ->map(fn (array $r): array => [
+                ...$r,
+                'status' => is_string($r['status'] ?? null) && $r['status'] !== ''
+                    ? $r['status']
+                    : RecommendationStatus::Proposed->value,
+            ])
+            ->all());
+    }
+
+    /**
+     * The ones still waiting on a decision: what the Dashboard card and
+     * `GetKnowledgeBase` show. A `done` or `archived` idea has already been
+     * decided and stays out of both.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function openRecommendations(): array
+    {
+        return array_values(array_filter(
+            $this->recommendations(),
+            fn (array $r): bool => $r['status'] === RecommendationStatus::Proposed->value,
+        ));
+    }
+
+    /**
+     * A fresh reading's own acquisition levers, minus any the user has
+     * already decided on: a `done` or `archived` idea is never rewritten or
+     * repeated by a later analysis, and stays even when this reading does
+     * not propose it again (ADR-032's "archived never comes back"). Shared
+     * by the full website analysis and a targeted recommendations-only
+     * re-read (`App\Actions\RefreshAcquisitionIdeas`) - both hand it
+     * whatever the agent just proposed and write back only what this
+     * returns, never the rest of the knowledge base.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function mergeRecommendations(mixed $recommendations): array
+    {
+        $decided = collect($this->recommendations())
+            ->reject(fn (array $r): bool => $r['status'] === RecommendationStatus::Proposed->value)
+            ->keyBy('key');
+
+        $fresh = collect(is_array($recommendations) ? $recommendations : [])
+            ->filter(fn (mixed $r): bool => is_array($r) && isset($r['key'], $r['idea'], $r['evidence'], $r['impact'], $r['effort']))
+            ->map(fn (array $r): array => [
+                'key' => (string) $r['key'],
+                'idea' => (string) $r['idea'],
+                'evidence' => (string) $r['evidence'],
+                'impact' => (string) $r['impact'],
+                'effort' => (string) $r['effort'],
+                'status' => RecommendationStatus::Proposed->value,
+            ])
+            ->keyBy('key');
+
+        return array_values($decided->union($fresh)->all());
     }
 
     /**

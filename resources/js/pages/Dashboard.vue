@@ -1,17 +1,19 @@
 <script setup lang="ts">
 import { Head, router, usePage } from '@inertiajs/vue3'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
+import { openEvieChat } from '@/composables/useChatPanel'
 import { relativeUrl } from '@/lib/utils'
 import { inbox, onboarding as onboardingRoute } from '@/routes'
 import campaignRoutes from '@/routes/campaigns'
 import companies from '@/routes/companies'
 import discoveryRuns from '@/routes/discovery-runs'
+import recommendationRoutes from '@/routes/recommendations'
 import organizationBilling from '@/routes/settings/organization/billing'
 import mailboxSettings from '@/routes/settings/mailboxes'
 import projectSettings from '@/routes/settings/project'
 import targets from '@/routes/targets'
-import type { DashboardCampaign, DashboardDiscoveryRun, DashboardReply, DashboardStats, Mailbox } from '@/types'
+import type { DashboardCampaign, DashboardDiscoveryRun, DashboardReply, DashboardStats, Mailbox, Recommendation } from '@/types'
 import { CLASSIFICATIONS } from '@/types/inbox'
 
 defineOptions({ layout: AppLayout })
@@ -22,6 +24,7 @@ const props = defineProps<{
     stats: DashboardStats
     autonomyLevel: 'supervised' | 'semi_auto' | 'autonomous'
     newLeadsCount: number
+    openRecommendations: Recommendation[]
     runningDiscoveryRun: DashboardDiscoveryRun | null
     campaigns: DashboardCampaign[]
     mailboxes: Mailbox[]
@@ -29,6 +32,22 @@ const props = defineProps<{
 }>()
 
 const page = usePage()
+const toast = useToast()
+
+const decidingRecommendation = ref<string | null>(null)
+
+function decideRecommendation (recommendation: Recommendation, status: 'done' | 'archived') {
+    decidingRecommendation.value = recommendation.key
+    router.put(recommendationRoutes.status.url({ project: page.props.currentProject!.slug, key: recommendation.key }), { status }, {
+        preserveScroll: true,
+        onSuccess: () => toast.add({ title: status === 'done' ? 'Marked as done' : 'Dismissed', color: 'neutral' }),
+        onFinish: () => decidingRecommendation.value = null
+    })
+}
+
+function discussRecommendations () {
+    openEvieChat('Let\'s discuss the acquisition ideas.')
+}
 
 const CAMPAIGN_STATUS: Record<string, { label: string, color: string }> = {
     active: { label: 'Sending', color: 'text-success' },
@@ -356,6 +375,76 @@ const topupPercent = computed(() => {
                     <p class="text-xs text-muted">
                         {{ autonomy.help }}
                     </p>
+                </UCard>
+
+                <UCard
+                    v-if="openRecommendations.length"
+                    variant="subtle"
+                >
+                    <template #header>
+                        <div class="flex items-center justify-between gap-2">
+                            <h3 class="text-sm font-semibold">
+                                Acquisition ideas
+                            </h3>
+                            <UButton
+                                icon="i-lucide-sparkles"
+                                color="neutral"
+                                variant="ghost"
+                                size="xs"
+                                label="Discuss with Evie"
+                                @click="discussRecommendations"
+                            />
+                        </div>
+                    </template>
+
+                    <div class="space-y-3">
+                        <div
+                            v-for="recommendation in openRecommendations"
+                            :key="recommendation.key"
+                            class="rounded-lg bg-elevated p-3"
+                        >
+                            <p class="font-medium text-highlighted">
+                                {{ recommendation.idea }}
+                            </p>
+                            <p class="mt-1 text-xs text-muted">
+                                {{ recommendation.evidence }}
+                            </p>
+                            <div class="mt-2 flex items-center justify-between gap-2">
+                                <div class="flex shrink-0 gap-1.5">
+                                    <UBadge
+                                        :color="recommendation.impact === 'high' ? 'success' : recommendation.impact === 'medium' ? 'warning' : 'neutral'"
+                                        variant="subtle"
+                                        size="sm"
+                                        :label="`${recommendation.impact} impact`"
+                                    />
+                                    <UBadge
+                                        :color="recommendation.effort === 'low' ? 'success' : recommendation.effort === 'medium' ? 'warning' : 'neutral'"
+                                        variant="subtle"
+                                        size="sm"
+                                        :label="`${recommendation.effort} effort`"
+                                    />
+                                </div>
+                                <div class="flex shrink-0 gap-1.5">
+                                    <UButton
+                                        color="neutral"
+                                        variant="ghost"
+                                        size="xs"
+                                        label="Reject"
+                                        :loading="decidingRecommendation === recommendation.key"
+                                        @click="decideRecommendation(recommendation, 'archived')"
+                                    />
+                                    <UButton
+                                        color="primary"
+                                        variant="ghost"
+                                        size="xs"
+                                        label="Done"
+                                        :loading="decidingRecommendation === recommendation.key"
+                                        @click="decideRecommendation(recommendation, 'done')"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </UCard>
 
                 <UCard

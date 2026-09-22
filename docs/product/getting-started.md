@@ -8,6 +8,8 @@ A project is one product or site you're promoting. Everything below — leads, c
 
 Paste your product's URL. Eveil's Website AI crawls it into a knowledge base and suggests positioning. Its Sales AI derives target profiles from that knowledge base: who to sell to, or who already touches them (partners, resellers, communities).
 
+It also proposes acquisition ideas your site is missing — a referral scheme, editorial content, a trade fair — each grounded in something specific it found, never generic advice. These show up on the Dashboard while at least one is still open: mark one done or not interested with a click, or talk it through with [Evie](/product/evie).
+
 ## 3. Review and approve
 
 Eveil finds and qualifies companies matching a target profile, extracts contacts, and drafts outreach. You review and approve — the step builder underneath is there when you need manual control, not required for the default flow.

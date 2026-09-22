@@ -118,6 +118,7 @@ class AnalyzeWebsite
                 // dropped them would silently undo that work.
                 'repositories' => $project->knowledge_base['repositories'] ?? [],
                 'gaps' => $this->mergeOpenQuestions($project, $summary['gaps'] ?? []),
+                'recommendations' => $project->mergeRecommendations($summary['recommendations'] ?? []),
             ],
             'default_language' => is_string($summary['language'] ?? null) && $summary['language'] !== ''
                 ? mb_substr($summary['language'], 0, 2)

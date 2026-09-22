@@ -19,6 +19,7 @@ use App\Ai\Tools\GetTargetProfile;
 use App\Ai\Tools\ListCampaigns;
 use App\Ai\Tools\ListCompanies;
 use App\Ai\Tools\ListTargetProfiles;
+use App\Ai\Tools\RefreshAcquisitionIdeas;
 use App\Ai\Tools\StartDiscovery;
 use App\Ai\Tools\UpdateKnowledgeBase;
 use App\Ai\Tools\UpdateSequence;
@@ -30,6 +31,7 @@ use App\Enums\TargetProfileSource;
 use App\Enums\TargetProfileType;
 use App\Jobs\DeriveTargets;
 use App\Jobs\Discovery\PlanDiscovery;
+use App\Jobs\RefreshAcquisitionIdeas as RefreshAcquisitionIdeasJob;
 use App\Models\AgentRun;
 use App\Models\Campaign;
 use App\Models\CampaignStep;
@@ -505,6 +507,21 @@ it('starts a target profile derivation that keeps the profiles already there', f
 
     expect($run->status)->toBe(AgentRunStatus::Pending)
         ->and($result)->toContain('Existing profiles are kept');
+});
+
+it('starts a targeted re-read for acquisition ideas', function () {
+    Queue::fake();
+
+    $project = Project::factory()->create(['knowledge_base' => ['what_it_does' => 'Routes vans.']]);
+
+    $result = (new RefreshAcquisitionIdeas($project))->handle(new Request);
+
+    Queue::assertPushed(RefreshAcquisitionIdeasJob::class, fn (RefreshAcquisitionIdeasJob $job): bool => $job->project->is($project));
+
+    $run = AgentRun::query()->withoutGlobalScopes()->sole();
+
+    expect($run->status)->toBe(AgentRunStatus::Pending)
+        ->and($result)->toContain('re-reading the site');
 });
 
 it('reads one target profile\'s full criteria', function () {

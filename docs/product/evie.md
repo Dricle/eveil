@@ -16,6 +16,14 @@ Want to explore a genuinely different angle on a profile that already has result
 
 Shipped something new? Tell Evie in chat. It reads the current knowledge base, agrees the wording with you, and updates it — the same portrait target profiles and sequences are derived from, corrected the way you'd correct it on the knowledge base settings screen. From there it can look for a target profile the feature opens up that isn't covered yet, and flag an existing draft sequence worth mentioning it in.
 
+## Discussing acquisition ideas
+
+The Website AI also proposes acquisition levers your product is missing — a referral scheme, a comparison page, an offer to a specific kind of customer — each grounded in something specific your site or knowledge base shows is absent, never generic advice. They show up on the Dashboard, under "Acquisition ideas", only while at least one is still open.
+
+Click "Discuss with Evie" to talk through what's open — it opens the chat and starts the conversation. Tell it you're doing one and it marks it done; tell it you're not interested and it archives it, which is final: an archived idea never comes back on a later re-analysis. It can also reword an idea's evidence or ranking when you correct it, or add a new one straight from what you just told it in chat. The same Done/Reject buttons sit on each idea directly, for marking one by hand without a conversation.
+
+Ask it for a fresh look ("is there anything new I'm missing?") and it re-reads the whole site looking for new ideas — a real crawl, so it pauses for your approval first, same as starting a discovery run. This only ever touches the acquisition ideas: the rest of the knowledge base (what it does, features, positioning) is left exactly as it is, even if you've just corrected something else in the same conversation.
+
 ## Drafting a LinkedIn post
 
 Tell Evie about something worth posting about — a feature you just shipped, a topic you want covered — and it writes a draft straight into your [LinkedIn posts queue](/product/linkedin) for review. It never posts on its own: the same approve/reject step applies whatever the source, so publishing still happens from that screen.

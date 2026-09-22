@@ -2,8 +2,9 @@
 import { isTextUIPart, isToolUIPart, getToolName } from 'ai'
 import DOMPurify from 'dompurify'
 import { marked } from 'marked'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import ChatJobChip from '@/components/chat/ChatJobChip.vue'
+import { pendingMessage } from '@/composables/useChatPanel'
 import { useEvieChat } from '@/composables/useEvieChat'
 
 defineProps<{ open: boolean }>()
@@ -11,6 +12,18 @@ defineProps<{ open: boolean }>()
 const input = ref('')
 
 const { messages, status, error, loadingHistory, sendMessage, regenerate, stop, clear, approve, pendingDecisions } = useEvieChat()
+
+// A trigger sent from outside the panel (the Dashboard's "Discuss with
+// Evie" button, via `openEvieChat()`): dispatched here rather than at the
+// call site because this is the one place that owns `sendMessage`.
+watch(pendingMessage, (text) => {
+    if (!text) {
+        return
+    }
+
+    sendMessage({ text })
+    pendingMessage.value = null
+})
 
 // useChat() mutates its messages array in place (push/index-assign) rather
 // than replacing it, so the array's own reference never changes across a

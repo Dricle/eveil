@@ -113,6 +113,7 @@ class DashboardController extends Controller
                 ->where('status', OutreachStatus::New)
                 ->whereHas('company', fn (Builder $company) => $company->whereNull('approved_at'))
                 ->count(),
+            'openRecommendations' => $this->currentProject->getOrFail()->openRecommendations(),
             'runningDiscoveryRun' => $this->summarizeRunningDiscovery->handle(),
             'campaigns' => CampaignResource::collection(
                 Campaign::query()

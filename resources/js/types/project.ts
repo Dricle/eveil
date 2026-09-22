@@ -41,8 +41,8 @@ export type RepoFindings = {
 
 /**
  * An acquisition lever the product is missing, grounded in specific
- * evidence (ADR-032, minus its state machine: this list is replaced
- * wholesale on each re-analysis, nothing is dismissed or done yet).
+ * evidence (ADR-032). `status` is decided by the user or by Evie on their
+ * behalf, never by a re-analysis once it's past `proposed`.
  */
 export type Recommendation = {
     key: string
@@ -50,6 +50,7 @@ export type Recommendation = {
     evidence: string
     impact: 'high' | 'medium' | 'low'
     effort: 'high' | 'medium' | 'low'
+    status: 'proposed' | 'done' | 'archived'
 }
 
 /**

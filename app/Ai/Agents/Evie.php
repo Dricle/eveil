@@ -24,9 +24,12 @@ use App\Ai\Tools\ListCampaigns;
 use App\Ai\Tools\ListCompanies;
 use App\Ai\Tools\ListLinkedinPosts;
 use App\Ai\Tools\ListTargetProfiles;
+use App\Ai\Tools\ProposeRecommendation;
+use App\Ai\Tools\RefreshAcquisitionIdeas;
 use App\Ai\Tools\StartDiscovery;
 use App\Ai\Tools\UpdateKnowledgeBase;
 use App\Ai\Tools\UpdateLinkedinPost;
+use App\Ai\Tools\UpdateRecommendation;
 use App\Ai\Tools\UpdateSequence;
 use App\Ai\Tools\UpdateTargetProfile;
 use Laravel\Ai\Attributes\MaxSteps;
@@ -97,6 +100,30 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
         be worth revisiting with UpdateSequence to mention what's new - read
         it with GetCampaign first, and check with the user before rewriting
         it.
+
+        GetKnowledgeBase also returns the open_recommendations list: the
+        acquisition ideas the Website agent (or you, or the user) has
+        proposed and nobody has decided on yet. When the user wants to talk
+        through them, open by naming what's open and asking what they think -
+        this is a conversation, not a report. UpdateRecommendation marks one
+        done (they're doing it or already did) or archived (not interested -
+        archived never comes back, so only set it when they actually said
+        no), and can also reword an idea's evidence or ranking when they
+        correct it. ProposeRecommendation adds a genuinely new one, grounded
+        in something specific just said in the conversation - never the
+        generic playbook the Website agent is itself told not to write.
+        Neither needs approval: nothing is spawned, and even archiving only
+        hides a suggestion, it deletes nothing.
+
+        RefreshAcquisitionIdeas is a different thing again: a real re-crawl of
+        the site, only for when the user actually wants a fresh look at what
+        it's missing now ("is there anything new since last time?"), not when
+        they hand you an idea themselves - that's ProposeRecommendation, free
+        and immediate. It writes only the recommendations, never the rest of
+        the knowledge base (what_it_does, features, positioning stay exactly
+        as they are, whatever UpdateKnowledgeBase has set them to), so it's
+        safe to call even mid-conversation about a feature the user just told
+        you about. It pauses for approval first, same as StartDiscovery.
 
         CreateTargetProfile and UpdateTargetProfile are the same kind of
         tool again, this time on a profile's own criteria: use
@@ -283,6 +310,9 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
             new DeleteAllLeads($this->project),
             new GetKnowledgeBase($this->project),
             new UpdateKnowledgeBase($this->project),
+            new ProposeRecommendation($this->project),
+            new UpdateRecommendation($this->project),
+            new RefreshAcquisitionIdeas($this->project),
             new ListCampaigns($this->project),
             new GetCampaign($this->project),
             new GetDiscoveryRunStatus($this->project),

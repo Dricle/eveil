@@ -7,6 +7,7 @@ use App\Ai\Tools\GetDiscoveryRunStatus;
 use App\Ai\Tools\ListCampaigns;
 use App\Ai\Tools\ListCompanies;
 use App\Ai\Tools\ListTargetProfiles;
+use App\Ai\Tools\RefreshAcquisitionIdeas;
 use App\Ai\Tools\StartDiscovery;
 use App\Ai\Tools\UpdateSequence;
 use App\Models\Project;
@@ -24,13 +25,16 @@ it('gates the tools that dispatch a real action', function () {
     $start = (new StartDiscovery($project))->shouldRequestApproval(new Request);
     $create = (new CreateSequence($project))->shouldRequestApproval(new Request);
     $update = (new UpdateSequence($project))->shouldRequestApproval(new Request);
+    $refresh = (new RefreshAcquisitionIdeas($project))->shouldRequestApproval(new Request);
 
     expect($start)->not->toBeNull()
         ->and($start->reason)->toContain('discovery run')
         ->and($create)->not->toBeNull()
         ->and($create->reason)->toContain('campaign')
         ->and($update)->not->toBeNull()
-        ->and($update->reason)->toContain('steps');
+        ->and($update->reason)->toContain('steps')
+        ->and($refresh)->not->toBeNull()
+        ->and($refresh->reason)->toContain('acquisition ideas');
 });
 
 it('never gates the read-only lookups', function () {

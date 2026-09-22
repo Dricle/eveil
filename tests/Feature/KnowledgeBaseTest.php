@@ -289,6 +289,51 @@ it('keeps an answered question the site now covers', function () {
         ->and($project->fresh()->knowledge_base['gaps'][0]['answer'])->toBe('Benelux only.');
 });
 
+it('keeps a decided recommendation through a re-reading that repeats its key', function () {
+    $user = owner();
+    $project = Project::factory()->for($user->organizations()->sole())->create([
+        'knowledge_base' => [
+            ...portrait(),
+            'recommendations' => [
+                ['key' => 'referral_program', 'idea' => 'Referral program', 'evidence' => 'No referral flow anywhere on the site.', 'impact' => 'high', 'effort' => 'medium', 'status' => 'archived'],
+            ],
+        ],
+    ]);
+
+    $method = new ReflectionMethod(AnalyzeWebsite::class, 'applyToProject');
+    $method->invoke(app(AnalyzeWebsite::class), $project, [
+        ...portrait(),
+        'recommendations' => [
+            ['key' => 'referral_program', 'idea' => 'Add a referral scheme', 'evidence' => 'Still no referral flow.', 'impact' => 'high', 'effort' => 'medium'],
+        ],
+    ], collect());
+
+    $recommendations = collect($project->fresh()->recommendations())->keyBy('key');
+
+    // Identity is the key, never the wording: a re-reading that rephrases the
+    // same idea must not resurrect or rewrite one the user already archived.
+    expect($recommendations['referral_program']['status'])->toBe('archived')
+        ->and($recommendations['referral_program']['idea'])->toBe('Referral program');
+});
+
+it('keeps a decided recommendation the re-reading no longer proposes', function () {
+    $user = owner();
+    $project = Project::factory()->for($user->organizations()->sole())->create([
+        'knowledge_base' => [
+            ...portrait(),
+            'recommendations' => [
+                ['key' => 'sector_case_studies', 'idea' => 'Sector case studies', 'evidence' => 'No case studies published.', 'impact' => 'medium', 'effort' => 'low', 'status' => 'done'],
+            ],
+        ],
+    ]);
+
+    $method = new ReflectionMethod(AnalyzeWebsite::class, 'applyToProject');
+    $method->invoke(app(AnalyzeWebsite::class), $project, [...portrait(), 'recommendations' => []], collect());
+
+    expect($project->fresh()->recommendations())->toHaveCount(1)
+        ->and($project->fresh()->recommendations()[0]['status'])->toBe('done');
+});
+
 it('leaves the questions alone when the portrait is corrected', function () {
     $user = owner();
     $project = Project::factory()->for($user->organizations()->sole())->create([

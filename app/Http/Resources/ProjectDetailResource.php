@@ -23,9 +23,13 @@ class ProjectDetailResource extends ProjectResource
             // The open questions leave separately and in a shape of their own:
             // they are answered rather than edited, and the portrait form
             // would have no way to carry the key each answer is filed under.
+            // `recommendations` is put back normalised (`Project::recommendations()`)
+            // rather than left as the raw stored array: a row written before
+            // `status` existed has none, and this is the one place the front
+            // end reads recommendations from on this screen.
             'knowledge_base' => $this->knowledge_base === null
                 ? null
-                : collect($this->knowledge_base)->except('gaps')->all(),
+                : collect($this->knowledge_base)->except('gaps')->put('recommendations', $this->recommendations())->all(),
             'open_questions' => $this->openQuestions(),
             'autonomy_level' => $this->autonomy_level->value,
             'daily_lead_limit' => $this->daily_lead_limit,

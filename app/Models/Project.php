@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 /**
  * One product to promote. Everything the Sales agent touches hangs off this.
@@ -125,6 +126,26 @@ class Project extends Model
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class)->withTimestamps();
+    }
+
+    /**
+     * Everyone `ProjectPolicy::view()` lets in: every Owner/Admin of this
+     * project's organization (implicit access, no `project_user` row for
+     * them) plus anyone with an explicit grant via `users()`. A project
+     * notification (a drafted post, a paused mailbox) must go to this, never
+     * to `users` alone - a single-owner organization has nobody in
+     * `project_user` at all, so `users` is silently empty for the one person
+     * who can actually see the project.
+     *
+     * @return Collection<int, User>
+     */
+    public function notifiableUsers(): Collection
+    {
+        $unrestricted = $this->organization->users()
+            ->wherePivotIn('role', [OrganizationRole::Owner->value, OrganizationRole::Admin->value])
+            ->get();
+
+        return $unrestricted->merge($this->users)->unique('id')->values();
     }
 
     /**

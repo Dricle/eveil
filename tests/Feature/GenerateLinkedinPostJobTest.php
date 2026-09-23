@@ -4,6 +4,7 @@ use App\Ai\Agents\LinkedinPostWriter;
 use App\Enums\LinkedinPostSourceType;
 use App\Enums\LinkedinPostStatus;
 use App\Enums\LinkedinPostVariant;
+use App\Enums\OrganizationRole;
 use App\Enums\OutreachStatus;
 use App\Jobs\GenerateLinkedinPost;
 use App\Models\AgentRun;
@@ -164,6 +165,23 @@ it('notifies the project\'s users when a draft is created', function () {
     GenerateLinkedinPost::dispatchSync($project);
 
     Notification::assertSentTo($project->users, LinkedinPostDrafted::class);
+});
+
+it('notifies the organization owner even without an explicit project_user grant', function () {
+    $project = Project::factory()->create();
+    $owner = User::factory()->create();
+    $project->organization->users()->attach($owner, ['role' => OrganizationRole::Owner->value]);
+    Notification::fake();
+
+    LinkedinPostWriter::fake([fakeWriterResponse([
+        'source_type' => 'knowledge_base',
+        'evidence' => 'e',
+        'body' => 'A fact.',
+    ])]);
+
+    GenerateLinkedinPost::dispatchSync($project);
+
+    Notification::assertSentTo($owner, LinkedinPostDrafted::class);
 });
 
 it('does not notify anyone when nothing was drafted', function () {

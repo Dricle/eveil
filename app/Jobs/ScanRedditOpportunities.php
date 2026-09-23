@@ -89,7 +89,7 @@ class ScanRedditOpportunities implements ShouldQueue
             }
 
             if ($drafted) {
-                Notification::send($this->project->users, RedditRepliesDrafted::for($this->project));
+                Notification::send($this->project->notifiableUsers(), RedditRepliesDrafted::for($this->project));
             }
         });
     }

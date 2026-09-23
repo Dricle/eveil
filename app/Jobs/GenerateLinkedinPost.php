@@ -61,7 +61,7 @@ class GenerateLinkedinPost implements ShouldQueue
             $created = $this->persist($response->structured, $run->id, $clientWon);
 
             if ($created) {
-                Notification::send($this->project->users, LinkedinPostDrafted::for($this->project));
+                Notification::send($this->project->notifiableUsers(), LinkedinPostDrafted::for($this->project));
             }
         });
     }

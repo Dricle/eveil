@@ -2,6 +2,7 @@
 
 use App\Ai\Agents\RedditOpportunityTriage;
 use App\Ai\Agents\RedditReplyWriter;
+use App\Enums\OrganizationRole;
 use App\Enums\RedditReplyAngle;
 use App\Enums\RedditReplySource;
 use App\Enums\RedditReplyStatus;
@@ -130,6 +131,30 @@ it('notifies the project\'s users only when something was actually drafted', fun
     ScanRedditOpportunities::dispatchSync($project);
 
     Notification::assertSentTo($project->users, RedditRepliesDrafted::class);
+});
+
+it('notifies the organization owner even without an explicit project_user grant', function () {
+    $project = scannableProject();
+    $owner = User::factory()->create();
+    $project->organization->users()->attach($owner, ['role' => OrganizationRole::Owner->value]);
+    Notification::fake();
+
+    RedditOpportunityTriage::fake([[
+        'items' => [[
+            'permalink' => 'https://www.reddit.com/r/SaaS/comments/xyz789/what_do_you_use/def456/',
+            'is_opportunity' => true,
+            'reason' => 'e',
+        ]],
+    ]]);
+    RedditReplyWriter::fake([[
+        'body_value_comment' => 'A reply.',
+        'body_soft_mention' => '',
+        'body_dm_invite' => '',
+    ]]);
+
+    ScanRedditOpportunities::dispatchSync($project);
+
+    Notification::assertSentTo($owner, RedditRepliesDrafted::class);
 });
 
 it('never re-drafts a thread that already has a reply row', function () {

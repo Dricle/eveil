@@ -140,7 +140,7 @@ class ImapClient
         if (! str_starts_with($greeting, '* OK')) {
             @fclose($socket);
 
-            throw new ImapFailure($greeting);
+            throw new ImapFailure($greeting !== '' ? mb_trim($greeting) : 'Server closed the connection before greeting');
         }
 
         return $socket;

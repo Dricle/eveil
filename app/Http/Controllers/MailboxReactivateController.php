@@ -29,6 +29,7 @@ class MailboxReactivateController extends Controller
         $mailbox->update([
             'status' => EmailAccountStatus::Active,
             'last_error' => null,
+            'imap_failures' => 0,
             // The bounce breaker judges only what happens from here on: without
             // this, a mailbox whose all-time history is still over threshold
             // re-pauses itself on the next dispatch tick, no new bounce needed.

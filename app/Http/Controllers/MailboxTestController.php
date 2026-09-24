@@ -29,6 +29,7 @@ class MailboxTestController extends Controller
         $mailbox->update([
             'last_checked_at' => now(),
             'last_error' => $problem,
+            'imap_failures' => 0,
             'status' => $problem === null
                 ? EmailAccountStatus::Active
                 // Not `Paused`: paused is a choice somebody made, error is the

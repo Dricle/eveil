@@ -254,7 +254,41 @@ it('puts the mailbox in error when its inbox cannot be read', function () {
     // mailbox is one problem to the user, not two.
     expect($mailbox->refresh()->status)->toBe(EmailAccountStatus::Error)
         ->and($mailbox->last_error)->toContain('IMAP')
-        ->and($mailbox->last_error)->toContain('AUTHENTICATIONFAILED');
+        ->and($mailbox->last_error)->toContain('AUTHENTICATIONFAILED')
+        ->and($mailbox->imap_failures)->toBe(1);
+});
+
+it('puts a mailbox back to sending when its inbox answers again after a blip', function () {
+    [$mailbox] = awaitingReply();
+    $mailbox->update(['status' => EmailAccountStatus::Error, 'last_error' => 'IMAP: Server closed the connection before greeting', 'imap_failures' => 2]);
+
+    fakeImap([]);
+    app(FetchReplies::class)->handle($mailbox);
+
+    expect($mailbox->refresh()->status)->toBe(EmailAccountStatus::Active)
+        ->and($mailbox->last_error)->toBeNull()
+        ->and($mailbox->imap_failures)->toBe(0);
+});
+
+it('stops healing a mailbox by itself after three failed reads in a row', function () {
+    [$mailbox] = awaitingReply();
+    $mailbox->update(['status' => EmailAccountStatus::Error, 'last_error' => 'IMAP: Server closed the connection before greeting', 'imap_failures' => 3]);
+
+    fakeImap([]);
+    app(FetchReplies::class)->handle($mailbox);
+
+    expect($mailbox->refresh()->status)->toBe(EmailAccountStatus::Error)
+        ->and($mailbox->imap_failures)->toBe(3);
+});
+
+it('never lifts an SMTP error because the inbox happens to answer', function () {
+    [$mailbox] = awaitingReply();
+    $mailbox->update(['status' => EmailAccountStatus::Error, 'last_error' => '535 Authentication failed', 'imap_failures' => 1]);
+
+    fakeImap([]);
+    app(FetchReplies::class)->handle($mailbox);
+
+    expect($mailbox->refresh()->status)->toBe(EmailAccountStatus::Error);
 });
 
 /**

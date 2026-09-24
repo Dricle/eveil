@@ -44,6 +44,12 @@ use Illuminate\Database\Eloquent\Builder;
  */
 class FetchReplies
 {
+    /**
+     * Consecutive failed reads after which a mailbox stops healing itself.
+     * `eveil:fetch-replies` runs every five minutes, so about ten minutes.
+     */
+    private const IMAP_RETRIES_BEFORE_GIVING_UP = 3;
+
     public function __construct(
         private ImapClient $imap,
         private OptOutPhrases $optOut,
@@ -66,10 +72,13 @@ class FetchReplies
                 'status' => EmailAccountStatus::Error,
                 'last_error' => 'IMAP: '.$failure->getMessage(),
                 'last_checked_at' => now(),
+                'imap_failures' => $account->imap_failures + 1,
             ]);
 
             return 0;
         }
+
+        $this->recoverFromImapBlip($account);
 
         $attributed = 0;
 
@@ -87,6 +96,29 @@ class FetchReplies
         $account->update(['last_checked_at' => now()]);
 
         return $attributed;
+    }
+
+    /**
+     * A read that works again after a short run of failures was a provider
+     * blip (Zoho dropping every connection for a few seconds), not a broken
+     * mailbox: put it back to sending on its own. From the
+     * `IMAP_RETRIES_BEFORE_GIVING_UP`th failure in a row it stays in error
+     * until someone tests or reactivates it, which resets the count.
+     */
+    private function recoverFromImapBlip(EmailAccount $account): void
+    {
+        if ($account->imap_failures === 0 || $account->imap_failures >= self::IMAP_RETRIES_BEFORE_GIVING_UP) {
+            return;
+        }
+
+        $account->update([
+            'imap_failures' => 0,
+            // Only an error this read put there: an SMTP auth failure is not
+            // cured by the inbox answering.
+            ...($account->status === EmailAccountStatus::Error && str_starts_with((string) $account->last_error, 'IMAP: ')
+                ? ['status' => EmailAccountStatus::Active, 'last_error' => null]
+                : []),
+        ]);
     }
 
     private function record(EmailAccount $account, InboundMail $mail): bool

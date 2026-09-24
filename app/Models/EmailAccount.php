@@ -51,6 +51,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $ramp_up_started_at
  * @property EmailAccountStatus $status
  * @property string|null $last_error
+ * @property int $imap_failures
  * @property Carbon|null $last_checked_at
  * @property Carbon|null $bounce_window_reset_at
  * @property int|null $last_inbound_uid
@@ -61,7 +62,7 @@ use Illuminate\Support\Carbon;
     'organization_id', 'name', 'from_name', 'from_email',
     'smtp_host', 'smtp_port', 'smtp_username', 'smtp_password', 'smtp_encryption',
     'imap_host', 'imap_port', 'imap_username', 'imap_password', 'imap_encryption',
-    'signature', 'daily_limit', 'max_bounce_rate', 'ramp_up_started_at', 'status', 'last_error',
+    'signature', 'daily_limit', 'max_bounce_rate', 'ramp_up_started_at', 'status', 'last_error', 'imap_failures',
     'last_checked_at', 'bounce_window_reset_at', 'last_inbound_uid',
 ])]
 #[Hidden(['smtp_password', 'imap_password'])]

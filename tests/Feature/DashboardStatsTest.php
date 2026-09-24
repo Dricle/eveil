@@ -4,15 +4,21 @@ use App\Cloud\Models\CreditTransaction;
 use App\Enums\DiscoveryRunStatus;
 use App\Enums\DiscoveryTaskKind;
 use App\Enums\DiscoveryTaskStatus;
+use App\Enums\LinkedinPostStatus;
 use App\Enums\MessageDirection;
+use App\Enums\RedditReplyStatus;
 use App\Models\AgentRun;
+use App\Models\Campaign;
+use App\Models\CampaignLead;
 use App\Models\Company;
 use App\Models\DiscoveryRun;
 use App\Models\DiscoveryTask;
 use App\Models\Lead;
+use App\Models\LinkedinPost;
 use App\Models\Message;
 use App\Models\Organization;
 use App\Models\Project;
+use App\Models\RedditReply;
 use App\Models\User;
 
 function dashboardUser(): array
@@ -164,4 +170,34 @@ it('summarizes a running discovery run into its three stages', function () {
             ->where('runningDiscoveryRun.id', $run->id)
             ->where('runningDiscoveryRun.stages.0.state', 'done')
             ->where('runningDiscoveryRun.stages.1.state', 'running'));
+});
+
+it('lists every draft and unanswered reply waiting on a person, this project only', function () {
+    [$organization, $project, $user] = dashboardUser();
+    $otherProject = Project::factory()->for($organization)->create();
+
+    RedditReply::factory()->count(2)->create(['project_id' => $project->id, 'thread_permalink' => 'https://www.reddit.com/r/selfhosted/comments/abc/']);
+    RedditReply::factory()->create(['project_id' => $project->id, 'status' => RedditReplyStatus::Published]);
+    RedditReply::factory()->create(['project_id' => $otherProject->id]);
+
+    LinkedinPost::factory()->create(['project_id' => $project->id]);
+    LinkedinPost::factory()->create(['project_id' => $project->id, 'status' => LinkedinPostStatus::Rejected]);
+    LinkedinPost::factory()->create(['project_id' => $otherProject->id]);
+
+    $campaign = Campaign::factory()->create(['project_id' => $project->id]);
+    $todo = CampaignLead::factory()->for($campaign)->create();
+    Message::factory()->create(['lead_id' => $todo->lead_id, 'campaign_lead_id' => $todo->id, 'direction' => MessageDirection::Inbound]);
+    // Already dealt with: not on the list, whatever it said.
+    $done = CampaignLead::factory()->for($campaign)->create(['attention_resolved_at' => now()]);
+    Message::factory()->create(['lead_id' => $done->lead_id, 'campaign_lead_id' => $done->id, 'direction' => MessageDirection::Inbound]);
+
+    $this->actingAs($user);
+    forProject($project);
+
+    $this->get(route('dashboard'))
+        ->assertInertia(fn ($page) => $page
+            ->has('review.redditReplies', 2)
+            ->has('review.linkedinPosts', 1)
+            ->has('review.conversations', 1)
+            ->where('review.conversations.0.id', $todo->id));
 });

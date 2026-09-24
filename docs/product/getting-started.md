@@ -14,6 +14,8 @@ It also proposes acquisition ideas your site is missing — a referral scheme, e
 
 Eveil finds and qualifies companies matching a target profile, extracts contacts, and drafts outreach. You review and approve — the step builder underneath is there when you need manual control, not required for the default flow.
 
+Everything waiting on you, whatever the channel, is listed on the Dashboard under "things to review": Reddit reply drafts, LinkedIn post drafts, and email replies still marked todo in the inbox. Click one to open it right there, with the same actions its own page gives you (approve, edit, reject, answer); once it's handled it drops off the list.
+
 A search that comes up completely empty on its first attempt gets one automatic retry with a different source before it's reported as a dead end — a blocked directory or an unlucky query isn't mistaken for "there's nobody here." You can also ask [Evie](/product/evie) to point a search at a specific angle, or start a fresh one exploring something new. See [How discovery finds companies](/product/discovery) for what's actually happening behind that step.
 
 Every email Eveil writes — the opening line of a sequence, a personalised reply — obeys one box, under Settings → AI instructions: tone, language, and words never to use. It ships with one rule already in it, banning dash punctuation, since that's one of the cheapest tells that a machine wrote a sentence. Edit it or empty it as you like; nothing is written outside what it allows. LinkedIn posts have their own, separate box right next to it, since a public feed post often wants a different tone than a cold email.

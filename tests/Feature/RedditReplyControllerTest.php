@@ -36,7 +36,7 @@ it('marks a draft as posted, with a pasted comment link, and rejects its sibling
     ]);
 
     $this->actingAs($user)
-        ->post(route('reddit.replies.approve', $valueComment), ['comment_permalink' => 'https://www.reddit.com/r/selfhosted/comments/abc/comment/xyz/'])
+        ->from(route('reddit.replies.index'))->post(route('reddit.replies.approve', $valueComment), ['comment_permalink' => 'https://www.reddit.com/r/selfhosted/comments/abc/comment/xyz/'])
         ->assertRedirect(route('reddit.replies.index'));
 
     expect($valueComment->fresh()->status)->toBe(RedditReplyStatus::Published)
@@ -50,7 +50,7 @@ it('marks a draft as posted with no comment link at all', function () {
     [$user, $project] = redditSetup();
     $reply = RedditReply::factory()->create(['project_id' => $project->id]);
 
-    $this->actingAs($user)->post(route('reddit.replies.approve', $reply));
+    $this->actingAs($user)->from(route('reddit.replies.index'))->post(route('reddit.replies.approve', $reply));
 
     expect($reply->fresh()->status)->toBe(RedditReplyStatus::Published)
         ->and($reply->fresh()->comment_permalink)->toBeNull();
@@ -61,7 +61,7 @@ it('refuses an invalid comment link', function () {
     $reply = RedditReply::factory()->create(['project_id' => $project->id]);
 
     $this->actingAs($user)
-        ->post(route('reddit.replies.approve', $reply), ['comment_permalink' => 'not a url'])
+        ->from(route('reddit.replies.index'))->post(route('reddit.replies.approve', $reply), ['comment_permalink' => 'not a url'])
         ->assertSessionHasErrors('comment_permalink');
 
     expect($reply->fresh()->status)->toBe(RedditReplyStatus::Draft);
@@ -82,7 +82,7 @@ it('submits a manually written reply, marks it posted, and rejects the drafted a
     ]);
 
     $this->actingAs($user)
-        ->post(route('reddit.replies.manual'), [
+        ->from(route('reddit.replies.index'))->post(route('reddit.replies.manual'), [
             'thread_permalink' => 'https://www.reddit.com/r/selfhosted/comments/abc/',
             'body' => 'My own reply, written by hand.',
             'comment_permalink' => 'https://www.reddit.com/r/selfhosted/comments/abc/comment/xyz/',
@@ -108,7 +108,7 @@ it('refuses a manual submission missing the comment link or body', function () {
     ]);
 
     $this->actingAs($user)
-        ->post(route('reddit.replies.manual'), [
+        ->from(route('reddit.replies.index'))->post(route('reddit.replies.manual'), [
             'thread_permalink' => 'https://www.reddit.com/r/selfhosted/comments/abc/',
             'body' => '',
             'comment_permalink' => '',
@@ -121,7 +121,7 @@ it('rejects a draft with an optional reason, keeping the row', function () {
     $reply = RedditReply::factory()->create(['project_id' => $project->id]);
 
     $this->actingAs($user)
-        ->post(route('reddit.replies.reject', $reply), ['reason' => 'Too pushy.'])
+        ->from(route('reddit.replies.index'))->post(route('reddit.replies.reject', $reply), ['reason' => 'Too pushy.'])
         ->assertRedirect(route('reddit.replies.index'));
 
     expect($reply->fresh()->status)->toBe(RedditReplyStatus::Rejected)
@@ -132,7 +132,7 @@ it('rejects a draft with no reason given', function () {
     [$user, $project] = redditSetup();
     $reply = RedditReply::factory()->create(['project_id' => $project->id]);
 
-    $this->actingAs($user)->post(route('reddit.replies.reject', $reply));
+    $this->actingAs($user)->from(route('reddit.replies.index'))->post(route('reddit.replies.reject', $reply));
 
     expect($reply->fresh()->status)->toBe(RedditReplyStatus::Rejected)
         ->and($reply->fresh()->rejection_reason)->toBeNull();
@@ -142,7 +142,7 @@ it('deletes a draft entirely, unlike reject', function () {
     [$user, $project] = redditSetup();
     $reply = RedditReply::factory()->create(['project_id' => $project->id]);
 
-    $this->actingAs($user)->delete(route('reddit.replies.destroy', $reply));
+    $this->actingAs($user)->from(route('reddit.replies.index'))->delete(route('reddit.replies.destroy', $reply));
 
     expect(RedditReply::find($reply->id))->toBeNull();
 });
@@ -154,7 +154,7 @@ it('marks a published reply as proven, project-scoped only', function () {
         'status' => RedditReplyStatus::Published,
     ]);
 
-    $this->actingAs($user)->post(route('reddit.replies.promote', $reply));
+    $this->actingAs($user)->from(route('reddit.replies.index'))->post(route('reddit.replies.promote', $reply));
 
     expect($reply->fresh()->promoted_at)->not->toBeNull()
         ->and(RedditReplyExample::count())->toBe(0);
@@ -164,7 +164,7 @@ it('refuses to promote a reply that has not been posted yet', function () {
     [$user, $project] = redditSetup();
     $reply = RedditReply::factory()->create(['project_id' => $project->id, 'status' => RedditReplyStatus::Draft]);
 
-    $this->actingAs($user)->post(route('reddit.replies.promote', $reply));
+    $this->actingAs($user)->from(route('reddit.replies.index'))->post(route('reddit.replies.promote', $reply));
 
     expect($reply->fresh()->promoted_at)->toBeNull();
 });
@@ -177,7 +177,7 @@ it('cannot reach another project draft by id', function () {
     $theirs = RedditReply::factory()->for(Project::factory())->create();
 
     $this->actingAs($user)
-        ->post(route('reddit.replies.approve', $theirs))
+        ->from(route('reddit.replies.index'))->post(route('reddit.replies.approve', $theirs))
         ->assertNotFound();
 });
 
@@ -225,7 +225,7 @@ it('deletes every draft angle sharing a thread, leaving other threads and other 
     ]);
 
     $this->actingAs($user)
-        ->delete(route('reddit.replies.destroyThread', ['thread_permalink' => 'https://www.reddit.com/r/selfhosted/comments/abc/']))
+        ->from(route('reddit.replies.index'))->delete(route('reddit.replies.destroyThread', ['thread_permalink' => 'https://www.reddit.com/r/selfhosted/comments/abc/']))
         ->assertRedirect(route('reddit.replies.index'));
 
     expect(RedditReply::find($valueComment->id))->toBeNull()
@@ -241,7 +241,7 @@ it('cannot delete another project drafts by thread permalink', function () {
     ]);
 
     $this->actingAs($user)
-        ->delete(route('reddit.replies.destroyThread', ['thread_permalink' => 'https://www.reddit.com/r/selfhosted/comments/abc/']))
+        ->from(route('reddit.replies.index'))->delete(route('reddit.replies.destroyThread', ['thread_permalink' => 'https://www.reddit.com/r/selfhosted/comments/abc/']))
         ->assertRedirect(route('reddit.replies.index'));
 
     expect(RedditReply::withoutGlobalScopes()->find($theirs->id))->not->toBeNull();

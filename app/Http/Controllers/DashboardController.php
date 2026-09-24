@@ -2,13 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\InboxFolders;
 use App\Actions\SummarizeRunningDiscovery;
 use App\Cloud\Models\CreditTransaction;
+use App\Enums\LinkedinPostStatus;
 use App\Enums\MessageDirection;
 use App\Enums\OutreachStatus;
+use App\Enums\RedditReplyStatus;
 use App\Enums\ReplyClassification;
 use App\Http\Resources\CampaignResource;
+use App\Http\Resources\ConversationResource;
+use App\Http\Resources\LinkedinAccountResource;
+use App\Http\Resources\LinkedinPostResource;
 use App\Http\Resources\MailboxResource;
+use App\Http\Resources\RedditReplyResource;
 use App\Http\Resources\ReplyResource;
 use App\Models\AgentRun;
 use App\Models\Campaign;
@@ -16,7 +23,9 @@ use App\Models\CampaignLead;
 use App\Models\Company;
 use App\Models\DiscoveryRun;
 use App\Models\Lead;
+use App\Models\LinkedinPost;
 use App\Models\Message;
+use App\Models\RedditReply;
 use App\Support\CurrentProject;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -37,6 +46,7 @@ class DashboardController extends Controller
     public function __construct(
         private CurrentProject $currentProject,
         private SummarizeRunningDiscovery $summarizeRunningDiscovery,
+        private InboxFolders $inboxFolders,
     ) {}
 
     public function index(Request $request): Response
@@ -134,6 +144,23 @@ class DashboardController extends Controller
             'mailboxes' => MailboxResource::collection(
                 $this->currentProject->getOrFail()->emailAccounts()->orderBy('from_email')->get()
             ),
+            // Everything an agent produced that now waits on a person, one
+            // list whatever the channel: drafts to approve and replies to
+            // answer. Each opens in a modal holding the SAME row the
+            // channel's own page renders, so a new channel only adds its
+            // drafts here and its row component there.
+            'review' => [
+                'redditReplies' => RedditReplyResource::collection(
+                    RedditReply::query()->where('status', RedditReplyStatus::Draft)->latest()->get()
+                ),
+                'linkedinPosts' => LinkedinPostResource::collection(
+                    LinkedinPost::query()->where('status', LinkedinPostStatus::Draft)->with('linkedinAccount')->latest()->get()
+                ),
+                'linkedinAccounts' => LinkedinAccountResource::collection(
+                    $this->currentProject->getOrFail()->linkedinAccounts()->get()
+                ),
+                'conversations' => ConversationResource::collection($this->inboxFolders->todo()),
+            ],
             'latestReplies' => ReplyResource::collection(
                 Message::query()
                     ->whereHas('lead')

@@ -25,6 +25,10 @@ use Inertia\Response;
  * `.ai/rules/controllers.md` it is never route-model-bound: `SubstituteBindings`
  * runs before `project.set`, so a bound model would be fetched with the
  * scope not yet applied. Take the id and look it up here instead.
+ *
+ * Every action on one row answers with `back()`, not this page: the same
+ * rows are reviewed from the dashboard's to-review modal too, and a redirect
+ * here would pull the user off the dashboard mid-review.
  */
 class RedditReplyController extends Controller
 {
@@ -61,7 +65,7 @@ class RedditReplyController extends Controller
 
         $mark->handle($reply, $request->validated('comment_permalink'));
 
-        return to_route('reddit.replies.index');
+        return back();
     }
 
     /**
@@ -78,7 +82,7 @@ class RedditReplyController extends Controller
             $request->validated('comment_permalink'),
         );
 
-        return to_route('reddit.replies.index');
+        return back();
     }
 
     /**
@@ -92,14 +96,14 @@ class RedditReplyController extends Controller
             'rejection_reason' => $request->validated('reason'),
         ]);
 
-        return to_route('reddit.replies.index');
+        return back();
     }
 
     public function destroy(int $redditReply): RedirectResponse
     {
         RedditReply::query()->findOrFail($redditReply)->delete();
 
-        return to_route('reddit.replies.index');
+        return back();
     }
 
     /**
@@ -116,7 +120,7 @@ class RedditReplyController extends Controller
             ->where('status', RedditReplyStatus::Draft)
             ->delete();
 
-        return to_route('reddit.replies.index');
+        return back();
     }
 
     /**
@@ -133,6 +137,6 @@ class RedditReplyController extends Controller
             $reply->update(['promoted_at' => now()]);
         }
 
-        return to_route('reddit.replies.index');
+        return back();
     }
 }

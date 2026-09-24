@@ -25,6 +25,10 @@ use Inertia\Response;
  * `.ai/rules/controllers.md` it is never route-model-bound: `SubstituteBindings`
  * runs before `project.set`, so a bound model would be fetched with the scope
  * not yet applied. Take the id and look it up here instead.
+ *
+ * Every action on one row answers with `back()`, not this page: the same
+ * rows are reviewed from the dashboard's to-review modal too, and a redirect
+ * here would pull the user off the dashboard mid-review.
  */
 class LinkedinPostController extends Controller
 {
@@ -46,7 +50,7 @@ class LinkedinPostController extends Controller
     {
         LinkedinPost::query()->findOrFail($linkedinPost)->update($request->validated());
 
-        return to_route('linkedin.posts.index');
+        return back();
     }
 
     /**
@@ -76,7 +80,7 @@ class LinkedinPostController extends Controller
 
         $publish->handle($post, $account);
 
-        return to_route('linkedin.posts.index');
+        return back();
     }
 
     /**
@@ -90,7 +94,7 @@ class LinkedinPostController extends Controller
             'rejection_reason' => $request->validated('reason'),
         ]);
 
-        return to_route('linkedin.posts.index');
+        return back();
     }
 
     /**
@@ -101,7 +105,7 @@ class LinkedinPostController extends Controller
     {
         LinkedinPost::query()->findOrFail($linkedinPost)->delete();
 
-        return to_route('linkedin.posts.index');
+        return back();
     }
 
     /**
@@ -121,6 +125,6 @@ class LinkedinPostController extends Controller
             $post->update(['promoted_at' => now()]);
         }
 
-        return to_route('linkedin.posts.index');
+        return back();
     }
 }

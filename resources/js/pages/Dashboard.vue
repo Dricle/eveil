@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { Head, router, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
+import ConversationPanel from '@/components/ConversationPanel.vue'
+import LinkedinPostCard from '@/components/LinkedinPostCard.vue'
+import RedditThreadCard from '@/components/RedditThreadCard.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { openEvieChat } from '@/composables/useChatPanel'
+import { groupThreads } from '@/lib/reddit'
 import { relativeUrl } from '@/lib/utils'
 import { inbox, onboarding as onboardingRoute } from '@/routes'
 import campaignRoutes from '@/routes/campaigns'
@@ -13,7 +17,7 @@ import organizationBilling from '@/routes/settings/organization/billing'
 import mailboxSettings from '@/routes/settings/mailboxes'
 import projectSettings from '@/routes/settings/project'
 import targets from '@/routes/targets'
-import type { DashboardCampaign, DashboardDiscoveryRun, DashboardReply, DashboardStats, Mailbox, Recommendation } from '@/types'
+import type { Conversation, DashboardCampaign, DashboardDiscoveryRun, DashboardReply, DashboardStats, LinkedinAccount, LinkedinPost, Mailbox, Recommendation, RedditReply } from '@/types'
 import { CLASSIFICATIONS } from '@/types/inbox'
 
 defineOptions({ layout: AppLayout })
@@ -29,10 +33,73 @@ const props = defineProps<{
     campaigns: DashboardCampaign[]
     mailboxes: Mailbox[]
     latestReplies: DashboardReply[]
+    review: {
+        redditReplies: RedditReply[]
+        linkedinPosts: LinkedinPost[]
+        linkedinAccounts: LinkedinAccount[]
+        conversations: Conversation[]
+    }
 }>()
 
 const page = usePage()
 const toast = useToast()
+
+// Everything waiting on a person, whatever the channel. Each row opens the
+// SAME component the channel's own page renders, so reviewing here and there
+// is one experience. Held as a kind and an id, not the item itself, same as
+// `Inbox.vue`: after an action the page reloads, the item leaves the list,
+// and the modal closes on its own because the id no longer finds anything.
+type ReviewKind = 'reddit' | 'linkedin' | 'email'
+
+const redditThreads = computed(() => groupThreads(props.review.redditReplies))
+
+const reviewItems = computed(() => [
+    ...redditThreads.value.map(thread => ({
+        kind: 'reddit' as ReviewKind,
+        id: thread.permalink,
+        icon: 'i-lucide-message-circle',
+        label: 'Reddit reply',
+        title: thread.threadTitle ?? 'Reddit thread',
+        detail: `${thread.subreddit ? `r/${thread.subreddit} · ` : ''}${thread.replies.length} ${thread.replies.length === 1 ? 'draft' : 'drafts'}`
+    })),
+    ...props.review.linkedinPosts.map(post => ({
+        kind: 'linkedin' as ReviewKind,
+        id: String(post.id),
+        icon: 'i-lucide-linkedin',
+        label: 'LinkedIn post',
+        title: post.body.split('\n')[0],
+        detail: post.evidence
+    })),
+    ...props.review.conversations.map(conversation => ({
+        kind: 'email' as ReviewKind,
+        id: String(conversation.id),
+        icon: 'i-lucide-mail',
+        label: 'Email reply',
+        title: conversation.lead.name ?? conversation.lead.email ?? 'Unknown',
+        detail: conversation.messages.find(message => message.direction === 'inbound')?.body ?? ''
+    }))
+])
+
+const reviewing = ref<{ kind: ReviewKind, id: string } | null>(null)
+
+const reviewThread = computed(() => reviewing.value?.kind === 'reddit'
+    ? redditThreads.value.find(thread => thread.permalink === reviewing.value!.id) ?? null
+    : null)
+const reviewPost = computed(() => reviewing.value?.kind === 'linkedin'
+    ? props.review.linkedinPosts.find(post => String(post.id) === reviewing.value!.id) ?? null
+    : null)
+const reviewConversation = computed(() => reviewing.value?.kind === 'email'
+    ? props.review.conversations.find(conversation => String(conversation.id) === reviewing.value!.id) ?? null
+    : null)
+
+const reviewOpen = computed({
+    get: () => reviewThread.value !== null || reviewPost.value !== null || reviewConversation.value !== null,
+    set: (value: boolean) => {
+        if (!value) {
+            reviewing.value = null
+        }
+    }
+})
 
 const decidingRecommendation = ref<string | null>(null)
 
@@ -188,6 +255,36 @@ const topupPercent = computed(() => {
                         label="Review them"
                     />
                 </div>
+
+                <UCard
+                    v-if="reviewItems.length"
+                    variant="subtle"
+                    :ui="{ body: 'p-1.5 sm:p-1.5' }"
+                >
+                    <template #header>
+                        <h3 class="text-sm font-semibold">
+                            You have {{ reviewItems.length }} {{ reviewItems.length === 1 ? 'thing' : 'things' }} to review
+                        </h3>
+                    </template>
+
+                    <button
+                        v-for="item in reviewItems"
+                        :key="`${item.kind}:${item.id}`"
+                        type="button"
+                        class="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left hover:bg-elevated"
+                        @click="reviewing = { kind: item.kind, id: item.id }"
+                    >
+                        <UIcon
+                            :name="item.icon"
+                            class="size-4 shrink-0 text-muted"
+                        />
+                        <span class="min-w-0 flex-1">
+                            <span class="block truncate text-sm font-medium text-highlighted">{{ item.title }}</span>
+                            <span class="block truncate text-xs text-muted">{{ item.label }} · {{ item.detail }}</span>
+                        </span>
+                        <span class="shrink-0 text-xs font-medium text-primary">Review</span>
+                    </button>
+                </UCard>
 
                 <!-- The stat strip: what the run has produced, not how far
                      people have got in a sequence - that funnel lives on
@@ -563,4 +660,32 @@ const topupPercent = computed(() => {
             </div>
         </div>
     </div>
+
+    <UModal
+        v-model:open="reviewOpen"
+        :ui="{ overlay: 'z-50', content: 'z-50 max-w-6xl' }"
+    >
+        <template #content>
+            <ConversationPanel
+                v-if="reviewConversation"
+                :conversation="reviewConversation"
+                :sent="false"
+                @close="reviewOpen = false"
+            />
+            <div
+                v-else
+                class="max-h-[85vh] overflow-y-auto p-4"
+            >
+                <RedditThreadCard
+                    v-if="reviewThread"
+                    :thread="reviewThread"
+                />
+                <LinkedinPostCard
+                    v-else-if="reviewPost"
+                    :post="reviewPost"
+                    :linkedin-accounts="review.linkedinAccounts"
+                />
+            </div>
+        </template>
+    </UModal>
 </template>

@@ -6,6 +6,7 @@ use App\Enums\MessageDirection;
 use App\Enums\OutreachStatus;
 use App\Models\CampaignLead;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 
 /**
@@ -81,12 +82,41 @@ class InboxFolders
      */
     public function todoCount(): int
     {
-        return CampaignLead::query()
-            ->whereHas('messages', fn (Builder $messages) => $messages->where('direction', MessageDirection::Inbound))
-            ->whereHas('campaign')
+        return $this->todoQuery()
             ->with('messages')
             ->get()
             ->filter->needsAttention()
             ->count();
+    }
+
+    /**
+     * The same conversations `todoCount()` counts, loaded for display: the
+     * dashboard's to-review list opens each one in the inbox's own panel.
+     *
+     * @return Collection<int, CampaignLead>
+     */
+    public function todo(): Collection
+    {
+        return $this->todoQuery()
+            ->with([
+                'campaign',
+                'lead.company',
+                'lead.notes.user',
+                'messages',
+            ])
+            ->orderedByLastActivity()
+            ->get()
+            ->filter->needsAttention()
+            ->values();
+    }
+
+    /**
+     * @return Builder<CampaignLead>
+     */
+    private function todoQuery(): Builder
+    {
+        return CampaignLead::query()
+            ->whereHas('messages', fn (Builder $messages) => $messages->where('direction', MessageDirection::Inbound))
+            ->whereHas('campaign');
     }
 }

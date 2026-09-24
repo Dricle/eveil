@@ -26,7 +26,7 @@ class ArticleFactory extends Factory
             'evidence' => fake()->sentence(),
             'title' => fake()->sentence(6),
             'meta_description' => fake()->sentence(),
-            'body' => "## Intro\n\n".fake()->paragraphs(3, true),
+            'body' => "## Intro\n\n".fake()->text(800),
             'language' => 'en',
             'status' => ArticleStatus::Draft,
         ];

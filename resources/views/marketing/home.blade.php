@@ -268,6 +268,8 @@
                     complaints, negative-reply rate, auth failures.</p>
                 <p class="text-[rgba(232,236,242,.62)]">Plus a bounce breaker scoped per mailbox and a
                     three-layer suppression list: project, mailbox, instance.</p>
+                <p class="mt-3 text-[rgba(232,236,242,.62)]">Set per channel: let email run on its own while
+                    LinkedIn posts still wait for your approval.</p>
             </div>
             <div class="grid gap-3">
                 <div class="border border-[rgba(232,236,242,.09)] bg-[#101520] rounded-xl px-[22px] py-5 grid grid-cols-[auto_1fr] gap-4 items-baseline">

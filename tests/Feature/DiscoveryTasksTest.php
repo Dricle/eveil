@@ -515,7 +515,7 @@ it('goes looking for the people the moment a company is kept', function () {
 
 it('approves a company the moment it qualifies, under full autonomy', function () {
     $targetProfile = discoveryProfile();
-    $targetProfile->project->update(['autonomy_level' => AutonomyLevel::Autonomous]);
+    $targetProfile->project->update(['email_autonomy_level' => AutonomyLevel::Autonomous]);
 
     DiscoveryPlanner::fake([overpassPlan()]);
     CompanyQualifier::fake([qualifierVerdict()]);

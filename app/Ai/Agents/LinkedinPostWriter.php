@@ -17,10 +17,11 @@ use Stringable;
  * judgment `WebsiteAnalyst` already exercises, rather than PHP hardcoding a
  * priority order between sources.
  *
- * Always draft-and-approve: nothing this agent writes is posted without a
- * human clicking approve, whatever the project's autonomy level says -
- * publishing to a public feed under the user's name is categorically
- * different from a private 1:1 email.
+ * Draft-and-approve by default: nothing this agent writes is posted without
+ * a human clicking approve, unless the project's own LinkedIn autonomy
+ * setting says otherwise (`GenerateLinkedinPost::publishIfAutonomous()`).
+ * It is separate from the email one on purpose: publishing to a public feed
+ * under the user's name is a different risk from a private 1:1 email.
  */
 class LinkedinPostWriter extends EveilAgent implements HasStructuredOutput
 {

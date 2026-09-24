@@ -153,7 +153,7 @@ class EnrolCampaign
      */
     private function needsApproval(Campaign $campaign): bool
     {
-        return $campaign->project->autonomy_level !== AutonomyLevel::Autonomous;
+        return $campaign->project->email_autonomy_level !== AutonomyLevel::Autonomous;
     }
 
     private function stagger(int $position): CarbonInterface

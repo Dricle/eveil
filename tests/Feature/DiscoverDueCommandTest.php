@@ -15,7 +15,7 @@ beforeEach(function () {
 });
 
 it('starts a run for every active target profile ready for one', function () {
-    $project = Project::factory()->create(['autonomy_level' => AutonomyLevel::SemiAuto]);
+    $project = Project::factory()->create(['email_autonomy_level' => AutonomyLevel::SemiAuto]);
     $profile = TargetProfile::factory()->create(['project_id' => $project->id, 'is_active' => true]);
     TargetProfile::factory()->create(['project_id' => $project->id, 'is_active' => false]);
 
@@ -70,7 +70,7 @@ it('runs again for a profile whose last run only came up narrow', function () {
 });
 
 it('leaves a supervised project alone', function () {
-    $project = Project::factory()->create(['autonomy_level' => AutonomyLevel::Supervised]);
+    $project = Project::factory()->create(['email_autonomy_level' => AutonomyLevel::Supervised]);
     TargetProfile::factory()->create(['project_id' => $project->id, 'is_active' => true]);
 
     $this->artisan('eveil:discover-due')->assertSuccessful();

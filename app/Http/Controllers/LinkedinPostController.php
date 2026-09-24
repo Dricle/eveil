@@ -19,7 +19,8 @@ use Inertia\Response;
 /**
  * The approval queue every source (knowledge base, client win, news, manual
  * via Evie) lands in. Nothing publishes without a human approving here,
- * whatever the project's autonomy level says.
+ * unless the project's LinkedIn autonomy is set to autonomous, in which case
+ * `GenerateLinkedinPost` publishes before a draft ever needs this screen.
  *
  * `LinkedinPost` is project-scoped (`BelongsToProject`), so per
  * `.ai/rules/controllers.md` it is never route-model-bound: `SubstituteBindings`

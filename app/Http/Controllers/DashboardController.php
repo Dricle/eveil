@@ -109,7 +109,10 @@ class DashboardController extends Controller
                 ->selectRaw('status, count(*) as total')
                 ->groupBy('status')
                 ->pluck('total', 'status'),
-            'autonomyLevel' => $this->currentProject->getOrFail()->autonomy_level,
+            'autonomy' => [
+                'email' => $this->currentProject->getOrFail()->email_autonomy_level,
+                'linkedin' => $this->currentProject->getOrFail()->linkedin_autonomy_level,
+            ],
             // What is actually stuck on a yes from this person: a new lead
             // whose company nobody has approved yet. A company-less lead (an
             // import) never needs approval (`EnrolCampaign::eligible()`), and

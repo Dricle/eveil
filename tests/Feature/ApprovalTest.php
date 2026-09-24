@@ -43,7 +43,7 @@ it('keeps an unapproved company out of the sequence, and lets it in once approve
 
     // The project ships on the middle setting, where the user's go-ahead on
     // the company is what opens the door.
-    expect($project->autonomy_level)->toBe(AutonomyLevel::SemiAuto)
+    expect($project->email_autonomy_level)->toBe(AutonomyLevel::SemiAuto)
         ->and(app(EnrolCampaign::class)->handle($campaign))->toBe(0);
 
     $company->update(['approved_at' => now()]);
@@ -56,7 +56,7 @@ it('keeps an unapproved company out of the sequence, and lets it in once approve
 it('writes to anyone contactable once the project is left to itself', function () {
     [, $project] = sender();
 
-    $project->update(['autonomy_level' => AutonomyLevel::Autonomous]);
+    $project->update(['email_autonomy_level' => AutonomyLevel::Autonomous]);
 
     $company = Company::factory()->create(['project_id' => $project->id]);
     atCompany($project, $company);
@@ -208,7 +208,7 @@ it('picks up the people found after a campaign was already running', function ()
 it('leaves a supervised project alone', function () {
     [, $project] = sender();
 
-    $project->update(['autonomy_level' => AutonomyLevel::Supervised]);
+    $project->update(['email_autonomy_level' => AutonomyLevel::Supervised]);
 
     $campaign = sequence($project);
     $campaign->update(['status' => CampaignStatus::Active]);

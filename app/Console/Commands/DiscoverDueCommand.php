@@ -31,7 +31,7 @@ class DiscoverDueCommand extends Command
             // Same reasoning as eveil:enrol-due: supervised means the user
             // decides WHEN, and a tick that started a search behind them would
             // take that decision away.
-            if ($project->autonomy_level === AutonomyLevel::Supervised) {
+            if ($project->email_autonomy_level === AutonomyLevel::Supervised) {
                 return;
             }
 

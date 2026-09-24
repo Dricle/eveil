@@ -27,6 +27,7 @@ use App\Http\Controllers\AppSettings\RedditReplyExampleThresholdController;
 use App\Http\Controllers\AppSettings\SendingController;
 use App\Http\Controllers\Auth\InvitationController;
 use App\Http\Controllers\Auth\SetupController;
+use App\Http\Controllers\AutonomyController;
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\CampaignEnrolmentController;
 use App\Http\Controllers\CampaignGenerationController;
@@ -188,6 +189,9 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
                 ->name('companies.destroy-all');
             Route::delete('contacts', [ContactBulkDeleteController::class, 'destroy'])
                 ->name('contacts.destroy-all');
+
+            Route::get('autonomy', [AutonomyController::class, 'edit'])->name('autonomy.edit');
+            Route::put('autonomy', [AutonomyController::class, 'update'])->name('autonomy.update');
 
             /*
              * Both writing-tone boxes together - see `AiInstructionsController`.

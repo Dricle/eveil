@@ -23,7 +23,7 @@ class ProjectFactory extends Factory
             'organization_id' => Organization::factory(),
             'name' => fake()->company(),
             'url' => fake()->url(),
-            'autonomy_level' => AutonomyLevel::SemiAuto,
+            'email_autonomy_level' => AutonomyLevel::SemiAuto,
         ];
     }
 }

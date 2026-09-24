@@ -17,6 +17,7 @@ export default defineConfig({
                     text: 'Using Eveil',
                     items: [
                         { text: 'Getting started', link: '/product/getting-started' },
+                        { text: 'Autonomy levels', link: '/product/autonomy' },
                         { text: 'How discovery finds companies', link: '/product/discovery' },
                         { text: 'Statuses and the inbox', link: '/product/statuses' },
                         { text: 'The timeline', link: '/product/timeline' },

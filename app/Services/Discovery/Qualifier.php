@@ -129,7 +129,7 @@ class Qualifier
         // The whole point of full autonomy: nobody has to click yes. Not tied
         // to a campaign - a company earns this the moment it qualifies, with or
         // without a sequence to enrol it into.
-        if ($company->approved_at === null && $targetProfile->project->autonomy_level === AutonomyLevel::Autonomous) {
+        if ($company->approved_at === null && $targetProfile->project->email_autonomy_level === AutonomyLevel::Autonomous) {
             $company->update(['approved_at' => now()]);
         }
 

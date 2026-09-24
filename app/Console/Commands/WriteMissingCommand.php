@@ -32,7 +32,7 @@ class WriteMissingCommand extends Command
         $queued = 0;
 
         Project::query()
-            ->where('autonomy_level', AutonomyLevel::Autonomous)
+            ->where('email_autonomy_level', AutonomyLevel::Autonomous)
             ->each(function (Project $project) use ($write, $currentProject, &$queued): void {
                 $queued += $currentProject->run($project, fn () => $write->handle($project)->count());
             });

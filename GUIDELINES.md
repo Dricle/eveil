@@ -159,13 +159,19 @@ Settled. Don't reopen without a genuinely new fact.
   persistent. Every invocation writes an `agent_runs` row (tokens, cost inputs, duration,
   status, error) - simultaneously the debug log, the analysis history, and the billing
   meter. Every run carries a hard budget (max tokens/pages/leads) and stops on it.
-- **Autonomy is a three-notch setting, per project**: *Supervised* (human approval at
+- **Autonomy is set per channel, not per project**. Email is the three-notch setting: *Supervised* (human approval at
   every stage - first project, cautious user, sensitive sector), *Semi-auto* (default -
   approve the target profile and a sequence sample once, then autopilot with escalation
   on anomaly), *Autonomous* (send from the URL alone). The human-escalation conditions
   (bounce-rate threshold, any spam complaint, abnormal negative-reply rate, an auth
   error) are common to semi-auto and autonomous and cut sending regardless of setting -
   autonomous removes *a priori* checkpoints, never the circuit breakers.
+  LinkedIn has two notches, *Supervised* and *Autonomous*: publishing is its only step,
+  so a middle notch has nothing to hand over, and even Autonomous leaves a client-naming
+  post or an ambiguous account choice to a person. Reddit has none: always
+  draft-and-copy. One setting per channel because emailing a stranger and publishing
+  under the user's name are different risks a user should be able to hand over
+  separately.
 - **No mailbox warm-up, anywhere, ever.** Warm-up serves fresh domains going to high
   volume; the target persona sends ~30/day from a real, years-old mailbox that's already
   "warm." Local warm-up between a user's own mailboxes builds no reputation (filters

@@ -849,7 +849,7 @@ it('writes the missing sequences by itself only when the project is left to itse
 
     Queue::assertNothingPushed();
 
-    $project->update(['autonomy_level' => AutonomyLevel::Autonomous]);
+    $project->update(['email_autonomy_level' => AutonomyLevel::Autonomous]);
 
     $this->artisan('eveil:write-missing')->assertSuccessful();
 

@@ -22,35 +22,15 @@ const confirmingDelete = ref(false)
 // was typed. Saving re-renders this page, which is exactly when it bites.
 const name = ref(props.project.name)
 const url = ref(props.project.url)
-const autonomy = ref(props.project.autonomy_level)
 const dailyLeadLimit = ref(props.project.daily_lead_limit)
 const leadLimit = ref(props.project.lead_limit)
 
 watch(() => props.project, (project) => {
     name.value = project.name
     url.value = project.url
-    autonomy.value = project.autonomy_level
     dailyLeadLimit.value = project.daily_lead_limit
     leadLimit.value = project.lead_limit
 })
-
-const AUTONOMY = [
-    {
-        label: 'Supervised',
-        value: 'supervised',
-        help: 'Nothing is written to anybody until you approve the company AND start the campaign yourself. Nobody is added to a running sequence behind you.'
-    },
-    {
-        label: 'Semi automatic',
-        value: 'semi_auto',
-        help: 'You approve companies; everything after that happens on its own. Approving one also goes looking for the people there, and they join the running sequence as they are found.'
-    },
-    {
-        label: 'Autonomous',
-        value: 'autonomous',
-        help: 'No approval is asked for. Every company a search qualifies is written to, unless you have set it aside yourself.'
-    }
-]
 </script>
 
 <template>
@@ -95,23 +75,6 @@ const AUTONOMY = [
                         v-model="url"
                         name="url"
                         required
-                        class="w-full"
-                    />
-                </UFormField>
-
-                <!-- The one setting that decides how much happens without
-                     being asked. Worth spelling out per option: "semi auto"
-                     says nothing on its own about who gets written to. -->
-                <UFormField
-                    label="How much it does on its own"
-                    name="autonomy_level"
-                    :error="errors.autonomy_level"
-                    :help="AUTONOMY.find(level => level.value === autonomy)?.help"
-                >
-                    <USelect
-                        v-model="autonomy"
-                        name="autonomy_level"
-                        :items="AUTONOMY"
                         class="w-full"
                     />
                 </UFormField>

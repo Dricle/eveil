@@ -107,7 +107,7 @@ class CampaignController extends Controller
             // manual "add people now" button only earns a place on the page
             // for that one autonomy level, everyone else already gets it for
             // free on the tick.
-            'autonomyLevel' => $this->currentProject->getOrFail()->autonomy_level,
+            'autonomyLevel' => $this->currentProject->getOrFail()->email_autonomy_level,
         ]);
     }
 

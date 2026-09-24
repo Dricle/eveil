@@ -127,7 +127,6 @@ export type ProjectDetail = Project & {
     edited_by_user: boolean
     has_github_token: boolean
     /** How much of the run happens without being asked. */
-    autonomy_level: 'supervised' | 'semi_auto' | 'autonomous'
     /** Pauses continuous discovery for the rest of the day once reached. Null is uncapped. */
     daily_lead_limit: number | null
     /** Stops continuous discovery permanently once reached. Null is uncapped. */

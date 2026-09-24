@@ -10,7 +10,7 @@ A discovery run starts when you (or [Evie](/product/evie)) tell a target profile
 
 ## Where it looks
 
-A plan comes first — Eveil reads the target profile and decides where to look before spending anything, and shows you that plan if your project's autonomy level asks for approval. Two kinds of source feed it, picked by what the profile actually describes:
+A plan comes first — Eveil reads the target profile and decides where to look before spending anything, and shows you that plan if your email [autonomy level](/product/autonomy) asks for approval. Two kinds of source feed it, picked by what the profile actually describes:
 
 - **OpenStreetMap**, for anything with a physical address — shops, clinics, agencies, workshops. It's exhaustive and free: every business with a front door in the area searched, not just the ones that rank well on Google.
 - **Web search**, for everything OpenStreetMap can't see — online-only businesses, professions, anything defined by what it sells rather than where it sits.

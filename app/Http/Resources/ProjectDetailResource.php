@@ -31,7 +31,6 @@ class ProjectDetailResource extends ProjectResource
                 ? null
                 : collect($this->knowledge_base)->except('gaps')->put('recommendations', $this->recommendations())->all(),
             'open_questions' => $this->openQuestions(),
-            'autonomy_level' => $this->autonomy_level->value,
             'daily_lead_limit' => $this->daily_lead_limit,
             'lead_limit' => $this->lead_limit,
             'edited_by_user' => $this->knowledge_base_edited_by_user,

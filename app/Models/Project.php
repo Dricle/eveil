@@ -37,7 +37,8 @@ use Illuminate\Support\Collection;
  * @property string|null $default_language
  * @property string|null $prompt_instructions
  * @property string|null $linkedin_prompt_instructions
- * @property AutonomyLevel $autonomy_level
+ * @property AutonomyLevel $email_autonomy_level
+ * @property AutonomyLevel $linkedin_autonomy_level
  * @property int|null $daily_lead_limit
  * @property int|null $lead_limit
  * @property LinkedinPostFrequency $linkedin_post_frequency
@@ -47,7 +48,7 @@ use Illuminate\Support\Collection;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['organization_id', 'name', 'slug', 'url', 'github_token', 'knowledge_base', 'knowledge_base_edited_by_user', 'default_language', 'prompt_instructions', 'linkedin_prompt_instructions', 'autonomy_level', 'daily_lead_limit', 'lead_limit', 'linkedin_post_frequency', 'linkedin_next_post_at', 'reddit_scan_frequency', 'reddit_next_scan_at'])]
+#[Fillable(['organization_id', 'name', 'slug', 'url', 'github_token', 'knowledge_base', 'knowledge_base_edited_by_user', 'default_language', 'prompt_instructions', 'linkedin_prompt_instructions', 'email_autonomy_level', 'linkedin_autonomy_level', 'daily_lead_limit', 'lead_limit', 'linkedin_post_frequency', 'linkedin_next_post_at', 'reddit_scan_frequency', 'reddit_next_scan_at'])]
 #[Hidden(['github_token'])]
 class Project extends Model
 {
@@ -413,7 +414,8 @@ class Project extends Model
         return [
             'knowledge_base' => 'array',
             'knowledge_base_edited_by_user' => 'boolean',
-            'autonomy_level' => AutonomyLevel::class,
+            'email_autonomy_level' => AutonomyLevel::class,
+            'linkedin_autonomy_level' => AutonomyLevel::class,
             'github_token' => EncryptedCredential::class,
             'linkedin_post_frequency' => LinkedinPostFrequency::class,
             'linkedin_next_post_at' => 'datetime',

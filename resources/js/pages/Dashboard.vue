@@ -15,7 +15,7 @@ import discoveryRuns from '@/routes/discovery-runs'
 import recommendationRoutes from '@/routes/recommendations'
 import organizationBilling from '@/routes/settings/organization/billing'
 import mailboxSettings from '@/routes/settings/mailboxes'
-import projectSettings from '@/routes/settings/project'
+import autonomySettings from '@/routes/settings/autonomy'
 import targets from '@/routes/targets'
 import type { Conversation, DashboardCampaign, DashboardDiscoveryRun, DashboardReply, DashboardStats, LinkedinAccount, LinkedinPost, Mailbox, Recommendation, RedditReply } from '@/types'
 import { CLASSIFICATIONS } from '@/types/inbox'
@@ -26,7 +26,10 @@ const props = defineProps<{
     onboarding: boolean
     greeting: { name: string | null, days_running: number }
     stats: DashboardStats
-    autonomyLevel: 'supervised' | 'semi_auto' | 'autonomous'
+    autonomy: {
+        email: 'supervised' | 'semi_auto' | 'autonomous'
+        linkedin: 'supervised' | 'autonomous'
+    }
     newLeadsCount: number
     openRecommendations: Recommendation[]
     runningDiscoveryRun: DashboardDiscoveryRun | null
@@ -124,28 +127,19 @@ const CAMPAIGN_STATUS: Record<string, { label: string, color: string }> = {
     archived: { label: 'Archived', color: 'text-dimmed' }
 }
 
-// Same copy as `settings/Project.vue`'s own picker: the only two places this
-// level is explained, and they must not drift apart.
-const AUTONOMY = [
-    {
-        value: 'supervised',
-        label: 'Supervised',
-        help: 'Nothing is written to anybody until you approve the company AND start the campaign yourself. Nobody is added to a running sequence behind you.'
-    },
-    {
-        value: 'semi_auto',
-        label: 'Semi-auto',
-        help: 'You approve companies; everything after that happens on its own. Approving one also goes looking for the people there, and they join the running sequence as they are found.'
-    },
-    {
-        value: 'autonomous',
-        label: 'Autonomous',
-        help: 'No approval is asked for. Every company a search qualifies is written to, unless you have set it aside yourself.'
-    }
-] as const
+// One row per channel: the full explanation lives on the settings screen
+// (`settings/Autonomy.vue`), this card only says where each one stands.
+const AUTONOMY_LABEL = {
+    supervised: 'Supervised',
+    semi_auto: 'Semi-auto',
+    autonomous: 'Autonomous'
+}
 
-const autonomyIndex = computed(() => AUTONOMY.findIndex(level => level.value === props.autonomyLevel))
-const autonomy = computed(() => AUTONOMY[autonomyIndex.value])
+const autonomyRows = computed(() => [
+    { channel: 'Email', level: props.autonomy.email, notches: 3, index: ['supervised', 'semi_auto', 'autonomous'].indexOf(props.autonomy.email) },
+    { channel: 'LinkedIn', level: props.autonomy.linkedin, notches: 2, index: ['supervised', 'autonomous'].indexOf(props.autonomy.linkedin) },
+    { channel: 'Reddit', level: 'supervised' as const, notches: 1, index: 0 }
+])
 
 function verdict (classification: DashboardReply['classification']) {
     return classification ? CLASSIFICATIONS[classification] : null
@@ -452,26 +446,31 @@ const topupPercent = computed(() => {
                                 Autonomy
                             </h3>
                             <ULink
-                                :href="relativeUrl(projectSettings.edit.url({ project: page.props.currentProject!.slug }))"
+                                :href="relativeUrl(autonomySettings.edit.url({ project: page.props.currentProject!.slug }))"
                                 class="text-xs font-medium"
                             >Change</ULink>
                         </div>
                     </template>
 
-                    <div class="mb-3 flex items-center gap-1">
-                        <span
-                            v-for="(level, index) in AUTONOMY"
-                            :key="level.value"
-                            class="h-[3px] flex-1 rounded-full"
-                            :class="index <= autonomyIndex ? 'bg-primary' : 'bg-accented'"
-                        />
+                    <div class="space-y-3">
+                        <div
+                            v-for="row in autonomyRows"
+                            :key="row.channel"
+                        >
+                            <div class="mb-1.5 flex items-baseline justify-between gap-2 text-sm">
+                                <span class="text-muted">{{ row.channel }}</span>
+                                <span class="font-medium text-highlighted">{{ AUTONOMY_LABEL[row.level] }}</span>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <span
+                                    v-for="notch in row.notches"
+                                    :key="notch"
+                                    class="h-[3px] flex-1 rounded-full"
+                                    :class="notch - 1 <= row.index ? 'bg-primary' : 'bg-accented'"
+                                />
+                            </div>
+                        </div>
                     </div>
-                    <p class="mb-1 text-sm font-medium text-highlighted">
-                        {{ autonomy.label }}
-                    </p>
-                    <p class="text-xs text-muted">
-                        {{ autonomy.help }}
-                    </p>
                 </UCard>
 
                 <UCard

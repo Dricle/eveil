@@ -36,7 +36,7 @@ class EnrolDueCommand extends Command
             // The supervised setting means the user decides WHEN, not only
             // who: starting a campaign by hand is the whole of their control,
             // and a tick that enrolled behind them would take it away.
-            if ($project->autonomy_level === AutonomyLevel::Supervised) {
+            if ($project->email_autonomy_level === AutonomyLevel::Supervised) {
                 return;
             }
 

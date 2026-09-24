@@ -2,8 +2,10 @@
 
 namespace App\Jobs;
 
+use App\Actions\PublishLinkedinPost;
 use App\Ai\Agents\LinkedinPostWriter;
 use App\Enums\AgentRunStatus;
+use App\Enums\AutonomyLevel;
 use App\Enums\LinkedinPostSourceType;
 use App\Enums\LinkedinPostStatus;
 use App\Enums\LinkedinPostVariant;
@@ -35,9 +37,9 @@ class GenerateLinkedinPost implements ShouldQueue
         $this->onQueue('ai');
     }
 
-    public function handle(NewsSearch $newsSearch, CurrentProject $currentProject): void
+    public function handle(NewsSearch $newsSearch, CurrentProject $currentProject, PublishLinkedinPost $publish): void
     {
-        $currentProject->run($this->project, function () use ($newsSearch): void {
+        $currentProject->run($this->project, function () use ($newsSearch, $publish): void {
             $clientWon = $this->pendingClientWin();
 
             $run = AgentRun::create([
@@ -58,12 +60,55 @@ class GenerateLinkedinPost implements ShouldQueue
 
             $response = $agent->recordInto($run)->draft();
 
-            $created = $this->persist($response->structured, $run->id, $clientWon);
+            $posts = $this->persist($response->structured, $run->id, $clientWon);
 
-            if ($created) {
+            $this->publishIfAutonomous($posts, $publish);
+
+            // Only what still waits on a person is worth an email: a post
+            // that went out on its own needs nobody's review.
+            if ($posts->contains(fn (LinkedinPost $post): bool => $post->fresh()?->status === LinkedinPostStatus::Draft)) {
                 Notification::send($this->project->notifiableUsers(), LinkedinPostDrafted::for($this->project));
             }
         });
+    }
+
+    /**
+     * The autonomous LinkedIn setting: publish straight away instead of
+     * waiting in the queue. Two cases still stop for a person. Several
+     * accounts on the project: which one to post as is a choice nobody has
+     * made. A client win: only the anonymized variant ever goes out on its
+     * own, since naming a client in public is theirs to agree to, and the
+     * named sibling is rejected the same way approving by hand rejects it.
+     * A failed publish stays a draft with its error, like the manual path.
+     *
+     * @param  Collection<int, LinkedinPost>  $posts
+     */
+    private function publishIfAutonomous(Collection $posts, PublishLinkedinPost $publish): void
+    {
+        if ($this->project->linkedin_autonomy_level !== AutonomyLevel::Autonomous) {
+            return;
+        }
+
+        $accounts = $this->project->linkedinAccounts()->get();
+
+        if ($accounts->count() !== 1) {
+            return;
+        }
+
+        $post = $posts->first(fn (LinkedinPost $post): bool => $post->variant !== LinkedinPostVariant::Named);
+
+        if ($post === null) {
+            return;
+        }
+
+        $post->update(['linkedin_account_id' => $accounts->sole()->id]);
+
+        $post->sibling()->update([
+            'status' => LinkedinPostStatus::Rejected,
+            'rejection_reason' => 'Superseded by the other variant.',
+        ]);
+
+        $publish->handle($post, $accounts->sole());
     }
 
     /**
@@ -126,10 +171,10 @@ class GenerateLinkedinPost implements ShouldQueue
 
     /**
      * @param  array<string, mixed>  $structured
-     * @return bool whether at least one draft was actually written - what
-     *              decides whether `LinkedinPostDrafted` goes out.
+     * @return Collection<int, LinkedinPost> every draft actually written,
+     *                                       empty when the writer passed.
      */
-    private function persist(array $structured, int $agentRunId, ?Company $clientWon): bool
+    private function persist(array $structured, int $agentRunId, ?Company $clientWon): Collection
     {
         $sourceType = LinkedinPostSourceType::from((string) $structured['source_type']);
         $evidence = (string) $structured['evidence'];
@@ -140,14 +185,14 @@ class GenerateLinkedinPost implements ShouldQueue
                 [LinkedinPostVariant::Anonymized, (string) ($structured['body_anonymized'] ?? '')],
             ];
 
-            $created = false;
+            $posts = new Collection;
 
             foreach ($variants as [$variant, $body]) {
                 if ($body === '') {
                     continue;
                 }
 
-                LinkedinPost::create([
+                $posts->push(LinkedinPost::create([
                     'project_id' => $this->project->id,
                     'agent_run_id' => $agentRunId,
                     'source_type' => LinkedinPostSourceType::ClientWon,
@@ -156,29 +201,25 @@ class GenerateLinkedinPost implements ShouldQueue
                     'evidence' => $evidence,
                     'body' => $body,
                     'status' => LinkedinPostStatus::Draft,
-                ]);
-
-                $created = true;
+                ]));
             }
 
-            return $created;
+            return $posts;
         }
 
         $body = (string) ($structured['body'] ?? '');
 
         if ($body === '') {
-            return false;
+            return new Collection;
         }
 
-        LinkedinPost::create([
+        return new Collection([LinkedinPost::create([
             'project_id' => $this->project->id,
             'agent_run_id' => $agentRunId,
             'source_type' => $sourceType,
             'evidence' => $evidence,
             'body' => $body,
             'status' => LinkedinPostStatus::Draft,
-        ]);
-
-        return true;
+        ])]);
     }
 }

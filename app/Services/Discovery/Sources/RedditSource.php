@@ -194,7 +194,7 @@ class RedditSource implements DiscoverySourceInterface
                 sourceUrl: $permalink,
                 facts: array_filter([
                     'reddit_subreddit' => $item['subreddit'] ?? null,
-                    'reddit_author' => $author !== '' ? $author : null,
+                    'reddit_author' => $author,
                     'reddit_reason' => $reason !== '' ? $reason : null,
                 ]),
             );

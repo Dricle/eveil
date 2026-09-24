@@ -35,20 +35,25 @@ export function useEvieChat () {
     const page = usePage()
 
     const transport = new DefaultChatTransport({
-        api: chatRoutes.store.url({ project: page.props.currentProject!.slug }),
         headers: () => ({ 'X-XSRF-TOKEN': xsrfToken() }),
         prepareSendMessagesRequest ({ messages, body }) {
+            // Resolved per request, never once at setup: this transport
+            // outlives project switches (the panel stays mounted in the
+            // persistent layout), and a URL frozen on the first project sent
+            // every later turn - and its tool calls - to that project.
+            const api = chatRoutes.store.url({ project: page.props.currentProject!.slug })
+
             // A resume (Approve/Deny) calls regenerate({ body: { decisions } })
             // with no new user message: pass that straight through instead of
             // extracting a message from a transcript that did not change.
             if (body && 'decisions' in body) {
-                return { body }
+                return { api, body }
             }
 
             const last = messages.at(-1)
             const text = last?.parts.filter(part => part.type === 'text').map(part => part.text).join('') ?? ''
 
-            return { body: { message: text } }
+            return { api, body: { message: text } }
         }
     })
 

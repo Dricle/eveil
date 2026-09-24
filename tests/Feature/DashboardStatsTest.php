@@ -8,6 +8,7 @@ use App\Enums\LinkedinPostStatus;
 use App\Enums\MessageDirection;
 use App\Enums\RedditReplyStatus;
 use App\Models\AgentRun;
+use App\Models\Article;
 use App\Models\Campaign;
 use App\Models\CampaignLead;
 use App\Models\Company;
@@ -184,20 +185,26 @@ it('lists every draft and unanswered reply waiting on a person, this project onl
     LinkedinPost::factory()->create(['project_id' => $project->id, 'status' => LinkedinPostStatus::Rejected]);
     LinkedinPost::factory()->create(['project_id' => $otherProject->id]);
 
+    Article::factory()->create(['project_id' => $project->id]);
+    Article::factory()->published()->create(['project_id' => $project->id]);
+    Article::factory()->create(['project_id' => $otherProject->id]);
+
     $campaign = Campaign::factory()->create(['project_id' => $project->id]);
-    $todo = CampaignLead::factory()->for($campaign)->create();
+    $todo = CampaignLead::factory()->for($campaign)->create(['lead_id' => Lead::factory()->create(['project_id' => $project->id])->id]);
     Message::factory()->create(['lead_id' => $todo->lead_id, 'campaign_lead_id' => $todo->id, 'direction' => MessageDirection::Inbound]);
     // Already dealt with: not on the list, whatever it said.
-    $done = CampaignLead::factory()->for($campaign)->create(['attention_resolved_at' => now()]);
+    $done = CampaignLead::factory()->for($campaign)->create(['lead_id' => Lead::factory()->create(['project_id' => $project->id])->id, 'attention_resolved_at' => now()]);
     Message::factory()->create(['lead_id' => $done->lead_id, 'campaign_lead_id' => $done->id, 'direction' => MessageDirection::Inbound]);
 
     $this->actingAs($user);
     forProject($project);
 
     $this->get(route('dashboard'))
+        ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->has('review.redditReplies', 2)
             ->has('review.linkedinPosts', 1)
             ->has('review.conversations', 1)
+            ->has('review.articles', 1)
             ->where('review.conversations.0.id', $todo->id));
 });

@@ -25,6 +25,8 @@ use App\Http\Controllers\AppSettings\ProviderTestController;
 use App\Http\Controllers\AppSettings\RedditReplyExampleController;
 use App\Http\Controllers\AppSettings\RedditReplyExampleThresholdController;
 use App\Http\Controllers\AppSettings\SendingController;
+use App\Http\Controllers\ArticleCadenceController;
+use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\Auth\InvitationController;
 use App\Http\Controllers\Auth\SetupController;
 use App\Http\Controllers\AutonomyController;
@@ -54,6 +56,7 @@ use App\Http\Controllers\DiscoveryRunController;
 use App\Http\Controllers\DiscoveryTaskReplayController;
 use App\Http\Controllers\EmailInstructionsController;
 use App\Http\Controllers\EvieChatController;
+use App\Http\Controllers\IdeaController;
 use App\Http\Controllers\InboxController;
 use App\Http\Controllers\KnownClientController;
 use App\Http\Controllers\LeadImportController;
@@ -352,6 +355,35 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
              */
             Route::post('posts/{linkedin_post}/promote', [LinkedinPostController::class, 'promote'])
                 ->name('posts.promote');
+        });
+
+        /*
+         * SEO: for now the article queue, later more. Nothing publishes on
+         * its own: the user copies an article into their own CMS and gives
+         * the URL back.
+         */
+        Route::prefix('seo')->name('seo.')->group(function (): void {
+            Route::get('/', [ArticleController::class, 'index'])->name('index');
+            /*
+             * Literal segments before {article} below, same trap as
+             * `linkedin.posts.cadence`.
+             */
+            Route::put('articles/cadence', [ArticleCadenceController::class, 'update'])
+                ->name('articles.cadence');
+            Route::post('articles/generate', [ArticleController::class, 'generate'])
+                ->name('articles.generate');
+            Route::put('articles/{article}', [ArticleController::class, 'update'])
+                ->name('articles.update');
+            Route::post('articles/{article}/publish', [ArticleController::class, 'publish'])
+                ->name('articles.publish');
+            Route::post('articles/{article}/reject', [ArticleController::class, 'reject'])
+                ->name('articles.reject');
+            Route::delete('articles/{article}', [ArticleController::class, 'destroy'])
+                ->name('articles.destroy');
+            Route::post('ideas/{idea}/write', [IdeaController::class, 'write'])
+                ->name('ideas.write');
+            Route::post('ideas/{idea}/dismiss', [IdeaController::class, 'dismiss'])
+                ->name('ideas.dismiss');
         });
 
         /*

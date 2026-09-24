@@ -12,6 +12,7 @@ import campaigns from '@/routes/campaigns'
 import companies from '@/routes/companies'
 import linkedinPosts from '@/routes/linkedin/posts'
 import redditReplies from '@/routes/reddit/replies'
+import seo from '@/routes/seo'
 import { profile } from '@/routes/account'
 import appSettings from '@/routes/app-settings/provider'
 import { create as createProject } from '@/routes/projects'
@@ -132,6 +133,16 @@ const items = computed<NavigationMenuItem[]>(() => {
             active: page.url.startsWith(`/app/${project.slug}/reddit`),
             badge: navCounts.value?.reddit
                 ? { label: navCounts.value.reddit, color: 'primary', variant: 'solid' }
+                : undefined
+        },
+
+        {
+            label: 'SEO',
+            icon: 'i-lucide-file-text',
+            to: relativeUrl(seo.index.url({ project: project.slug })),
+            active: page.url.startsWith(`/app/${project.slug}/seo`),
+            badge: navCounts.value?.seo
+                ? { label: navCounts.value.seo, color: 'primary', variant: 'solid' }
                 : undefined
         },
 

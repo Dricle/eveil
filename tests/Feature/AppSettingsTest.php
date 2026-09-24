@@ -235,12 +235,12 @@ it('shows what each agent has already spent', function () {
 
     $this->actingAs(superAdmin())->get(route('app-settings.agents.index'))
         ->assertInertia(fn ($page) => $page
-            ->where('agents.17.slug', 'website-analyst')
-            ->where('agents.17.calls', 2)
-            ->where('agents.17.tokens_in', 200)
-            ->where('agents.17.tokens_out', 100)
-            ->where('agents.17.avg_tokens_in', 100)
-            ->where('agents.17.avg_tokens_out', 50));
+            ->where('agents.18.slug', 'website-analyst')
+            ->where('agents.18.calls', 2)
+            ->where('agents.18.tokens_in', 200)
+            ->where('agents.18.tokens_out', 100)
+            ->where('agents.18.avg_tokens_in', 100)
+            ->where('agents.18.avg_tokens_out', 50));
 });
 
 it('has no credit price for an agent nobody has priced', function () {
@@ -250,7 +250,7 @@ it('has no credit price for an agent nobody has priced', function () {
     CreditPrice::where('agent', 'website-analyst')->delete();
 
     $this->actingAs(superAdmin())->get(route('app-settings.agents.index'))
-        ->assertInertia(fn ($page) => $page->where('agents.17.credit_price', null));
+        ->assertInertia(fn ($page) => $page->where('agents.18.credit_price', null));
 });
 
 it('calibrates an agent\'s credit price by adding a new versioned row, never editing in place', function () {
@@ -275,19 +275,19 @@ it('marks the agents a weak model would break rather than merely blunt', functio
         ->assertInertia(fn ($page) => $page
             // Extraction returns fields; a model that cannot hold the schema
             // returns wrong ones that look like results.
-            ->where('agents.0.slug', 'company-qualifier')
-            ->where('agents.0.strict', true)
-            ->where('agents.17.slug', 'website-analyst')
-            ->where('agents.17.strict', false));
+            ->where('agents.1.slug', 'company-qualifier')
+            ->where('agents.1.strict', true)
+            ->where('agents.18.slug', 'website-analyst')
+            ->where('agents.18.strict', false));
 });
 
 it('marks the agents that shipped calibrated to run on the cheap model', function () {
     $this->actingAs(superAdmin())->get(route('app-settings.agents.index'))
         ->assertInertia(fn ($page) => $page
-            ->where('agents.0.slug', 'company-qualifier')
-            ->where('agents.0.smallModelOk', true)
-            ->where('agents.17.slug', 'website-analyst')
-            ->where('agents.17.smallModelOk', false));
+            ->where('agents.1.slug', 'company-qualifier')
+            ->where('agents.1.smallModelOk', true)
+            ->where('agents.18.slug', 'website-analyst')
+            ->where('agents.18.smallModelOk', false));
 });
 
 it('suggests the models a provider names for itself, without fixing the choice', function () {

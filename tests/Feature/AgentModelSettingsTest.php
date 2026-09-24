@@ -157,6 +157,7 @@ it('leaves the model unset so the provider default applies', function () {
 it('lists every agent it finds in the code, not a hand-kept list', function () {
     // An enum would drift the day someone adds an agent and forgets the case.
     expect(app(AgentSettings::class)->known())->toBe([
+        'article-writer',
         'company-qualifier',
         'contact-extractor',
         'contact-page-finder',

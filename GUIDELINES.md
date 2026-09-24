@@ -79,7 +79,7 @@ by role puts unrelated jobs on one settings/pricing line):
   suggestions as a free by-product of the same call. Not an SEO audit tool.
 - **Sales**: knowledge base + target profile → qualified companies, verified contacts,
   outreach sequences, handled replies.
-- **Inbound** (Reddit shipped, articles/X/Bluesky/LinkedIn later): target profile +
+- **Inbound** (Reddit and SEO articles shipped, X/Bluesky later): target profile +
   knowledge base → anchored channel opportunities, drafted for review; companies crossed
   along the way feed back into discovery. Reddit shipped in a more conservative shape
   than "published per the autonomy setting" implies: always draft-and-copy, never an

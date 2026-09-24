@@ -20,7 +20,7 @@ looking for those companies, finds the people at them, writes the email
 sequence, sends it from your own mailbox, and reads the replies.
 
 Your own AI CMO, running its own army of agents. Lead discovery and outreach
-are B2B; LinkedIn posting and Reddit reply drafting (both evidence-driven)
+are B2B; LinkedIn posting, Reddit reply drafting and SEO articles (all evidence-driven)
 already work for anyone building an online presence, B2C solo founders
 included.
 
@@ -39,7 +39,8 @@ unlimited mailboxes, unlimited leads, your data on your own machine.
 > organizations, roles, and pay-as-you-go billing for the cloud edition.
 > LinkedIn posting (personal profile, official API) is in too, and so is
 > Reddit reply drafting - manual-publish only for now, since Reddit is
-> currently blocking new API app registration. Not built yet: a public API,
+> currently blocking new API app registration - and SEO articles for your own
+> blog. Not built yet: a public API,
 > commenting on someone else's LinkedIn post. See
 > [Issues](https://github.com/Dricle/eveil/issues) for exactly what's left.
 
@@ -76,6 +77,10 @@ unlimited mailboxes, unlimited leads, your data on your own machine.
   "best X" threads already ranking on Google, drafted in the thread's own
   tone. Copy, post it yourself, mark it posted - no OAuth, since Reddit is
   currently blocking new API app registration.
+- **Writes SEO articles for your blog.** On a feature your site never
+  explains, a competitor comparison, a question buyers ask on Reddit, a client
+  win: always something Eveil actually found. Copy it into your blog, give the
+  URL back, and Eveil won't write it twice.
 - **Reads and threads replies itself**, over IMAP, matched on the mail's own
   `Message-ID` so a reply always attaches to the lead it answers.
 - **A bounce circuit breaker**, scoped per mailbox, that pauses sending before

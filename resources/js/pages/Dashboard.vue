@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, router, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
+import ArticleCard from '@/components/ArticleCard.vue'
 import ConversationPanel from '@/components/ConversationPanel.vue'
 import LinkedinPostCard from '@/components/LinkedinPostCard.vue'
 import RedditThreadCard from '@/components/RedditThreadCard.vue'
@@ -17,7 +18,7 @@ import organizationBilling from '@/routes/settings/organization/billing'
 import mailboxSettings from '@/routes/settings/mailboxes'
 import autonomySettings from '@/routes/settings/autonomy'
 import targets from '@/routes/targets'
-import type { Conversation, DashboardCampaign, DashboardDiscoveryRun, DashboardReply, DashboardStats, LinkedinAccount, LinkedinPost, Mailbox, Recommendation, RedditReply } from '@/types'
+import type { Article, Conversation, DashboardCampaign, DashboardDiscoveryRun, DashboardReply, DashboardStats, LinkedinAccount, LinkedinPost, Mailbox, Recommendation, RedditReply } from '@/types'
 import { CLASSIFICATIONS } from '@/types/inbox'
 
 defineOptions({ layout: AppLayout })
@@ -41,6 +42,7 @@ const props = defineProps<{
         linkedinPosts: LinkedinPost[]
         linkedinAccounts: LinkedinAccount[]
         conversations: Conversation[]
+        articles: Article[]
     }
 }>()
 
@@ -52,7 +54,7 @@ const toast = useToast()
 // is one experience. Held as a kind and an id, not the item itself, same as
 // `Inbox.vue`: after an action the page reloads, the item leaves the list,
 // and the modal closes on its own because the id no longer finds anything.
-type ReviewKind = 'reddit' | 'linkedin' | 'email'
+type ReviewKind = 'reddit' | 'linkedin' | 'email' | 'article'
 
 const redditThreads = computed(() => groupThreads(props.review.redditReplies))
 
@@ -72,6 +74,14 @@ const reviewItems = computed(() => [
         label: 'LinkedIn post',
         title: post.body.split('\n')[0],
         detail: post.evidence
+    })),
+    ...props.review.articles.map(article => ({
+        kind: 'article' as ReviewKind,
+        id: String(article.id),
+        icon: 'i-lucide-file-text',
+        label: 'SEO article',
+        title: article.title,
+        detail: article.evidence
     })),
     ...props.review.conversations.map(conversation => ({
         kind: 'email' as ReviewKind,
@@ -95,8 +105,12 @@ const reviewConversation = computed(() => reviewing.value?.kind === 'email'
     ? props.review.conversations.find(conversation => String(conversation.id) === reviewing.value!.id) ?? null
     : null)
 
+const reviewArticle = computed(() => reviewing.value?.kind === 'article'
+    ? props.review.articles.find(article => String(article.id) === reviewing.value!.id) ?? null
+    : null)
+
 const reviewOpen = computed({
-    get: () => reviewThread.value !== null || reviewPost.value !== null || reviewConversation.value !== null,
+    get: () => reviewThread.value !== null || reviewPost.value !== null || reviewConversation.value !== null || reviewArticle.value !== null,
     set: (value: boolean) => {
         if (!value) {
             reviewing.value = null
@@ -683,6 +697,12 @@ const topupPercent = computed(() => {
                     v-else-if="reviewPost"
                     :post="reviewPost"
                     :linkedin-accounts="review.linkedinAccounts"
+                />
+                <ArticleCard
+                    v-else-if="reviewArticle"
+                    :article="reviewArticle"
+                    expanded
+                    @rework="reviewOpen = false"
                 />
             </div>
         </template>

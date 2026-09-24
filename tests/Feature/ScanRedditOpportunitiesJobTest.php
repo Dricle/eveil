@@ -2,12 +2,15 @@
 
 use App\Ai\Agents\RedditOpportunityTriage;
 use App\Ai\Agents\RedditReplyWriter;
+use App\Enums\IdeaKind;
+use App\Enums\IdeaStatus;
 use App\Enums\OrganizationRole;
 use App\Enums\RedditReplyAngle;
 use App\Enums\RedditReplySource;
 use App\Enums\RedditReplyStatus;
 use App\Jobs\ScanRedditOpportunities;
 use App\Models\AgentRun;
+use App\Models\Idea;
 use App\Models\Project;
 use App\Models\RedditReply;
 use App\Models\RedditReplyExample;
@@ -275,4 +278,53 @@ it('feeds the shared instance-wide pool into the writer prompt', function () {
     expect(AgentRun::where('agent', RedditReplyWriter::slug())->sole()->input['prompt'])
         ->toContain('Proven Reddit replies')
         ->toContain('A proven reply from another tenant.');
+});
+
+it('notes a thread worth an article even when it is no reply opportunity, once', function () {
+    $project = scannableProject();
+
+    $verdict = [[
+        'items' => [[
+            'permalink' => 'https://www.reddit.com/r/SaaS/comments/xyz789/what_do_you_use/def456/',
+            'is_opportunity' => false,
+            'reason' => 'Nobody here needs this product.',
+            'article_angle' => 'Why every tool in this space ends up too expensive, and what to look for instead.',
+        ]],
+    ]];
+
+    RedditOpportunityTriage::fake([...$verdict, ...$verdict]);
+
+    ScanRedditOpportunities::dispatchSync($project);
+    ScanRedditOpportunities::dispatchSync($project);
+
+    $idea = Idea::sole();
+
+    expect($idea->project_id)->toBe($project->id)
+        ->and($idea->kind)->toBe(IdeaKind::Article)
+        ->and($idea->status)->toBe(IdeaStatus::Open)
+        ->and($idea->source_ref)->toBe('https://www.reddit.com/r/SaaS/comments/xyz789/what_do_you_use/def456/')
+        ->and($idea->angle)->toBe('Why every tool in this space ends up too expensive, and what to look for instead.')
+        ->and(RedditReply::count())->toBe(0);
+});
+
+it('never reopens an idea the user dismissed', function () {
+    $project = scannableProject();
+    Idea::factory()->create([
+        'project_id' => $project->id,
+        'source_ref' => 'https://www.reddit.com/r/SaaS/comments/xyz789/what_do_you_use/def456/',
+        'status' => IdeaStatus::Dismissed,
+    ]);
+
+    RedditOpportunityTriage::fake([[
+        'items' => [[
+            'permalink' => 'https://www.reddit.com/r/SaaS/comments/xyz789/what_do_you_use/def456/',
+            'is_opportunity' => false,
+            'reason' => 'x',
+            'article_angle' => 'A new angle on the same thread.',
+        ]],
+    ]]);
+
+    ScanRedditOpportunities::dispatchSync($project);
+
+    expect(Idea::sole()->status)->toBe(IdeaStatus::Dismissed);
 });

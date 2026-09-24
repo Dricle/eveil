@@ -234,6 +234,16 @@
                 </div>
                 <div class="bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-6 pt-[26px] pb-7">
                     <div class="font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[rgba(232,236,242,.45)] mb-3">
+                        Channels
+                    </div>
+                    <h4 class="font-[Sora,sans-serif] font-semibold text-[20px] tracking-[-.02em] mb-[10px]">
+                        SEO articles</h4>
+                    <p class="text-[14.5px] text-[rgba(232,236,242,.6)]">Articles for your own blog on what your
+                        buyers search for and your site doesn't answer: an uncovered feature, a competitor
+                        comparison, a question asked on Reddit. In your site's language, ready to paste.</p>
+                </div>
+                <div class="bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-6 pt-[26px] pb-7">
+                    <div class="font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[rgba(232,236,242,.45)] mb-3">
                         Team
                     </div>
                     <h4 class="font-[Sora,sans-serif] font-semibold text-[20px] tracking-[-.02em] mb-[10px]">

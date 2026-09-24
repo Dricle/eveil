@@ -64,3 +64,7 @@ Schedule::command('eveil:reddit-scan-due')->daily();
 // outright, and `FlareSolverrRenderer` already no-ops when the profile
 // isn't configured.
 Schedule::command('eveil:reddit-fetch-stats')->daily();
+
+// Same daily granularity as the LinkedIn and Reddit cadences above: the
+// shortest article cadence is daily too.
+Schedule::command('eveil:articles-generate-due')->daily();

@@ -11,6 +11,8 @@ Two independent sources feed the same queue:
 
 Both run on the same schedule: turn scanning on from the **Reddit** page (off by default — pick daily, weekly, every two weeks, or monthly), or hit **Scan now** for an on-demand check outside the cadence.
 
+While it reads each thread, Eveil also asks a second question: would this discussion make a good article for your blog? That's judged separately from whether it's worth a reply, so a thread can be one, the other, or both. The ones worth an article show up as ideas on the [SEO page](/product/seo).
+
 ## What gets drafted
 
 For each thread worth replying to, the writer drafts up to three angles in one pass, matching the tone of that thread's own top comments:

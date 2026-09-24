@@ -11,15 +11,20 @@ use App\Ai\Tools\DeleteAllLeads;
 use App\Ai\Tools\DeleteCompanyNote;
 use App\Ai\Tools\DeleteLeadNote;
 use App\Ai\Tools\DeleteTargetProfile;
+use App\Ai\Tools\DismissArticleIdea;
+use App\Ai\Tools\DraftArticle;
 use App\Ai\Tools\DraftLinkedinPost;
 use App\Ai\Tools\Evie\ProposeSuggestedReplies;
 use App\Ai\Tools\FindNewTargetProfiles;
+use App\Ai\Tools\GetArticle;
 use App\Ai\Tools\GetCampaign;
 use App\Ai\Tools\GetCompany;
 use App\Ai\Tools\GetContact;
 use App\Ai\Tools\GetDiscoveryRunStatus;
 use App\Ai\Tools\GetKnowledgeBase;
 use App\Ai\Tools\GetTargetProfile;
+use App\Ai\Tools\ListArticleIdeas;
+use App\Ai\Tools\ListArticles;
 use App\Ai\Tools\ListCampaigns;
 use App\Ai\Tools\ListCompanies;
 use App\Ai\Tools\ListLinkedinPosts;
@@ -27,6 +32,7 @@ use App\Ai\Tools\ListTargetProfiles;
 use App\Ai\Tools\ProposeRecommendation;
 use App\Ai\Tools\RefreshAcquisitionIdeas;
 use App\Ai\Tools\StartDiscovery;
+use App\Ai\Tools\UpdateArticle;
 use App\Ai\Tools\UpdateKnowledgeBase;
 use App\Ai\Tools\UpdateLinkedinPost;
 use App\Ai\Tools\UpdateRecommendation;
@@ -63,8 +69,9 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
 
         Look things up before you act: ListTargetProfiles, ListCompanies,
         GetCompany, GetContact, ListCampaigns, GetCampaign,
-        GetDiscoveryRunStatus, GetKnowledgeBase, GetTargetProfile and
-        ListLinkedinPosts cost nothing and answer most questions on their own.
+        GetDiscoveryRunStatus, GetKnowledgeBase, GetTargetProfile,
+        ListLinkedinPosts, ListArticles, GetArticle and ListArticleIdeas cost
+        nothing and answer most questions on their own.
 
         ListCampaigns only gives you the shape (id, name, status, step
         count) - when the user wants to discuss, review, or rewrite a
@@ -198,6 +205,24 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
         published it refuses, since the queue's own edit option is gone by
         then too.
 
+        DraftArticle queues a NEW SEO article for the project's blog, written in
+        the background by the article writer from the brief you pass: never
+        write the article yourself in the chat. When the user announces
+        something worth writing about ("we just shipped X", "we signed Y"),
+        offer both: a LinkedIn post (DraftLinkedinPost) and an article
+        (DraftArticle). Like LinkedIn, check ListArticles first when the user
+        may mean an article that already exists.
+
+        ListArticleIdeas lists the Reddit discussions the scan noted as worth an
+        article. When the user wants one written, pass its idea_id to
+        DraftArticle (no brief). When they say an idea is not worth it,
+        DismissArticleIdea removes it for good.
+
+        When the user asks you to rework an article, call GetArticle to read it,
+        then UpdateArticle with their changes applied. Pass the whole new body,
+        not only the edited part, and keep everything they did not ask to change
+        word for word. UpdateArticle only works on a draft.
+
         When the obvious next replies are predictable, offer them with
         ProposeSuggestedReplies instead of making the user type. Skip it when
         there is nothing obvious to suggest.
@@ -323,6 +348,12 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
             new DraftLinkedinPost($this->project),
             new ListLinkedinPosts($this->project),
             new UpdateLinkedinPost($this->project),
+            new ListArticles($this->project),
+            new GetArticle($this->project),
+            new DraftArticle($this->project),
+            new UpdateArticle($this->project),
+            new ListArticleIdeas($this->project),
+            new DismissArticleIdea($this->project),
             new ProposeSuggestedReplies,
         ];
     }

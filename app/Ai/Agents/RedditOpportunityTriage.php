@@ -30,6 +30,10 @@ use Stringable;
  * One shared batch is cheaper than two separate calls and the underlying
  * judgment - "would replying here genuinely help, with this product as the
  * reason" - is the same question either way.
+ *
+ * The same pass also asks the second thing a researcher notices while
+ * reading: whether a thread would make a blog article (`article_angle`),
+ * independently of whether it is worth a reply. Those become `Idea` rows.
  */
 class RedditOpportunityTriage extends EveilAgent implements HasStructuredOutput
 {
@@ -86,6 +90,17 @@ class RedditOpportunityTriage extends EveilAgent implements HasStructuredOutput
         Write the reason as one sentence, specific to what the item actually says,
         usable as-is to explain to the person approving drafts why this thread was
         picked.
+
+        Separately, judge every item a second way, as someone who writes this
+        product's blog would: is this a discussion worth turning into an article on
+        the product's blog? That is a different question from the one above. A thread
+        can be worth an article without being a reply opportunity (an interesting
+        debate in the product's field, a question many people clearly share, a
+        misconception worth correcting), and a reply opportunity is not automatically
+        an article. When it is worth one, write the article's angle in one sentence:
+        what the article would answer or argue, framed for this product's readers,
+        not a summary of the thread. Otherwise leave article_angle empty. Most items
+        are worth neither.
         PROMPT;
     }
 
@@ -99,6 +114,7 @@ class RedditOpportunityTriage extends EveilAgent implements HasStructuredOutput
                 'permalink' => $schema->string()->description('Exactly as given to you.')->required(),
                 'is_opportunity' => $schema->boolean()->description('True only when replying here would genuinely help, with this product as the reason.')->required(),
                 'reason' => $schema->string()->description('One sentence, specific to this item, usable as the draft\'s evidence.')->required(),
+                'article_angle' => $schema->string()->description('The blog article this discussion would make, in one sentence. Empty when it would not make one.')->required(),
             ]))->description('One entry per item you were given, none missing.')->required(),
         ];
     }

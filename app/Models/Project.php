@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Casts\EncryptedCredential;
+use App\Enums\ArticleFrequency;
 use App\Enums\AutonomyLevel;
 use App\Enums\LinkedinPostFrequency;
 use App\Enums\OrganizationRole;
@@ -45,10 +46,12 @@ use Illuminate\Support\Collection;
  * @property Carbon|null $linkedin_next_post_at
  * @property RedditScanFrequency $reddit_scan_frequency
  * @property Carbon|null $reddit_next_scan_at
+ * @property ArticleFrequency $article_frequency
+ * @property Carbon|null $article_next_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['organization_id', 'name', 'slug', 'url', 'github_token', 'knowledge_base', 'knowledge_base_edited_by_user', 'default_language', 'prompt_instructions', 'linkedin_prompt_instructions', 'email_autonomy_level', 'linkedin_autonomy_level', 'daily_lead_limit', 'lead_limit', 'linkedin_post_frequency', 'linkedin_next_post_at', 'reddit_scan_frequency', 'reddit_next_scan_at'])]
+#[Fillable(['organization_id', 'name', 'slug', 'url', 'github_token', 'knowledge_base', 'knowledge_base_edited_by_user', 'default_language', 'prompt_instructions', 'linkedin_prompt_instructions', 'email_autonomy_level', 'linkedin_autonomy_level', 'daily_lead_limit', 'lead_limit', 'linkedin_post_frequency', 'linkedin_next_post_at', 'reddit_scan_frequency', 'reddit_next_scan_at', 'article_frequency', 'article_next_at'])]
 #[Hidden(['github_token'])]
 class Project extends Model
 {
@@ -243,6 +246,14 @@ class Project extends Model
     }
 
     /**
+     * @return HasMany<Article, $this>
+     */
+    public function articles(): HasMany
+    {
+        return $this->hasMany(Article::class);
+    }
+
+    /**
      * @return HasMany<RedditReply, $this>
      */
     public function redditReplies(): HasMany
@@ -421,6 +432,8 @@ class Project extends Model
             'linkedin_next_post_at' => 'datetime',
             'reddit_scan_frequency' => RedditScanFrequency::class,
             'reddit_next_scan_at' => 'datetime',
+            'article_frequency' => ArticleFrequency::class,
+            'article_next_at' => 'datetime',
         ];
     }
 }

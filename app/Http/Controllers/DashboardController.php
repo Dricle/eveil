@@ -5,11 +5,13 @@ namespace App\Http\Controllers;
 use App\Actions\InboxFolders;
 use App\Actions\SummarizeRunningDiscovery;
 use App\Cloud\Models\CreditTransaction;
+use App\Enums\ArticleStatus;
 use App\Enums\LinkedinPostStatus;
 use App\Enums\MessageDirection;
 use App\Enums\OutreachStatus;
 use App\Enums\RedditReplyStatus;
 use App\Enums\ReplyClassification;
+use App\Http\Resources\ArticleResource;
 use App\Http\Resources\CampaignResource;
 use App\Http\Resources\ConversationResource;
 use App\Http\Resources\LinkedinAccountResource;
@@ -18,6 +20,7 @@ use App\Http\Resources\MailboxResource;
 use App\Http\Resources\RedditReplyResource;
 use App\Http\Resources\ReplyResource;
 use App\Models\AgentRun;
+use App\Models\Article;
 use App\Models\Campaign;
 use App\Models\CampaignLead;
 use App\Models\Company;
@@ -163,6 +166,9 @@ class DashboardController extends Controller
                     $this->currentProject->getOrFail()->linkedinAccounts()->get()
                 ),
                 'conversations' => ConversationResource::collection($this->inboxFolders->todo()),
+                'articles' => ArticleResource::collection(
+                    Article::query()->where('status', ArticleStatus::Draft)->latest()->get()
+                ),
             ],
             'latestReplies' => ReplyResource::collection(
                 Message::query()

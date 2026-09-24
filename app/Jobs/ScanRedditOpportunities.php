@@ -5,10 +5,13 @@ namespace App\Jobs;
 use App\Ai\Agents\RedditOpportunityTriage;
 use App\Ai\Agents\RedditReplyWriter;
 use App\Enums\AgentRunStatus;
+use App\Enums\IdeaKind;
+use App\Enums\IdeaStatus;
 use App\Enums\RedditReplyAngle;
 use App\Enums\RedditReplySource;
 use App\Enums\RedditReplyStatus;
 use App\Models\AgentRun;
+use App\Models\Idea;
 use App\Models\Project;
 use App\Models\RedditReply;
 use App\Models\RedditReplyExample;
@@ -22,6 +25,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 
 /**
  * One scan cycle for one project: gather candidates from BOTH discovery
@@ -62,6 +66,8 @@ class ScanRedditOpportunities implements ShouldQueue
             /** @var Collection<string, OpportunityCandidate> $byPermalink */
             $byPermalink = $candidates->keyBy(fn (OpportunityCandidate $candidate): string => $candidate->permalink);
 
+            $this->noteArticleIdeas($verdicts, $byPermalink);
+
             /** @var Collection<int, array{0: OpportunityCandidate, 1: string}> $accepted */
             $accepted = $verdicts
                 ->filter(fn (array $verdict): bool => $verdict['is_opportunity'] ?? false)
@@ -95,8 +101,38 @@ class ScanRedditOpportunities implements ShouldQueue
     }
 
     /**
+     * Threads the triage judged worth an article, reply opportunity or not.
+     * A thread already noted (open, used or dismissed) is left alone: the
+     * user's "no" sticks, and one thread is one idea.
+     *
+     * @param  Collection<int, array{permalink?: string, is_opportunity?: bool, reason?: string, article_angle?: string}>  $verdicts
+     * @param  Collection<string, OpportunityCandidate>  $byPermalink
+     */
+    private function noteArticleIdeas(Collection $verdicts, Collection $byPermalink): void
+    {
+        foreach ($verdicts as $verdict) {
+            $angle = trim((string) ($verdict['article_angle'] ?? ''));
+            $candidate = $byPermalink->get(trim((string) ($verdict['permalink'] ?? '')));
+
+            if ($angle === '' || $candidate === null) {
+                continue;
+            }
+
+            Idea::query()->firstOrCreate(
+                ['project_id' => $this->project->id, 'kind' => IdeaKind::Article, 'source_ref' => $candidate->permalink],
+                [
+                    'source' => 'reddit',
+                    'title' => $candidate->threadTitle ?? Str::limit($candidate->text, 120),
+                    'angle' => $angle,
+                    'status' => IdeaStatus::Open,
+                ],
+            );
+        }
+    }
+
+    /**
      * @param  Collection<int, OpportunityCandidate>  $candidates
-     * @return Collection<int, array{permalink?: string, is_opportunity?: bool, reason?: string}>
+     * @return Collection<int, array{permalink?: string, is_opportunity?: bool, reason?: string, article_angle?: string}>
      */
     private function triage(Collection $candidates): Collection
     {

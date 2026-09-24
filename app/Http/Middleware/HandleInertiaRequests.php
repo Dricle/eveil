@@ -4,12 +4,14 @@ namespace App\Http\Middleware;
 
 use App\Actions\InboxFolders;
 use App\Ai\ProviderCredentials;
+use App\Enums\ArticleStatus;
 use App\Enums\DiscoveryRunStatus;
 use App\Enums\EmailAccountStatus;
 use App\Enums\LinkedinPostStatus;
 use App\Enums\RedditReplyStatus;
 use App\Http\Resources\OrganizationResource;
 use App\Http\Resources\ProjectResource;
+use App\Models\Article;
 use App\Models\Company;
 use App\Models\DiscoveryRun;
 use App\Models\EmailAccount;
@@ -179,6 +181,7 @@ class HandleInertiaRequests extends Middleware
             // Same reasoning: drafts awaiting a decision, not a running
             // total of every reply ever drafted.
             'reddit' => RedditReply::query()->where('status', RedditReplyStatus::Draft)->count(),
+            'seo' => Article::query()->where('status', ArticleStatus::Draft)->count(),
         ]);
     }
 

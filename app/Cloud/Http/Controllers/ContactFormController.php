@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Cloud\Http\Controllers;
 
 use App\Actions\SendContactMessage;
+use App\Http\Controllers\Controller;
 use App\Http\Requests\ContactMessageRequest;
 use Illuminate\Http\RedirectResponse;
 

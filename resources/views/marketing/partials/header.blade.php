@@ -18,6 +18,7 @@
             <a href="{{ route('home') }}#agents" class="text-[rgba(232,236,242,.72)]">Agents</a>
             <a href="{{ route('home') }}#editions" class="text-[rgba(232,236,242,.72)]">Self-hosted</a>
             <a href="{{ route('home') }}#pricing" class="text-[rgba(232,236,242,.72)]">Pricing</a>
+            <a href="{{ route('blog.index') }}" class="text-[rgba(232,236,242,.72)]">Blog</a>
             <a href="https://github.com/Dricle/eveil" class="text-[rgba(232,236,242,.72)]">GitHub</a>
         </nav>
         <a href="{{ route('login') }}" class="ghost-btn ml-auto lg:ml-0 border border-[rgba(232,236,242,.18)] px-[14px] sm:px-[18px] py-[9px] rounded-lg font-[Sora,sans-serif] font-semibold text-[14px]">Log in</a>

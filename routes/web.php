@@ -1,6 +1,7 @@
 <?php
 
-use App\Http\Controllers\ContactFormController;
+use App\Cloud\Http\Controllers\BlogController;
+use App\Cloud\Http\Controllers\ContactFormController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -40,3 +41,6 @@ Route::get('/contact', fn () => config('eveil.edition') === 'cloud'
 Route::post('/contact', [ContactFormController::class, 'store'])
     ->middleware('throttle:5,1')
     ->name('contact.store');
+
+Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
+Route::get('/blog/{article}/{slug?}', [BlogController::class, 'show'])->whereNumber('article')->name('blog.show');

@@ -68,3 +68,7 @@ Schedule::command('eveil:reddit-fetch-stats')->daily();
 // Same daily granularity as the LinkedIn and Reddit cadences above: the
 // shortest article cadence is daily too.
 Schedule::command('eveil:articles-generate-due')->daily();
+
+// Daily, and it must stay daily: the action reminds about replies that crossed
+// the one-day mark inside the last 24 hours, so each reply mails exactly once.
+Schedule::command('eveil:remind-replies')->daily();

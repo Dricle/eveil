@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\FetchReplies;
+use App\Actions\RemindAwaitingReplies;
 use App\Actions\SetOutreachStatus;
 use App\Ai\Agents\ReplyHandler;
 use App\Ai\Tools\IgnoreReply;
@@ -23,6 +24,7 @@ use App\Models\Message;
 use App\Models\Project;
 use App\Models\Suppression;
 use App\Models\User;
+use App\Notifications\RepliesAwaiting;
 use App\Services\Outreach\ImapClient;
 use App\Services\Outreach\ImapFailure;
 use App\Services\Outreach\InboundMail;
@@ -30,6 +32,7 @@ use App\Services\Outreach\MailParser;
 use App\Services\Outreach\OptOutPhrases;
 use App\Services\Outreach\ReplyOutcomes;
 use App\Services\Outreach\Sender;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Ai\Tools\Request as ToolRequest;
 
@@ -1220,4 +1223,43 @@ it('does not let a refused send look like one that arrived', function () {
             ->has('conversations.data', 1)
             // But never as a mail that arrived.
             ->where('conversations.data.0.delivery', 'failed'));
+});
+
+it('reminds the project once a todo reply has waited a day, and only once', function () {
+    Queue::fake();
+    Notification::fake();
+
+    [$mailbox, $membership] = awaitingReply();
+    $user = User::query()->firstOrFail();
+    $membership->campaign->project->users()->syncWithoutDetaching($user);
+
+    fakeImap([inbound('Oui, ça m\'intéresse.')]);
+    app(FetchReplies::class)->handle($mailbox);
+
+    // Same day: most replies get answered before a reminder would help.
+    expect(app(RemindAwaitingReplies::class)->handle())->toBe(0);
+
+    $this->travel(25)->hours();
+    expect(app(RemindAwaitingReplies::class)->handle())->toBe(1);
+    Notification::assertSentTo($user, RepliesAwaiting::class, fn (RepliesAwaiting $notification) => $notification->todoCount === 1);
+
+    // The next morning's run: already reminded about this one.
+    $this->travel(1)->day();
+    expect(app(RemindAwaitingReplies::class)->handle())->toBe(0);
+});
+
+it('never reminds about a reply someone already dealt with', function () {
+    Queue::fake();
+    Notification::fake();
+
+    [$mailbox, $membership] = awaitingReply();
+
+    fakeImap([inbound('Oui, ça m\'intéresse.')]);
+    app(FetchReplies::class)->handle($mailbox);
+    $membership->update(['attention_resolved_at' => now()]);
+
+    $this->travel(25)->hours();
+
+    expect(app(RemindAwaitingReplies::class)->handle())->toBe(0);
+    Notification::assertNothingSent();
 });

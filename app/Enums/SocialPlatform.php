@@ -2,6 +2,7 @@
 
 namespace App\Enums;
 
+use App\Models\Project;
 use App\Services\Bluesky\BlueskyClient;
 use App\Services\Social\SocialClientInterface;
 use App\Services\Social\XClient;
@@ -53,6 +54,18 @@ enum SocialPlatform: string
             self::X => XClient::class,
             self::Bluesky => BlueskyClient::class,
         });
+    }
+
+    /**
+     * How much the project lets this network do on its own, from its
+     * `{platform}_autonomy_level` column. A network with no column (X, posted
+     * by hand) is always supervised.
+     */
+    public function autonomyLevel(Project $project): AutonomyLevel
+    {
+        $level = $project->getAttribute("{$this->value}_autonomy_level");
+
+        return $level instanceof AutonomyLevel ? $level : AutonomyLevel::Supervised;
     }
 
     /**

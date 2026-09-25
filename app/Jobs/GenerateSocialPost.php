@@ -101,13 +101,14 @@ class GenerateSocialPost implements ShouldQueue
     }
 
     /**
-     * The autonomous Bluesky setting: publish straight away. Several accounts
-     * on the project still stop for a person, since which one to post as is
-     * a choice nobody has made. X always waits: it is posted by hand.
+     * The network's autonomous setting: publish straight away. Several
+     * accounts on the project still stop for a person, since which one to
+     * post as is a choice nobody has made. X is always supervised: it is
+     * posted by hand.
      */
     private function publishIfAutonomous(SocialPost $post, PublishSocialPost $publish): void
     {
-        if (! $this->platform->publishesThroughApi() || $this->project->bluesky_autonomy_level !== AutonomyLevel::Autonomous) {
+        if ($this->platform->autonomyLevel($this->project) !== AutonomyLevel::Autonomous) {
             return;
         }
 

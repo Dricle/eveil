@@ -20,7 +20,7 @@ The scheduler (part of the `app` container, under supervisord) already runs thes
 | `eveil:remind-replies` | daily | Emails a project's users when an inbox reply has been waiting in todo for a day. Each reply triggers one reminder at most. |
 | `eveil:promote-proven-emails` | daily | Adds any campaign step that's earned it to the shared examples bank. |
 | `eveil:social-generate-due` | daily | Drafts an X or Bluesky post for every project whose cadence on that network is due. Bluesky waits until a working account is granted to the project. |
-| `eveil:social-fetch-stats` | daily | Reads like counts on Bluesky posts from the last 30 days, through Bluesky's free public API, and marks one past the threshold as a proven example for its project. X is never read. |
+| `eveil:social-fetch-stats` | daily | Reads like counts on Bluesky posts from the last 30 days, through Bluesky's free public API, and copies one past the threshold into the shared Bluesky examples bank. X is never read. |
 | `eveil:reddit-scan-due` | daily | Scans every project's tracked subreddits and buyer-intent search results for reply opportunities, on the cadence set from the Reddit page. |
 | `eveil:reddit-fetch-stats` | daily | Checks the real score on any self-reported-posted Reddit reply, and promotes it to the shared examples bank once it crosses the threshold. Needs the `flaresolverr` compose profile running — see [Configuration](configuration.md). |
 

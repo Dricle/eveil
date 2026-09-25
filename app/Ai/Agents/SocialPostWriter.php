@@ -27,6 +27,7 @@ class SocialPostWriter extends EveilAgent implements HasStructuredOutput
      * @param  Collection<int, string>  $recentPublished  bodies already published on this network, do not repeat the angle
      * @param  Collection<int, SocialPost>  $rejected  recently rejected on this network, with reasons
      * @param  Collection<int, string>  $ownWinners  bodies of this project's own proven posts
+     * @param  string  $sharedPoolDigest  `SocialPostExample::promptDigest()` for this network
      */
     public function __construct(
         Project $project,
@@ -37,6 +38,7 @@ class SocialPostWriter extends EveilAgent implements HasStructuredOutput
         private Collection $recentPublished,
         private Collection $rejected,
         private Collection $ownWinners,
+        private string $sharedPoolDigest,
     ) {
         parent::__construct($project);
     }
@@ -140,6 +142,10 @@ class SocialPostWriter extends EveilAgent implements HasStructuredOutput
 
         if ($this->ownWinners->isNotEmpty()) {
             $sections[] = "## This project's own posts that performed well\n\n".$this->ownWinners->implode("\n\n---\n\n");
+        }
+
+        if ($this->sharedPoolDigest !== '') {
+            $sections[] = $this->sharedPoolDigest;
         }
 
         $sections[] = "## Today's date\n\n".now()->toDateString();

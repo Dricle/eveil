@@ -118,8 +118,9 @@ class SocialPostController extends Controller
 
     /**
      * Stamps `promoted_at` so this project's own writer treats the post as a
-     * proven example. The only way in for an X post, which Eveil never reads
-     * numbers for.
+     * proven example. Never touches the shared instance-wide bank: a
+     * self-reported click is not a signal other tenants' prompts may trust,
+     * same reasoning as `LinkedinPostController::promote()`.
      */
     public function promote(int $socialPost): RedirectResponse
     {

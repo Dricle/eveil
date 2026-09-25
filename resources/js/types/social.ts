@@ -39,3 +39,15 @@ export type SocialPost = {
     likes_count: number
     created_at: string | null
 }
+
+/**
+ * One row of a shared, instance-wide bank of proven X or Bluesky posts.
+ */
+export type SocialPostExampleRow = {
+    id: number
+    platform: SocialPlatform
+    body: string
+    source: 'manual' | 'promoted'
+    added_by: string | null
+    created_at: string | null
+}

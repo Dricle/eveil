@@ -17,6 +17,7 @@ use App\Models\Article;
 use App\Models\Company;
 use App\Models\Project;
 use App\Models\SocialPost;
+use App\Models\SocialPostExample;
 use App\Notifications\SocialPostDrafted;
 use App\Services\Linkedin\NewsSearch;
 use App\Support\CurrentProject;
@@ -61,6 +62,7 @@ class GenerateSocialPost implements ShouldQueue
                 $this->posts()->where('status', SocialPostStatus::Published)->latest('published_at')->limit(5)->pluck('body'),
                 $this->posts()->where('status', SocialPostStatus::Rejected)->latest('updated_at')->limit(5)->get(['body', 'rejection_reason']),
                 $this->posts()->whereNotNull('promoted_at')->latest('promoted_at')->limit(5)->pluck('body'),
+                SocialPostExample::promptDigest($this->platform),
             ))->recordInto($run)->draft()->structured;
 
             $body = trim((string) ($structured['body'] ?? ''));

@@ -15,6 +15,7 @@ use App\Models\Company;
 use App\Models\Project;
 use App\Models\SocialAccount;
 use App\Models\SocialPost;
+use App\Models\SocialPostExample;
 use App\Models\User;
 use App\Notifications\SocialPostDrafted;
 use Illuminate\Support\Facades\Http;
@@ -127,4 +128,15 @@ it('feeds only that network\'s own rejections into the prompt', function () {
     GenerateSocialPost::dispatchSync($project, SocialPlatform::Bluesky);
 
     expect(AgentRun::sole()->input['prompt'])->toContain('Bluesky flop')->toContain('Too long')->not->toContain('X flop');
+});
+
+it('feeds that network\'s shared bank into the prompt, never the other one', function () {
+    $project = Project::factory()->create();
+    SocialPostExample::factory()->create(['platform' => SocialPlatform::Bluesky, 'body' => 'Bluesky classic']);
+    SocialPostExample::factory()->create(['platform' => SocialPlatform::X, 'body' => 'X classic']);
+    fakeSocialWriter(['source_type' => 'knowledge_base', 'evidence' => 'e', 'body' => 'A fact.']);
+
+    GenerateSocialPost::dispatchSync($project, SocialPlatform::Bluesky);
+
+    expect(AgentRun::sole()->input['prompt'])->toContain('Bluesky classic')->not->toContain('X classic');
 });

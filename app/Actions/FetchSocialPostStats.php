@@ -3,18 +3,19 @@
 namespace App\Actions;
 
 use App\Enums\SocialPlatform;
+use App\Enums\SocialPostExampleSource;
 use App\Enums\SocialPostStatus;
 use App\Models\SocialPost;
+use App\Models\SocialPostExample;
 use App\Services\Bluesky\BlueskyClient;
 use App\Support\Settings;
 
 /**
- * Reads like counts on recent Bluesky posts and, past a threshold, marks one
- * as a proven example for its own project's writer. Free and public on
- * Bluesky, so every recent post is read. X is never read: its API is paid.
- *
- * Unlike LinkedIn there is no shared instance-wide pool to feed: a proven
- * post only ever teaches its own project.
+ * Reads like counts on recent Bluesky posts and, past a threshold, copies one
+ * into the shared instance-wide Bluesky bank and marks it proven for its own
+ * project. The only automatic way into the bank, same trust rule as
+ * `FetchLinkedinPostStats`. Free and public on Bluesky, so every recent post
+ * is read. X is never read: its API is paid.
  *
  * Runs across every project on the instance, same as
  * `FetchLinkedinPostStats`: no `CurrentProject` is set from a console
@@ -25,7 +26,7 @@ class FetchSocialPostStats
     public function __construct(private BlueskyClient $client, private Settings $settings) {}
 
     /**
-     * How many posts were newly promoted.
+     * How many posts newly joined the shared bank.
      */
     public function handle(): int
     {
@@ -53,15 +54,26 @@ class FetchSocialPostStats
             }
 
             $count = $likes[$post->external_id];
-            $promote = $post->promoted_at === null && $count >= $minLikes;
 
-            $post->update([
-                'likes_count' => $count,
-                'stats_checked_at' => now(),
-                ...($promote ? ['promoted_at' => now()] : []),
-            ]);
+            $post->update(['likes_count' => $count, 'stats_checked_at' => now()]);
 
-            $promoted += (int) $promote;
+            if ($count < $minLikes) {
+                continue;
+            }
+
+            // Into the shared Bluesky bank, once. A post the user already
+            // marked successful by hand still earns its place here: the
+            // click never wrote to the bank, the measured number does.
+            $example = SocialPostExample::query()->firstOrCreate(
+                ['social_post_id' => $post->id],
+                ['platform' => $post->platform, 'body' => $post->body, 'source' => SocialPostExampleSource::Promoted],
+            );
+
+            if ($post->promoted_at === null) {
+                $post->update(['promoted_at' => now()]);
+            }
+
+            $promoted += (int) $example->wasRecentlyCreated;
         }
 
         return $promoted;

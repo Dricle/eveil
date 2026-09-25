@@ -39,4 +39,6 @@ With several Bluesky accounts on the project, publishing asks which one to post 
 
 ## Teaching the writer what works
 
-A published post has a **Mark as successful** button: that project's writer then uses it as an example. Bluesky posts are also checked daily for likes, and one that crosses the threshold is marked successful on its own. X posts are never read, so the button is the only way there. Either way it only ever teaches that one project.
+A published post has a **Mark as successful** button. Clicking it only ever helps *this project's* own future drafts on that network, so there is nothing to moderate.
+
+Separately, each network has an **instance-wide bank** of proven posts, shared across every project on the instance and sampled into every draft for that network, the same idea as the LinkedIn bank. Bluesky posts are checked daily for likes, and one that crosses the threshold joins the Bluesky bank on its own: that number is measured by Bluesky, so it is trusted the way a click is not. X posts are never read, so the X bank only grows by hand. A superadmin manages both banks, and the Bluesky threshold, from **App Settings → X & Bluesky post examples**.

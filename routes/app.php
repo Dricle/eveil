@@ -25,6 +25,8 @@ use App\Http\Controllers\AppSettings\ProviderTestController;
 use App\Http\Controllers\AppSettings\RedditReplyExampleController;
 use App\Http\Controllers\AppSettings\RedditReplyExampleThresholdController;
 use App\Http\Controllers\AppSettings\SendingController;
+use App\Http\Controllers\AppSettings\SocialExampleThresholdController;
+use App\Http\Controllers\AppSettings\SocialPostExampleController;
 use App\Http\Controllers\ArticleCadenceController;
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\Auth\InvitationController;
@@ -744,6 +746,15 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             ->name('linkedin-post-examples.destroy');
         Route::put('linkedin-post-examples/threshold', [LinkedinExampleThresholdController::class, 'update'])
             ->name('linkedin-post-examples.threshold');
+
+        Route::get('social-post-examples', [SocialPostExampleController::class, 'index'])
+            ->name('social-post-examples.index');
+        Route::post('social-post-examples', [SocialPostExampleController::class, 'store'])
+            ->name('social-post-examples.store');
+        Route::delete('social-post-examples/{socialPostExample}', [SocialPostExampleController::class, 'destroy'])
+            ->name('social-post-examples.destroy');
+        Route::put('social-post-examples/threshold', [SocialExampleThresholdController::class, 'update'])
+            ->name('social-post-examples.threshold');
 
         Route::get('reddit-reply-examples', [RedditReplyExampleController::class, 'index'])
             ->name('reddit-reply-examples.index');

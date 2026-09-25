@@ -4,6 +4,7 @@ use App\Actions\RunDiscovery;
 use App\Ai\Agents\CompanyQualifier;
 use App\Ai\Agents\DiscoveryPlanner;
 use App\Ai\Agents\RedditThreadTriage;
+use App\Ai\OutOfCredit;
 use App\Enums\AutonomyLevel;
 use App\Enums\ContactSearchStatus;
 use App\Enums\DiscoveryDiagnosis;
@@ -24,6 +25,7 @@ use App\Support\CurrentProject;
 use App\Support\Settings;
 use Database\Seeders\KnownHostSeeder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Ai\Prompts\AgentPrompt;
@@ -149,6 +151,24 @@ it('replays one node without rerunning the run', function () {
     expect($task->refresh()->status)->toBe(DiscoveryTaskStatus::Succeeded)
         ->and($task->attempts)->toBe(2)
         ->and(Company::sole()->domain)->toBe('friterie-centre.be');
+});
+
+it('stops the whole run the moment the wallet is empty, without reporting it', function () {
+    $targetProfile = discoveryProfile();
+
+    Exceptions::fake();
+    DiscoveryPlanner::fake([overpassPlan()]);
+    CompanyQualifier::fake(fn () => throw new OutOfCredit('This project has no credits left.'));
+    mapReturning('https://friterie-centre.be', 'https://friterie-gare.be');
+
+    $run = discover($targetProfile);
+
+    expect($run->refresh()->status)->toBe(DiscoveryRunStatus::Failed)
+        ->and($run->error)->toContain('no credits left')
+        ->and(DiscoveryTask::query()->where('kind', DiscoveryTaskKind::Qualify)->pluck('status')->all())
+        ->toBe([DiscoveryTaskStatus::Failed, DiscoveryTaskStatus::Skipped]);
+
+    Exceptions::assertNothingReported();
 });
 
 it('deletes queued nodes instead of running them once the run is stopped', function () {

@@ -77,7 +77,7 @@ class AutoTopUp
         $stripePaymentIntentId = $payment->asStripePaymentIntent()->id;
 
         DB::transaction(function () use ($organization, $credits, $amountCents, $stripePaymentIntentId): void {
-            $organization->increment('credits_balance', $credits);
+            $organization->increment('credits_balance', $credits, ['out_of_credit_notified_at' => null]);
             $organization->recordAutoTopUpSpend($amountCents);
 
             CreditTransaction::create([

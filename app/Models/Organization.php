@@ -38,6 +38,7 @@ use Laravel\Cashier\Billable;
  * @property int|null $auto_topup_threshold
  * @property int|null $auto_topup_amount_cents
  * @property Carbon|null $auto_topup_locked_until
+ * @property Carbon|null $out_of_credit_notified_at
  * @property int|null $auto_topup_monthly_cap_cents
  * @property int $auto_topup_spent_cents
  * @property string|null $auto_topup_spent_month
@@ -159,6 +160,20 @@ class Organization extends Model
         );
 
         return $claimed > 0;
+    }
+
+    /**
+     * Claims the one "you are out of credits" email this depletion gets, in
+     * one `UPDATE`: a discovery run hits the empty balance from dozens of
+     * workers at once, and only one of them may send it. Every grant clears
+     * the column, so the next depletion claims it again.
+     */
+    public function claimOutOfCreditNotice(): bool
+    {
+        return DB::update(
+            'update organizations set out_of_credit_notified_at = now() where id = ? and out_of_credit_notified_at is null',
+            [$this->id],
+        ) > 0;
     }
 
     /**

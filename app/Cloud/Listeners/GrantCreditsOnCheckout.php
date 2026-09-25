@@ -48,7 +48,7 @@ class GrantCreditsOnCheckout
          */
         try {
             DB::transaction(function () use ($organization, $credits, $event): void {
-                $organization->increment('credits_balance', $credits);
+                $organization->increment('credits_balance', $credits, ['out_of_credit_notified_at' => null]);
 
                 CreditTransaction::create([
                     'organization_id' => $organization->id,

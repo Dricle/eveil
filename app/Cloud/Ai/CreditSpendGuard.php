@@ -7,8 +7,11 @@ use App\Ai\Contracts\SpendGuardInterface;
 use App\Cloud\Actions\AutoTopUp;
 use App\Cloud\Models\CreditPrice;
 use App\Cloud\Models\CreditTransaction;
+use App\Enums\OrganizationRole;
 use App\Models\Project;
+use App\Notifications\CreditsDepleted;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 
 /**
  * Cloud's answer to `SpendGuardInterface`: a real balance on the
@@ -48,6 +51,8 @@ class CreditSpendGuard implements SpendGuardInterface
         }
 
         if ($project->organization->credits_balance < $price) {
+            $this->notifyOwnersOnce($project);
+
             return 'This project has no credits left. Top up to keep the searches running.';
         }
 
@@ -134,5 +139,20 @@ class CreditSpendGuard implements SpendGuardInterface
             ->where('conversation_id', $conversationId)
             ->where('role', 'user')
             ->count();
+    }
+
+    private function notifyOwnersOnce(Project $project): void
+    {
+        $organization = $project->organization;
+
+        if (! $organization->claimOutOfCreditNotice()) {
+            return;
+        }
+
+        $owners = $organization->users()
+            ->wherePivot('role', OrganizationRole::Owner->value)
+            ->get();
+
+        Notification::send($owners, new CreditsDepleted($organization->name, $project->slug));
     }
 }

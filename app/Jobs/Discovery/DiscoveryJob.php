@@ -2,6 +2,7 @@
 
 namespace App\Jobs\Discovery;
 
+use App\Ai\OutOfCredit;
 use App\Enums\AgentRunStatus;
 use App\Enums\DiscoveryRunStatus;
 use App\Enums\DiscoveryTaskKind;
@@ -67,7 +68,13 @@ abstract class DiscoveryJob implements ShouldQueue
             // directory must not cost the companies already found.
             $this->close($task, DiscoveryTaskStatus::Failed, null, $e->getMessage());
 
-            if ($this->failsRun()) {
+            // An empty wallet is not a node failing: every node still queued
+            // would hit it too. Stopping the run lets them skip on pickup
+            // instead of each one refusing, and the owners already got
+            // their one email from the spend guard.
+            $outOfCredit = $e instanceof OutOfCredit || $e->getPrevious() instanceof OutOfCredit;
+
+            if ($outOfCredit || $this->failsRun()) {
                 $run->update([
                     'status' => DiscoveryRunStatus::Failed,
                     'error' => $e->getMessage(),

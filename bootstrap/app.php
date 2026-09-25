@@ -1,5 +1,6 @@
 <?php
 
+use App\Ai\OutOfCredit;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SetCurrentProject;
 use App\Http\Middleware\ShareTargetProfiles;
@@ -48,6 +49,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->preventRequestForgery(except: ['stripe/*']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // An empty wallet is the customer's state, not our bug: the spend
+        // guard already emailed the owners once.
+        $exceptions->dontReport(OutOfCredit::class);
+
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );

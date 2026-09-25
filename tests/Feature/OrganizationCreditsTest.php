@@ -5,15 +5,19 @@ use App\Ai\Contracts\SpendGuardInterface;
 use App\Ai\OutOfCredit;
 use App\Ai\UnmeteredSpend;
 use App\Cloud\Ai\CreditSpendGuard;
+use App\Cloud\Listeners\GrantCreditsOnCheckout;
 use App\Cloud\Models\CreditPrice;
 use App\Cloud\Models\CreditTransaction;
 use App\Models\AgentRun;
 use App\Models\Organization;
 use App\Models\Project;
 use App\Models\User;
+use App\Notifications\CreditsDepleted;
+use Illuminate\Support\Facades\Notification;
 use Laravel\Ai\Responses\Data\Meta;
 use Laravel\Ai\Responses\Data\Usage;
 use Laravel\Ai\Responses\StructuredTextResponse;
+use Laravel\Cashier\Events\WebhookReceived;
 
 // `credits_balance` is deliberately not mass-fillable (never user input), so
 // tests reach for it the same way `GrantTrialCredits` does.
@@ -80,6 +84,37 @@ it('refuses the call outright when the balance cannot cover the price', function
     WebsiteAnalyst::fake(fn () => throw new RuntimeException('the provider was called'));
 
     expect(fn () => (new WebsiteAnalyst($project, collect()))->prompt('Analyse this.'))->toThrow(OutOfCredit::class);
+});
+
+it('emails the owners once per depletion, not once per refused call', function () {
+    Notification::fake();
+
+    $organization = organizationWithBalance(150);
+    $organization->forceFill(['stripe_id' => 'cus_empty'])->save();
+    $owner = User::factory()->create();
+    $organization->users()->attach($owner, ['role' => 'owner']);
+    $organization->users()->attach(User::factory()->create(), ['role' => 'member']);
+    $project = Project::factory()->for($organization)->create();
+
+    WebsiteAnalyst::fake(fn () => throw new RuntimeException('the provider was called'));
+    $prompt = fn () => rescue(fn () => (new WebsiteAnalyst($project->fresh(), collect()))->prompt('Analyse this.'), report: false);
+
+    $prompt();
+    $prompt();
+
+    Notification::assertSentTimes(CreditsDepleted::class, 1);
+    Notification::assertSentTo($owner, CreditsDepleted::class);
+
+    // A top-up re-arms it: running dry again is a new depletion worth telling.
+    (new GrantCreditsOnCheckout)->handle(new WebhookReceived([
+        'id' => 'evt_topup',
+        'type' => 'checkout.session.completed',
+        'data' => ['object' => ['customer' => 'cus_empty', 'metadata' => ['credits' => '10']]],
+    ]));
+
+    $prompt();
+
+    Notification::assertSentTimes(CreditsDepleted::class, 2);
 });
 
 it('debits atomically, never past what the organization actually holds', function () {

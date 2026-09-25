@@ -3,6 +3,7 @@
 namespace App\Services\Bluesky;
 
 use App\Models\SocialAccount;
+use App\Services\Social\SocialClientInterface;
 use App\Support\HtmlText;
 use DOMXPath;
 use GuzzleHttp\Psr7\Uri;
@@ -21,7 +22,7 @@ use Throwable;
  * A fresh session per publish instead of storing the short-lived JWT: posts
  * go out a few times a week at most, far below `createSession`'s rate limit.
  */
-class BlueskyClient
+class BlueskyClient implements SocialClientInterface
 {
     // ponytail: accounts hosted on Bluesky's own PDS only. A self-hosted PDS
     // needs its URL resolved from the DID document, add when someone asks.
@@ -62,7 +63,7 @@ class BlueskyClient
      *
      * @return array{uri: string, url: string}
      */
-    public function publish(SocialAccount $account, string $text, ?string $language = null): array
+    public function publish(SocialAccount $account, string $text, ?string $language = null): ?array
     {
         $session = $this->session($account->external_id, $account->secret);
 
@@ -106,17 +107,17 @@ class BlueskyClient
     }
 
     /**
-     * Like counts by post URI. Public, no session needed; Bluesky caps one
-     * call at 25 URIs.
+     * Like counts by post at:// URI. Public, no session needed; Bluesky caps
+     * one call at 25 URIs.
      *
-     * @param  array<int, string>  $uris
+     * @param  array<int, string>  $ids
      * @return array<string, int>
      */
-    public function likeCounts(array $uris): array
+    public function likeCounts(array $ids): array
     {
         $counts = [];
 
-        foreach (array_chunk($uris, 25) as $chunk) {
+        foreach (array_chunk($ids, 25) as $chunk) {
             $query = implode('&', array_map(fn (string $uri): string => 'uris='.urlencode($uri), $chunk));
 
             $response = Http::get(self::PUBLIC_API.'/xrpc/app.bsky.feed.getPosts?'.$query);

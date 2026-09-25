@@ -2,6 +2,7 @@
 
 use App\Actions\FetchSocialPostStats;
 use App\Actions\GenerateDueSocialPosts;
+use App\Actions\PublishSocialPost;
 use App\Enums\SocialAccountStatus;
 use App\Enums\SocialPlatform;
 use App\Enums\SocialPostExampleSource;
@@ -92,4 +93,15 @@ it('never writes to the shared bank from a user\'s own click', function () {
 
     expect($post->fresh()->promoted_at)->not->toBeNull()
         ->and(SocialPostExample::query()->count())->toBe(0);
+});
+
+it('sends nothing through X\'s driver, which neither publishes nor reads', function () {
+    Http::fake();
+    $post = SocialPost::factory()->x()->create();
+
+    app(PublishSocialPost::class)->handle($post, SocialAccount::factory()->create());
+
+    expect($post->fresh()->status)->toBe(SocialPostStatus::Draft)
+        ->and(SocialPlatform::X->client()->likeCounts(['123']))->toBe([]);
+    Http::assertNothingSent();
 });

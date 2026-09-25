@@ -7,15 +7,14 @@ use App\Enums\SocialPostExampleSource;
 use App\Enums\SocialPostStatus;
 use App\Models\SocialPost;
 use App\Models\SocialPostExample;
-use App\Services\Bluesky\BlueskyClient;
 use App\Support\Settings;
 
 /**
- * Reads like counts on recent Bluesky posts and, past a threshold, copies one
- * into the shared instance-wide Bluesky bank and marks it proven for its own
- * project. The only automatic way into the bank, same trust rule as
- * `FetchLinkedinPostStats`. Free and public on Bluesky, so every recent post
- * is read. X is never read: its API is paid.
+ * Reads like counts on recent posts through each network's driver and, past
+ * a threshold, copies one into that network's shared instance-wide bank and
+ * marks it proven for its own project. The only automatic way into a bank,
+ * same trust rule as `FetchLinkedinPostStats`. Bluesky's counts are free and
+ * public; X's driver reads nothing, since its API is paid.
  *
  * Runs across every project on the instance, same as
  * `FetchLinkedinPostStats`: no `CurrentProject` is set from a console
@@ -23,7 +22,7 @@ use App\Support\Settings;
  */
 class FetchSocialPostStats
 {
-    public function __construct(private BlueskyClient $client, private Settings $settings) {}
+    public function __construct(private Settings $settings) {}
 
     /**
      * How many posts newly joined the shared bank.
@@ -35,7 +34,6 @@ class FetchSocialPostStats
         // A post's engagement settles within days, so nothing older than 30
         // is worth reading again.
         $posts = SocialPost::query()
-            ->where('platform', SocialPlatform::Bluesky)
             ->where('status', SocialPostStatus::Published)
             ->whereNotNull('external_id')
             ->where('published_at', '>=', now()->subDays(30))
@@ -45,15 +43,21 @@ class FetchSocialPostStats
             return 0;
         }
 
-        $likes = $this->client->likeCounts($posts->pluck('external_id')->all());
+        // Per network, so two networks' ids can never collide.
+        $likes = [];
+
+        foreach ($posts->groupBy(fn (SocialPost $post): string => $post->platform->value) as $platform => $group) {
+            $likes[$platform] = SocialPlatform::from($platform)->client()->likeCounts($group->pluck('external_id')->all());
+        }
+
         $promoted = 0;
 
         foreach ($posts as $post) {
-            if (! isset($likes[$post->external_id])) {
+            if (! isset($likes[$post->platform->value][$post->external_id])) {
                 continue;
             }
 
-            $count = $likes[$post->external_id];
+            $count = $likes[$post->platform->value][$post->external_id];
 
             $post->update(['likes_count' => $count, 'stats_checked_at' => now()]);
 
@@ -61,7 +65,7 @@ class FetchSocialPostStats
                 continue;
             }
 
-            // Into the shared Bluesky bank, once. A post the user already
+            // Into that network's shared bank, once. A post the user already
             // marked successful by hand still earns its place here: the
             // click never wrote to the bank, the measured number does.
             $example = SocialPostExample::query()->firstOrCreate(

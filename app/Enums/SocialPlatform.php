@@ -2,6 +2,10 @@
 
 namespace App\Enums;
 
+use App\Services\Bluesky\BlueskyClient;
+use App\Services\Social\SocialClientInterface;
+use App\Services\Social\XClient;
+
 /**
  * The short-post networks `SocialPostWriter` writes for. LinkedIn is not one
  * of them: it keeps its own tables and writer.
@@ -38,6 +42,17 @@ enum SocialPlatform: string
     public function publishesThroughApi(): bool
     {
         return $this === self::Bluesky;
+    }
+
+    /**
+     * This network's driver.
+     */
+    public function client(): SocialClientInterface
+    {
+        return app(match ($this) {
+            self::X => XClient::class,
+            self::Bluesky => BlueskyClient::class,
+        });
     }
 
     /**

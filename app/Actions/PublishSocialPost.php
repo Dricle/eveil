@@ -6,28 +6,24 @@ use App\Enums\SocialAccountStatus;
 use App\Enums\SocialPostStatus;
 use App\Models\SocialAccount;
 use App\Models\SocialPost;
-use App\Services\Bluesky\BlueskyClient;
 use App\Services\Bluesky\SignInRefused;
 use Throwable;
 
 /**
- * Publishes a Bluesky post, synchronously: a couple of HTTP calls, not worth
- * a queue. Same failure rule as `PublishLinkedinPost`: the row stays `Draft`
- * with `last_error` set, so the same Approve button is the retry.
- *
- * X never comes through here: it is posted by hand, see
- * `MarkSocialPostPublished`.
+ * Publishes a post through its network's driver, synchronously: a couple of
+ * HTTP calls, not worth a queue. Same failure rule as `PublishLinkedinPost`:
+ * the row stays `Draft` with `last_error` set, so the same Approve button is
+ * the retry. A driver that does not publish (X, posted by hand, see
+ * `MarkSocialPostPublished`) leaves the draft untouched.
  */
 class PublishSocialPost
 {
-    public function __construct(private BlueskyClient $client) {}
-
     public function handle(SocialPost $post, SocialAccount $account): void
     {
         $post->update(['social_account_id' => $account->id]);
 
         try {
-            $published = $this->client->publish($account, $post->body, $post->project->default_language);
+            $published = $post->platform->client()->publish($account, $post->body, $post->project->default_language);
         } catch (Throwable $e) {
             $post->update(['last_error' => $e->getMessage()]);
 
@@ -37,6 +33,10 @@ class PublishSocialPost
                 $account->update(['status' => SocialAccountStatus::Error, 'last_error' => $e->getMessage()]);
             }
 
+            return;
+        }
+
+        if ($published === null) {
             return;
         }
 

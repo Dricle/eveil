@@ -5,6 +5,7 @@ use App\Ai\Tools\UpdateSocialPost;
 use App\Enums\AutonomyLevel;
 use App\Enums\SocialPlatform;
 use App\Enums\SocialPostStatus;
+use App\Jobs\GenerateSocialPost;
 use App\Models\Organization;
 use App\Models\Project;
 use App\Models\SocialAccount;
@@ -13,6 +14,7 @@ use App\Models\User;
 use App\Support\CurrentProject;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Laravel\Ai\Tools\Request;
 
 function socialAccountSetup(): array
@@ -86,14 +88,20 @@ it('saves the Bluesky autonomy and the X and Bluesky tone box', function () {
         ->social_prompt_instructions->toBe('No hashtags.');
 });
 
-it('lets Evie draft a post for one network and edit only a draft', function () {
+it('lets Evie queue a post from a brief, for the network she names', function () {
+    Queue::fake();
     $project = Project::factory()->create();
 
-    (new DraftSocialPost($project))->handle(new Request(['platform' => 'bluesky', 'body' => 'We shipped it.', 'evidence' => 'Release']));
+    (new DraftSocialPost($project))->handle(new Request(['platform' => 'bluesky', 'brief' => 'We shipped dark mode.']));
 
-    $draft = SocialPost::sole();
-    expect($draft->platform)->toBe(SocialPlatform::Bluesky)
-        ->and($draft->status)->toBe(SocialPostStatus::Draft);
+    Queue::assertPushed(GenerateSocialPost::class, fn (GenerateSocialPost $job): bool => $job->platform === SocialPlatform::Bluesky
+        && $job->brief === 'We shipped dark mode.'
+        && $job->project->is($project));
+});
+
+it('lets Evie edit only a draft', function () {
+    $project = Project::factory()->create();
+    $draft = SocialPost::factory()->create(['project_id' => $project->id]);
 
     (new UpdateSocialPost($project))->handle(new Request(['social_post_id' => $draft->id, 'body' => 'Shorter.']));
     expect($draft->fresh()->body)->toBe('Shorter.');

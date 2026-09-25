@@ -28,6 +28,7 @@ class SocialPostWriter extends EveilAgent implements HasStructuredOutput
      * @param  Collection<int, SocialPost>  $rejected  recently rejected on this network, with reasons
      * @param  Collection<int, string>  $ownWinners  bodies of this project's own proven posts
      * @param  string  $sharedPoolDigest  `SocialPostExample::promptDigest()` for this network
+     * @param  string|null  $brief  what the user asked Evie for; when set, it IS the topic
      */
     public function __construct(
         Project $project,
@@ -39,6 +40,7 @@ class SocialPostWriter extends EveilAgent implements HasStructuredOutput
         private Collection $rejected,
         private Collection $ownWinners,
         private string $sharedPoolDigest,
+        private ?string $brief = null,
     ) {
         parent::__construct($project);
     }
@@ -53,6 +55,8 @@ class SocialPostWriter extends EveilAgent implements HasStructuredOutput
         You are given several possible signals for what to write about. Pick
         exactly one:
 
+        - A USER BRIEF, when one is given: that is the topic, full stop. Use
+          every concrete detail it gives. source_type manual.
         - A pending CLIENT WIN (a company that just started working with this
           business). Never name the client: say the sector and the shape of the
           work instead. source_type client_won.
@@ -86,7 +90,7 @@ class SocialPostWriter extends EveilAgent implements HasStructuredOutput
     public function schema(JsonSchema $schema): array
     {
         return [
-            'source_type' => $schema->string()->enum(['knowledge_base', 'client_won', 'news', 'article'])
+            'source_type' => $schema->string()->enum(['manual', 'knowledge_base', 'client_won', 'news', 'article'])
                 ->description('Which signal this post is actually built from.')
                 ->required(),
 
@@ -115,6 +119,10 @@ class SocialPostWriter extends EveilAgent implements HasStructuredOutput
             "## Product URL\n\n{$this->project->url}",
             "## Site language\n\n".($this->project->default_language ?? 'en'),
         ];
+
+        if ($this->brief !== null) {
+            $sections[] = "## User brief\n\n{$this->brief}";
+        }
 
         if ($this->clientWon !== null) {
             $sections[] = "## Pending client win\n\nSector: {$this->clientWon->industry}\nLocation: {$this->clientWon->location}";

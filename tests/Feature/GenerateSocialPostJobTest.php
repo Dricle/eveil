@@ -140,3 +140,22 @@ it('feeds that network\'s shared bank into the prompt, never the other one', fun
 
     expect(AgentRun::sole()->input['prompt'])->toContain('Bluesky classic')->not->toContain('X classic');
 });
+
+it('writes a post about Evie\'s brief as a draft, never published and never emailed about', function () {
+    $project = Project::factory()->create(['bluesky_autonomy_level' => AutonomyLevel::Autonomous]);
+    SocialAccount::factory()->create(['organization_id' => $project->organization_id])->projects()->attach($project);
+    Company::factory()->create(['project_id' => $project->id, 'status' => OutreachStatus::Won]);
+    Http::fake();
+    fakeSocialWriter(['source_type' => 'client_won', 'evidence' => 'Dark mode shipped.', 'body' => 'Dark mode is here.']);
+
+    GenerateSocialPost::dispatchSync($project, SocialPlatform::Bluesky, 'We shipped dark mode.');
+
+    expect(SocialPost::sole())
+        ->source_type->toBe(SocialPostSourceType::Manual)
+        ->source_ref->toBeNull()
+        ->status->toBe(SocialPostStatus::Draft)
+        ->and(AgentRun::sole()->input['prompt'])->toContain('We shipped dark mode.')->not->toContain('Pending client win');
+
+    Http::assertNothingSent();
+    Notification::assertNothingSent();
+});

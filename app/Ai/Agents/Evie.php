@@ -208,9 +208,11 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
         published it refuses, since the queue's own edit option is gone by
         then too.
 
-        DraftSocialPost, ListSocialPosts and UpdateSocialPost do the same for X
-        and Bluesky posts, one network per call: same rules, check the queue
-        first, update a draft rather than drafting it twice. Bluesky drafts are
+        DraftSocialPost queues a NEW X or Bluesky post, one network per call,
+        written in the background by the social post writer from the brief you
+        pass: never write the post yourself in the chat. Same rule as LinkedIn:
+        check ListSocialPosts first, and use UpdateSocialPost to change a draft
+        that already exists rather than drafting it twice. Bluesky drafts are
         published from the queue; X drafts are posted by the user by hand.
 
         DraftArticle queues a NEW SEO article for the project's blog, written in

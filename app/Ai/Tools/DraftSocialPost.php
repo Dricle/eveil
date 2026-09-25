@@ -3,18 +3,19 @@
 namespace App\Ai\Tools;
 
 use App\Enums\SocialPlatform;
-use App\Enums\SocialPostSourceType;
-use App\Enums\SocialPostStatus;
+use App\Jobs\GenerateSocialPost;
 use App\Models\Project;
-use App\Models\SocialPost;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
 use Stringable;
 
 /**
- * Lands a hand-composed X or Bluesky draft in the same queue every other
- * source uses. Never publishes, same reasoning as `DraftLinkedinPost`.
+ * Queues a new X or Bluesky post about what the user just told Evie ("we
+ * just shipped X"). Evie writes the brief, not the post: `SocialPostWriter`
+ * writes every one, so a post from chat follows the same tone box, examples
+ * bank and length limit as one from the cadence. Same shape as
+ * `DraftArticle`. Needs no approval: it only drafts, nothing is published.
  */
 class DraftSocialPost implements Tool
 {
@@ -23,10 +24,12 @@ class DraftSocialPost implements Tool
     public function description(): Stringable|string
     {
         return <<<'TEXT'
-        Drafts an X or a Bluesky post from what the user just told you and puts it
-        in their X & Bluesky queue for review. It does NOT post it. Keep it under
-        280 characters for X and 300 for Bluesky, product URL included. Call it
-        once per network when the user wants both.
+        Queues a new X or Bluesky post about what the user just told you - a
+        feature that shipped, news worth sharing. Pass the network and a brief:
+        what the post is about and every concrete detail the user gave. It is
+        written in the background and lands in the X & Bluesky queue as a draft
+        within a minute or two; it is never published on its own. Call it once per
+        network when the user wants both.
         TEXT;
     }
 
@@ -38,16 +41,15 @@ class DraftSocialPost implements Tool
             return 'platform must be x or bluesky.';
         }
 
-        SocialPost::create([
-            'project_id' => $this->project->id,
-            'platform' => $platform,
-            'source_type' => SocialPostSourceType::Manual,
-            'evidence' => $request->string('evidence')->value(),
-            'body' => $request->string('body')->value(),
-            'status' => SocialPostStatus::Draft,
-        ]);
+        $brief = trim($request->string('brief')->value());
 
-        return "Draft saved to the {$platform->label()} queue for review.";
+        if ($brief === '') {
+            return 'Pass a brief: what the post is about.';
+        }
+
+        GenerateSocialPost::dispatch($this->project, $platform, $brief);
+
+        return "The {$platform->label()} post is being written. It will appear as a draft in the X & Bluesky queue shortly.";
     }
 
     /**
@@ -57,8 +59,9 @@ class DraftSocialPost implements Tool
     {
         return [
             'platform' => $schema->string()->enum(['x', 'bluesky'])->description('Which network the post is for.')->required(),
-            'body' => $schema->string()->description('The full post text, written as the user would post it.')->required(),
-            'evidence' => $schema->string()->description('One line on what this is about, shown beside the draft in the queue.')->required(),
+            'brief' => $schema->string()
+                ->description('What the post is about, with every concrete detail the user gave: the feature, who it is for, any link.')
+                ->required(),
         ];
     }
 }

@@ -31,12 +31,17 @@ use Illuminate\Support\Facades\Notification;
  * One X or Bluesky post: gather every signal, ask `SocialPostWriter` once,
  * keep the draft. Same shape as `GenerateLinkedinPost`, one network per job
  * since each has its own cadence.
+ *
+ * `$brief` is set when Evie queued it from a conversation ("we just shipped
+ * X"), same as `GenerateArticle`: the post is then about that, the other
+ * signals are left out, it never publishes on its own, and nobody gets an
+ * email, since the user asked for this one and is waiting for it.
  */
 class GenerateSocialPost implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(public Project $project, public SocialPlatform $platform)
+    public function __construct(public Project $project, public SocialPlatform $platform, public ?string $brief = null)
     {
         $this->onQueue('ai');
     }
@@ -44,8 +49,8 @@ class GenerateSocialPost implements ShouldQueue
     public function handle(NewsSearch $newsSearch, CurrentProject $currentProject, PublishSocialPost $publish): void
     {
         $currentProject->run($this->project, function () use ($newsSearch, $publish): void {
-            $clientWon = $this->pendingClientWin();
-            $article = $this->unsharedArticle();
+            $clientWon = $this->brief === null ? $this->pendingClientWin() : null;
+            $article = $this->brief === null ? $this->unsharedArticle() : null;
 
             $run = AgentRun::create([
                 'project_id' => $this->project->id,
@@ -57,12 +62,13 @@ class GenerateSocialPost implements ShouldQueue
                 $this->project,
                 $this->platform,
                 $clientWon,
-                $newsSearch->recent($this->project),
+                $this->brief === null ? $newsSearch->recent($this->project) : new Collection,
                 $article,
                 $this->posts()->where('status', SocialPostStatus::Published)->latest('published_at')->limit(5)->pluck('body'),
                 $this->posts()->where('status', SocialPostStatus::Rejected)->latest('updated_at')->limit(5)->get(['body', 'rejection_reason']),
                 $this->posts()->whereNotNull('promoted_at')->latest('promoted_at')->limit(5)->pluck('body'),
                 SocialPostExample::promptDigest($this->platform),
+                $this->brief,
             ))->recordInto($run)->draft()->structured;
 
             $body = trim((string) ($structured['body'] ?? ''));
@@ -71,7 +77,10 @@ class GenerateSocialPost implements ShouldQueue
                 return;
             }
 
-            $sourceType = SocialPostSourceType::tryFrom((string) ($structured['source_type'] ?? '')) ?? SocialPostSourceType::KnowledgeBase;
+            // Never trust the model with where a brief came from either.
+            $sourceType = $this->brief !== null
+                ? SocialPostSourceType::Manual
+                : SocialPostSourceType::tryFrom((string) ($structured['source_type'] ?? '')) ?? SocialPostSourceType::KnowledgeBase;
 
             // Never trust the model with which row a source points at.
             $sourceRef = match ($sourceType) {
@@ -90,6 +99,12 @@ class GenerateSocialPost implements ShouldQueue
                 'body' => $body,
                 'status' => SocialPostStatus::Draft,
             ]);
+
+            // Asked for from chat: always a draft, since no Evie tool ever
+            // publishes, and no email about something the user is waiting for.
+            if ($this->brief !== null) {
+                return;
+            }
 
             $this->publishIfAutonomous($post, $publish);
 

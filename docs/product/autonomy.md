@@ -30,6 +30,18 @@ What never changes: in every mode, emails only go out from mailboxes you've conn
 
 Two things still wait for you in Autonomous: a post that names a client (only the anonymous version goes out on its own), and any post on a project with more than one LinkedIn account, since Eveil can't guess which one to post as. There's no Semi-auto here: publishing is the only step, so there's nothing in between. New projects start on Supervised. See [Posting to LinkedIn](/product/linkedin).
 
+## Bluesky
+
+| | 🟢 Supervised | 🔴 Autonomous |
+|---|---|---|
+| **Publishing a post** | You approve each one | Eveil publishes it as soon as it's written |
+
+A project with more than one Bluesky account still waits for you in Autonomous, since Eveil can't guess which one to post as. New projects start on Supervised. See [Posting to X and Bluesky](/product/social).
+
+## X
+
+Always supervised. Eveil drafts posts and you post them yourself: posting through X's API is paid per post. See [Posting to X and Bluesky](/product/social).
+
 ## Reddit
 
 Always supervised. Eveil drafts replies and you post them yourself, because posting on its own could get your account banned. See [Replying on Reddit](/product/reddit).

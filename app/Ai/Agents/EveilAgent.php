@@ -144,6 +144,29 @@ abstract class EveilAgent implements Agent, HasMiddleware
     }
 
     /**
+     * The X and Bluesky tone box, independent of the email and LinkedIn ones
+     * for the same reason LinkedIn has its own. Only `SocialPostWriter`
+     * calls this.
+     */
+    protected function socialInstructions(): string
+    {
+        $instructions = trim((string) $this->project->social_prompt_instructions);
+
+        if ($instructions === '') {
+            return '';
+        }
+
+        return <<<PROMPT
+
+
+            The user's own instructions for how this product writes X and Bluesky posts.
+            Where they disagree with anything above, follow these:
+
+            {$instructions}
+            PROMPT;
+    }
+
+    /**
      * The full product portrait, the same fields and order as the
      * Knowledge Base settings screen (`resources/js/pages/settings/KnowledgeBase.vue`):
      * what it does, who it is for, value proposition, positioning, pricing

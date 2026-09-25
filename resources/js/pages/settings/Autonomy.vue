@@ -9,6 +9,7 @@ defineOptions({ layout: [AppLayout, [SettingsLayout, { title: 'Autonomy' }]] })
 const props = defineProps<{
     emailAutonomyLevel: 'supervised' | 'semi_auto' | 'autonomous'
     linkedinAutonomyLevel: 'supervised' | 'autonomous'
+    blueskyAutonomyLevel: 'supervised' | 'autonomous'
 }>()
 
 const page = usePage()
@@ -16,7 +17,8 @@ const toast = useToast()
 
 const form = useForm({
     email_autonomy_level: props.emailAutonomyLevel,
-    linkedin_autonomy_level: props.linkedinAutonomyLevel
+    linkedin_autonomy_level: props.linkedinAutonomyLevel,
+    bluesky_autonomy_level: props.blueskyAutonomyLevel
 })
 
 // Same words as `docs/product/autonomy.md`: the two places this is
@@ -49,6 +51,19 @@ const LINKEDIN = [
         value: 'autonomous',
         label: 'Autonomous',
         description: 'Posts are published as soon as they are written. A post naming a client, or a project with several LinkedIn accounts, still waits for you.'
+    }
+]
+
+const BLUESKY = [
+    {
+        value: 'supervised',
+        label: 'Supervised',
+        description: 'Every post waits for you to approve it.'
+    },
+    {
+        value: 'autonomous',
+        label: 'Autonomous',
+        description: 'Posts are published as soon as they are written. A project with several Bluesky accounts still waits for you.'
     }
 ]
 
@@ -96,6 +111,34 @@ function save () {
                     :items="LINKEDIN"
                 />
             </UFormField>
+        </UCard>
+
+        <UCard>
+            <template #header>
+                <h2 class="font-medium">
+                    Bluesky
+                </h2>
+            </template>
+
+            <UFormField :error="form.errors.bluesky_autonomy_level">
+                <URadioGroup
+                    v-model="form.bluesky_autonomy_level"
+                    :items="BLUESKY"
+                />
+            </UFormField>
+        </UCard>
+
+        <UCard>
+            <template #header>
+                <h2 class="font-medium">
+                    X
+                </h2>
+            </template>
+
+            <p class="text-sm text-muted">
+                Always supervised. Eveil drafts posts, you post them yourself:
+                publishing through X's API is paid per post.
+            </p>
         </UCard>
 
         <UCard>

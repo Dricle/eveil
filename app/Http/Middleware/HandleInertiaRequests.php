@@ -9,6 +9,7 @@ use App\Enums\DiscoveryRunStatus;
 use App\Enums\EmailAccountStatus;
 use App\Enums\LinkedinPostStatus;
 use App\Enums\RedditReplyStatus;
+use App\Enums\SocialPostStatus;
 use App\Http\Resources\OrganizationResource;
 use App\Http\Resources\ProjectResource;
 use App\Models\Article;
@@ -18,6 +19,7 @@ use App\Models\EmailAccount;
 use App\Models\LinkedinPost;
 use App\Models\Project;
 use App\Models\RedditReply;
+use App\Models\SocialPost;
 use App\Models\TargetProfile;
 use App\Models\User;
 use App\Support\CurrentProject;
@@ -146,9 +148,9 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * @return array{targets: int, leads: int, inbox: int, linkedin: int, reddit: int}|null
-     *                                                                                      null while no project is selected, so the sidebar shows no
-     *                                                                                      badge rather than one for the wrong project
+     * @return array{targets: int, leads: int, inbox: int, linkedin: int, reddit: int, seo: int, social: int}|null
+     *                                                                                                             null while no project is selected, so the sidebar shows no
+     *                                                                                                             badge rather than one for the wrong project
      */
     private function navCounts(?User $user): ?array
     {
@@ -182,6 +184,7 @@ class HandleInertiaRequests extends Middleware
             // total of every reply ever drafted.
             'reddit' => RedditReply::query()->where('status', RedditReplyStatus::Draft)->count(),
             'seo' => Article::query()->where('status', ArticleStatus::Draft)->count(),
+            'social' => SocialPost::query()->where('status', SocialPostStatus::Draft)->count(),
         ]);
     }
 

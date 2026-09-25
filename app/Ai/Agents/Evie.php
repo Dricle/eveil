@@ -14,6 +14,7 @@ use App\Ai\Tools\DeleteTargetProfile;
 use App\Ai\Tools\DismissArticleIdea;
 use App\Ai\Tools\DraftArticle;
 use App\Ai\Tools\DraftLinkedinPost;
+use App\Ai\Tools\DraftSocialPost;
 use App\Ai\Tools\Evie\ProposeSuggestedReplies;
 use App\Ai\Tools\FindNewTargetProfiles;
 use App\Ai\Tools\GetArticle;
@@ -28,6 +29,7 @@ use App\Ai\Tools\ListArticles;
 use App\Ai\Tools\ListCampaigns;
 use App\Ai\Tools\ListCompanies;
 use App\Ai\Tools\ListLinkedinPosts;
+use App\Ai\Tools\ListSocialPosts;
 use App\Ai\Tools\ListTargetProfiles;
 use App\Ai\Tools\ProposeRecommendation;
 use App\Ai\Tools\RefreshAcquisitionIdeas;
@@ -37,6 +39,7 @@ use App\Ai\Tools\UpdateKnowledgeBase;
 use App\Ai\Tools\UpdateLinkedinPost;
 use App\Ai\Tools\UpdateRecommendation;
 use App\Ai\Tools\UpdateSequence;
+use App\Ai\Tools\UpdateSocialPost;
 use App\Ai\Tools\UpdateTargetProfile;
 use Laravel\Ai\Attributes\MaxSteps;
 use Laravel\Ai\Concerns\RemembersConversations;
@@ -70,8 +73,8 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
         Look things up before you act: ListTargetProfiles, ListCompanies,
         GetCompany, GetContact, ListCampaigns, GetCampaign,
         GetDiscoveryRunStatus, GetKnowledgeBase, GetTargetProfile,
-        ListLinkedinPosts, ListArticles, GetArticle and ListArticleIdeas cost
-        nothing and answer most questions on their own.
+        ListLinkedinPosts, ListSocialPosts, ListArticles, GetArticle and
+        ListArticleIdeas cost nothing and answer most questions on their own.
 
         ListCampaigns only gives you the shape (id, name, status, step
         count) - when the user wants to discuss, review, or rewrite a
@@ -204,6 +207,13 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
         works on a draft still awaiting approval - once approved, rejected or
         published it refuses, since the queue's own edit option is gone by
         then too.
+
+        DraftSocialPost queues a NEW X or Bluesky post, one network per call,
+        written in the background by the social post writer from the brief you
+        pass: never write the post yourself in the chat. Same rule as LinkedIn:
+        check ListSocialPosts first, and use UpdateSocialPost to change a draft
+        that already exists rather than drafting it twice. Bluesky drafts are
+        published from the queue; X drafts are posted by the user by hand.
 
         DraftArticle queues a NEW SEO article for the project's blog, written in
         the background by the article writer from the brief you pass: never
@@ -348,6 +358,9 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
             new DraftLinkedinPost($this->project),
             new ListLinkedinPosts($this->project),
             new UpdateLinkedinPost($this->project),
+            new DraftSocialPost($this->project),
+            new ListSocialPosts($this->project),
+            new UpdateSocialPost($this->project),
             new ListArticles($this->project),
             new GetArticle($this->project),
             new DraftArticle($this->project),

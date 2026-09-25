@@ -72,9 +72,12 @@ const deleting = ref(false)
 
 const slug = computed(() => page.props.currentProject!.slug)
 
+// While editing, copies the draft so unsaved changes come along.
 async function copy () {
+    const { title, body } = editing.value ? draft.value : props.article
+
     try {
-        await navigator.clipboard.writeText(`# ${props.article.title}\n\n${props.article.body}`)
+        await navigator.clipboard.writeText(`# ${title}\n\n${body}`)
         toast.add({ title: 'Copied as Markdown', color: 'success' })
     } catch {
         toast.add({ title: 'Could not copy - select and copy manually', color: 'error' })
@@ -262,12 +265,22 @@ function destroy () {
                     />
                 </UEditor>
             </UFormField>
-            <UButton
-                size="xs"
-                label="Save"
-                :loading="saving"
-                @click="save"
-            />
+            <div class="flex gap-2">
+                <UButton
+                    size="xs"
+                    label="Save"
+                    :loading="saving"
+                    @click="save"
+                />
+                <UButton
+                    icon="i-lucide-copy"
+                    color="neutral"
+                    variant="ghost"
+                    size="xs"
+                    label="Copy Markdown source"
+                    @click="copy"
+                />
+            </div>
         </div>
 
         <template v-else>

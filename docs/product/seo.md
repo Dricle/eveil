@@ -30,7 +30,7 @@ You can also ask [Evie](/product/evie): tell her "we just shipped X" and she'll 
 Nothing publishes on its own: Eveil has no access to your blog. For each draft you can:
 
 - **Copy** it as Markdown and paste it into your blog.
-- **Edit** the title, the search snippet (meta description) or the text yourself.
+- **Edit** the title, the search snippet (meta description) or the text yourself. While editing, **Copy Markdown source** copies your current version, unsaved changes included.
 - **Rework with Evie**: opens the chat on that article, so you can ask for changes in plain words ("shorter intro", "add a section on pricing"). She rewrites the draft in place.
 - **Mark as published**, with the address it went live at. Eveil reads that page and won't write the same article again.
 - **Reject** it, with an optional reason the writer takes into account next time, or delete it.

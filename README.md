@@ -20,8 +20,8 @@ looking for those companies, finds the people at them, writes the email
 sequence, sends it from your own mailbox, and reads the replies.
 
 Your own AI CMO, running its own army of agents. Lead discovery and outreach
-are B2B; LinkedIn posting, Reddit reply drafting and SEO articles (all evidence-driven)
-already work for anyone building an online presence, B2C solo founders
+are B2B; LinkedIn, X and Bluesky posting, Reddit reply drafting and SEO
+articles (all evidence-driven) already work for anyone building an online presence, B2C solo founders
 included.
 
 That's automation of the same work a human researcher would do by hand:
@@ -37,7 +37,8 @@ unlimited mailboxes, unlimited leads, your data on your own machine.
 > **Status: v1** The whole outbound loop works end to end:
 > site analysis, lead discovery, sequences, sending, replies, plus
 > organizations, roles, and pay-as-you-go billing for the cloud edition.
-> LinkedIn posting (personal profile, official API) is in too, and so is
+> LinkedIn posting (personal profile, official API) is in too, X and Bluesky
+> posting (Bluesky published for you, X copied and posted by you), and so is
 > Reddit reply drafting - manual-publish only for now, since Reddit is
 > currently blocking new API app registration - and SEO articles for your own
 > blog. Not built yet: a public API,
@@ -73,6 +74,10 @@ unlimited mailboxes, unlimited leads, your data on your own machine.
   you just won, or relevant industry news, drafted and queued for your
   approval before anything goes out - official API, personal profile, no
   automation of connection requests or messages.
+- **Posts to X and Bluesky.** Short posts from the same evidence, plus your
+  own freshly published articles, one queue for both. Bluesky publishes
+  through its free API with an app password; X you copy and post yourself,
+  since its API is paid per post.
 - **Finds Reddit threads worth replying to.** Live subreddits and evergreen
   "best X" threads already ranking on Google, drafted in the thread's own
   tone. Copy, post it yourself, mark it posted - no OAuth, since Reddit is

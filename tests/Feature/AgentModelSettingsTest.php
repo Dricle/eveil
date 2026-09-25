@@ -173,6 +173,7 @@ it('lists every agent it finds in the code, not a hand-kept list', function () {
         'repo-explorer',
         'result-triage',
         'sequence-writer',
+        'social-post-writer',
         'target-profile-deriver',
         'variant-writer',
         'website-analyst',

@@ -69,6 +69,14 @@ Schedule::command('eveil:reddit-fetch-stats')->daily();
 // shortest article cadence is daily too.
 Schedule::command('eveil:articles-generate-due')->daily();
 
+// Same daily granularity as the LinkedIn cadence: the shortest X and
+// Bluesky cadence is daily too.
+Schedule::command('eveil:social-generate-due')->daily();
+
+// Bluesky's counts are free and public, so every recent post is read. X is
+// never read: its API is paid per call.
+Schedule::command('eveil:social-fetch-stats')->daily();
+
 // Daily, and it must stay daily: the action reminds about replies that crossed
 // the one-day mark inside the last 24 hours, so each reply mails exactly once.
 Schedule::command('eveil:remind-replies')->daily();

@@ -84,6 +84,14 @@ class Organization extends Model
         return $this->hasMany(LinkedinAccount::class);
     }
 
+    /**
+     * @return HasMany<SocialAccount, $this>
+     */
+    public function socialAccounts(): HasMany
+    {
+        return $this->hasMany(SocialAccount::class);
+    }
+
     public function roleOf(User $user): ?OrganizationRole
     {
         $role = $this->users()->whereKey($user->getKey())->first()?->getAttribute('pivot')?->role;

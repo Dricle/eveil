@@ -9,6 +9,7 @@ import knowledgeBase from '@/routes/settings/knowledge-base'
 import linkedin from '@/routes/settings/linkedin'
 import mailboxes from '@/routes/settings/mailboxes'
 import members from '@/routes/settings/members'
+import social from '@/routes/settings/social'
 import project from '@/routes/settings/project'
 import aiInstructions from '@/routes/settings/ai-instructions'
 import autonomy from '@/routes/settings/autonomy'
@@ -46,6 +47,7 @@ const organizationItems = computed<NavigationMenuItem[]>(() => [
     // it carries no LinkedIn glyph): a generic one rather than a broken
     // reference.
     { label: 'LinkedIn', icon: 'i-lucide-share-2', to: relativeUrl(linkedin.index.url({ project: page.props.currentProject!.slug })) },
+    { label: 'Bluesky', icon: 'i-lucide-at-sign', to: relativeUrl(social.index.url({ project: page.props.currentProject!.slug })) },
     { label: 'Members', icon: 'i-lucide-users', to: relativeUrl(members.index.url({ project: page.props.currentProject!.slug })) },
     // Cloud only: self-hosted has no wallet, no plan, nothing this screen
     // would show.

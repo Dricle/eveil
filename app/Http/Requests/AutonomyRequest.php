@@ -18,6 +18,9 @@ class AutonomyRequest extends FormRequest
             // No semi-auto: publishing is the only step LinkedIn has, so
             // there is nothing for a middle notch to hand over.
             'linkedin_autonomy_level' => ['required', Rule::enum(AutonomyLevel::class)->only([AutonomyLevel::Supervised, AutonomyLevel::Autonomous])],
+            // Same two notches as LinkedIn. X has no setting: it is always
+            // posted by hand.
+            'bluesky_autonomy_level' => ['required', Rule::enum(AutonomyLevel::class)->only([AutonomyLevel::Supervised, AutonomyLevel::Autonomous])],
         ];
     }
 }

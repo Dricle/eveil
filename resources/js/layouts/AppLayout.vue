@@ -13,6 +13,7 @@ import companies from '@/routes/companies'
 import linkedinPosts from '@/routes/linkedin/posts'
 import redditReplies from '@/routes/reddit/replies'
 import seo from '@/routes/seo'
+import socialPosts from '@/routes/social/posts'
 import { profile } from '@/routes/account'
 import appSettings from '@/routes/app-settings/provider'
 import { create as createProject } from '@/routes/projects'
@@ -123,6 +124,16 @@ const items = computed<NavigationMenuItem[]>(() => {
             active: page.url.startsWith(`/app/${project.slug}/linkedin`),
             badge: navCounts.value?.linkedin
                 ? { label: navCounts.value.linkedin, color: 'primary', variant: 'solid' }
+                : undefined
+        },
+
+        {
+            label: 'X & Bluesky',
+            icon: 'i-lucide-at-sign',
+            to: relativeUrl(socialPosts.index.url({ project: project.slug })),
+            active: page.url.startsWith(`/app/${project.slug}/social`),
+            badge: navCounts.value?.social
+                ? { label: navCounts.value.social, color: 'primary', variant: 'solid' }
                 : undefined
         },
 

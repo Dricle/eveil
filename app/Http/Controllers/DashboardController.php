@@ -11,6 +11,8 @@ use App\Enums\MessageDirection;
 use App\Enums\OutreachStatus;
 use App\Enums\RedditReplyStatus;
 use App\Enums\ReplyClassification;
+use App\Enums\SocialPlatform;
+use App\Enums\SocialPostStatus;
 use App\Http\Resources\ArticleResource;
 use App\Http\Resources\CampaignResource;
 use App\Http\Resources\ConversationResource;
@@ -19,6 +21,8 @@ use App\Http\Resources\LinkedinPostResource;
 use App\Http\Resources\MailboxResource;
 use App\Http\Resources\RedditReplyResource;
 use App\Http\Resources\ReplyResource;
+use App\Http\Resources\SocialAccountResource;
+use App\Http\Resources\SocialPostResource;
 use App\Models\AgentRun;
 use App\Models\Article;
 use App\Models\Campaign;
@@ -29,6 +33,7 @@ use App\Models\Lead;
 use App\Models\LinkedinPost;
 use App\Models\Message;
 use App\Models\RedditReply;
+use App\Models\SocialPost;
 use App\Support\CurrentProject;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -115,6 +120,7 @@ class DashboardController extends Controller
             'autonomy' => [
                 'email' => $this->currentProject->getOrFail()->email_autonomy_level,
                 'linkedin' => $this->currentProject->getOrFail()->linkedin_autonomy_level,
+                'bluesky' => $this->currentProject->getOrFail()->bluesky_autonomy_level,
             ],
             // What is actually stuck on a yes from this person: a new lead
             // whose company nobody has approved yet. A company-less lead (an
@@ -164,6 +170,12 @@ class DashboardController extends Controller
                 ),
                 'linkedinAccounts' => LinkedinAccountResource::collection(
                     $this->currentProject->getOrFail()->linkedinAccounts()->get()
+                ),
+                'socialPosts' => SocialPostResource::collection(
+                    SocialPost::query()->where('status', SocialPostStatus::Draft)->latest()->get()
+                ),
+                'blueskyAccounts' => SocialAccountResource::collection(
+                    $this->currentProject->getOrFail()->socialAccounts()->where('platform', SocialPlatform::Bluesky)->get()
                 ),
                 'conversations' => ConversationResource::collection($this->inboxFolders->todo()),
                 'articles' => ArticleResource::collection(

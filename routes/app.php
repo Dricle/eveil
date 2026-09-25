@@ -79,6 +79,10 @@ use App\Http\Controllers\RecommendationStatusController;
 use App\Http\Controllers\RedditCadenceController;
 use App\Http\Controllers\RedditReplyController;
 use App\Http\Controllers\Settings\MemberController;
+use App\Http\Controllers\SocialAccountController;
+use App\Http\Controllers\SocialCadenceController;
+use App\Http\Controllers\SocialInstructionsController;
+use App\Http\Controllers\SocialPostController;
 use App\Http\Controllers\StepVariantController;
 use App\Http\Controllers\StepVariantGenerationController;
 use App\Http\Controllers\TargetProfileActivationController;
@@ -208,6 +212,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
                 ->name('ai-instructions.emails.update');
             Route::put('ai-instructions/linkedin', [LinkedinInstructionsController::class, 'update'])
                 ->name('ai-instructions.linkedin.update');
+            Route::put('ai-instructions/social', [SocialInstructionsController::class, 'update'])
+                ->name('ai-instructions.social.update');
 
             /*
              * Organization-scoped, same reasoning as mailboxes below: a
@@ -258,6 +264,16 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
              */
             Route::get('linkedin/{linkedinAccount}/stats/connect', [LinkedinStatsOAuthController::class, 'redirect'])
                 ->name('linkedin.stats.connect');
+
+            /*
+             * Bluesky accounts, organization-owned like the LinkedIn ones
+             * above. Connected with an app password, so no OAuth callback.
+             * X has no account at all: it is posted by hand.
+             */
+            Route::get('social', [SocialAccountController::class, 'index'])->name('social.index');
+            Route::post('social', [SocialAccountController::class, 'store'])->name('social.store');
+            Route::put('social/{socialAccount}', [SocialAccountController::class, 'update'])->name('social.update');
+            Route::delete('social/{socialAccount}', [SocialAccountController::class, 'destroy'])->name('social.destroy');
 
             /*
              * Cloud billing. The route exists in both editions (one repo,
@@ -354,6 +370,36 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
              * shared instance-wide pool - see `LinkedinPostController::promote()`.
              */
             Route::post('posts/{linkedin_post}/promote', [LinkedinPostController::class, 'promote'])
+                ->name('posts.promote');
+        });
+
+        /*
+         * The X and Bluesky queue, same reasoning as LinkedIn's for being a
+         * nav item. Bluesky drafts are approved and published through its
+         * API (`approve`); X drafts are posted by hand and their URL pasted
+         * back (`publish`).
+         */
+        Route::prefix('social')->name('social.')->group(function (): void {
+            Route::get('posts', [SocialPostController::class, 'index'])->name('posts.index');
+            /*
+             * Literal segments before {social_post} below, same trap as
+             * `linkedin.posts.cadence`.
+             */
+            Route::put('posts/cadence', [SocialCadenceController::class, 'update'])
+                ->name('posts.cadence');
+            Route::post('posts/generate', [SocialPostController::class, 'generate'])
+                ->name('posts.generate');
+            Route::put('posts/{social_post}', [SocialPostController::class, 'update'])
+                ->name('posts.update');
+            Route::post('posts/{social_post}/approve', [SocialPostController::class, 'approve'])
+                ->name('posts.approve');
+            Route::post('posts/{social_post}/publish', [SocialPostController::class, 'publish'])
+                ->name('posts.publish');
+            Route::post('posts/{social_post}/reject', [SocialPostController::class, 'reject'])
+                ->name('posts.reject');
+            Route::delete('posts/{social_post}', [SocialPostController::class, 'destroy'])
+                ->name('posts.destroy');
+            Route::post('posts/{social_post}/promote', [SocialPostController::class, 'promote'])
                 ->name('posts.promote');
         });
 

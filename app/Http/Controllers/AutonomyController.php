@@ -12,8 +12,8 @@ use Inertia\Response;
  * How much each channel does on its own, one setting per channel rather than
  * one for the whole project: emailing a company nobody looked at and
  * publishing under someone's name are not the same risk, so a user can hand
- * one over without the other. Reddit has no setting, it never posts on its
- * own.
+ * one over without the other. Reddit and X have no setting, they never
+ * post on their own.
  */
 class AutonomyController extends Controller
 {
@@ -24,6 +24,7 @@ class AutonomyController extends Controller
         return Inertia::render('settings/Autonomy', [
             'emailAutonomyLevel' => $project->email_autonomy_level->value,
             'linkedinAutonomyLevel' => $project->linkedin_autonomy_level->value,
+            'blueskyAutonomyLevel' => $project->bluesky_autonomy_level->value,
         ]);
     }
 

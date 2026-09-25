@@ -5,12 +5,14 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import SettingsLayout from '@/layouts/SettingsLayout.vue'
 import emailInstructionsRoutes from '@/routes/settings/ai-instructions/emails'
 import linkedinInstructionsRoutes from '@/routes/settings/ai-instructions/linkedin'
+import socialInstructionsRoutes from '@/routes/settings/ai-instructions/social'
 
 defineOptions({ layout: [AppLayout, [SettingsLayout, { title: 'AI instructions' }]] })
 
 const props = defineProps<{
     promptInstructions: string | null
     linkedinPromptInstructions: string | null
+    socialPromptInstructions: string | null
 }>()
 
 const page = usePage()
@@ -23,6 +25,9 @@ watch(() => props.promptInstructions, value => emailInstructions.value = value ?
 
 const linkedinInstructions = ref(props.linkedinPromptInstructions ?? '')
 watch(() => props.linkedinPromptInstructions, value => linkedinInstructions.value = value ?? '', { immediate: true })
+
+const socialInstructions = ref(props.socialPromptInstructions ?? '')
+watch(() => props.socialPromptInstructions, value => socialInstructions.value = value ?? '', { immediate: true })
 </script>
 
 <template>
@@ -97,6 +102,49 @@ watch(() => props.linkedinPromptInstructions, value => linkedinInstructions.valu
                     <UTextarea
                         v-model="linkedinInstructions"
                         name="linkedin_prompt_instructions"
+                        :rows="5"
+                        :maxlength="2000"
+                        class="w-full"
+                    />
+                </UFormField>
+
+                <div class="flex items-center gap-3">
+                    <UButton
+                        type="submit"
+                        :loading="processing"
+                        label="Save"
+                    />
+                    <span
+                        v-if="recentlySuccessful"
+                        class="text-sm text-muted"
+                    >Saved.</span>
+                </div>
+            </Form>
+        </UCard>
+
+        <UCard>
+            <template #header>
+                <h2 class="font-medium">
+                    How X and Bluesky posts are written
+                </h2>
+                <p class="mt-1 text-sm text-muted">
+                    One box for both networks, independent of the two above. E.g.
+                    playful, no hashtags, always end with a question.
+                </p>
+            </template>
+
+            <Form
+                v-slot="{ errors, processing, recentlySuccessful }"
+                v-bind="socialInstructionsRoutes.update.form({ project: page.props.currentProject!.slug })"
+                class="space-y-4"
+            >
+                <UFormField
+                    name="social_prompt_instructions"
+                    :error="errors.social_prompt_instructions"
+                >
+                    <UTextarea
+                        v-model="socialInstructions"
+                        name="social_prompt_instructions"
                         :rows="5"
                         :maxlength="2000"
                         class="w-full"

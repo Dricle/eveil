@@ -17,7 +17,7 @@ use Inertia\Response;
  * performance has to clear to join it automatically - see
  * `App\Actions\FetchRedditReplyStats`, the thing that actually promotes
  * one. This screen only manages the bank and its threshold, never promotes
- * anything itself. Mirrors `LinkedinPostExampleController` exactly.
+ * anything itself. Mirrors `SocialPostExampleController` exactly.
  */
 class RedditReplyExampleController extends Controller
 {

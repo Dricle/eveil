@@ -3,6 +3,8 @@
 namespace App\Services\Social;
 
 use App\Models\SocialAccount;
+use App\Models\SocialPost;
+use Illuminate\Support\Collection;
 
 /**
  * What the network-agnostic actions (`PublishSocialPost`,
@@ -21,10 +23,12 @@ interface SocialClientInterface
     public function publish(SocialAccount $account, string $text, ?string $language = null): ?array;
 
     /**
-     * Like counts by post id, for the ids this network could read.
+     * Like counts for this network's published posts, keyed by post id, for
+     * the posts it could read. The posts, not just their ids: reading one may
+     * need the account it went out on.
      *
-     * @param  array<int, string>  $ids
-     * @return array<string, int>
+     * @param  Collection<int, SocialPost>  $posts
+     * @return array<int, int>
      */
-    public function likeCounts(array $ids): array;
+    public function likeCounts(Collection $posts): array;
 }

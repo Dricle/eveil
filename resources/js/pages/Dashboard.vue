@@ -3,7 +3,6 @@ import { Head, router, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 import ArticleCard from '@/components/ArticleCard.vue'
 import ConversationPanel from '@/components/ConversationPanel.vue'
-import LinkedinPostCard from '@/components/LinkedinPostCard.vue'
 import RedditThreadCard from '@/components/RedditThreadCard.vue'
 import SocialPostCard from '@/components/SocialPostCard.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
@@ -20,7 +19,7 @@ import organizationBilling from '@/routes/settings/organization/billing'
 import mailboxSettings from '@/routes/settings/mailboxes'
 import autonomySettings from '@/routes/settings/autonomy'
 import targets from '@/routes/targets'
-import type { Article, Conversation, DashboardCampaign, DashboardDiscoveryRun, DashboardReply, DashboardStats, LinkedinAccount, LinkedinPost, Mailbox, Recommendation, RedditReply, SocialAccount, SocialPost } from '@/types'
+import type { Article, Conversation, DashboardCampaign, DashboardDiscoveryRun, DashboardReply, DashboardStats, Mailbox, Recommendation, RedditReply, SocialAccount, SocialPost } from '@/types'
 import { CLASSIFICATIONS } from '@/types/inbox'
 
 defineOptions({ layout: AppLayout })
@@ -42,10 +41,8 @@ const props = defineProps<{
     latestReplies: DashboardReply[]
     review: {
         redditReplies: RedditReply[]
-        linkedinPosts: LinkedinPost[]
-        linkedinAccounts: LinkedinAccount[]
         socialPosts: SocialPost[]
-        blueskyAccounts: SocialAccount[]
+        socialAccounts: SocialAccount[]
         conversations: Conversation[]
         articles: Article[]
     }
@@ -59,7 +56,7 @@ const toast = useToast()
 // is one experience. Held as a kind and an id, not the item itself, same as
 // `Inbox.vue`: after an action the page reloads, the item leaves the list,
 // and the modal closes on its own because the id no longer finds anything.
-type ReviewKind = 'reddit' | 'linkedin' | 'social' | 'email' | 'article'
+type ReviewKind = 'reddit' | 'social' | 'email' | 'article'
 
 const redditThreads = computed(() => groupThreads(props.review.redditReplies))
 
@@ -71,14 +68,6 @@ const reviewItems = computed(() => [
         label: 'Reddit reply',
         title: thread.threadTitle ?? 'Reddit thread',
         detail: `${thread.subreddit ? `r/${thread.subreddit} · ` : ''}${thread.replies.length} ${thread.replies.length === 1 ? 'draft' : 'drafts'}`
-    })),
-    ...props.review.linkedinPosts.map(post => ({
-        kind: 'linkedin' as ReviewKind,
-        id: String(post.id),
-        icon: 'i-lucide-linkedin',
-        label: 'LinkedIn post',
-        title: post.body.split('\n')[0],
-        detail: post.evidence
     })),
     ...props.review.socialPosts.map(post => ({
         kind: 'social' as ReviewKind,
@@ -111,9 +100,6 @@ const reviewing = ref<{ kind: ReviewKind, id: string } | null>(null)
 const reviewThread = computed(() => reviewing.value?.kind === 'reddit'
     ? redditThreads.value.find(thread => thread.permalink === reviewing.value!.id) ?? null
     : null)
-const reviewPost = computed(() => reviewing.value?.kind === 'linkedin'
-    ? props.review.linkedinPosts.find(post => String(post.id) === reviewing.value!.id) ?? null
-    : null)
 const reviewSocialPost = computed(() => reviewing.value?.kind === 'social'
     ? props.review.socialPosts.find(post => String(post.id) === reviewing.value!.id) ?? null
     : null)
@@ -126,7 +112,7 @@ const reviewArticle = computed(() => reviewing.value?.kind === 'article'
     : null)
 
 const reviewOpen = computed({
-    get: () => reviewThread.value !== null || reviewPost.value !== null || reviewSocialPost.value !== null || reviewConversation.value !== null || reviewArticle.value !== null,
+    get: () => reviewThread.value !== null || reviewSocialPost.value !== null || reviewConversation.value !== null || reviewArticle.value !== null,
     set: (value: boolean) => {
         if (!value) {
             reviewing.value = null
@@ -711,15 +697,10 @@ const topupPercent = computed(() => {
                     v-if="reviewThread"
                     :thread="reviewThread"
                 />
-                <LinkedinPostCard
-                    v-else-if="reviewPost"
-                    :post="reviewPost"
-                    :linkedin-accounts="review.linkedinAccounts"
-                />
                 <SocialPostCard
                     v-else-if="reviewSocialPost"
                     :post="reviewSocialPost"
-                    :bluesky-accounts="review.blueskyAccounts"
+                    :accounts="review.socialAccounts.filter(account => account.platform === reviewSocialPost!.platform)"
                 />
                 <ArticleCard
                     v-else-if="reviewArticle"

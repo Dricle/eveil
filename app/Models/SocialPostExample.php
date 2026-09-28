@@ -12,14 +12,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
 /**
- * An X or Bluesky post worth learning from, fed back into `SocialPostWriter`
- * for every project writing for that network. One bank per network: what
- * works in 280 characters on X is not what works on Bluesky.
+ * A post worth learning from, fed back into `SocialPostWriter` for every
+ * project writing for that network. One bank per network: what works in 280
+ * characters on X is not what works in a LinkedIn post.
  *
- * Shared instance-wide, same reasoning and same trust rule as
- * `LinkedinPostExample`: fed only by a superadmin typing one in, or by
- * `FetchSocialPostStats` crossing a real Bluesky like count. A user's own
- * "mark as successful" click never writes here.
+ * Shared instance-wide on purpose, not scoped to an organization or project,
+ * same reasoning as `EmailExample`. Fed by exactly two trusted sources: a
+ * superadmin typing one in, or `FetchSocialPostStats` crossing a real,
+ * externally-measured like count. A user's own "mark as successful" click
+ * never writes here - it only stamps `social_posts.promoted_at`, feeding that
+ * same project's own prompts - which is what keeps a self-serve click from
+ * being a one-click poisoning vector into every other tenant's prompt.
  *
  * @property int $id
  * @property SocialPlatform $platform

@@ -3,11 +3,13 @@
 namespace App\Services\Bluesky;
 
 use App\Models\SocialAccount;
+use App\Models\SocialPost;
 use App\Services\Social\SocialClientInterface;
 use App\Support\HtmlText;
 use DOMXPath;
 use GuzzleHttp\Psr7\Uri;
 use GuzzleHttp\Psr7\UriResolver;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 use Throwable;
@@ -107,24 +109,24 @@ class BlueskyClient implements SocialClientInterface
     }
 
     /**
-     * Like counts by post at:// URI. Public, no session needed; Bluesky caps
-     * one call at 25 URIs.
+     * Public, no session needed; Bluesky caps one call at 25 URIs.
      *
-     * @param  array<int, string>  $ids
-     * @return array<string, int>
+     * @param  Collection<int, SocialPost>  $posts
+     * @return array<int, int>
      */
-    public function likeCounts(array $ids): array
+    public function likeCounts(Collection $posts): array
     {
+        $postIds = $posts->pluck('id', 'external_id');
         $counts = [];
 
-        foreach (array_chunk($ids, 25) as $chunk) {
-            $query = implode('&', array_map(fn (string $uri): string => 'uris='.urlencode($uri), $chunk));
+        foreach ($postIds->keys()->chunk(25) as $chunk) {
+            $query = $chunk->map(fn (string $uri): string => 'uris='.urlencode($uri))->implode('&');
 
             $response = Http::get(self::PUBLIC_API.'/xrpc/app.bsky.feed.getPosts?'.$query);
 
             foreach ((array) $response->json('posts', []) as $post) {
-                if (is_array($post) && isset($post['uri'])) {
-                    $counts[(string) $post['uri']] = (int) ($post['likeCount'] ?? 0);
+                if (is_array($post) && isset($post['uri'], $postIds[$post['uri']])) {
+                    $counts[$postIds[$post['uri']]] = (int) ($post['likeCount'] ?? 0);
                 }
             }
         }

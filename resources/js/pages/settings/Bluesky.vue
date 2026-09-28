@@ -3,7 +3,8 @@ import { Form, Head, router, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import SettingsLayout from '@/layouts/SettingsLayout.vue'
-import socialRoutes from '@/routes/settings/social'
+import blueskyRoutes from '@/routes/settings/bluesky'
+import socialAccountRoutes from '@/routes/settings/social-accounts'
 import type { Project, SocialAccount } from '@/types'
 
 defineOptions({ layout: [AppLayout, [SettingsLayout, { title: 'Bluesky' }]] })
@@ -33,13 +34,14 @@ function open (account: SocialAccount) {
 }
 
 function destroy (account: SocialAccount) {
-    router.delete(socialRoutes.destroy.url({ project: slug.value, socialAccount: account.id }), {
+    router.delete(socialAccountRoutes.destroy.url({ project: slug.value, socialAccount: account.id }), {
         onSuccess: () => toast.add({ title: 'Account disconnected', color: 'neutral' })
     })
 }
 
 const STATUS = {
     active: { color: 'success' as const, label: 'Active' },
+    expired: { color: 'warning' as const, label: 'Reconnect needed' },
     error: { color: 'error' as const, label: 'Reconnect needed' }
 }
 </script>
@@ -53,7 +55,7 @@ const STATUS = {
                 Bluesky posts are published through Bluesky's own API, with an app
                 password: create one in Bluesky under Settings, Privacy and security,
                 App passwords. It can be revoked there at any time and cannot change
-                your account. X needs no account here: you post those yourself.
+                your account. The posting cadence is set from the Bluesky posts queue.
             </p>
 
             <UAlert
@@ -141,7 +143,7 @@ const STATUS = {
 
             <Form
                 v-slot="{ errors, processing }"
-                v-bind="socialRoutes.store.form({ project: slug })"
+                v-bind="blueskyRoutes.store.form({ project: slug })"
                 class="space-y-4"
                 :options="{ preserveScroll: true }"
                 @success="appPassword = ''"
@@ -192,7 +194,7 @@ const STATUS = {
             <Form
                 v-if="editing"
                 v-slot="{ processing }"
-                v-bind="socialRoutes.update.form({ project: slug, socialAccount: editing.id })"
+                v-bind="socialAccountRoutes.update.form({ project: slug, socialAccount: editing.id })"
                 class="space-y-4"
                 @success="editingOpen = false"
             >

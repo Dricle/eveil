@@ -2,37 +2,42 @@
 
 namespace App\Services\Linkedin;
 
-use App\Enums\LinkedinAccountStatus;
-use App\Models\LinkedinAccount;
+use App\Enums\SocialAccountStatus;
+use App\Models\SocialAccount;
+use App\Models\SocialPost;
+use App\Services\Social\SocialClientInterface;
 use App\Support\LinkedinCredentials;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
+use Throwable;
 
 /**
- * The calls this product needs against LinkedIn's official API: publish a
- * post as a member, refresh an expiring token, and (only for an account with
- * the separate, restricted stats connection) read a post's engagement.
- * Personal-profile only (`w_member_social`) - see `.ai/rules/linkedin.md`.
+ * LinkedIn's driver, on its official API: publish a post as a member,
+ * refresh an expiring token, and (only for an account with the separate,
+ * restricted stats connection) read a post's engagement. Personal-profile
+ * only (`w_member_social`).
  *
- * Comment read/reply on your own post is a documented gap, not an oversight:
- * LinkedIn's exact API shape for it needs verifying against their current
- * developer docs before it is wired up.
+ * On a LinkedIn `SocialAccount`, `secret` is the posting app's access token
+ * and `stats_secret` the performance-polling app's.
  */
-class LinkedinClient
+class LinkedinClient implements SocialClientInterface
 {
     private const API_VERSION = '202608';
 
     public function __construct(private LinkedinCredentials $credentials) {}
 
     /**
-     * Publishes as the connected member. Returns the created post's URN.
+     * Publishes as the connected member. The URI is the post's URN.
+     *
+     * @return array{uri: string, url: string}
      */
-    public function publishPost(LinkedinAccount $account, string $text): string
+    public function publish(SocialAccount $account, string $text, ?string $language = null): ?array
     {
-        $response = Http::withToken($account->access_token)
+        $response = Http::withToken($account->secret)
             ->withHeaders($this->headers())
             ->post('https://api.linkedin.com/rest/posts', [
-                'author' => $account->member_urn,
+                'author' => $account->external_id,
                 'commentary' => $text,
                 'visibility' => 'PUBLIC',
                 'distribution' => [
@@ -54,32 +59,48 @@ class LinkedinClient
             throw new RuntimeException('LinkedIn published the post but returned no id.');
         }
 
-        return $urn;
+        return ['uri' => $urn, 'url' => "https://www.linkedin.com/feed/update/{$urn}/"];
     }
 
     /**
-     * The reaction/comment counts on a post the connected member published -
-     * `App\Actions\FetchLinkedinPostStats`'s only call. Requires the
-     * SEPARATE `stats_access_token` (the Community Management app's
-     * restricted `r_member_social_feed`, not the posting app's
-     * `w_member_social`): a 401/403 here almost always means the account
-     * was never granted it, which is expected for most accounts and must
-     * never be treated as an error to surface.
+     * Reaction counts, per post, through the SEPARATE stats token (the
+     * Community Management app's restricted `r_member_social_feed`). A post
+     * whose account never made that second connection is skipped outright,
+     * expected for most accounts; one LinkedIn refuses is skipped too.
+     *
+     * @param  Collection<int, SocialPost>  $posts
+     * @return array<int, int>
      */
-    public function socialMetadata(LinkedinAccount $account, string $urn): int
+    public function likeCounts(Collection $posts): array
     {
-        $response = Http::withToken($account->stats_access_token)
-            ->withHeaders($this->headers())
-            ->get("https://api.linkedin.com/rest/socialMetadata/{$urn}");
+        $counts = [];
 
-        if (! $response->successful()) {
-            throw new RuntimeException("LinkedIn refused the social metadata request: HTTP {$response->status()}");
+        foreach ($posts as $post) {
+            $token = $post->socialAccount?->stats_secret;
+
+            if ($token === null) {
+                continue;
+            }
+
+            try {
+                $response = Http::withToken($token)
+                    ->withHeaders($this->headers())
+                    ->get("https://api.linkedin.com/rest/socialMetadata/{$post->external_id}");
+            } catch (Throwable) {
+                continue;
+            }
+
+            if (! $response->successful()) {
+                continue;
+            }
+
+            /** @var array<string, array{count: int}> $reactions */
+            $reactions = $response->json('reactionSummaries') ?? [];
+
+            $counts[$post->id] = array_sum(array_column($reactions, 'count'));
         }
 
-        /** @var array<string, array{count: int}> $reactions */
-        $reactions = $response->json('reactionSummaries') ?? [];
-
-        return array_sum(array_column($reactions, 'count'));
+        return $counts;
     }
 
     /**
@@ -87,24 +108,24 @@ class LinkedinClient
      * call 401s rather than on a schedule - the same "last moment before the
      * call" reasoning as `ProviderCredentials::apply()`.
      */
-    public function refreshToken(LinkedinAccount $account): void
+    public function refreshToken(SocialAccount $account): void
     {
-        if ($account->refresh_token === null) {
-            $account->update(['status' => LinkedinAccountStatus::Expired, 'last_error' => 'No refresh token stored: reconnect the account.']);
+        if ($account->refresh_secret === null) {
+            $account->update(['status' => SocialAccountStatus::Expired, 'last_error' => 'No refresh token stored: reconnect the account.']);
 
             return;
         }
 
         $response = Http::asForm()->post('https://www.linkedin.com/oauth/v2/accessToken', [
             'grant_type' => 'refresh_token',
-            'refresh_token' => $account->refresh_token,
+            'refresh_token' => $account->refresh_secret,
             'client_id' => $this->credentials->clientId(),
             'client_secret' => $this->credentials->clientSecret(),
         ]);
 
         if (! $response->successful()) {
             $account->update([
-                'status' => LinkedinAccountStatus::Error,
+                'status' => SocialAccountStatus::Error,
                 'last_error' => "Token refresh failed: HTTP {$response->status()}",
             ]);
 
@@ -112,10 +133,10 @@ class LinkedinClient
         }
 
         $account->update([
-            'access_token' => (string) $response->json('access_token'),
-            'access_token_expires_at' => now()->addSeconds((int) $response->json('expires_in')),
-            'refresh_token' => $response->json('refresh_token') ?? $account->refresh_token,
-            'status' => LinkedinAccountStatus::Active,
+            'secret' => (string) $response->json('access_token'),
+            'secret_expires_at' => now()->addSeconds((int) $response->json('expires_in')),
+            'refresh_secret' => $response->json('refresh_token') ?? $account->refresh_secret,
+            'status' => SocialAccountStatus::Active,
             'last_error' => null,
         ]);
     }

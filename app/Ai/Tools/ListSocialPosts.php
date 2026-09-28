@@ -10,7 +10,7 @@ use Laravel\Ai\Tools\Request;
 use Stringable;
 
 /**
- * Read-only: the X and Bluesky posts already in the queue, so a vague
+ * Read-only: the posts already in the queues, so a vague
  * request ("shorten the Bluesky post") finds the existing one rather than
  * drafting a duplicate.
  */
@@ -20,7 +20,7 @@ class ListSocialPosts implements Tool
 
     public function description(): Stringable|string
     {
-        return 'Lists this project\'s X and Bluesky posts (drafts and published), with their id, network, status, source and body, most recent first.';
+        return 'Lists this project\'s LinkedIn, X and Bluesky posts (drafts and published), with their id, network, status, source and body, most recent first.';
     }
 
     public function handle(Request $request): Stringable|string
@@ -35,12 +35,13 @@ class ListSocialPosts implements Tool
                 'platform' => $post->platform->value,
                 'status' => $post->status->value,
                 'source_type' => $post->source_type->value,
+                'variant' => $post->variant?->value,
                 'evidence' => $post->evidence,
                 'body' => $post->body,
             ]);
 
         if ($posts->isEmpty()) {
-            return 'This project has no X or Bluesky posts yet.';
+            return 'This project has no posts yet.';
         }
 
         return (string) json_encode($posts->all());

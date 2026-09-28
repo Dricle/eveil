@@ -10,7 +10,7 @@ use Illuminate\Http\RedirectResponse;
  * The project's "How Emails are written" box - see
  * `EveilAgent::emailWritingInstructions()`. Split out from `ProjectController`
  * so it can save independently on the AI instructions settings screen,
- * alongside the separate LinkedIn box (`LinkedinInstructionsController`),
+ * alongside the separate LinkedIn box (`SocialInstructionsController`),
  * without submitting name/url/autonomy/lead limits along with it.
  */
 class EmailInstructionsController extends Controller

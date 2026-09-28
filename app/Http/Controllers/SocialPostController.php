@@ -7,7 +7,6 @@ use App\Actions\PublishSocialPost;
 use App\Enums\SocialPlatform;
 use App\Enums\SocialPostStatus;
 use App\Http\Requests\SocialPostApproveRequest;
-use App\Http\Requests\SocialPostGenerateRequest;
 use App\Http\Requests\SocialPostPublishRequest;
 use App\Http\Requests\SocialPostRejectRequest;
 use App\Http\Requests\SocialPostRequest;
@@ -22,9 +21,10 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * The queue every X and Bluesky draft lands in. The two publish differently:
- * a Bluesky draft is approved and published through Bluesky's API, an X draft
- * is copied, posted by hand, and its URL pasted back (`publish()`).
+ * One queue per network, each its own nav entry, all on the same rows. A
+ * LinkedIn or Bluesky draft is approved and published through the network's
+ * API (`approve()`); an X draft is copied, posted by hand, and its URL
+ * pasted back (`publish()`).
  *
  * `SocialPost` is project-scoped, so per `.ai/rules/controllers.md` it is
  * never route-model-bound. Every action on one row answers with `back()`:
@@ -32,29 +32,27 @@ use Inertia\Response;
  */
 class SocialPostController extends Controller
 {
-    public function index(CurrentProject $currentProject): Response
+    public function index(CurrentProject $currentProject, SocialPlatform $platform): Response
     {
         $project = $currentProject->getOrFail();
 
         return Inertia::render('social/Posts', [
-            'posts' => SocialPostResource::collection(SocialPost::query()->with('socialAccount')->latest()->get()),
-            'blueskyAccounts' => SocialAccountResource::collection(
-                $project->socialAccounts()->where('platform', SocialPlatform::Bluesky)->get()
+            'platform' => $platform->value,
+            'posts' => SocialPostResource::collection(
+                SocialPost::query()->where('platform', $platform)->with('socialAccount')->latest()->get()
             ),
-            'frequencies' => [
-                'x' => $project->x_post_frequency->value,
-                'bluesky' => $project->bluesky_post_frequency->value,
-            ],
+            'accounts' => SocialAccountResource::collection(
+                $project->socialAccounts()->where('platform', $platform)->get()
+            ),
+            'frequency' => $project->getAttribute($platform->frequencyColumn())->value,
         ]);
     }
 
-    public function generate(SocialPostGenerateRequest $request, CurrentProject $currentProject): RedirectResponse
+    public function generate(CurrentProject $currentProject, SocialPlatform $platform): RedirectResponse
     {
-        $platform = SocialPlatform::from($request->validated('platform'));
-
         GenerateSocialPost::dispatch($currentProject->getOrFail(), $platform);
 
-        return to_route('social.posts.index')->with('status', "Writing a {$platform->label()} post. It will appear here shortly.");
+        return to_route('social.posts.index', $platform)->with('status', "Writing a {$platform->label()} post. It will appear here shortly.");
     }
 
     public function update(SocialPostRequest $request, int $socialPost): RedirectResponse
@@ -65,24 +63,33 @@ class SocialPostController extends Controller
     }
 
     /**
-     * Bluesky only: approving and publishing are the same action, as on
-     * LinkedIn. A failure leaves the draft with `last_error`, so the same
-     * button retries.
+     * LinkedIn and Bluesky: approving and publishing are the same action,
+     * there is no `approved` status to sit in first. A failure leaves the
+     * draft with `last_error`, so the same button retries. Only one of a
+     * named/anonymized pair can ever go out: the user just chose which.
      */
     public function approve(SocialPostApproveRequest $request, PublishSocialPost $publish, int $socialPost): RedirectResponse
     {
         $post = SocialPost::query()
-            ->where('platform', SocialPlatform::Bluesky)
+            ->where('platform', '!=', SocialPlatform::X)
             ->where('status', SocialPostStatus::Draft)
             ->findOrFail($socialPost);
 
-        $publish->handle($post, SocialAccount::query()->findOrFail((int) $request->validated('social_account_id')));
+        $account = SocialAccount::query()->where('platform', $post->platform)->findOrFail((int) $request->validated('social_account_id'));
+
+        $post->sibling()->update([
+            'status' => SocialPostStatus::Rejected,
+            'rejection_reason' => 'Superseded by the other variant.',
+        ]);
+
+        $publish->handle($post, $account);
 
         return back();
     }
 
     /**
-     * X only: "I posted it", with the post's URL.
+     * X only: "I posted it", with the post's URL. Rejects a client win's
+     * other variant, same as approving does.
      */
     public function publish(SocialPostPublishRequest $request, MarkSocialPostPublished $mark, int $socialPost): RedirectResponse
     {
@@ -91,6 +98,11 @@ class SocialPostController extends Controller
             ->where('status', SocialPostStatus::Draft)
             ->findOrFail($socialPost);
 
+        $post->sibling()->update([
+            'status' => SocialPostStatus::Rejected,
+            'rejection_reason' => 'Superseded by the other variant.',
+        ]);
+
         $mark->handle($post, $request->validated('url'));
 
         return back();
@@ -98,6 +110,7 @@ class SocialPostController extends Controller
 
     /**
      * Keeps the row, with an optional reason the writer reads next time.
+     * Delete below is the hard removal: two different actions on purpose.
      */
     public function reject(SocialPostRejectRequest $request, int $socialPost): RedirectResponse
     {
@@ -118,9 +131,10 @@ class SocialPostController extends Controller
 
     /**
      * Stamps `promoted_at` so this project's own writer treats the post as a
-     * proven example. Never touches the shared instance-wide bank: a
-     * self-reported click is not a signal other tenants' prompts may trust,
-     * same reasoning as `LinkedinPostController::promote()`.
+     * proven example. Never touches the shared instance-wide bank: a user's
+     * own click can only ever affect their own project, which is what makes
+     * it safe with no review step. The bank is fed only by a superadmin's
+     * hand or `FetchSocialPostStats`' real, externally-measured number.
      */
     public function promote(int $socialPost): RedirectResponse
     {

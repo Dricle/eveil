@@ -6,18 +6,14 @@ use App\Actions\InboxFolders;
 use App\Actions\SummarizeRunningDiscovery;
 use App\Cloud\Models\CreditTransaction;
 use App\Enums\ArticleStatus;
-use App\Enums\LinkedinPostStatus;
 use App\Enums\MessageDirection;
 use App\Enums\OutreachStatus;
 use App\Enums\RedditReplyStatus;
 use App\Enums\ReplyClassification;
-use App\Enums\SocialPlatform;
 use App\Enums\SocialPostStatus;
 use App\Http\Resources\ArticleResource;
 use App\Http\Resources\CampaignResource;
 use App\Http\Resources\ConversationResource;
-use App\Http\Resources\LinkedinAccountResource;
-use App\Http\Resources\LinkedinPostResource;
 use App\Http\Resources\MailboxResource;
 use App\Http\Resources\RedditReplyResource;
 use App\Http\Resources\ReplyResource;
@@ -30,7 +26,6 @@ use App\Models\CampaignLead;
 use App\Models\Company;
 use App\Models\DiscoveryRun;
 use App\Models\Lead;
-use App\Models\LinkedinPost;
 use App\Models\Message;
 use App\Models\RedditReply;
 use App\Models\SocialPost;
@@ -165,17 +160,12 @@ class DashboardController extends Controller
                 'redditReplies' => RedditReplyResource::collection(
                     RedditReply::query()->where('status', RedditReplyStatus::Draft)->latest()->get()
                 ),
-                'linkedinPosts' => LinkedinPostResource::collection(
-                    LinkedinPost::query()->where('status', LinkedinPostStatus::Draft)->with('linkedinAccount')->latest()->get()
-                ),
-                'linkedinAccounts' => LinkedinAccountResource::collection(
-                    $this->currentProject->getOrFail()->linkedinAccounts()->get()
-                ),
                 'socialPosts' => SocialPostResource::collection(
-                    SocialPost::query()->where('status', SocialPostStatus::Draft)->latest()->get()
+                    SocialPost::query()->where('status', SocialPostStatus::Draft)->with('socialAccount')->latest()->get()
                 ),
-                'blueskyAccounts' => SocialAccountResource::collection(
-                    $this->currentProject->getOrFail()->socialAccounts()->where('platform', SocialPlatform::Bluesky)->get()
+                // Every network's granted accounts: each card picks its own.
+                'socialAccounts' => SocialAccountResource::collection(
+                    $this->currentProject->getOrFail()->socialAccounts()->get()
                 ),
                 'conversations' => ConversationResource::collection($this->inboxFolders->todo()),
                 'articles' => ArticleResource::collection(

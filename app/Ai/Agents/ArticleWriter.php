@@ -16,7 +16,7 @@ use Stringable;
  * topic from what Eveil already found: a feature the site never explains,
  * a competitor worth a comparison, a Reddit discussion the scan noted as
  * worth an article (`Idea`), a client win, industry news. Same editorial-judgment shape as
- * `LinkedinPostWriter`: the caller gathers every signal, the agent decides
+ * `SocialPostWriter`: the caller gathers every signal, the agent decides
  * which is worth an article.
  *
  * Given a `$brief` (the user telling Evie "we just shipped X"), that brief

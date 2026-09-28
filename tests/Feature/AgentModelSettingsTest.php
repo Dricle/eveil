@@ -163,7 +163,6 @@ it('lists every agent it finds in the code, not a hand-kept list', function () {
         'contact-page-finder',
         'discovery-planner',
         'evie',
-        'linkedin-post-writer',
         'listing-extractor',
         'message-personalizer',
         'reddit-opportunity-triage',

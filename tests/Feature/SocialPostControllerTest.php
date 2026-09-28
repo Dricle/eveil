@@ -46,8 +46,8 @@ it('publishes a Bluesky draft to the chosen account, with clickable link and has
     $post = SocialPost::factory()->create(['project_id' => $project->id, 'body' => 'Café ☕ https://acme.test #launch']);
 
     $this->actingAs($user)
-        ->from(route('social.posts.index'))->post(route('social.posts.approve', $post), ['social_account_id' => $account->id])
-        ->assertRedirect(route('social.posts.index'));
+        ->from(route('social.posts.index', 'bluesky'))->post(route('social.posts.approve', $post), ['social_account_id' => $account->id])
+        ->assertRedirect(route('social.posts.index', 'bluesky'));
 
     expect($post->fresh())
         ->status->toBe(SocialPostStatus::Published)
@@ -76,7 +76,7 @@ it('keeps the draft with the error, and flags the account, when Bluesky refuses 
 
     $post = SocialPost::factory()->create(['project_id' => $project->id]);
 
-    $this->actingAs($user)->from(route('social.posts.index'))->post(route('social.posts.approve', $post), ['social_account_id' => $account->id]);
+    $this->actingAs($user)->from(route('social.posts.index', 'bluesky'))->post(route('social.posts.approve', $post), ['social_account_id' => $account->id]);
 
     expect($post->fresh()->status)->toBe(SocialPostStatus::Draft)
         ->and($post->fresh()->last_error)->toContain('Invalid identifier or password')
@@ -90,7 +90,7 @@ it('refuses to publish through an account not granted to this project', function
 
     $post = SocialPost::factory()->create(['project_id' => $project->id]);
 
-    $this->actingAs($user)->from(route('social.posts.index'))
+    $this->actingAs($user)->from(route('social.posts.index', 'bluesky'))
         ->post(route('social.posts.approve', $post), ['social_account_id' => $foreign->id])
         ->assertSessionHasErrors('social_account_id');
 
@@ -114,9 +114,9 @@ it('marks an X draft as posted from the link the user pastes back', function () 
 
     $post = SocialPost::factory()->x()->create(['project_id' => $project->id]);
 
-    $this->actingAs($user)->from(route('social.posts.index'))
+    $this->actingAs($user)->from(route('social.posts.index', 'bluesky'))
         ->post(route('social.posts.publish', $post), ['url' => 'https://x.com/acme/status/1839201'])
-        ->assertRedirect(route('social.posts.index'));
+        ->assertRedirect(route('social.posts.index', 'bluesky'));
 
     expect($post->fresh())
         ->status->toBe(SocialPostStatus::Published)
@@ -129,7 +129,7 @@ it('refuses a link that is not a post', function () {
 
     $post = SocialPost::factory()->x()->create(['project_id' => $project->id]);
 
-    $this->actingAs($user)->from(route('social.posts.index'))
+    $this->actingAs($user)->from(route('social.posts.index', 'bluesky'))
         ->post(route('social.posts.publish', $post), ['url' => 'https://x.com/acme'])
         ->assertSessionHasErrors('url');
 
@@ -142,7 +142,7 @@ it('edits a draft but never a published post', function () {
     $draft = SocialPost::factory()->create(['project_id' => $project->id]);
     $published = SocialPost::factory()->create(['project_id' => $project->id, 'status' => SocialPostStatus::Published, 'body' => 'Live']);
 
-    $this->actingAs($user)->from(route('social.posts.index'))->put(route('social.posts.update', $draft), ['body' => 'Shorter']);
+    $this->actingAs($user)->from(route('social.posts.index', 'bluesky'))->put(route('social.posts.update', $draft), ['body' => 'Shorter']);
     $this->actingAs($user)->put(route('social.posts.update', $published), ['body' => 'Changed'])->assertNotFound();
 
     expect($draft->fresh()->body)->toBe('Shorter')
@@ -155,9 +155,9 @@ it('rejects with a reason and promotes only a published post', function () {
     $draft = SocialPost::factory()->create(['project_id' => $project->id]);
     $published = SocialPost::factory()->x()->create(['project_id' => $project->id, 'status' => SocialPostStatus::Published]);
 
-    $this->actingAs($user)->from(route('social.posts.index'))->post(route('social.posts.reject', $draft), ['reason' => 'Too salesy']);
-    $this->actingAs($user)->from(route('social.posts.index'))->post(route('social.posts.promote', $draft));
-    $this->actingAs($user)->from(route('social.posts.index'))->post(route('social.posts.promote', $published));
+    $this->actingAs($user)->from(route('social.posts.index', 'bluesky'))->post(route('social.posts.reject', $draft), ['reason' => 'Too salesy']);
+    $this->actingAs($user)->from(route('social.posts.index', 'bluesky'))->post(route('social.posts.promote', $draft));
+    $this->actingAs($user)->from(route('social.posts.index', 'bluesky'))->post(route('social.posts.promote', $published));
 
     expect($draft->fresh())
         ->status->toBe(SocialPostStatus::Rejected)
@@ -179,8 +179,9 @@ it('makes a network due now only when its cadence changed', function () {
     [$user, $project] = socialSetup();
     $project->update(['bluesky_post_frequency' => SocialPostFrequency::Weekly, 'bluesky_next_post_at' => now()->addDays(5)]);
 
-    $this->actingAs($user)->put(route('social.posts.cadence'), ['x_post_frequency' => 'daily', 'bluesky_post_frequency' => 'weekly'])
-        ->assertRedirect(route('social.posts.index'));
+    $this->actingAs($user)->put(route('social.posts.cadence', 'x'), ['frequency' => 'daily'])
+        ->assertRedirect(route('social.posts.index', 'x'));
+    $this->actingAs($user)->put(route('social.posts.cadence', 'bluesky'), ['frequency' => 'weekly']);
 
     $project->refresh();
 
@@ -189,24 +190,35 @@ it('makes a network due now only when its cadence changed', function () {
         ->and($project->bluesky_next_post_at->isAfter(now()->addDays(4)))->toBeTrue();
 });
 
+it('refuses an invalid cadence or an unknown network', function () {
+    [$user] = socialSetup();
+
+    $this->actingAs($user)->put(route('social.posts.cadence', 'x'), ['frequency' => 'hourly'])->assertSessionHasErrors('frequency');
+    $this->actingAs($user)->put('/app/'.app(CurrentProject::class)->getOrFail()->slug.'/posts/myspace/cadence', ['frequency' => 'daily'])->assertNotFound();
+});
+
 it('queues a draft for the network asked for', function () {
     [$user, $project] = socialSetup();
     Queue::fake();
 
-    $this->actingAs($user)->post(route('social.posts.generate'), ['platform' => 'x'])->assertRedirect(route('social.posts.index'));
+    $this->actingAs($user)->post(route('social.posts.generate', 'x'))->assertRedirect(route('social.posts.index', 'x'));
 
     Queue::assertPushed(GenerateSocialPost::class, fn (GenerateSocialPost $job): bool => $job->platform === SocialPlatform::X && $job->project->is($project));
 });
 
-it('lists the project\'s posts and granted Bluesky accounts', function () {
+it('lists one network\'s posts and granted accounts, this project only', function () {
     [$user, $project] = socialSetup();
     SocialPost::factory()->x()->create(['project_id' => $project->id]);
     SocialPost::factory()->create();
 
-    $this->actingAs($user)->get(route('social.posts.index'))
+    $this->actingAs($user)->get(route('social.posts.index', 'x'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page->component('social/Posts')
+            ->where('platform', 'x')
             ->has('posts', 1)
-            ->has('blueskyAccounts', 1)
-            ->where('frequencies.x', 'off'));
+            ->has('accounts', 0)
+            ->where('frequency', 'off'));
+
+    $this->actingAs($user)->get(route('social.posts.index', 'bluesky'))
+        ->assertInertia(fn ($page) => $page->has('posts', 0)->has('accounts', 1));
 });

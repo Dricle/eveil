@@ -6,7 +6,7 @@ use Illuminate\Foundation\Http\FormRequest;
 
 /**
  * `reason` is optional: rejecting with nothing typed is still a valid
- * reject. Copy of `LinkedinPostRejectRequest`.
+ * reject. Copy of `SocialPostRejectRequest`.
  */
 class RedditReplyRejectRequest extends FormRequest
 {

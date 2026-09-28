@@ -30,4 +30,20 @@ class SocialAccountFactory extends Factory
             'status' => SocialAccountStatus::Active,
         ];
     }
+
+    /**
+     * A LinkedIn member profile: no handle, a member URN, an OAuth token.
+     */
+    public function linkedin(): static
+    {
+        return $this->state(fn (): array => [
+            'platform' => SocialPlatform::Linkedin,
+            'handle' => null,
+            'external_id' => 'urn:li:person:'.fake()->unique()->regexify('[A-Za-z0-9_-]{16}'),
+            'secret' => fake()->sha256(),
+            'refresh_secret' => fake()->sha256(),
+            'secret_expires_at' => now()->addDays(60),
+            'refresh_secret_expires_at' => now()->addYear(),
+        ]);
+    }
 }

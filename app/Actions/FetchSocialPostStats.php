@@ -11,26 +11,28 @@ use App\Support\Settings;
 
 /**
  * Reads like counts on recent posts through each network's driver and, past
- * a threshold, copies one into that network's shared instance-wide bank and
- * marks it proven for its own project. The only automatic way into a bank,
- * same trust rule as `FetchLinkedinPostStats`. Bluesky's counts are free and
- * public; X's driver reads nothing, since its API is paid.
+ * that network's threshold, copies one into its shared instance-wide bank
+ * and marks it proven for its own project. The only automatic way into a
+ * bank, deliberately: a real, externally-measured number is trusted the way
+ * a user's self-reported "mark as successful" click is not.
  *
- * Runs across every project on the instance, same as
- * `FetchLinkedinPostStats`: no `CurrentProject` is set from a console
- * command, so the `BelongsToProject` scope does not apply.
+ * Bluesky's counts are free and public. LinkedIn's need the account's
+ * separate performance-polling connection, and its driver skips a post
+ * without one. X is skipped outright: its API is paid, so it has no
+ * threshold (`SocialPlatform::minLikesSetting()`).
+ *
+ * Runs across every project on the instance: no `CurrentProject` is set from
+ * a console command, so the `BelongsToProject` scope does not apply.
  */
 class FetchSocialPostStats
 {
     public function __construct(private Settings $settings) {}
 
     /**
-     * How many posts newly joined the shared bank.
+     * How many posts newly joined a shared bank.
      */
     public function handle(): int
     {
-        $minLikes = $this->settings->int('social_examples.min_likes');
-
         // A post's engagement settles within days, so nothing older than 30
         // is worth reading again.
         $posts = SocialPost::query()
@@ -39,45 +41,44 @@ class FetchSocialPostStats
             ->where('published_at', '>=', now()->subDays(30))
             ->get();
 
-        if ($posts->isEmpty()) {
-            return 0;
-        }
-
-        // Per network, so two networks' ids can never collide.
-        $likes = [];
-
-        foreach ($posts->groupBy(fn (SocialPost $post): string => $post->platform->value) as $platform => $group) {
-            $likes[$platform] = SocialPlatform::from($platform)->client()->likeCounts($group->pluck('external_id')->all());
-        }
-
         $promoted = 0;
 
-        foreach ($posts as $post) {
-            if (! isset($likes[$post->platform->value][$post->external_id])) {
+        foreach ($posts->groupBy(fn (SocialPost $post): string => $post->platform->value) as $platform => $group) {
+            $platform = SocialPlatform::from($platform);
+            $setting = $platform->minLikesSetting();
+
+            if ($setting === null) {
                 continue;
             }
 
-            $count = $likes[$post->platform->value][$post->external_id];
+            $minLikes = $this->settings->int($setting);
+            $likes = $platform->client()->likeCounts($group);
 
-            $post->update(['likes_count' => $count, 'stats_checked_at' => now()]);
+            foreach ($group as $post) {
+                if (! isset($likes[$post->id])) {
+                    continue;
+                }
 
-            if ($count < $minLikes) {
-                continue;
+                $post->update(['likes_count' => $likes[$post->id], 'stats_checked_at' => now()]);
+
+                if ($likes[$post->id] < $minLikes) {
+                    continue;
+                }
+
+                // Into that network's shared bank, once. A post the user
+                // already marked successful by hand still earns its place:
+                // the click never wrote to the bank, the measured number does.
+                $example = SocialPostExample::query()->firstOrCreate(
+                    ['social_post_id' => $post->id],
+                    ['platform' => $post->platform, 'body' => $post->body, 'source' => SocialPostExampleSource::Promoted],
+                );
+
+                if ($post->promoted_at === null) {
+                    $post->update(['promoted_at' => now()]);
+                }
+
+                $promoted += (int) $example->wasRecentlyCreated;
             }
-
-            // Into that network's shared bank, once. A post the user already
-            // marked successful by hand still earns its place here: the
-            // click never wrote to the bank, the measured number does.
-            $example = SocialPostExample::query()->firstOrCreate(
-                ['social_post_id' => $post->id],
-                ['platform' => $post->platform, 'body' => $post->body, 'source' => SocialPostExampleSource::Promoted],
-            );
-
-            if ($post->promoted_at === null) {
-                $post->update(['promoted_at' => now()]);
-            }
-
-            $promoted += (int) $example->wasRecentlyCreated;
         }
 
         return $promoted;

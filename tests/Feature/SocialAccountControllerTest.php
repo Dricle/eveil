@@ -36,8 +36,8 @@ it('connects a Bluesky account, keeps the app password encrypted, and grants it 
         'public.api.bsky.app/*' => Http::response(['displayName' => 'Acme']),
     ]);
 
-    $this->actingAs($user)->post(route('settings.social.store'), ['handle' => '@acme.bsky.social', 'app_password' => 'abcd-efgh-ijkl-mnop'])
-        ->assertRedirect(route('settings.social.index'));
+    $this->actingAs($user)->post(route('settings.bluesky.store'), ['handle' => '@acme.bsky.social', 'app_password' => 'abcd-efgh-ijkl-mnop'])
+        ->assertRedirect(route('settings.bluesky.index'));
 
     $account = SocialAccount::sole();
 
@@ -54,8 +54,8 @@ it('shows Bluesky\'s refusal on the password field and stores nothing', function
     [$user] = socialAccountSetup();
     Http::fake(['bsky.social/*' => Http::response(['message' => 'Invalid identifier or password'], 401)]);
 
-    $this->actingAs($user)->from(route('settings.social.index'))
-        ->post(route('settings.social.store'), ['handle' => 'acme.bsky.social', 'app_password' => 'wrong'])
+    $this->actingAs($user)->from(route('settings.bluesky.index'))
+        ->post(route('settings.bluesky.store'), ['handle' => 'acme.bsky.social', 'app_password' => 'wrong'])
         ->assertSessionHasErrors('app_password');
 
     expect(SocialAccount::count())->toBe(0);
@@ -65,13 +65,13 @@ it('cannot change or remove another organization\'s account', function () {
     [$user] = socialAccountSetup();
     $foreign = SocialAccount::factory()->create();
 
-    $this->actingAs($user)->put(route('settings.social.update', $foreign), ['projects' => []])->assertNotFound();
-    $this->actingAs($user)->delete(route('settings.social.destroy', $foreign))->assertNotFound();
+    $this->actingAs($user)->put(route('settings.social-accounts.update', $foreign), ['projects' => []])->assertNotFound();
+    $this->actingAs($user)->delete(route('settings.social-accounts.destroy', $foreign))->assertNotFound();
 
     expect($foreign->fresh())->not->toBeNull();
 });
 
-it('saves the Bluesky autonomy and the X and Bluesky tone box', function () {
+it('saves the Bluesky autonomy', function () {
     [$user, $project] = socialAccountSetup();
 
     $this->actingAs($user)->put(route('settings.autonomy.update'), [
@@ -80,12 +80,8 @@ it('saves the Bluesky autonomy and the X and Bluesky tone box', function () {
         'bluesky_autonomy_level' => 'autonomous',
     ])->assertRedirect(route('settings.autonomy.edit'));
 
-    $this->actingAs($user)->put(route('settings.ai-instructions.social.update'), ['social_prompt_instructions' => 'No hashtags.'])
-        ->assertRedirect(route('settings.ai-instructions.edit'));
-
     expect($project->fresh())
-        ->bluesky_autonomy_level->toBe(AutonomyLevel::Autonomous)
-        ->social_prompt_instructions->toBe('No hashtags.');
+        ->bluesky_autonomy_level->toBe(AutonomyLevel::Autonomous);
 });
 
 it('lets Evie queue a post from a brief, for the network she names', function () {

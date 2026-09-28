@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\LinkedinAccountStatus;
+use App\Enums\SocialAccountStatus;
+use App\Enums\SocialPlatform;
 use App\Models\Project;
 use App\Support\CurrentProject;
 use App\Support\LinkedinCredentials;
@@ -18,8 +19,8 @@ use Illuminate\Support\Str;
  * `laravel/ai`) covers it through Laravel's `Http` facade.
  *
  * Grants to specific projects are a separate step on the LinkedIn account
- * screen (`LinkedinAccountController`), same as a mailbox: the account
- * connects first, which projects may use it is chosen afterwards.
+ * screen (`SocialAccountController::update()`), same as a mailbox: the
+ * account connects first, which projects may use it is chosen afterwards.
  */
 class LinkedinOAuthController extends Controller
 {
@@ -76,17 +77,17 @@ class LinkedinOAuthController extends Controller
 
         $organization = $project->organization;
 
-        $organization->linkedinAccounts()->updateOrCreate(
-            ['member_urn' => 'urn:li:person:'.$identity->json('sub')],
+        $organization->socialAccounts()->updateOrCreate(
+            ['platform' => SocialPlatform::Linkedin, 'external_id' => 'urn:li:person:'.$identity->json('sub')],
             [
                 'display_name' => (string) $identity->json('name'),
-                'access_token' => (string) $token->json('access_token'),
-                'refresh_token' => $token->json('refresh_token'),
-                'access_token_expires_at' => now()->addSeconds((int) $token->json('expires_in')),
-                'refresh_token_expires_at' => $token->json('refresh_token_expires_in') !== null
+                'secret' => (string) $token->json('access_token'),
+                'refresh_secret' => $token->json('refresh_token'),
+                'secret_expires_at' => now()->addSeconds((int) $token->json('expires_in')),
+                'refresh_secret_expires_at' => $token->json('refresh_token_expires_in') !== null
                     ? now()->addSeconds((int) $token->json('refresh_token_expires_in'))
                     : null,
-                'status' => LinkedinAccountStatus::Active,
+                'status' => SocialAccountStatus::Active,
                 'last_error' => null,
             ],
         );

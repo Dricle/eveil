@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * `reason` is optional, same as `LinkedinPostRejectRequest`. When given, the
+ * `reason` is optional, same as clicking Delete needs no explanation. When given, the
  * writer reads it next time.
  */
 class SocialPostRejectRequest extends FormRequest

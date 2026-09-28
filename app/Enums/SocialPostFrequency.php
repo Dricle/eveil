@@ -3,8 +3,9 @@
 namespace App\Enums;
 
 /**
- * How often a project wants a new post drafted for one network. Copy of
- * `LinkedinPostFrequency`, including the opt-in `Off` default.
+ * How often a project wants a new post drafted for one network. `Off` is the
+ * default: nothing is drafted until the user opts in, same reasoning as a
+ * project starting with no mailbox attached.
  */
 enum SocialPostFrequency: string
 {

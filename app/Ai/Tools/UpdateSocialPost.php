@@ -11,8 +11,13 @@ use Laravel\Ai\Tools\Request;
 use Stringable;
 
 /**
- * Rewrites an existing X or Bluesky draft in place, what the queue's own
- * "Edit" button does. Drafts only, same reasoning as `UpdateLinkedinPost`.
+ * Rewrites an existing draft in place - what the queue's own "Edit" button
+ * does, on the user's behalf - rather than DraftSocialPost queuing a second,
+ * duplicate one. Needs no approval: nothing is spawned or published.
+ *
+ * Only ever touches a DRAFT: once published or rejected, the queue's own
+ * "Edit" button is gone too, and rewriting a published post from chat would
+ * silently change what was actually reviewed or already went out.
  */
 class UpdateSocialPost implements Tool
 {
@@ -21,7 +26,7 @@ class UpdateSocialPost implements Tool
     public function description(): Stringable|string
     {
         return <<<'TEXT'
-        Rewrites the text of an existing X or Bluesky draft, in place - call
+        Rewrites the text of an existing LinkedIn, X or Bluesky draft, in place - call
         ListSocialPosts first to find its id. Only works on a draft; once
         published or rejected it refuses.
         TEXT;
@@ -34,7 +39,7 @@ class UpdateSocialPost implements Tool
             ->find($request->integer('social_post_id'));
 
         if ($post === null) {
-            return 'No X or Bluesky post with that id exists on this project. Call ListSocialPosts first.';
+            return 'No post with that id exists on this project. Call ListSocialPosts first.';
         }
 
         if ($post->status !== SocialPostStatus::Draft) {

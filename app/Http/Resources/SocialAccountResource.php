@@ -25,6 +25,9 @@ class SocialAccountResource extends JsonResource
             'display_name' => $this->display_name,
             'status' => $this->status->value,
             'last_error' => $this->last_error,
+            // LinkedIn only: whether its separate performance-polling app is
+            // connected, the one way Eveil can read its posts' numbers.
+            'has_stats_access' => $this->hasStatsAccess(),
             'projects' => $this->whenLoaded('projects', fn () => $this->projects->pluck('id')->all()),
         ];
     }

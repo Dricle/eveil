@@ -31,6 +31,11 @@ class SocialPostFactory extends Factory
         ];
     }
 
+    public function linkedin(): static
+    {
+        return $this->state(['platform' => SocialPlatform::Linkedin]);
+    }
+
     public function x(): static
     {
         return $this->state(['platform' => SocialPlatform::X]);

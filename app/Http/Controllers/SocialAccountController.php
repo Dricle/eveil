@@ -18,10 +18,11 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * The Bluesky accounts an organization has connected, and which of its
- * projects may post through each. Same shape as `LinkedinAccountController`,
- * with an app password instead of OAuth. Connecting the same account again
- * replaces its password, which is also how a revoked one is fixed.
+ * Connected accounts. `index`/`store` are Bluesky's own screen, connected
+ * with an app password: connecting the same account again replaces its
+ * password, which is also how a revoked one is fixed. `update`/`destroy`
+ * serve LinkedIn and Bluesky alike: granting an account to projects and
+ * disconnecting it work the same whatever the network.
  */
 class SocialAccountController extends Controller
 {
@@ -31,9 +32,9 @@ class SocialAccountController extends Controller
     {
         $organization = $this->currentProject->organization();
 
-        return Inertia::render('settings/Social', [
+        return Inertia::render('settings/Bluesky', [
             'accounts' => SocialAccountResource::collection(
-                $organization->socialAccounts()->with('projects')->orderBy('id')->get()
+                $organization->socialAccounts()->where('platform', SocialPlatform::Bluesky)->with('projects')->orderBy('id')->get()
             ),
             'projects' => ProjectResource::collection(
                 $organization->projects()->orderBy('name')->get()->each->setRelation('organization', $organization)
@@ -66,7 +67,7 @@ class SocialAccountController extends Controller
         // away: connecting and then granting would be two steps for one.
         $account->projects()->syncWithoutDetaching([$this->currentProject->getOrFail()->id]);
 
-        return to_route('settings.social.index')->with('status', "Connected {$account->handle}.");
+        return to_route('settings.bluesky.index')->with('status', "Connected {$account->handle}.");
     }
 
     public function update(SocialAccountProjectsRequest $request, int $socialAccount): RedirectResponse
@@ -75,13 +76,13 @@ class SocialAccountController extends Controller
 
         $account->projects()->sync($request->validated('projects', []));
 
-        return to_route('settings.social.index');
+        return back();
     }
 
     public function destroy(Request $request, int $socialAccount): RedirectResponse
     {
         SocialAccount::query()->ownedBy($request->user())->findOrFail($socialAccount)->delete();
 
-        return to_route('settings.social.index');
+        return back();
     }
 }

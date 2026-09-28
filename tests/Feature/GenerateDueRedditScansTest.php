@@ -7,7 +7,7 @@ use App\Models\Project;
 use Illuminate\Support\Facades\Queue;
 
 /**
- * Mirrors `GenerateDueLinkedinPostsTest`'s coverage: what decides a project
+ * Mirrors `GenerateDueSocialPostsTest`'s coverage: what decides a project
  * is due, and that the cadence advances regardless of what the job finds -
  * unlike the LinkedIn version, no account-status gate to test, since this
  * feature has no account at all.

@@ -43,18 +43,19 @@ Schedule::command('eveil:discover-due')->everySixHours();
 // promoted or still short of the floor is skipped.
 Schedule::command('eveil:promote-proven-emails')->daily();
 
-// The shortest LinkedIn posting cadence is daily, so daily is the right
-// check granularity: nothing to do for a project whose next post is not
-// due yet, same reasoning as the command above.
-Schedule::command('eveil:linkedin-generate-due')->daily();
+// The shortest posting cadence, on any network, is daily, so daily is the
+// right check granularity: nothing to do for a project whose next post is
+// not due yet, same reasoning as the command above.
+Schedule::command('eveil:social-generate-due')->daily();
 
 // A post's engagement settles quickly, so daily is enough to catch it. Cheap
-// either way: an account that never connected the separate Community
-// Management app is skipped outright, and most never will - LinkedIn grants
-// `r_member_social_feed` selectively.
-Schedule::command('eveil:linkedin-fetch-stats')->daily();
+// either way: Bluesky's counts are free and public, a LinkedIn account that
+// never connected the separate Community Management app is skipped outright
+// (LinkedIn grants `r_member_social_feed` selectively), and X is never read,
+// its API being paid per call.
+Schedule::command('eveil:social-fetch-stats')->daily();
 
-// Same cadence granularity as LinkedIn's own generate-due check above.
+// Same cadence granularity as the posts' own generate-due check above.
 // Nothing to do for a project whose next scan is not due yet, and the
 // shortest Reddit scan cadence is also daily.
 Schedule::command('eveil:reddit-scan-due')->daily();
@@ -65,17 +66,9 @@ Schedule::command('eveil:reddit-scan-due')->daily();
 // isn't configured.
 Schedule::command('eveil:reddit-fetch-stats')->daily();
 
-// Same daily granularity as the LinkedIn and Reddit cadences above: the
+// Same daily granularity as the post and Reddit cadences above: the
 // shortest article cadence is daily too.
 Schedule::command('eveil:articles-generate-due')->daily();
-
-// Same daily granularity as the LinkedIn cadence: the shortest X and
-// Bluesky cadence is daily too.
-Schedule::command('eveil:social-generate-due')->daily();
-
-// Bluesky's counts are free and public, so every recent post is read. X is
-// never read: its API is paid per call.
-Schedule::command('eveil:social-fetch-stats')->daily();
 
 // Daily, and it must stay daily: the action reminds about replies that crossed
 // the one-day mark inside the last 24 hours, so each reply mails exactly once.

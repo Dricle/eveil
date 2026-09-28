@@ -29,14 +29,16 @@ it('refuses an example with no network', function () {
         ->assertSessionHasErrors('platform');
 });
 
-it('deletes an example and saves the Bluesky threshold', function () {
+it('deletes an example and saves a network\'s threshold', function () {
     $example = SocialPostExample::factory()->create();
 
     $this->actingAs(superAdmin())->delete(route('app-settings.social-post-examples.destroy', $example));
-    $this->actingAs(superAdmin())->put(route('app-settings.social-post-examples.threshold'), ['min_likes' => 50]);
+    $this->actingAs(superAdmin())->put(route('app-settings.social-post-examples.threshold', 'linkedin'), ['min_likes' => 50]);
+    // X's numbers are never read, so it has no threshold to set.
+    $this->actingAs(superAdmin())->put(route('app-settings.social-post-examples.threshold', 'x'), ['min_likes' => 50])->assertNotFound();
 
     expect(SocialPostExample::query()->count())->toBe(0)
-        ->and(app(Settings::class)->int('social_examples.min_likes'))->toBe(50);
+        ->and(app(Settings::class)->int('social_examples.linkedin.min_likes'))->toBe(50);
 });
 
 it('only ever samples the bank of the network being written for', function () {

@@ -7,27 +7,29 @@ import { PLATFORM_LABEL } from '@/lib/social'
 import socialPostExamples from '@/routes/app-settings/social-post-examples'
 import type { SocialPlatform, SocialPostExampleRow } from '@/types'
 
-defineOptions({ layout: [AppLayout, [AppSettingsLayout, { title: 'X & Bluesky post examples' }]] })
+defineOptions({ layout: [AppLayout, [AppSettingsLayout, { title: 'Post examples' }]] })
 
 const props = defineProps<{
     examples: SocialPostExampleRow[]
-    threshold: { min_likes: number }
+    /** Per network that reads its numbers: X has none. */
+    thresholds: Partial<Record<SocialPlatform, number>>
 }>()
 
-const minLikes = ref(props.threshold.min_likes)
-
-watch(() => props.threshold, (threshold) => {
-    minLikes.value = threshold.min_likes
-}, { immediate: true })
-
 const PLATFORMS = [
-    { label: 'Bluesky', value: 'bluesky' },
-    { label: 'X', value: 'x' }
+    { label: 'LinkedIn', value: 'linkedin' },
+    { label: 'X', value: 'x' },
+    { label: 'Bluesky', value: 'bluesky' }
 ]
 
 // One bank per network: the add form writes to, and the list shows, the
 // one picked here.
-const platform = ref<SocialPlatform>('bluesky')
+const platform = ref<SocialPlatform>('linkedin')
+
+const minLikes = ref<number | undefined>(undefined)
+
+watch([() => props.thresholds, platform], () => {
+    minLikes.value = props.thresholds[platform.value]
+}, { immediate: true })
 const bank = computed(() => props.examples.filter(example => example.platform === platform.value))
 
 function sourceLabel (source: string): string {
@@ -38,7 +40,7 @@ const viewing = ref<SocialPostExampleRow | null>(null)
 </script>
 
 <template>
-    <Head title="X & Bluesky post examples" />
+    <Head title="Post examples" />
 
     <div class="space-y-4">
         <UTabs
@@ -99,20 +101,24 @@ const viewing = ref<SocialPostExampleRow | null>(null)
             </Form>
         </UCard>
 
-        <UCard v-if="platform === 'bluesky'">
+        <UCard v-if="thresholds[platform] !== undefined">
             <template #header>
                 <h2 class="font-medium">
                     When a post earns its place here
                 </h2>
                 <p class="mt-1 text-sm text-muted">
-                    Checked daily. A published Bluesky post joins the bank once its
-                    real like count crosses this floor.
+                    Checked daily. A published {{ PLATFORM_LABEL[platform] }} post joins
+                    the bank once its real like count crosses this floor.
+                    <template v-if="platform === 'linkedin'">
+                        Only for accounts that connected the separate
+                        performance-polling app.
+                    </template>
                 </p>
             </template>
 
             <Form
                 v-slot="{ errors, processing, recentlySuccessful }"
-                v-bind="socialPostExamples.threshold.form()"
+                v-bind="socialPostExamples.threshold.form(platform)"
                 class="space-y-4"
             >
                 <UFormField

@@ -4,7 +4,7 @@ namespace App\Enums;
 
 /**
  * How often a project's tracked subreddits and buyer-intent queries get
- * scanned for reply opportunities. Copy of `LinkedinPostFrequency`,
+ * scanned for reply opportunities. Copy of `SocialPostFrequency`,
  * including the opt-in `Off` default: nothing scans until the user turns it
  * on from the Reddit queue page.
  */

@@ -4,27 +4,28 @@ import { ref } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import SettingsLayout from '@/layouts/SettingsLayout.vue'
 import linkedinRoutes from '@/routes/settings/linkedin'
-import type { LinkedinAccount, Project } from '@/types'
+import socialAccountRoutes from '@/routes/settings/social-accounts'
+import type { Project, SocialAccount } from '@/types'
 
 defineOptions({ layout: [AppLayout, [SettingsLayout, { title: 'LinkedIn' }]] })
 
 // Inline rather than a type alias imported through the barrel: an alias there
 // silently declares no props at all.
 defineProps<{
-    accounts: LinkedinAccount[]
+    accounts: SocialAccount[]
     projects: Project[]
     statsConfigured: boolean
 }>()
 
 const page = usePage()
 
-const editing = ref<LinkedinAccount | null>(null)
+const editing = ref<SocialAccount | null>(null)
 const editingOpen = ref(false)
 const editingProjects = ref<number[]>([])
 
-function open (account: LinkedinAccount) {
+function open (account: SocialAccount) {
     editing.value = account
-    editingProjects.value = [...account.projects]
+    editingProjects.value = [...(account.projects ?? [])]
     editingOpen.value = true
 }
 
@@ -93,7 +94,7 @@ const STATUS = {
                         color="error"
                         variant="ghost"
                         size="xs"
-                        @click="router.delete(linkedinRoutes.destroy.url({ project: page.props.currentProject!.slug, linkedinAccount: account.id }))"
+                        @click="router.delete(socialAccountRoutes.destroy.url({ project: page.props.currentProject!.slug, socialAccount: account.id }))"
                     />
                 </div>
 
@@ -105,7 +106,7 @@ const STATUS = {
                 </p>
 
                 <p
-                    v-if="account.projects.length === 0"
+                    v-if="!account.projects?.length"
                     class="text-sm text-dimmed"
                 >
                     No project may draft/post through it yet.
@@ -124,7 +125,7 @@ const STATUS = {
                     variant="outline"
                     size="xs"
                     label="Connect performance polling"
-                    :href="linkedinRoutes.stats.connect.url({ project: page.props.currentProject!.slug, linkedinAccount: account.id })"
+                    :href="linkedinRoutes.stats.connect.url({ project: page.props.currentProject!.slug, socialAccount: account.id })"
                     external
                 />
             </div>
@@ -154,7 +155,7 @@ const STATUS = {
             <Form
                 v-if="editing"
                 v-slot="{ processing }"
-                v-bind="linkedinRoutes.update.form({ project: page.props.currentProject!.slug, linkedinAccount: editing.id })"
+                v-bind="socialAccountRoutes.update.form({ project: page.props.currentProject!.slug, socialAccount: editing.id })"
                 class="space-y-4"
                 @success="editingOpen = false"
             >

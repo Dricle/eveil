@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\LinkedinAccount;
+use App\Enums\SocialPlatform;
 use App\Models\Project;
+use App\Models\SocialAccount;
 use App\Support\CurrentProject;
 use App\Support\LinkedinCredentials;
 use Illuminate\Http\RedirectResponse;
@@ -16,7 +17,7 @@ use Illuminate\Support\Str;
  * Community Management API's restricted `r_member_social_feed`
  * (post-performance polling) cannot live on the same app as Share on
  * LinkedIn - LinkedIn does not allow it, confirmed by trying. So this
- * attaches a second token to an already-connected `LinkedinAccount` rather
+ * attaches a second token to an already-connected LinkedIn `SocialAccount` rather
  * than widening `LinkedinOAuthController`'s scope.
  *
  * No fresh identity fetch on callback: it is the same member reconnecting
@@ -25,9 +26,12 @@ use Illuminate\Support\Str;
  */
 class LinkedinStatsOAuthController extends Controller
 {
-    public function redirect(Request $request, int $linkedinAccount, CurrentProject $currentProject, LinkedinCredentials $credentials): RedirectResponse
+    public function redirect(Request $request, int $socialAccount, CurrentProject $currentProject, LinkedinCredentials $credentials): RedirectResponse
     {
-        $account = LinkedinAccount::query()->ownedBy($request->user())->findOrFail($linkedinAccount);
+        $account = SocialAccount::query()
+            ->ownedBy($request->user())
+            ->where('platform', SocialPlatform::Linkedin)
+            ->findOrFail($socialAccount);
 
         $state = Str::random(40);
         $request->session()->put('linkedin_stats_oauth_state', $state);
@@ -61,7 +65,7 @@ class LinkedinStatsOAuthController extends Controller
             return to_route('settings.linkedin.index', ['project' => $project])->with('status', 'LinkedIn connection failed: the request could not be verified.');
         }
 
-        $account = LinkedinAccount::query()->find((int) $accountId);
+        $account = SocialAccount::query()->where('platform', SocialPlatform::Linkedin)->find((int) $accountId);
 
         if ($account === null) {
             return to_route('settings.linkedin.index', ['project' => $project])->with('status', 'That LinkedIn account no longer exists.');
@@ -80,10 +84,10 @@ class LinkedinStatsOAuthController extends Controller
         }
 
         $account->update([
-            'stats_access_token' => (string) $token->json('access_token'),
-            'stats_refresh_token' => $token->json('refresh_token'),
-            'stats_access_token_expires_at' => now()->addSeconds((int) $token->json('expires_in')),
-            'stats_refresh_token_expires_at' => $token->json('refresh_token_expires_in') !== null
+            'stats_secret' => (string) $token->json('access_token'),
+            'stats_refresh_secret' => $token->json('refresh_token'),
+            'stats_secret_expires_at' => now()->addSeconds((int) $token->json('expires_in')),
+            'stats_refresh_secret_expires_at' => $token->json('refresh_token_expires_in') !== null
                 ? now()->addSeconds((int) $token->json('refresh_token_expires_in'))
                 : null,
         ]);

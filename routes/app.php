@@ -17,8 +17,6 @@ use App\Http\Controllers\AppSettings\EmailExampleThresholdController;
 use App\Http\Controllers\AppSettings\KnownHostController;
 use App\Http\Controllers\AppSettings\LimitController;
 use App\Http\Controllers\AppSettings\LinkedinCredentialsController;
-use App\Http\Controllers\AppSettings\LinkedinExampleThresholdController;
-use App\Http\Controllers\AppSettings\LinkedinPostExampleController;
 use App\Http\Controllers\AppSettings\LinkedinStatsCredentialsController;
 use App\Http\Controllers\AppSettings\ProviderController;
 use App\Http\Controllers\AppSettings\ProviderTestController;
@@ -64,10 +62,7 @@ use App\Http\Controllers\KnownClientController;
 use App\Http\Controllers\LeadImportController;
 use App\Http\Controllers\LeadNoteController;
 use App\Http\Controllers\LinkedinAccountController;
-use App\Http\Controllers\LinkedinCadenceController;
-use App\Http\Controllers\LinkedinInstructionsController;
 use App\Http\Controllers\LinkedinOAuthController;
-use App\Http\Controllers\LinkedinPostController;
 use App\Http\Controllers\LinkedinStatsOAuthController;
 use App\Http\Controllers\MailboxController;
 use App\Http\Controllers\MailboxReactivateController;
@@ -203,19 +198,18 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             Route::put('autonomy', [AutonomyController::class, 'update'])->name('autonomy.update');
 
             /*
-             * Both writing-tone boxes together - see `AiInstructionsController`.
-             * Each saves through its own small route/controller since a
-             * different agent reads each one (`EveilAgent::
-             * emailWritingInstructions()` / `linkedinInstructions()`).
+             * Every writing-tone box together - see `AiInstructionsController`.
+             * Each saves through its own route since a different agent, or a
+             * different network, reads each one (`EveilAgent::
+             * emailWritingInstructions()` / `postInstructions()`). The
+             * literal `emails` segment comes before {platform}.
              */
             Route::get('ai-instructions', [AiInstructionsController::class, 'edit'])
                 ->name('ai-instructions.edit');
             Route::put('ai-instructions/emails', [EmailInstructionsController::class, 'update'])
                 ->name('ai-instructions.emails.update');
-            Route::put('ai-instructions/linkedin', [LinkedinInstructionsController::class, 'update'])
-                ->name('ai-instructions.linkedin.update');
-            Route::put('ai-instructions/social', [SocialInstructionsController::class, 'update'])
-                ->name('ai-instructions.social.update');
+            Route::put('ai-instructions/{platform}', [SocialInstructionsController::class, 'update'])
+                ->name('ai-instructions.posts.update');
 
             /*
              * Organization-scoped, same reasoning as mailboxes below: a
@@ -243,39 +237,35 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
                 ->name('mailboxes.reactivate');
 
             /*
-             * LinkedIn account belongs to the ORGANIZATION, same reasoning
-             * as mailboxes above: one LinkedIn identity is often posted
-             * through by several products and never a third. The posting
-             * cadence lives on the posts queue instead (`linkedin.posts.
-             * cadence` below): it is a decision about that queue's own
-             * rhythm, not about the account itself. Literal segments before
-             * {linkedinAccount}, or "connect" would themselves be read as
-             * an account id.
+             * LinkedIn and Bluesky accounts belong to the ORGANIZATION, same
+             * reasoning as mailboxes above: one identity is often posted
+             * through by several products and never a third. Each network
+             * connects its own way (OAuth for LinkedIn, an app password for
+             * Bluesky); granting to projects and disconnecting are shared.
+             * The posting cadence lives on each network's queue instead: it
+             * is a decision about that queue's rhythm, not the account.
              */
             Route::get('linkedin', [LinkedinAccountController::class, 'index'])->name('linkedin.index');
             Route::get('linkedin/connect', [LinkedinOAuthController::class, 'redirect'])
                 ->name('linkedin.connect');
-            Route::put('linkedin/{linkedinAccount}', [LinkedinAccountController::class, 'update'])
-                ->name('linkedin.update');
-            Route::delete('linkedin/{linkedinAccount}', [LinkedinAccountController::class, 'destroy'])
-                ->name('linkedin.destroy');
             /*
              * The SECOND, optional OAuth connection - the Community
              * Management app, per account, only ever reachable once that
              * account already exists.
              */
-            Route::get('linkedin/{linkedinAccount}/stats/connect', [LinkedinStatsOAuthController::class, 'redirect'])
+            Route::get('linkedin/{socialAccount}/stats/connect', [LinkedinStatsOAuthController::class, 'redirect'])
                 ->name('linkedin.stats.connect');
 
             /*
-             * Bluesky accounts, organization-owned like the LinkedIn ones
-             * above. Connected with an app password, so no OAuth callback.
-             * X has no account at all: it is posted by hand.
+             * No OAuth callback for Bluesky: an app password is checked
+             * on submit. X has no account at all: it is posted by hand.
              */
-            Route::get('social', [SocialAccountController::class, 'index'])->name('social.index');
-            Route::post('social', [SocialAccountController::class, 'store'])->name('social.store');
-            Route::put('social/{socialAccount}', [SocialAccountController::class, 'update'])->name('social.update');
-            Route::delete('social/{socialAccount}', [SocialAccountController::class, 'destroy'])->name('social.destroy');
+            Route::get('bluesky', [SocialAccountController::class, 'index'])->name('bluesky.index');
+            Route::post('bluesky', [SocialAccountController::class, 'store'])->name('bluesky.store');
+            Route::put('social-accounts/{socialAccount}', [SocialAccountController::class, 'update'])
+                ->name('social-accounts.update');
+            Route::delete('social-accounts/{socialAccount}', [SocialAccountController::class, 'destroy'])
+                ->name('social-accounts.destroy');
 
             /*
              * Cloud billing. The route exists in both editions (one repo,
@@ -338,72 +328,38 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         });
 
         /*
-         * The approval queue every post source lands in: knowledge base,
-         * client win, news, or drafted by talking to Evie. Its own nav
-         * item rather than a Settings page: new drafts appear on their own
-         * schedule, same reasoning as Targets living outside Settings.
-         * The connected account itself lives in Settings -> the account
-         * is organization-scoped config, set once, not reread on a
-         * schedule the way this queue is.
+         * One queue per network, each its own nav item, all on the same
+         * `social_posts` rows. A nav item rather than a Settings page: new
+         * drafts appear on their own schedule, same reasoning as Targets
+         * living outside Settings. LinkedIn and Bluesky drafts are approved
+         * and published through the network's API (`approve`); X drafts are
+         * posted by hand and their URL pasted back (`publish`).
+         *
+         * {platform} is a `SocialPlatform` value and {social_post} a number,
+         * so the two never read as each other.
          */
-        Route::prefix('linkedin')->name('linkedin.')->group(function (): void {
-            Route::get('posts', [LinkedinPostController::class, 'index'])->name('posts.index');
-            /*
-             * Literal segment before {linkedin_post} below, or "cadence"
-             * would itself be read as a post id.
-             */
-            Route::put('posts/cadence', [LinkedinCadenceController::class, 'update'])
-                ->name('posts.cadence');
-            Route::put('posts/{linkedin_post}', [LinkedinPostController::class, 'update'])
-                ->name('posts.update');
-            Route::post('posts/{linkedin_post}/approve', [LinkedinPostController::class, 'approve'])
-                ->name('posts.approve');
-            /*
-             * Reject keeps the row (with an optional reason, fed back into
-             * the writer's prompt); destroy below is a hard delete. Two
-             * different actions on purpose - see `LinkedinPostController`.
-             */
-            Route::post('posts/{linkedin_post}/reject', [LinkedinPostController::class, 'reject'])
-                ->name('posts.reject');
-            Route::delete('posts/{linkedin_post}', [LinkedinPostController::class, 'destroy'])
-                ->name('posts.destroy');
-            /*
-             * Project-scoped only: stamps `promoted_at`, never writes to the
-             * shared instance-wide pool - see `LinkedinPostController::promote()`.
-             */
-            Route::post('posts/{linkedin_post}/promote', [LinkedinPostController::class, 'promote'])
-                ->name('posts.promote');
+        Route::prefix('posts')->name('social.posts.')->group(function (): void {
+            Route::get('{platform}', [SocialPostController::class, 'index'])->name('index');
+            Route::put('{platform}/cadence', [SocialCadenceController::class, 'update'])->name('cadence');
+            Route::post('{platform}/generate', [SocialPostController::class, 'generate'])->name('generate');
+
+            Route::whereNumber('social_post')->group(function (): void {
+                Route::put('{social_post}', [SocialPostController::class, 'update'])->name('update');
+                Route::post('{social_post}/approve', [SocialPostController::class, 'approve'])->name('approve');
+                Route::post('{social_post}/publish', [SocialPostController::class, 'publish'])->name('publish');
+                /*
+                 * Reject keeps the row (with an optional reason, fed back
+                 * into the writer's prompt); destroy is a hard delete. Two
+                 * different actions on purpose.
+                 */
+                Route::post('{social_post}/reject', [SocialPostController::class, 'reject'])->name('reject');
+                Route::delete('{social_post}', [SocialPostController::class, 'destroy'])->name('destroy');
+                Route::post('{social_post}/promote', [SocialPostController::class, 'promote'])->name('promote');
+            });
         });
 
-        /*
-         * The X and Bluesky queue, same reasoning as LinkedIn's for being a
-         * nav item. Bluesky drafts are approved and published through its
-         * API (`approve`); X drafts are posted by hand and their URL pasted
-         * back (`publish`).
-         */
-        Route::prefix('social')->name('social.')->group(function (): void {
-            Route::get('posts', [SocialPostController::class, 'index'])->name('posts.index');
-            /*
-             * Literal segments before {social_post} below, same trap as
-             * `linkedin.posts.cadence`.
-             */
-            Route::put('posts/cadence', [SocialCadenceController::class, 'update'])
-                ->name('posts.cadence');
-            Route::post('posts/generate', [SocialPostController::class, 'generate'])
-                ->name('posts.generate');
-            Route::put('posts/{social_post}', [SocialPostController::class, 'update'])
-                ->name('posts.update');
-            Route::post('posts/{social_post}/approve', [SocialPostController::class, 'approve'])
-                ->name('posts.approve');
-            Route::post('posts/{social_post}/publish', [SocialPostController::class, 'publish'])
-                ->name('posts.publish');
-            Route::post('posts/{social_post}/reject', [SocialPostController::class, 'reject'])
-                ->name('posts.reject');
-            Route::delete('posts/{social_post}', [SocialPostController::class, 'destroy'])
-                ->name('posts.destroy');
-            Route::post('posts/{social_post}/promote', [SocialPostController::class, 'promote'])
-                ->name('posts.promote');
-        });
+        // Links in emails sent before the queues merged.
+        Route::get('linkedin/posts', fn () => to_route('social.posts.index', 'linkedin'));
 
         /*
          * SEO: for now the article queue, later more. Nothing publishes on
@@ -414,7 +370,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             Route::get('/', [ArticleController::class, 'index'])->name('index');
             /*
              * Literal segments before {article} below, same trap as
-             * `linkedin.posts.cadence`.
+             * a post id.
              */
             Route::put('articles/cadence', [ArticleCadenceController::class, 'update'])
                 ->name('articles.cadence');
@@ -445,7 +401,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             Route::get('replies', [RedditReplyController::class, 'index'])->name('replies.index');
             /*
              * Literal segment before {reddit_reply} below, same trap as
-             * `linkedin.posts.cadence`.
+             * a post id.
              */
             Route::put('replies/cadence', [RedditCadenceController::class, 'update'])
                 ->name('replies.cadence');
@@ -738,22 +694,13 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::put('email-examples/thresholds', [EmailExampleThresholdController::class, 'update'])
             ->name('email-examples.thresholds');
 
-        Route::get('linkedin-post-examples', [LinkedinPostExampleController::class, 'index'])
-            ->name('linkedin-post-examples.index');
-        Route::post('linkedin-post-examples', [LinkedinPostExampleController::class, 'store'])
-            ->name('linkedin-post-examples.store');
-        Route::delete('linkedin-post-examples/{linkedinPostExample}', [LinkedinPostExampleController::class, 'destroy'])
-            ->name('linkedin-post-examples.destroy');
-        Route::put('linkedin-post-examples/threshold', [LinkedinExampleThresholdController::class, 'update'])
-            ->name('linkedin-post-examples.threshold');
-
         Route::get('social-post-examples', [SocialPostExampleController::class, 'index'])
             ->name('social-post-examples.index');
         Route::post('social-post-examples', [SocialPostExampleController::class, 'store'])
             ->name('social-post-examples.store');
         Route::delete('social-post-examples/{socialPostExample}', [SocialPostExampleController::class, 'destroy'])
             ->name('social-post-examples.destroy');
-        Route::put('social-post-examples/threshold', [SocialExampleThresholdController::class, 'update'])
+        Route::put('social-post-examples/threshold/{platform}', [SocialExampleThresholdController::class, 'update'])
             ->name('social-post-examples.threshold');
 
         Route::get('reddit-reply-examples', [RedditReplyExampleController::class, 'index'])

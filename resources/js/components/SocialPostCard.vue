@@ -5,13 +5,14 @@ import { PLATFORM_LABEL, PLATFORM_LIMIT, postLength } from '@/lib/social'
 import socialPostRoutes from '@/routes/social/posts'
 import type { SocialAccount, SocialPost } from '@/types'
 
-// One X or Bluesky post with every action on it. Shared by `social/Posts.vue`
-// and the dashboard's to-review modal, so both review a draft the same way.
-// A Bluesky draft is approved and published through its API; an X draft is
-// copied, posted by hand, and its URL pasted back.
+// One post with every action on it. Shared by `social/Posts.vue` and the
+// dashboard's to-review modal, so both review a draft the same way. A
+// LinkedIn or Bluesky draft is approved and published through the network's
+// API; an X draft is copied, posted by hand, and its URL pasted back.
 const props = defineProps<{
     post: SocialPost
-    blueskyAccounts: SocialAccount[]
+    /** The project's granted accounts on this post's network. */
+    accounts: SocialAccount[]
 }>()
 
 const page = usePage()
@@ -48,7 +49,12 @@ const publishing = ref(false)
 
 const limit = computed(() => PLATFORM_LIMIT[props.post.platform])
 const length = computed(() => postLength(props.post.platform, editing.value ? editBody.value : props.post.body))
-const activeAccounts = computed(() => props.blueskyAccounts.filter(account => account.status === 'active'))
+const label = computed(() => PLATFORM_LABEL[props.post.platform])
+const activeAccounts = computed(() => props.accounts.filter(account => account.status === 'active'))
+
+function accountName (account: { handle: string | null, display_name: string }): string {
+    return account.handle ? `@${account.handle}` : account.display_name
+}
 
 function toggleEdit () {
     editing.value = !editing.value
@@ -87,7 +93,7 @@ function submitApprove (socialAccountId: number | undefined) {
         preserveScroll: true,
         onSuccess: () => {
             pickingAccount.value = false
-            toast.add({ title: 'Publishing to Bluesky…', color: 'success' })
+            toast.add({ title: `Publishing to ${label.value}…`, color: 'success' })
         },
         onFinish: () => approving.value = false
     })
@@ -146,13 +152,14 @@ function promote () {
         <div class="flex flex-wrap items-center gap-3">
             <UBadge
                 color="neutral"
-                variant="solid"
-                :label="PLATFORM_LABEL[post.platform]"
-            />
-            <UBadge
-                color="neutral"
                 variant="subtle"
                 :label="SOURCE[post.source_type]"
+            />
+            <UBadge
+                v-if="post.variant"
+                color="neutral"
+                variant="outline"
+                :label="post.variant === 'named' ? 'Names the client' : 'Anonymized'"
             />
             <UBadge
                 :color="STATUS[post.status].color"
@@ -160,13 +167,13 @@ function promote () {
                 :label="STATUS[post.status].label"
             />
             <UBadge
-                v-if="post.social_account && blueskyAccounts.length > 1"
+                v-if="post.social_account && accounts.length > 1"
                 color="neutral"
                 variant="outline"
-                :label="`@${post.social_account.handle}`"
+                :label="accountName(post.social_account)"
             />
             <span
-                v-if="post.status === 'published' && post.platform === 'bluesky'"
+                v-if="post.status === 'published' && post.platform !== 'x'"
                 class="text-xs text-muted"
             >{{ post.likes_count }} {{ post.likes_count === 1 ? 'like' : 'likes' }}</span>
 
@@ -199,7 +206,7 @@ function promote () {
                     />
                 </template>
                 <UButton
-                    v-if="post.status === 'draft' && post.platform === 'bluesky'"
+                    v-if="post.status === 'draft' && post.platform !== 'x'"
                     icon="i-lucide-check"
                     color="success"
                     variant="subtle"
@@ -291,7 +298,7 @@ function promote () {
             target="_blank"
             rel="noopener"
             class="text-sm text-primary"
-        >View on {{ PLATFORM_LABEL[post.platform] }}</a>
+        >View on {{ label }}</a>
 
         <p
             v-if="post.last_error"
@@ -379,10 +386,10 @@ function promote () {
             title="Publish to which account?"
         >
             <template #body>
-                <UFormField label="Bluesky account">
+                <UFormField :label="`${label} account`">
                     <USelect
                         v-model="selectedAccountId"
-                        :items="activeAccounts.map(account => ({ label: `@${account.handle}`, value: account.id }))"
+                        :items="activeAccounts.map(account => ({ label: accountName(account), value: account.id }))"
                         class="w-full"
                     />
                 </UFormField>

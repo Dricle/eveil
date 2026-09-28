@@ -8,26 +8,25 @@ use App\Support\CurrentProject;
 use Illuminate\Http\RedirectResponse;
 
 /**
- * How often the current project wants a new X and a new Bluesky post. A
- * network whose cadence just changed is due now: nothing else ever sets its
- * next date, so a cadence just turned on would otherwise never be picked up.
- * An unchanged one keeps its date, so saving does not draft again.
+ * How often the current project wants a new post on one network, set from
+ * that network's queue. A cadence that changed makes the network due now:
+ * nothing else ever sets its next date, so a cadence just turned on would
+ * otherwise never be picked up. An unchanged one keeps its date, so saving
+ * does not draft again.
  */
 class SocialCadenceController extends Controller
 {
-    public function update(SocialPostFrequencyRequest $request, CurrentProject $currentProject): RedirectResponse
+    public function update(SocialPostFrequencyRequest $request, CurrentProject $currentProject, SocialPlatform $platform): RedirectResponse
     {
         $project = $currentProject->getOrFail();
-        $project->fill($request->validated());
+        $project->setAttribute($platform->frequencyColumn(), $request->validated('frequency'));
 
-        foreach (SocialPlatform::cases() as $platform) {
-            if ($project->isDirty($platform->frequencyColumn())) {
-                $project->setAttribute($platform->nextPostColumn(), now());
-            }
+        if ($project->isDirty($platform->frequencyColumn())) {
+            $project->setAttribute($platform->nextPostColumn(), now());
         }
 
         $project->save();
 
-        return to_route('social.posts.index');
+        return to_route('social.posts.index', $platform);
     }
 }

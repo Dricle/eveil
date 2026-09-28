@@ -3,34 +3,34 @@ import { Form, Head, router, usePage, usePoll } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import SocialPostCard from '@/components/SocialPostCard.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
+import { PLATFORM_LABEL } from '@/lib/social'
 import { relativeUrl } from '@/lib/utils'
-import socialAccountRoutes from '@/routes/settings/social'
+import blueskyRoutes from '@/routes/settings/bluesky'
+import linkedinRoutes from '@/routes/settings/linkedin'
 import socialPostRoutes from '@/routes/social/posts'
 import type { SocialAccount, SocialPlatform, SocialPost } from '@/types'
 
 defineOptions({ layout: AppLayout })
 
-type Frequency = 'off' | 'daily' | 'weekly' | 'biweekly' | 'monthly'
-
+// One network's queue: LinkedIn, X and Bluesky each have their own nav entry
+// pointing here with their own `platform`.
 const props = defineProps<{
+    platform: SocialPlatform
     posts: SocialPost[]
-    blueskyAccounts: SocialAccount[]
-    frequencies: { x: Frequency, bluesky: Frequency }
+    accounts: SocialAccount[]
+    frequency: 'off' | 'daily' | 'weekly' | 'biweekly' | 'monthly'
 }>()
 
 const page = usePage()
 const slug = computed(() => page.props.currentProject!.slug)
+const label = computed(() => PLATFORM_LABEL[props.platform])
 
 // New drafts appear on the cadence's own schedule, so this screen rereads.
 usePoll(15000, { only: ['posts'] })
 
-// Local drafts synced from the props, not `default-value`: see `.ai/rules/js.md`.
-const xFrequency = ref(props.frequencies.x)
-const blueskyFrequency = ref(props.frequencies.bluesky)
-watch(() => props.frequencies, (value) => {
-    xFrequency.value = value.x
-    blueskyFrequency.value = value.bluesky
-}, { immediate: true, deep: true })
+// A local draft synced from the prop, not `default-value`: see `.ai/rules/js.md`.
+const frequency = ref(props.frequency)
+watch(() => props.frequency, value => frequency.value = value, { immediate: true })
 
 const FREQUENCIES = [
     { label: 'Off', value: 'off' },
@@ -40,89 +40,94 @@ const FREQUENCIES = [
     { label: 'Monthly', value: 'monthly' }
 ]
 
-const PLATFORMS = [
-    { label: 'All', value: 'all' },
-    { label: 'X', value: 'x' },
-    { label: 'Bluesky', value: 'bluesky' }
-]
-
 const TABS = [
     { label: 'Drafts', value: 'draft' },
     { label: 'Published', value: 'published' },
     { label: 'Rejected', value: 'rejected' }
 ]
 
-const activePlatform = ref('all')
+const DESCRIPTION: Record<SocialPlatform, string> = {
+    linkedin: 'Posts for your own LinkedIn profile, published through LinkedIn\'s official API once you approve them.',
+    x: 'X posts you copy and post yourself, then paste the link back here: X charges for every post made through its API.',
+    bluesky: 'Bluesky posts, published through Bluesky\'s own API once you approve them.'
+}
+
+// Where this network's account is connected. X has none.
+const connectUrl = computed(() => ({
+    linkedin: relativeUrl(linkedinRoutes.index.url({ project: slug.value })),
+    x: null,
+    bluesky: relativeUrl(blueskyRoutes.index.url({ project: slug.value }))
+})[props.platform])
+
 const activeTab = ref('draft')
-const filteredPosts = computed(() => props.posts.filter(post =>
-    post.status === activeTab.value && (activePlatform.value === 'all' || post.platform === activePlatform.value)
-))
+const filteredPosts = computed(() => props.posts.filter(post => post.status === activeTab.value))
 
-const generating = ref<SocialPlatform | null>(null)
+const generating = ref(false)
 
-function generate (platform: SocialPlatform) {
-    generating.value = platform
-    router.post(socialPostRoutes.generate.url({ project: slug.value }), { platform }, {
+function generate () {
+    generating.value = true
+    router.post(socialPostRoutes.generate.url({ project: slug.value, platform: props.platform }), {}, {
         preserveScroll: true,
-        onFinish: () => generating.value = null
+        onFinish: () => generating.value = false
     })
 }
 </script>
 
 <template>
-    <Head title="X & Bluesky posts" />
+    <Head :title="`${label} posts`" />
 
     <div class="space-y-4 p-6">
         <div class="flex flex-wrap items-end justify-between gap-3">
             <div>
                 <h2 class="font-medium">
-                    X & Bluesky posts
+                    {{ label }} posts
                 </h2>
                 <p class="text-sm text-muted">
-                    Bluesky posts are published for you once approved. X posts you
-                    copy and post yourself, then paste the link back here.
+                    {{ DESCRIPTION[platform] }}
                 </p>
             </div>
 
-            <Form
-                v-slot="{ processing }"
-                v-bind="socialPostRoutes.cadence.form({ project: slug })"
-                class="flex flex-wrap items-end gap-3"
-            >
-                <UFormField label="New X post">
-                    <USelect
-                        v-model="xFrequency"
-                        name="x_post_frequency"
-                        :items="FREQUENCIES"
-                        class="w-40"
-                    />
-                </UFormField>
+            <div class="flex flex-wrap items-end gap-3">
+                <Form
+                    v-slot="{ processing }"
+                    v-bind="socialPostRoutes.cadence.form({ project: slug, platform })"
+                    class="flex items-end gap-3"
+                >
+                    <UFormField label="New post">
+                        <USelect
+                            v-model="frequency"
+                            name="frequency"
+                            :items="FREQUENCIES"
+                            class="w-44"
+                        />
+                    </UFormField>
 
-                <UFormField label="New Bluesky post">
-                    <USelect
-                        v-model="blueskyFrequency"
-                        name="bluesky_post_frequency"
-                        :items="FREQUENCIES"
-                        class="w-40"
+                    <UButton
+                        type="submit"
+                        label="Save"
+                        :loading="processing"
                     />
-                </UFormField>
+                </Form>
 
                 <UButton
-                    type="submit"
-                    label="Save"
-                    :loading="processing"
+                    icon="i-lucide-sparkles"
+                    color="neutral"
+                    variant="outline"
+                    label="Write one now"
+                    :loading="generating"
+                    @click="generate"
                 />
-            </Form>
+            </div>
         </div>
 
         <UAlert
-            v-if="!blueskyAccounts.length"
-            color="neutral"
+            v-if="connectUrl && !accounts.length"
+            color="warning"
             variant="subtle"
             icon="i-lucide-plug"
-            title="No Bluesky account connected to this project"
-            description="Bluesky drafts can still be written, but nothing can be published until an account is connected. X needs no account."
-            :actions="[{ label: 'Connect Bluesky', to: relativeUrl(socialAccountRoutes.index.url({ project: slug })), color: 'neutral', variant: 'solid' }]"
+            :title="`No ${label} account connected to this project`"
+            description="Drafts can still be written, but nothing can be published until an account is connected."
+            :actions="[{ label: `Connect ${label}`, to: connectUrl, color: 'warning', variant: 'solid' }]"
         />
 
         <UAlert
@@ -133,46 +138,17 @@ function generate (platform: SocialPlatform) {
             :description="String(page.props.status)"
         />
 
-        <div class="flex flex-wrap items-center justify-between gap-3">
-            <div class="flex flex-wrap items-center gap-3">
-                <UTabs
-                    v-model="activeTab"
-                    :items="TABS"
-                    :content="false"
-                />
-                <UTabs
-                    v-model="activePlatform"
-                    :items="PLATFORMS"
-                    :content="false"
-                    variant="link"
-                />
-            </div>
-
-            <div class="flex gap-2">
-                <UButton
-                    icon="i-lucide-sparkles"
-                    color="neutral"
-                    variant="outline"
-                    label="Write an X post"
-                    :loading="generating === 'x'"
-                    @click="generate('x')"
-                />
-                <UButton
-                    icon="i-lucide-sparkles"
-                    color="neutral"
-                    variant="outline"
-                    label="Write a Bluesky post"
-                    :loading="generating === 'bluesky'"
-                    @click="generate('bluesky')"
-                />
-            </div>
-        </div>
+        <UTabs
+            v-model="activeTab"
+            :items="TABS"
+            :content="false"
+        />
 
         <SocialPostCard
             v-for="post in filteredPosts"
             :key="post.id"
             :post="post"
-            :bluesky-accounts="blueskyAccounts"
+            :accounts="accounts"
         />
 
         <p

@@ -7,9 +7,10 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Which of the project's granted Bluesky accounts this draft publishes to,
- * checked against the pivot so an ungranted id fails validation rather than
- * publishing somewhere else. Same reasoning as `LinkedinPostApproveRequest`.
+ * Which of the project's granted accounts this draft publishes to, chosen by
+ * the caller rather than defaulted to the first one: a project can be granted
+ * several. Checked against the pivot so an ungranted id fails validation
+ * rather than publishing somewhere else.
  */
 class SocialPostApproveRequest extends FormRequest
 {

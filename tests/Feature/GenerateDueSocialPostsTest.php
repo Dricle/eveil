@@ -41,6 +41,18 @@ it('skips a due Bluesky post until a working account is granted', function () {
     expect(app(GenerateDueSocialPosts::class)->handle())->toBe(1);
 });
 
+it('skips a due LinkedIn post until an account is connected, the safe default', function () {
+    Queue::fake();
+    $project = Project::factory()->create(['linkedin_post_frequency' => SocialPostFrequency::Weekly, 'linkedin_next_post_at' => now()->subMinute()]);
+
+    expect(app(GenerateDueSocialPosts::class)->handle())->toBe(0);
+
+    SocialAccount::factory()->linkedin()->create(['organization_id' => $project->organization_id])->projects()->attach($project);
+
+    expect(app(GenerateDueSocialPosts::class)->handle())->toBe(1);
+    Queue::assertPushed(GenerateSocialPost::class, fn (GenerateSocialPost $job): bool => $job->platform === SocialPlatform::Linkedin);
+});
+
 it('leaves a project whose cadence is off or not due yet alone', function () {
     Queue::fake();
     Project::factory()->create(['x_post_frequency' => SocialPostFrequency::Off, 'x_next_post_at' => now()->subDay()]);
@@ -89,7 +101,7 @@ it('never writes to the shared bank from a user\'s own click', function () {
     $post->project->organization->users()->attach($user, ['role' => 'owner']);
     app(CurrentProject::class)->set($post->project);
 
-    $this->actingAs($user)->from(route('social.posts.index'))->post(route('social.posts.promote', $post));
+    $this->actingAs($user)->from(route('social.posts.index', 'bluesky'))->post(route('social.posts.promote', $post));
 
     expect($post->fresh()->promoted_at)->not->toBeNull()
         ->and(SocialPostExample::query()->count())->toBe(0);
@@ -102,6 +114,6 @@ it('sends nothing through X\'s driver, which neither publishes nor reads', funct
     app(PublishSocialPost::class)->handle($post, SocialAccount::factory()->create());
 
     expect($post->fresh()->status)->toBe(SocialPostStatus::Draft)
-        ->and(SocialPlatform::X->client()->likeCounts(['123']))->toBe([]);
+        ->and(SocialPlatform::X->client()->likeCounts(collect([$post])))->toBe([]);
     Http::assertNothingSent();
 });

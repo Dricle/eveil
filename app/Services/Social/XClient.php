@@ -3,6 +3,7 @@
 namespace App\Services\Social;
 
 use App\Models\SocialAccount;
+use Illuminate\Support\Collection;
 
 /**
  * X's driver, deliberately inert: X's API is paid per call, so Eveil neither
@@ -17,7 +18,7 @@ class XClient implements SocialClientInterface
         return null;
     }
 
-    public function likeCounts(array $ids): array
+    public function likeCounts(Collection $posts): array
     {
         return [];
     }

@@ -1,6 +1,6 @@
 # Posting to X and Bluesky
 
-Eveil drafts short posts for X and Bluesky from the same writer, in one queue: **X & Bluesky** in the main navigation, badged with how many drafts are waiting on you. The two networks publish differently:
+Eveil drafts short posts for X and Bluesky with the same writer as [LinkedIn](/product/linkedin). Each network has its own item in the main navigation, **X** and **Bluesky**, badged with how many drafts are waiting on you. The two publish differently:
 
 - **Bluesky**: Eveil publishes for you, through Bluesky's own free API, once you approve a draft (or straight away, if you set Bluesky to Autonomous).
 - **X**: you post it yourself. X charges for every post made through its API, so Eveil does not use it. Click **Copy & open X**, which copies the draft and opens X with it pre-filled, post it, then click **Mark as posted** and paste the link to your post.
@@ -15,19 +15,19 @@ X needs no account in Eveil.
 
 ## Cadence and tone
 
-The cadence is set per network from the top of the queue: off, daily, weekly, every two weeks, or monthly. Each network gets its own drafts on its own rhythm. **Write an X post** and **Write a Bluesky post** draft one right away.
+The cadence is set from the top of each network's queue: off, daily, weekly, every two weeks, or monthly. Each network gets its own drafts on its own rhythm. **Write one now** drafts one right away.
 
-Tone lives in **Settings → AI instructions**, in its own "How X and Bluesky posts are written" box, separate from the email and LinkedIn ones.
+Tone lives in **Settings → AI instructions**, one box per network ("How X posts are written", "How Bluesky posts are written"), separate from the email and LinkedIn ones.
 
 ## Where the content comes from
 
 Every draft traces to something real. The writer looks at everything available and picks the strongest angle:
 
 - **One of your own articles**, published from the [SEO page](/product/seo) in the last month and not shared on that network yet.
-- **A client you just won**, written without naming them ("a new client in logistics").
+- **A client you just won**: two versions get drafted, one naming the client and one that doesn't ("a new client in logistics"). You choose which goes out; the other is rejected. Autonomous Bluesky only ever publishes the anonymous one.
 - **Relevant industry news**, when there is a genuine angle for your product.
 - **A knowledge base fact**: a feature, a proof point, your value proposition.
-- **Whatever you tell Evie about**: "write a Bluesky post about the new pricing".
+- **Whatever you tell Evie about**: "write a Bluesky post about the new pricing" has the writer draft it from that brief. It always waits for you, whatever the autonomy setting.
 
 Every post includes your product's link (or the article's), since a post nobody can click through from does little. The queue shows a counter against each network's limit: 280 characters on X, where any link counts as 23, and 300 on Bluesky.
 
@@ -41,4 +41,4 @@ With several Bluesky accounts on the project, publishing asks which one to post 
 
 A published post has a **Mark as successful** button. Clicking it only ever helps *this project's* own future drafts on that network, so there is nothing to moderate.
 
-Separately, each network has an **instance-wide bank** of proven posts, shared across every project on the instance and sampled into every draft for that network, the same idea as the LinkedIn bank. Bluesky posts are checked daily for likes, and one that crosses the threshold joins the Bluesky bank on its own: that number is measured by Bluesky, so it is trusted the way a click is not. X posts are never read, so the X bank only grows by hand. A superadmin manages both banks, and the Bluesky threshold, from **App Settings → X & Bluesky post examples**.
+Separately, each network has an **instance-wide bank** of proven posts, shared across every project on the instance and sampled into every draft for that network, the same idea as the LinkedIn bank. Bluesky posts are checked daily for likes, and one that crosses the threshold joins the Bluesky bank on its own: that number is measured by Bluesky, so it is trusted the way a click is not. X posts are never read, so the X bank only grows by hand. A superadmin manages every network's bank, and the thresholds, from **App Settings → Post examples**.

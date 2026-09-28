@@ -12,6 +12,7 @@ use App\Enums\SocialAccountStatus;
 use App\Enums\SocialPlatform;
 use App\Enums\SocialPostSourceType;
 use App\Enums\SocialPostStatus;
+use App\Enums\SocialPostVariant;
 use App\Models\AgentRun;
 use App\Models\Article;
 use App\Models\Company;
@@ -28,9 +29,9 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
 
 /**
- * One X or Bluesky post: gather every signal, ask `SocialPostWriter` once,
- * keep the draft. Same shape as `GenerateLinkedinPost`, one network per job
- * since each has its own cadence.
+ * One LinkedIn, X or Bluesky post: gather every signal, ask
+ * `SocialPostWriter` once, keep what it wrote. One network per job, since
+ * each has its own cadence.
  *
  * `$brief` is set when Evie queued it from a conversation ("we just shipped
  * X"), same as `GenerateArticle`: the post is then about that, the other
@@ -71,57 +72,79 @@ class GenerateSocialPost implements ShouldQueue
                 $this->brief,
             ))->recordInto($run)->draft()->structured;
 
-            $body = trim((string) ($structured['body'] ?? ''));
-
-            if ($body === '') {
-                return;
-            }
-
-            // Never trust the model with where a brief came from either.
-            $sourceType = $this->brief !== null
-                ? SocialPostSourceType::Manual
-                : SocialPostSourceType::tryFrom((string) ($structured['source_type'] ?? '')) ?? SocialPostSourceType::KnowledgeBase;
-
-            // Never trust the model with which row a source points at.
-            $sourceRef = match ($sourceType) {
-                SocialPostSourceType::ClientWon => $clientWon?->id,
-                SocialPostSourceType::Article => $article?->id,
-                default => null,
-            };
-
-            $post = SocialPost::create([
-                'project_id' => $this->project->id,
-                'platform' => $this->platform,
-                'agent_run_id' => $run->id,
-                'source_type' => $sourceType,
-                'source_ref' => $sourceRef === null ? null : (string) $sourceRef,
-                'evidence' => (string) ($structured['evidence'] ?? ''),
-                'body' => $body,
-                'status' => SocialPostStatus::Draft,
-            ]);
+            $posts = $this->persist($structured, $run->id, $clientWon, $article);
 
             // Asked for from chat: always a draft, since no Evie tool ever
             // publishes, and no email about something the user is waiting for.
-            if ($this->brief !== null) {
+            if ($posts->isEmpty() || $this->brief !== null) {
                 return;
             }
 
-            $this->publishIfAutonomous($post, $publish);
+            $this->publishIfAutonomous($posts, $publish);
 
             // Only what still waits on a person is worth an email.
-            if ($post->fresh()?->status === SocialPostStatus::Draft) {
+            if ($posts->contains(fn (SocialPost $post): bool => $post->fresh()?->status === SocialPostStatus::Draft)) {
                 Notification::send($this->project->notifiableUsers(), SocialPostDrafted::for($this->project, $this->platform));
             }
         });
     }
 
     /**
-     * The network's autonomous setting: publish straight away. Several
-     * accounts on the project still stop for a person, since which one to
-     * post as is a choice nobody has made. X is always supervised: it is
-     * posted by hand.
+     * Every draft the writer produced: one post, or a named and an anonymized
+     * sibling for a client win.
+     *
+     * @param  array<string, mixed>  $structured
+     * @return Collection<int, SocialPost>
      */
-    private function publishIfAutonomous(SocialPost $post, PublishSocialPost $publish): void
+    private function persist(array $structured, int $agentRunId, ?Company $clientWon, ?Article $article): Collection
+    {
+        // Never trust the model with where a brief came from, or with which
+        // row a source points at.
+        $sourceType = $this->brief !== null
+            ? SocialPostSourceType::Manual
+            : SocialPostSourceType::tryFrom((string) ($structured['source_type'] ?? '')) ?? SocialPostSourceType::KnowledgeBase;
+
+        $sourceRef = match ($sourceType) {
+            SocialPostSourceType::ClientWon => $clientWon?->id,
+            SocialPostSourceType::Article => $article?->id,
+            default => null,
+        };
+
+        $bodies = $sourceType === SocialPostSourceType::ClientWon && $clientWon !== null
+            ? [
+                SocialPostVariant::Named->value => $structured['body_named'] ?? '',
+                SocialPostVariant::Anonymized->value => $structured['body_anonymized'] ?? '',
+            ]
+            : ['' => $structured['body'] ?? ''];
+
+        return collect($bodies)
+            ->map(fn (mixed $body): string => trim((string) $body))
+            ->filter()
+            ->map(fn (string $body, string $variant): SocialPost => SocialPost::create([
+                'project_id' => $this->project->id,
+                'platform' => $this->platform,
+                'agent_run_id' => $agentRunId,
+                'source_type' => $sourceType,
+                'source_ref' => $sourceRef === null ? null : (string) $sourceRef,
+                'variant' => SocialPostVariant::tryFrom($variant),
+                'evidence' => (string) ($structured['evidence'] ?? ''),
+                'body' => $body,
+                'status' => SocialPostStatus::Draft,
+            ]))
+            ->values();
+    }
+
+    /**
+     * The network's autonomous setting: publish straight away. Two cases still
+     * stop for a person. Several accounts on the project: which one to post as
+     * is a choice nobody has made. A client win: only the anonymized variant
+     * ever goes out on its own, since naming a client in public is theirs to
+     * agree to, and the named sibling is rejected the same way approving by
+     * hand rejects it. X is always supervised: it is posted by hand.
+     *
+     * @param  Collection<int, SocialPost>  $posts
+     */
+    private function publishIfAutonomous(Collection $posts, PublishSocialPost $publish): void
     {
         if ($this->platform->autonomyLevel($this->project) !== AutonomyLevel::Autonomous) {
             return;
@@ -132,9 +155,18 @@ class GenerateSocialPost implements ShouldQueue
             ->where('status', SocialAccountStatus::Active)
             ->get();
 
-        if ($accounts->count() === 1) {
-            $publish->handle($post, $accounts->sole());
+        $post = $posts->first(fn (SocialPost $post): bool => $post->variant !== SocialPostVariant::Named);
+
+        if ($accounts->count() !== 1 || $post === null) {
+            return;
         }
+
+        $post->sibling()->update([
+            'status' => SocialPostStatus::Rejected,
+            'rejection_reason' => 'Superseded by the other variant.',
+        ]);
+
+        $publish->handle($post, $accounts->sole());
     }
 
     /**
@@ -146,8 +178,9 @@ class GenerateSocialPost implements ShouldQueue
     }
 
     /**
-     * The oldest Won company no post on this network is about yet, same rule
-     * as `GenerateLinkedinPost::pendingClientWin()`.
+     * The oldest Won company no post on this network is about yet,
+     * existence-checked against `social_posts` rather than a separate
+     * "consumed" column.
      */
     private function pendingClientWin(): ?Company
     {

@@ -6,10 +6,10 @@ use App\Models\CodeRepository;
 use App\Models\Company;
 use App\Models\EmailAccount;
 use App\Models\Lead;
-use App\Models\LinkedinPost;
 use App\Models\Organization;
 use App\Models\Project;
 use App\Models\ProjectAnalysis;
+use App\Models\SocialPost;
 use App\Support\CurrentProject;
 use Illuminate\Database\QueryException;
 
@@ -48,7 +48,7 @@ it('scopes every project-owned model', function (string $model) {
     app(CurrentProject::class)->run($mine, function () use ($model) {
         expect($model::count())->toBe(0);
     });
-})->with([Lead::class, Company::class, Campaign::class, LinkedinPost::class]);
+})->with([Lead::class, Company::class, Campaign::class, SocialPost::class]);
 
 it('stamps the current project on new records', function () {
     $project = Project::factory()->create();

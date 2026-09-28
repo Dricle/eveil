@@ -36,7 +36,7 @@ Two things still wait for you in Autonomous: a post that names a client (only th
 |---|---|---|
 | **Publishing a post** | You approve each one | Eveil publishes it as soon as it's written |
 
-A project with more than one Bluesky account still waits for you in Autonomous, since Eveil can't guess which one to post as. New projects start on Supervised. See [Posting to X and Bluesky](/product/social).
+Same two exceptions as LinkedIn still wait for you in Autonomous: a post that names a client (only the anonymous version goes out on its own), and any post on a project with more than one Bluesky account. New projects start on Supervised. See [Posting to X and Bluesky](/product/social).
 
 ## X
 

@@ -87,7 +87,7 @@ class RedditReplyController extends Controller
 
     /**
      * Keeps the row, with an optional reason - same "reject vs delete"
-     * distinction as `LinkedinPostController::reject()`.
+     * distinction as `SocialPostController::reject()`.
      */
     public function reject(RedditReplyRejectRequest $request, int $redditReply): RedirectResponse
     {
@@ -126,7 +126,7 @@ class RedditReplyController extends Controller
     /**
      * Project-scoped only: stamps `promoted_at` so this project's own
      * future drafts treat it as a proven example. Never touches the shared
-     * instance-wide pool - see `LinkedinPostController::promote()` for the
+     * instance-wide pool - see `SocialPostController::promote()` for the
      * same reasoning.
      */
     public function promote(int $redditReply): RedirectResponse

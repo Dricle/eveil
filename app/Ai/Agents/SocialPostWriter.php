@@ -14,10 +14,15 @@ use Laravel\Ai\Responses\StructuredAgentResponse;
 use Stringable;
 
 /**
- * Drafts one short post per call for X or Bluesky, picking its own topic
+ * Drafts one post per call for LinkedIn, X or Bluesky, picking its own topic
  * from every signal the caller gathered: same editorial-judgment shape as
- * `LinkedinPostWriter` and `ArticleWriter`. One writer for both networks,
- * told which one it writes for: they differ in length limit, not in voice.
+ * `ArticleWriter`. One writer for every network, told which one it writes
+ * for: they differ in length and form (`style()`), and each has its own tone
+ * box (`EveilAgent::postInstructions()`).
+ *
+ * A client win is always written twice, naming the client and not: the user
+ * picks which goes out, and autonomous publishing only ever sends the
+ * anonymized one (`GenerateSocialPost::publishIfAutonomous()`).
  */
 class SocialPostWriter extends EveilAgent implements HasStructuredOutput
 {
@@ -48,9 +53,9 @@ class SocialPostWriter extends EveilAgent implements HasStructuredOutput
     public function instructions(): Stringable|string
     {
         return <<<PROMPT
-        You write one {$this->platform->label()} post for this product's own account.
-        It must read as something a person who runs this business actually typed,
-        not as an advert.
+        You write one {$this->platform->label()} post for this product, published under
+        the account of the person who runs it. It must read as something they
+        actually typed, not as an advert or content marketing.
 
         You are given several possible signals for what to write about. Pick
         exactly one:
@@ -58,8 +63,11 @@ class SocialPostWriter extends EveilAgent implements HasStructuredOutput
         - A USER BRIEF, when one is given: that is the topic, full stop. Use
           every concrete detail it gives. source_type manual.
         - A pending CLIENT WIN (a company that just started working with this
-          business). Never name the client: say the sector and the shape of the
-          work instead. source_type client_won.
+          business). Usually the strongest post: real, specific, concrete. Write
+          TWO full versions in body_named and body_anonymized, leave body empty,
+          source_type client_won. Do not soften the anonymized one into something
+          generic: "just onboarded a new client in logistics" still names the
+          sector and the shape of the work, only not the company.
         - One of this product's own ARTICLES, just published. Give the reader a
           reason to click, not a summary, and include the article's URL.
           source_type article.
@@ -70,18 +78,21 @@ class SocialPostWriter extends EveilAgent implements HasStructuredOutput
           not covered by the recent posts you are shown. The fallback when
           nothing above is strong enough. source_type knowledge_base.
 
-        Never invent a topic that traces to nothing you were given. Do not repeat
-        the angle of any post shown to you as already published.
+        Never invent a topic that traces to nothing you were given: no generic
+        "5 tips for founders" at any point. Do not repeat the angle of any post
+        shown to you as already published.
 
-        Include the product's URL, or the article's URL for an article post, in the
-        post: a reader who is interested must be one click from the product.
+        Include the product's URL, or the article's URL for an article post: a
+        reader who is interested must be one click from the product.
 
-        Hard limit: {$this->platform->maxLength()} characters, including the URL
-        (on X any URL counts as 23). Aim well under it. Plain text, no markdown,
-        at most one or two hashtags and only when they add something. Write in
-        the language given as the site language. No dash punctuation: no em dash,
-        en dash, or hyphen standing in for one.
-        PROMPT.$this->socialInstructions();
+        Weave in a seasonal or calendar angle from today's date ONLY when it is
+        genuinely apt for this business, never forced ("Happy Monday!").
+
+        {$this->style()}
+
+        Write in the language given as the site language. No dash punctuation: no
+        em dash, en dash, or hyphen standing in for one.
+        PROMPT.$this->postInstructions($this->platform);
     }
 
     /**
@@ -95,12 +106,17 @@ class SocialPostWriter extends EveilAgent implements HasStructuredOutput
                 ->required(),
 
             'evidence' => $schema->string()
-                ->description('What grounds this post: the sector for a win, the title and URL for news or an article, the specific fact for a knowledge base post. Never generic.')
+                ->description('What grounds this post: the client and sector for a win, the title and URL for news or an article, the specific fact for a knowledge base post. Never generic.')
                 ->required(),
 
             'body' => $schema->string()
-                ->description('The post text, URL included.')
-                ->required(),
+                ->description('The post text, URL included. Leave empty for client_won.'),
+
+            'body_named' => $schema->string()
+                ->description('The post text naming the client, for client_won only. Leave empty otherwise.'),
+
+            'body_anonymized' => $schema->string()
+                ->description('The post text without naming the client, for client_won only. Leave empty otherwise.'),
         ];
     }
 
@@ -110,6 +126,18 @@ class SocialPostWriter extends EveilAgent implements HasStructuredOutput
         $response = $this->prompt($this->buildPrompt());
 
         return $response;
+    }
+
+    /**
+     * What differs between networks: length and form, not voice.
+     */
+    private function style(): string
+    {
+        return match ($this->platform) {
+            SocialPlatform::Linkedin => 'LinkedIn style: short paragraphs, plain text, no markdown, at most two or three hashtags and only if they add something. Up to 3000 characters, but most good posts are far shorter.',
+            SocialPlatform::X => 'Hard limit: 280 characters, and any URL counts as 23 of them. Aim well under it. Plain text, at most one or two hashtags and only when they add something.',
+            SocialPlatform::Bluesky => 'Hard limit: 300 characters, URL included. Aim well under it. Plain text, at most one or two hashtags and only when they add something.',
+        };
     }
 
     private function buildPrompt(): string
@@ -125,7 +153,7 @@ class SocialPostWriter extends EveilAgent implements HasStructuredOutput
         }
 
         if ($this->clientWon !== null) {
-            $sections[] = "## Pending client win\n\nSector: {$this->clientWon->industry}\nLocation: {$this->clientWon->location}";
+            $sections[] = "## Pending client win\n\nCompany: {$this->clientWon->name}\nSector: {$this->clientWon->industry}\nLocation: {$this->clientWon->location}";
         }
 
         if ($this->article !== null) {

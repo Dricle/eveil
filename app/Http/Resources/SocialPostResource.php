@@ -20,6 +20,7 @@ class SocialPostResource extends JsonResource
             'id' => $this->id,
             'platform' => $this->platform->value,
             'source_type' => $this->source_type->value,
+            'variant' => $this->variant?->value,
             'evidence' => $this->evidence,
             'body' => $this->body,
             'status' => $this->status->value,
@@ -27,6 +28,7 @@ class SocialPostResource extends JsonResource
             'social_account' => $this->whenLoaded('socialAccount', fn () => $this->socialAccount === null ? null : [
                 'id' => $this->socialAccount->id,
                 'handle' => $this->socialAccount->handle,
+                'display_name' => $this->socialAccount->display_name,
             ]),
             'url' => $this->url,
             'published_at' => $this->published_at?->toIso8601String(),

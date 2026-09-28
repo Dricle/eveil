@@ -77,7 +77,7 @@ class ArticleController extends Controller
 
     /**
      * Keeps the row, with an optional reason the writer reads next time -
-     * same "reject vs delete" distinction as `LinkedinPostController`.
+     * same "reject vs delete" distinction as `SocialPostController`.
      */
     public function reject(ArticleRejectRequest $request, int $article): RedirectResponse
     {

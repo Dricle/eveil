@@ -6,8 +6,9 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Which projects a connected Bluesky account is granted to. Same shape as
- * `LinkedinAccountRequest`: an empty list is legitimate.
+ * Which projects a connected LinkedIn or Bluesky account is granted to. Same
+ * shape as `MailboxRequest`'s `projects` field: an empty list is legitimate
+ * and means the account exists but may not post for anything yet.
  */
 class SocialAccountProjectsRequest extends FormRequest
 {

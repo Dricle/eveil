@@ -11,13 +11,13 @@ use App\Models\SocialAccount;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Which projects are due a new X or Bluesky post right now, one cadence per
- * network. Called by `eveil:social-generate-due`, same shape as
- * `GenerateDueLinkedinPosts`: each due project and network becomes one
- * queued job.
+ * Which projects are due a new post right now, one cadence per network.
+ * Called by `eveil:social-generate-due`: nothing here writes a post itself,
+ * each due project and network becomes one queued job, so a slow model call
+ * costs one post and never the batch.
  *
- * Bluesky needs a working account granted to the project, like LinkedIn. X
- * needs nothing: the user posts it by hand.
+ * LinkedIn and Bluesky need a working account granted to the project. X needs
+ * nothing: the user posts it by hand.
  */
 class GenerateDueSocialPosts
 {

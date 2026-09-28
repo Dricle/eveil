@@ -12,7 +12,7 @@ use Illuminate\Support\Carbon;
 
 /**
  * A Reddit reply worth learning from, fed back into `RedditReplyWriter` for
- * every project. Copy of `LinkedinPostExample` - shared instance-wide on
+ * every project. Copy of `SocialPostExample` - shared instance-wide on
  * purpose, fed by exactly two trusted sources: a superadmin typing one in,
  * or `FetchRedditReplyStats` crossing a real, externally-measured score.
  *

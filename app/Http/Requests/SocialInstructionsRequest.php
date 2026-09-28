@@ -12,7 +12,7 @@ class SocialInstructionsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'social_prompt_instructions' => ['nullable', 'string', 'max:2000'],
+            'instructions' => ['nullable', 'string', 'max:2000'],
         ];
     }
 }

@@ -2,17 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\SocialPlatform;
 use App\Support\CurrentProject;
 use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Every writing-tone box together: emails (`EmailInstructionsController`),
- * LinkedIn posts (`LinkedinInstructionsController`) and X/Bluesky posts
- * (`SocialInstructionsController`). Read-only here -
- * each box saves through its own small controller, same reasoning as
- * splitting them in `EveilAgent` (`.ai/rules/ai.md`): two different agents
- * read them, so two different forms write them.
+ * Every writing-tone box together: emails (`EmailInstructionsController`)
+ * and one per social network (`SocialInstructionsController`). Read-only
+ * here - each box saves through its own route, same reasoning as splitting
+ * them in `EveilAgent` (`.ai/rules/ai.md`): a different agent, or a
+ * different network, reads each one.
  */
 class AiInstructionsController extends Controller
 {
@@ -22,8 +22,8 @@ class AiInstructionsController extends Controller
 
         return Inertia::render('settings/AiInstructions', [
             'promptInstructions' => $project->prompt_instructions,
-            'linkedinPromptInstructions' => $project->linkedin_prompt_instructions,
-            'socialPromptInstructions' => $project->social_prompt_instructions,
+            'postInstructions' => collect(SocialPlatform::cases())
+                ->mapWithKeys(fn (SocialPlatform $platform): array => [$platform->value => $project->getAttribute($platform->instructionsColumn())]),
         ]);
     }
 }

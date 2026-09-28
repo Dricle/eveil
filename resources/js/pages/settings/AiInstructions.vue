@@ -3,19 +3,27 @@ import { Form, Head, usePage } from '@inertiajs/vue3'
 import { ref, watch } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import SettingsLayout from '@/layouts/SettingsLayout.vue'
+import { PLATFORM_LABEL } from '@/lib/social'
 import emailInstructionsRoutes from '@/routes/settings/ai-instructions/emails'
-import linkedinInstructionsRoutes from '@/routes/settings/ai-instructions/linkedin'
-import socialInstructionsRoutes from '@/routes/settings/ai-instructions/social'
+import postInstructionsRoutes from '@/routes/settings/ai-instructions/posts'
+import type { SocialPlatform } from '@/types'
 
 defineOptions({ layout: [AppLayout, [SettingsLayout, { title: 'AI instructions' }]] })
 
 const props = defineProps<{
     promptInstructions: string | null
-    linkedinPromptInstructions: string | null
-    socialPromptInstructions: string | null
+    postInstructions: Record<SocialPlatform, string | null>
 }>()
 
 const page = usePage()
+
+const PLATFORMS: SocialPlatform[] = ['linkedin', 'x', 'bluesky']
+
+const EXAMPLES: Record<SocialPlatform, string> = {
+    linkedin: 'E.g. more casual, first person, short punchy lines.',
+    x: 'E.g. playful, no hashtags, always end with a question.',
+    bluesky: 'E.g. conversational, no hashtags, one emoji at most.'
+}
 
 // Local drafts synced from the props, not `default-value`: Nuxt UI's textarea
 // reads that once and every re-render (this page's own redirect after
@@ -23,11 +31,10 @@ const page = usePage()
 const emailInstructions = ref(props.promptInstructions ?? '')
 watch(() => props.promptInstructions, value => emailInstructions.value = value ?? '', { immediate: true })
 
-const linkedinInstructions = ref(props.linkedinPromptInstructions ?? '')
-watch(() => props.linkedinPromptInstructions, value => linkedinInstructions.value = value ?? '', { immediate: true })
-
-const socialInstructions = ref(props.socialPromptInstructions ?? '')
-watch(() => props.socialPromptInstructions, value => socialInstructions.value = value ?? '', { immediate: true })
+const postDrafts = ref<Record<SocialPlatform, string>>({ linkedin: '', x: '', bluesky: '' })
+watch(() => props.postInstructions, (value) => {
+    postDrafts.value = { linkedin: value.linkedin ?? '', x: value.x ?? '', bluesky: value.bluesky ?? '' }
+}, { immediate: true, deep: true })
 </script>
 
 <template>
@@ -77,74 +84,33 @@ watch(() => props.socialPromptInstructions, value => socialInstructions.value = 
             </Form>
         </UCard>
 
-        <UCard>
+        <UCard
+            v-for="platform in PLATFORMS"
+            :key="platform"
+        >
             <template #header>
                 <h2 class="font-medium">
-                    How LinkedIn posts are written
+                    How {{ PLATFORM_LABEL[platform] }} posts are written
                 </h2>
                 <p class="mt-1 text-sm text-muted">
-                    Independent of the emails box above: a public feed post is a
-                    different kind of writing, with its own audience, so it does not
-                    default to the email tone. E.g. more casual, first person, short
-                    punchy lines.
+                    Independent of the emails box and of the other networks: a public
+                    post is a different kind of writing, with its own audience.
+                    {{ EXAMPLES[platform] }}
                 </p>
             </template>
 
             <Form
                 v-slot="{ errors, processing, recentlySuccessful }"
-                v-bind="linkedinInstructionsRoutes.update.form({ project: page.props.currentProject!.slug })"
+                v-bind="postInstructionsRoutes.update.form({ project: page.props.currentProject!.slug, platform })"
                 class="space-y-4"
             >
                 <UFormField
-                    name="linkedin_prompt_instructions"
-                    :error="errors.linkedin_prompt_instructions"
+                    name="instructions"
+                    :error="errors.instructions"
                 >
                     <UTextarea
-                        v-model="linkedinInstructions"
-                        name="linkedin_prompt_instructions"
-                        :rows="5"
-                        :maxlength="2000"
-                        class="w-full"
-                    />
-                </UFormField>
-
-                <div class="flex items-center gap-3">
-                    <UButton
-                        type="submit"
-                        :loading="processing"
-                        label="Save"
-                    />
-                    <span
-                        v-if="recentlySuccessful"
-                        class="text-sm text-muted"
-                    >Saved.</span>
-                </div>
-            </Form>
-        </UCard>
-
-        <UCard>
-            <template #header>
-                <h2 class="font-medium">
-                    How X and Bluesky posts are written
-                </h2>
-                <p class="mt-1 text-sm text-muted">
-                    One box for both networks, independent of the two above. E.g.
-                    playful, no hashtags, always end with a question.
-                </p>
-            </template>
-
-            <Form
-                v-slot="{ errors, processing, recentlySuccessful }"
-                v-bind="socialInstructionsRoutes.update.form({ project: page.props.currentProject!.slug })"
-                class="space-y-4"
-            >
-                <UFormField
-                    name="social_prompt_instructions"
-                    :error="errors.social_prompt_instructions"
-                >
-                    <UTextarea
-                        v-model="socialInstructions"
-                        name="social_prompt_instructions"
+                        v-model="postDrafts[platform]"
+                        name="instructions"
                         :rows="5"
                         :maxlength="2000"
                         class="w-full"

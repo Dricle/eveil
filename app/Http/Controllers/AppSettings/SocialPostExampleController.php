@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\AppSettings;
 
+use App\Enums\SocialPlatform;
 use App\Enums\SocialPostExampleSource;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AppSettings\SocialPostExampleRequest;
@@ -13,9 +14,10 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * The shared banks of proven X and Bluesky posts, one per network, and the
- * like count a Bluesky post has to reach to join its bank on its own (see
- * `FetchSocialPostStats`). Mirrors `LinkedinPostExampleController`.
+ * The shared banks of proven posts, one per network, and the like count a
+ * post has to reach to join its bank on its own (see `FetchSocialPostStats`,
+ * the thing that actually promotes one). This screen only manages the banks
+ * and their thresholds, never promotes anything itself.
  */
 class SocialPostExampleController extends Controller
 {
@@ -27,9 +29,10 @@ class SocialPostExampleController extends Controller
             'examples' => SocialPostExampleResource::collection(
                 SocialPostExample::query()->with('addedBy')->latest('id')->get()
             ),
-            'threshold' => [
-                'min_likes' => $this->settings->int('social_examples.min_likes'),
-            ],
+            // Per network that reads its numbers; X has none.
+            'thresholds' => collect(SocialPlatform::cases())
+                ->filter(fn (SocialPlatform $platform): bool => $platform->minLikesSetting() !== null)
+                ->mapWithKeys(fn (SocialPlatform $platform): array => [$platform->value => $this->settings->int((string) $platform->minLikesSetting())]),
         ]);
     }
 

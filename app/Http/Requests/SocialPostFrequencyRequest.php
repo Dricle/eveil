@@ -14,8 +14,7 @@ class SocialPostFrequencyRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'x_post_frequency' => ['required', Rule::enum(SocialPostFrequency::class)],
-            'bluesky_post_frequency' => ['required', Rule::enum(SocialPostFrequency::class)],
+            'frequency' => ['required', Rule::enum(SocialPostFrequency::class)],
         ];
     }
 }

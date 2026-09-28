@@ -56,24 +56,6 @@ it('keeps a draft for the network it was asked for, and emails about it', functi
     Notification::assertSentTo($owner, SocialPostDrafted::class);
 });
 
-it('points a client win at the company and never proposes it twice on that network', function () {
-    $project = Project::factory()->create();
-    $company = Company::factory()->create(['project_id' => $project->id, 'status' => OutreachStatus::Won, 'name' => 'Acme Corp']);
-    fakeSocialWriter(['source_type' => 'client_won', 'evidence' => 'A new client.', 'body' => 'New client in logistics.']);
-
-    GenerateSocialPost::dispatchSync($project, SocialPlatform::Bluesky);
-
-    expect(SocialPost::sole()->source_ref)->toBe((string) $company->id)
-        // Never named: a client win goes out anonymized on these networks.
-        ->and(AgentRun::sole()->input['prompt'])->not->toContain('Acme Corp');
-
-    fakeSocialWriter(['source_type' => 'knowledge_base', 'evidence' => 'e', 'body' => 'A fact.']);
-
-    GenerateSocialPost::dispatchSync($project, SocialPlatform::Bluesky);
-
-    expect(AgentRun::query()->latest('id')->first()->input['prompt'])->not->toContain('Pending client win');
-});
-
 it('offers a freshly published article not shared on that network yet', function () {
     $project = Project::factory()->create();
     $article = Article::factory()->create([

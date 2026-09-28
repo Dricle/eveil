@@ -63,7 +63,7 @@ const BLUESKY = [
     {
         value: 'autonomous',
         label: 'Autonomous',
-        description: 'Posts are published as soon as they are written. A project with several Bluesky accounts still waits for you.'
+        description: 'Posts are published as soon as they are written. A post naming a client, or a project with several Bluesky accounts, still waits for you.'
     }
 ]
 

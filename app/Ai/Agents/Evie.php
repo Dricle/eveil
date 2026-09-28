@@ -13,7 +13,6 @@ use App\Ai\Tools\DeleteLeadNote;
 use App\Ai\Tools\DeleteTargetProfile;
 use App\Ai\Tools\DismissArticleIdea;
 use App\Ai\Tools\DraftArticle;
-use App\Ai\Tools\DraftLinkedinPost;
 use App\Ai\Tools\DraftSocialPost;
 use App\Ai\Tools\Evie\ProposeSuggestedReplies;
 use App\Ai\Tools\FindNewTargetProfiles;
@@ -28,7 +27,6 @@ use App\Ai\Tools\ListArticleIdeas;
 use App\Ai\Tools\ListArticles;
 use App\Ai\Tools\ListCampaigns;
 use App\Ai\Tools\ListCompanies;
-use App\Ai\Tools\ListLinkedinPosts;
 use App\Ai\Tools\ListSocialPosts;
 use App\Ai\Tools\ListTargetProfiles;
 use App\Ai\Tools\ProposeRecommendation;
@@ -36,11 +34,11 @@ use App\Ai\Tools\RefreshAcquisitionIdeas;
 use App\Ai\Tools\StartDiscovery;
 use App\Ai\Tools\UpdateArticle;
 use App\Ai\Tools\UpdateKnowledgeBase;
-use App\Ai\Tools\UpdateLinkedinPost;
 use App\Ai\Tools\UpdateRecommendation;
 use App\Ai\Tools\UpdateSequence;
 use App\Ai\Tools\UpdateSocialPost;
 use App\Ai\Tools\UpdateTargetProfile;
+use App\Enums\SocialPlatform;
 use Laravel\Ai\Attributes\MaxSteps;
 use Laravel\Ai\Concerns\RemembersConversations;
 use Laravel\Ai\Contracts\HasTools;
@@ -73,8 +71,7 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
         Look things up before you act: ListTargetProfiles, ListCompanies,
         GetCompany, GetContact, ListCampaigns, GetCampaign,
         GetDiscoveryRunStatus, GetKnowledgeBase, GetTargetProfile,
-        ListLinkedinPosts, ListSocialPosts, ListArticles, GetArticle and
-        ListArticleIdeas cost nothing and answer most questions on their own.
+        ListSocialPosts, ListArticles, GetArticle and ListArticleIdeas cost nothing and answer most questions on their own.
 
         ListCampaigns only gives you the shape (id, name, status, step
         count) - when the user wants to discuss, review, or rewrite a
@@ -190,38 +187,31 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
         anything real happens: that is expected, not an error, and you do not
         need to ask for permission again in prose first.
 
-        DraftLinkedinPost writes a NEW post to the LinkedIn posts queue for the user
-        to review and publish themselves - it never posts anything on its own.
-        Use it when the user tells you something worth posting about ("we just
-        shipped X, write a post about it"). Needs no approval before calling it,
-        same reasoning as AddLeadNote: nothing is spawned and nothing is
-        published, only drafted.
+        DraftSocialPost queues a NEW LinkedIn, X or Bluesky post, one network per
+        call, written in the background by the post writer from the brief you
+        pass: never write the post yourself in the chat. Use it when the user
+        tells you something worth posting about ("we just shipped X, write a post
+        about it"). It never publishes: the user reviews it in that network's
+        queue. Needs no approval before calling it, same reasoning as
+        AddLeadNote: nothing is published, only drafted.
 
         Before drafting, consider whether the user is actually asking to CHANGE
-        something already in the queue ("update the post about the pricing
+        something already in a queue ("update the post about the pricing
         change", "make that LinkedIn draft shorter") rather than write a new
-        one. Call ListLinkedinPosts first whenever that is ambiguous: drafting
+        one. Call ListSocialPosts first whenever that is ambiguous: drafting
         again for something that already exists creates a duplicate the user
         then has to notice and reject by hand. Found the right one? Use
-        UpdateLinkedinPost, not DraftLinkedinPost. UpdateLinkedinPost only
-        works on a draft still awaiting approval - once approved, rejected or
-        published it refuses, since the queue's own edit option is gone by
-        then too.
-
-        DraftSocialPost queues a NEW X or Bluesky post, one network per call,
-        written in the background by the social post writer from the brief you
-        pass: never write the post yourself in the chat. Same rule as LinkedIn:
-        check ListSocialPosts first, and use UpdateSocialPost to change a draft
-        that already exists rather than drafting it twice. Bluesky drafts are
-        published from the queue; X drafts are posted by the user by hand.
+        UpdateSocialPost, not DraftSocialPost. UpdateSocialPost only works on a
+        draft still awaiting approval - once published or rejected it refuses,
+        since the queue's own edit option is gone by then too.
 
         DraftArticle queues a NEW SEO article for the project's blog, written in
         the background by the article writer from the brief you pass: never
         write the article yourself in the chat. When the user announces
         something worth writing about ("we just shipped X", "we signed Y"),
-        offer both: a LinkedIn post (DraftLinkedinPost) and an article
-        (DraftArticle). Like LinkedIn, check ListArticles first when the user
-        may mean an article that already exists.
+        offer both: a post (DraftSocialPost) and an article (DraftArticle). Like
+        posts, check ListArticles first when the user may mean an article that
+        already exists.
 
         ListArticleIdeas lists the Reddit discussions the scan noted as worth an
         article. When the user wants one written, pass its idea_id to
@@ -238,7 +228,7 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
         there is nothing obvious to suggest.
 
         Be direct and brief: this is a chat, not a report.
-        PROMPT.$this->documentation().$this->emailPreferencesForReference().$this->linkedinPreferencesForReference();
+        PROMPT.$this->documentation().$this->emailPreferencesForReference().$this->postPreferencesForReference();
     }
 
     /**
@@ -297,30 +287,34 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
     }
 
     /**
-     * Same reasoning as `emailPreferencesForReference()` above, for the
-     * separate LinkedIn tone box (`EveilAgent::linkedinInstructions()`,
-     * `LinkedinPostWriter`'s own): Evie drafts and updates LinkedIn posts
-     * through `DraftLinkedinPost`/`UpdateLinkedinPost`, so she should know
-     * what tone the user asked for there too, without it governing how she
-     * talks in this conversation.
+     * Same reasoning as `emailPreferencesForReference()` above, for each
+     * network's own tone box (`EveilAgent::postInstructions()`, what
+     * `SocialPostWriter` follows): the user may ask Evie about it, without it
+     * governing how she talks in this conversation.
      */
-    private function linkedinPreferencesForReference(): string
+    private function postPreferencesForReference(): string
     {
-        $instructions = trim((string) $this->project->linkedin_prompt_instructions);
+        return collect(SocialPlatform::cases())
+            ->map(function (SocialPlatform $platform): string {
+                $instructions = trim((string) $this->project->getAttribute($platform->instructionsColumn()));
 
-        if ($instructions === '') {
-            return '';
-        }
+                if ($instructions === '') {
+                    return '';
+                }
 
-        return <<<PROMPT
+                $label = strtoupper($platform->label());
+
+                return <<<PROMPT
 
 
-            The user's own instructions for how this project's LINKEDIN POSTS are
-            written - for your own reference only, since the user may ask about it.
-            It governs LinkedIn drafting, not your own tone in this conversation:
+                    The user's own instructions for how this project's {$label} POSTS are
+                    written - for your own reference only, since the user may ask about it.
+                    It governs that network's drafting, not your own tone in this conversation:
 
-            {$instructions}
-            PROMPT;
+                    {$instructions}
+                    PROMPT;
+            })
+            ->implode('');
     }
 
     /**
@@ -355,9 +349,6 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
             new FindNewTargetProfiles($this->project),
             new CreateSequence($this->project),
             new UpdateSequence($this->project),
-            new DraftLinkedinPost($this->project),
-            new ListLinkedinPosts($this->project),
-            new UpdateLinkedinPost($this->project),
             new DraftSocialPost($this->project),
             new ListSocialPosts($this->project),
             new UpdateSocialPost($this->project),

@@ -7,9 +7,9 @@ use App\Actions\WriteVariant;
 use App\Ai\Agents\CompanyQualifier;
 use App\Ai\Agents\ContactExtractor;
 use App\Ai\Agents\Evie;
-use App\Ai\Agents\LinkedinPostWriter;
 use App\Ai\Agents\MessagePersonalizer;
 use App\Ai\Agents\SequenceWriter;
+use App\Ai\Agents\SocialPostWriter;
 use App\Ai\Agents\TargetProfileDeriver;
 use App\Ai\Agents\VariantWriter;
 use App\Ai\Agents\WebsiteAnalyst;
@@ -19,6 +19,7 @@ use App\Enums\CampaignStatus;
 use App\Enums\CampaignStepType;
 use App\Enums\EmailStatus;
 use App\Enums\OutreachStatus;
+use App\Enums\SocialPlatform;
 use App\Enums\TargetProfileType;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Jobs\WriteCampaign;
@@ -754,9 +755,9 @@ it("appends the project's own EMAIL writing instructions to the agents that writ
         // themselves, and they expect it to win.
         ->and((string) (new MessagePersonalizer($project, $step, $lead, 'Subject', 'Body', null, ''))->instructions())
         ->toEndWith('Never use emoji.')
-        // The box never reaches a LinkedIn post, which has its own separate
-        // tone box entirely.
-        ->and((string) (new LinkedinPostWriter($project, null, collect(), collect(), collect(), collect(), ''))->instructions())
+        // The box never reaches a post, which has its own separate tone box
+        // per network entirely.
+        ->and((string) (new SocialPostWriter($project, SocialPlatform::Linkedin, null, collect(), null, collect(), collect(), collect(), ''))->instructions())
         ->not->toContain('Write in French. Never use emoji.');
 
     // Evie DOES see the box's content, since the user may ask her about it -

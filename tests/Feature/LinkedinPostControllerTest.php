@@ -1,16 +1,20 @@
 <?php
 
-use App\Enums\LinkedinPostStatus;
-use App\Enums\LinkedinPostVariant;
-use App\Models\LinkedinAccount;
-use App\Models\LinkedinPost;
-use App\Models\LinkedinPostExample;
+use App\Enums\SocialPostSourceType;
+use App\Enums\SocialPostStatus;
+use App\Enums\SocialPostVariant;
 use App\Models\Organization;
 use App\Models\Project;
+use App\Models\SocialAccount;
+use App\Models\SocialPost;
 use App\Models\User;
 use App\Support\CurrentProject;
 use Illuminate\Support\Facades\Http;
 
+/**
+ * LinkedIn's side of `SocialPostController`, and the client-win pairs every
+ * network now drafts.
+ */
 function linkedinSetup(): array
 {
     $user = User::factory()->create();
@@ -18,7 +22,7 @@ function linkedinSetup(): array
     $organization->users()->attach($user, ['role' => 'owner']);
     $project = Project::factory()->for($organization)->create();
 
-    $account = LinkedinAccount::factory()->create(['organization_id' => $organization->id]);
+    $account = SocialAccount::factory()->linkedin()->create(['organization_id' => $organization->id]);
     $account->projects()->attach($project);
 
     app(CurrentProject::class)->set($project);
@@ -26,147 +30,93 @@ function linkedinSetup(): array
     return [$user, $project, $account];
 }
 
+function clientWinPair(Project $project, string $platform = 'linkedin'): array
+{
+    return collect([SocialPostVariant::Named, SocialPostVariant::Anonymized])
+        ->map(fn (SocialPostVariant $variant): SocialPost => SocialPost::factory()->create([
+            'project_id' => $project->id,
+            'platform' => $platform,
+            'source_type' => SocialPostSourceType::ClientWon,
+            'source_ref' => '1',
+            'variant' => $variant,
+        ]))
+        ->all();
+}
+
 it('approves a draft, publishes it synchronously, and rejects its sibling with a reason', function () {
     [$user, $project, $account] = linkedinSetup();
     Http::fake(['api.linkedin.com/rest/posts' => Http::response('', 201, ['x-restli-id' => 'urn:li:share:1'])]);
-
-    $named = LinkedinPost::factory()->create([
-        'project_id' => $project->id,
-        'source_type' => 'client_won',
-        'source_ref' => '1',
-        'variant' => LinkedinPostVariant::Named,
-    ]);
-    $anonymized = LinkedinPost::factory()->create([
-        'project_id' => $project->id,
-        'source_type' => 'client_won',
-        'source_ref' => '1',
-        'variant' => LinkedinPostVariant::Anonymized,
-    ]);
+    [$named, $anonymized] = clientWinPair($project);
 
     $this->actingAs($user)
-        ->from(route('linkedin.posts.index'))->post(route('linkedin.posts.approve', $anonymized), ['linkedin_account_id' => $account->id])
-        ->assertRedirect(route('linkedin.posts.index'));
+        ->from(route('social.posts.index', 'linkedin'))->post(route('social.posts.approve', $anonymized), ['social_account_id' => $account->id])
+        ->assertRedirect(route('social.posts.index', 'linkedin'));
 
-    expect($anonymized->fresh()->status)->toBe(LinkedinPostStatus::Published)
-        ->and($anonymized->fresh()->urn)->toBe('urn:li:share:1')
-        ->and($anonymized->fresh()->linkedin_account_id)->toBe($account->id)
-        ->and($named->fresh()->status)->toBe(LinkedinPostStatus::Rejected)
-        ->and($named->fresh()->rejection_reason)->toBe('Superseded by the other variant.');
+    expect($anonymized->fresh())
+        ->status->toBe(SocialPostStatus::Published)
+        ->external_id->toBe('urn:li:share:1')
+        ->social_account_id->toBe($account->id)
+        ->and($named->fresh())
+        ->status->toBe(SocialPostStatus::Rejected)
+        ->rejection_reason->toBe('Superseded by the other variant.');
 });
 
 it('publishes to the chosen account, not just the first one attached', function () {
-    [$user, $project, $firstAccount] = linkedinSetup();
-    $secondAccount = LinkedinAccount::factory()->create(['organization_id' => $project->organization_id]);
-    $secondAccount->projects()->attach($project);
+    [$user, $project] = linkedinSetup();
+    $second = SocialAccount::factory()->linkedin()->create(['organization_id' => $project->organization_id]);
+    $second->projects()->attach($project);
     Http::fake(['api.linkedin.com/rest/posts' => Http::response('', 201, ['x-restli-id' => 'urn:li:share:2'])]);
 
-    $post = LinkedinPost::factory()->create(['project_id' => $project->id]);
+    $post = SocialPost::factory()->linkedin()->create(['project_id' => $project->id]);
 
-    $this->actingAs($user)
-        ->from(route('linkedin.posts.index'))->post(route('linkedin.posts.approve', $post), ['linkedin_account_id' => $secondAccount->id])
-        ->assertRedirect(route('linkedin.posts.index'));
+    $this->actingAs($user)->from(route('social.posts.index', 'linkedin'))
+        ->post(route('social.posts.approve', $post), ['social_account_id' => $second->id]);
 
-    expect($post->fresh()->linkedin_account_id)->toBe($secondAccount->id)
-        ->and($post->fresh()->linkedin_account_id)->not->toBe($firstAccount->id);
+    expect($post->fresh()->social_account_id)->toBe($second->id);
 });
 
-it('refuses to approve without a connected LinkedIn account', function () {
-    [$user, $project, $account] = linkedinSetup();
-    $project->linkedinAccounts()->detach();
-
-    $post = LinkedinPost::factory()->create(['project_id' => $project->id]);
-
-    $this->actingAs($user)->from(route('linkedin.posts.index'))->post(route('linkedin.posts.approve', $post), ['linkedin_account_id' => $account->id]);
-
-    expect($post->fresh()->status)->toBe(LinkedinPostStatus::Draft);
-});
-
-it('refuses to approve with an account not granted to this project', function () {
+it('refuses to publish a LinkedIn draft through another network\'s account', function () {
     [$user, $project] = linkedinSetup();
-    $otherAccount = LinkedinAccount::factory()->create();
+    $bluesky = SocialAccount::factory()->create(['organization_id' => $project->organization_id]);
+    $bluesky->projects()->attach($project);
+    Http::fake();
 
-    $post = LinkedinPost::factory()->create(['project_id' => $project->id]);
+    $post = SocialPost::factory()->linkedin()->create(['project_id' => $project->id]);
 
-    $this->actingAs($user)
-        ->from(route('linkedin.posts.index'))->post(route('linkedin.posts.approve', $post), ['linkedin_account_id' => $otherAccount->id])
-        ->assertSessionHasErrors('linkedin_account_id');
+    $this->actingAs($user)->post(route('social.posts.approve', $post), ['social_account_id' => $bluesky->id])->assertNotFound();
 
-    expect($post->fresh()->status)->toBe(LinkedinPostStatus::Draft);
+    expect($post->fresh()->status)->toBe(SocialPostStatus::Draft);
+    Http::assertNothingSent();
 });
 
 it('keeps a draft as draft with the error visible when publishing fails', function () {
     [$user, $project, $account] = linkedinSetup();
-    Http::fake(['api.linkedin.com/rest/posts' => Http::response('nope', 401)]);
+    Http::fake(['api.linkedin.com/rest/posts' => Http::response('nope', 422)]);
 
-    $post = LinkedinPost::factory()->create(['project_id' => $project->id]);
+    $post = SocialPost::factory()->linkedin()->create(['project_id' => $project->id]);
 
-    $this->actingAs($user)->from(route('linkedin.posts.index'))->post(route('linkedin.posts.approve', $post), ['linkedin_account_id' => $account->id]);
+    $this->actingAs($user)->from(route('social.posts.index', 'linkedin'))
+        ->post(route('social.posts.approve', $post), ['social_account_id' => $account->id]);
 
-    expect($post->fresh()->status)->toBe(LinkedinPostStatus::Draft)
-        ->and($post->fresh()->last_error)->not->toBeNull();
+    expect($post->fresh())
+        ->status->toBe(SocialPostStatus::Draft)
+        ->last_error->toContain('LinkedIn refused the post');
 });
 
-it('rejects a draft with an optional reason, keeping the row', function () {
+it('rejects the other side of a pair when an X post is marked posted', function () {
     [$user, $project] = linkedinSetup();
-    $post = LinkedinPost::factory()->create(['project_id' => $project->id]);
+    [$named, $anonymized] = clientWinPair($project, 'x');
 
-    $this->actingAs($user)
-        ->from(route('linkedin.posts.index'))->post(route('linkedin.posts.reject', $post), ['reason' => 'Too many emojis.'])
-        ->assertRedirect(route('linkedin.posts.index'));
+    $this->actingAs($user)->from(route('social.posts.index', 'x'))
+        ->post(route('social.posts.publish', $named), ['url' => 'https://x.com/acme/status/42']);
 
-    expect($post->fresh()->status)->toBe(LinkedinPostStatus::Rejected)
-        ->and($post->fresh()->rejection_reason)->toBe('Too many emojis.');
+    expect($named->fresh()->status)->toBe(SocialPostStatus::Published)
+        ->and($anonymized->fresh()->status)->toBe(SocialPostStatus::Rejected);
 });
 
-it('rejects a draft with no reason given', function () {
-    [$user, $project] = linkedinSetup();
-    $post = LinkedinPost::factory()->create(['project_id' => $project->id]);
+it('redirects the old LinkedIn queue address to the new one', function () {
+    [$user] = linkedinSetup();
 
-    $this->actingAs($user)->from(route('linkedin.posts.index'))->post(route('linkedin.posts.reject', $post));
-
-    expect($post->fresh()->status)->toBe(LinkedinPostStatus::Rejected)
-        ->and($post->fresh()->rejection_reason)->toBeNull();
-});
-
-it('deletes a draft entirely, unlike reject', function () {
-    [$user, $project] = linkedinSetup();
-    $post = LinkedinPost::factory()->create(['project_id' => $project->id]);
-
-    $this->actingAs($user)->from(route('linkedin.posts.index'))->delete(route('linkedin.posts.destroy', $post));
-
-    expect(LinkedinPost::find($post->id))->toBeNull();
-});
-
-it('marks a published post as promoted, project-scoped only', function () {
-    [$user, $project] = linkedinSetup();
-    $post = LinkedinPost::factory()->create([
-        'project_id' => $project->id,
-        'status' => LinkedinPostStatus::Published,
-    ]);
-
-    $this->actingAs($user)->from(route('linkedin.posts.index'))->post(route('linkedin.posts.promote', $post));
-
-    expect($post->fresh()->promoted_at)->not->toBeNull()
-        ->and(LinkedinPostExample::count())->toBe(0);
-});
-
-it('refuses to promote a post that has not published yet', function () {
-    [$user, $project] = linkedinSetup();
-    $post = LinkedinPost::factory()->create(['project_id' => $project->id, 'status' => LinkedinPostStatus::Draft]);
-
-    $this->actingAs($user)->from(route('linkedin.posts.index'))->post(route('linkedin.posts.promote', $post));
-
-    expect($post->fresh()->promoted_at)->toBeNull();
-});
-
-it('cannot reach another project draft by id', function () {
-    [$user, , $account] = linkedinSetup();
-    // Explicit project via `for()`, not the factory default: `CurrentProject`
-    // is already set by `linkedinSetup()`, and `BelongsToProject` would
-    // otherwise silently stamp this row into MY project too.
-    $theirs = LinkedinPost::factory()->for(Project::factory())->create();
-
-    $this->actingAs($user)
-        ->from(route('linkedin.posts.index'))->post(route('linkedin.posts.approve', $theirs), ['linkedin_account_id' => $account->id])
-        ->assertNotFound();
+    $this->actingAs($user)->get('/app/'.app(CurrentProject::class)->getOrFail()->slug.'/linkedin/posts')
+        ->assertRedirect(route('social.posts.index', 'linkedin'));
 });

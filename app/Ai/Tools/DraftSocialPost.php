@@ -11,7 +11,7 @@ use Laravel\Ai\Tools\Request;
 use Stringable;
 
 /**
- * Queues a new X or Bluesky post about what the user just told Evie ("we
+ * Queues a new LinkedIn, X or Bluesky post about what the user just told Evie ("we
  * just shipped X"). Evie writes the brief, not the post: `SocialPostWriter`
  * writes every one, so a post from chat follows the same tone box, examples
  * bank and length limit as one from the cadence. Same shape as
@@ -24,12 +24,12 @@ class DraftSocialPost implements Tool
     public function description(): Stringable|string
     {
         return <<<'TEXT'
-        Queues a new X or Bluesky post about what the user just told you - a
+        Queues a new LinkedIn, X or Bluesky post about what the user just told you - a
         feature that shipped, news worth sharing. Pass the network and a brief:
         what the post is about and every concrete detail the user gave. It is
-        written in the background and lands in the X & Bluesky queue as a draft
+        written in the background and lands in that network's queue as a draft
         within a minute or two; it is never published on its own. Call it once per
-        network when the user wants both.
+        network when the user wants several.
         TEXT;
     }
 
@@ -38,7 +38,7 @@ class DraftSocialPost implements Tool
         $platform = SocialPlatform::tryFrom($request->string('platform')->value());
 
         if ($platform === null) {
-            return 'platform must be x or bluesky.';
+            return 'platform must be linkedin, x or bluesky.';
         }
 
         $brief = trim($request->string('brief')->value());
@@ -49,7 +49,7 @@ class DraftSocialPost implements Tool
 
         GenerateSocialPost::dispatch($this->project, $platform, $brief);
 
-        return "The {$platform->label()} post is being written. It will appear as a draft in the X & Bluesky queue shortly.";
+        return "The {$platform->label()} post is being written. It will appear as a draft in its queue shortly.";
     }
 
     /**
@@ -58,7 +58,7 @@ class DraftSocialPost implements Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'platform' => $schema->string()->enum(['x', 'bluesky'])->description('Which network the post is for.')->required(),
+            'platform' => $schema->string()->enum(array_column(SocialPlatform::cases(), 'value'))->description('Which network the post is for.')->required(),
             'brief' => $schema->string()
                 ->description('What the post is about, with every concrete detail the user gave: the feature, who it is for, any link.')
                 ->required(),

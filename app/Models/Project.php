@@ -5,7 +5,6 @@ namespace App\Models;
 use App\Casts\EncryptedCredential;
 use App\Enums\ArticleFrequency;
 use App\Enums\AutonomyLevel;
-use App\Enums\LinkedinPostFrequency;
 use App\Enums\OrganizationRole;
 use App\Enums\RecommendationStatus;
 use App\Enums\RedditScanFrequency;
@@ -43,7 +42,7 @@ use Illuminate\Support\Collection;
  * @property AutonomyLevel $linkedin_autonomy_level
  * @property int|null $daily_lead_limit
  * @property int|null $lead_limit
- * @property LinkedinPostFrequency $linkedin_post_frequency
+ * @property SocialPostFrequency $linkedin_post_frequency
  * @property Carbon|null $linkedin_next_post_at
  * @property RedditScanFrequency $reddit_scan_frequency
  * @property Carbon|null $reddit_next_scan_at
@@ -54,11 +53,12 @@ use Illuminate\Support\Collection;
  * @property SocialPostFrequency $bluesky_post_frequency
  * @property Carbon|null $bluesky_next_post_at
  * @property AutonomyLevel $bluesky_autonomy_level
- * @property string|null $social_prompt_instructions
+ * @property string|null $x_prompt_instructions
+ * @property string|null $bluesky_prompt_instructions
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['organization_id', 'name', 'slug', 'url', 'github_token', 'knowledge_base', 'knowledge_base_edited_by_user', 'default_language', 'prompt_instructions', 'linkedin_prompt_instructions', 'email_autonomy_level', 'linkedin_autonomy_level', 'daily_lead_limit', 'lead_limit', 'linkedin_post_frequency', 'linkedin_next_post_at', 'reddit_scan_frequency', 'reddit_next_scan_at', 'article_frequency', 'article_next_at', 'x_post_frequency', 'x_next_post_at', 'bluesky_post_frequency', 'bluesky_next_post_at', 'bluesky_autonomy_level', 'social_prompt_instructions'])]
+#[Fillable(['organization_id', 'name', 'slug', 'url', 'github_token', 'knowledge_base', 'knowledge_base_edited_by_user', 'default_language', 'prompt_instructions', 'linkedin_prompt_instructions', 'email_autonomy_level', 'linkedin_autonomy_level', 'daily_lead_limit', 'lead_limit', 'linkedin_post_frequency', 'linkedin_next_post_at', 'reddit_scan_frequency', 'reddit_next_scan_at', 'article_frequency', 'article_next_at', 'x_post_frequency', 'x_next_post_at', 'bluesky_post_frequency', 'bluesky_next_post_at', 'bluesky_autonomy_level', 'x_prompt_instructions', 'bluesky_prompt_instructions'])]
 #[Hidden(['github_token'])]
 class Project extends Model
 {
@@ -234,27 +234,9 @@ class Project extends Model
     }
 
     /**
-     * LinkedIn accounts this project may draft/post through. Owned by the
-     * organization and granted here, same reasoning as `emailAccounts()`.
-     *
-     * @return BelongsToMany<LinkedinAccount, $this>
-     */
-    public function linkedinAccounts(): BelongsToMany
-    {
-        return $this->belongsToMany(LinkedinAccount::class)->withTimestamps();
-    }
-
-    /**
-     * @return HasMany<LinkedinPost, $this>
-     */
-    public function linkedinPosts(): HasMany
-    {
-        return $this->hasMany(LinkedinPost::class);
-    }
-
-    /**
-     * Bluesky accounts this project may post through. Owned by the
-     * organization and granted here, same reasoning as `linkedinAccounts()`.
+     * The LinkedIn and Bluesky accounts this project may post through. Owned
+     * by the organization and granted here, same reasoning as
+     * `emailAccounts()`.
      *
      * @return BelongsToMany<SocialAccount, $this>
      */
@@ -454,7 +436,7 @@ class Project extends Model
             'email_autonomy_level' => AutonomyLevel::class,
             'linkedin_autonomy_level' => AutonomyLevel::class,
             'github_token' => EncryptedCredential::class,
-            'linkedin_post_frequency' => LinkedinPostFrequency::class,
+            'linkedin_post_frequency' => SocialPostFrequency::class,
             'linkedin_next_post_at' => 'datetime',
             'reddit_scan_frequency' => RedditScanFrequency::class,
             'reddit_next_scan_at' => 'datetime',

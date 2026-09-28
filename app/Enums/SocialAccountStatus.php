@@ -3,11 +3,13 @@
 namespace App\Enums;
 
 /**
- * `Error` is set when Bluesky refuses the stored app password: the user
- * revoked it, or the handle moved. Reconnecting replaces it.
+ * `Expired`: a LinkedIn token that could not be refreshed. `Error`: the
+ * network refused the stored credential outright (a revoked Bluesky app
+ * password, a moved handle). Either way, reconnecting fixes it.
  */
 enum SocialAccountStatus: string
 {
     case Active = 'active';
+    case Expired = 'expired';
     case Error = 'error';
 }

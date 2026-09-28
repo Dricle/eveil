@@ -11,8 +11,8 @@ use Throwable;
 
 /**
  * Publishes a post through its network's driver, synchronously: a couple of
- * HTTP calls, not worth a queue. Same failure rule as `PublishLinkedinPost`:
- * the row stays `Draft` with `last_error` set, so the same Approve button is
+ * HTTP calls, not worth a queue. A failure leaves the row `Draft` with
+ * `last_error` set, never a status of its own, so the same Approve button is
  * the retry. A driver that does not publish (X, posted by hand, see
  * `MarkSocialPostPublished`) leaves the draft untouched.
  */

@@ -1,18 +1,21 @@
 import type { SocialPlatform } from '@/types'
 
 export const PLATFORM_LABEL: Record<SocialPlatform, string> = {
+    linkedin: 'LinkedIn',
     x: 'X',
     bluesky: 'Bluesky'
 }
 
 export const PLATFORM_LIMIT: Record<SocialPlatform, number> = {
+    linkedin: 3000,
     x: 280,
     bluesky: 300
 }
 
 /**
  * The length each network itself counts. X counts characters with any URL
- * as 23; Bluesky counts graphemes, so an emoji is one.
+ * as 23; Bluesky counts graphemes, so an emoji is one; LinkedIn counts
+ * characters.
  * ponytail: X's real weighting also counts CJK characters double, add it
  * if someone writes in those scripts.
  */
@@ -21,5 +24,9 @@ export function postLength (platform: SocialPlatform, body: string): number {
         return [...body.replace(/https?:\/\/\S+/g, 'x'.repeat(23))].length
     }
 
-    return [...new Intl.Segmenter().segment(body)].length
+    if (platform === 'bluesky') {
+        return [...new Intl.Segmenter().segment(body)].length
+    }
+
+    return [...body].length
 }

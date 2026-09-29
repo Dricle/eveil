@@ -1,6 +1,5 @@
 <?php
 
-use App\Support\Settings;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -149,15 +148,15 @@ return new class extends Migration
      * One like-count bar per network that reads its numbers, keyed
      * `social_examples.{platform}.min_likes`. The LinkedIn writer's own
      * model mapping goes: `social-post-writer` writes for every network now.
+     *
+     * The settings cache is NOT flushed here: Redis is not guaranteed
+     * reachable while migrations run. `deploy/entrypoint.sh` forgets it right
+     * after `migrate`, once Redis is up.
      */
     private function moveSettings(): void
     {
         DB::table('settings')->where('key', 'linkedin_examples.min_likes')->update(['key' => 'social_examples.linkedin.min_likes']);
         DB::table('settings')->where('key', 'social_examples.min_likes')->update(['key' => 'social_examples.bluesky.min_likes']);
         DB::table('settings')->where('key', 'agents.linkedin-post-writer')->delete();
-
-        // `Settings` caches every row forever: renamed keys would otherwise
-        // read as missing until the next write, and `int()` throws on that.
-        app(Settings::class)->flush();
     }
 };

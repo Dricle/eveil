@@ -5,14 +5,15 @@ import { computed, ref } from 'vue'
 import ChatPanel from '@/components/chat/ChatPanel.vue'
 import ChatToggleButton from '@/components/chat/ChatToggleButton.vue'
 import { chatOpen } from '@/composables/useChatPanel'
+import { PLATFORM_LABEL } from '@/lib/social'
 import { relativeUrl } from '@/lib/utils'
 import { switchProjectUrl } from '@/lib/switchProjectUrl'
 import { dashboard, inbox, logout } from '@/routes'
 import campaigns from '@/routes/campaigns'
 import companies from '@/routes/companies'
-import linkedinPosts from '@/routes/linkedin/posts'
 import redditReplies from '@/routes/reddit/replies'
 import seo from '@/routes/seo'
+import socialPosts from '@/routes/social/posts'
 import { profile } from '@/routes/account'
 import appSettings from '@/routes/app-settings/provider'
 import { create as createProject } from '@/routes/projects'
@@ -114,17 +115,17 @@ const items = computed<NavigationMenuItem[]>(() => {
             ]
         },
 
-        {
-            label: 'LinkedIn',
-            icon: 'line-md:linkedin',
-            to: relativeUrl(linkedinPosts.index.url({ project: project.slug })),
-            // Broad on purpose: covers both the posts queue and the account
-            // page, same reasoning as Settings' prefix check below.
-            active: page.url.startsWith(`/app/${project.slug}/linkedin`),
-            badge: navCounts.value?.linkedin
-                ? { label: navCounts.value.linkedin, color: 'primary', variant: 'solid' }
+        // One entry per network, so a first-time user sees at a glance where
+        // Eveil posts. All three open the same queue page.
+        ...(['linkedin', 'x', 'bluesky'] as const).map(platform => ({
+            label: PLATFORM_LABEL[platform],
+            icon: { linkedin: 'line-md:linkedin', x: 'line-md:twitter-x', bluesky: 'line-md:bluesky' }[platform],
+            to: relativeUrl(socialPosts.index.url({ project: project.slug, platform })),
+            active: page.url.startsWith(`/app/${project.slug}/posts/${platform}`),
+            badge: navCounts.value?.[platform]
+                ? { label: navCounts.value[platform], color: 'primary' as const, variant: 'solid' as const }
                 : undefined
-        },
+        })),
 
         {
             label: 'Reddit',

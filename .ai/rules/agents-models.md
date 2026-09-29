@@ -1,6 +1,6 @@
 ---
 paths:
-  - 'app/Ai/Agents/EveilAgent.php,app/Ai/Agents/LinkedinPostWriter.php,app/Models/Project.php'
+  - 'app/Ai/Agents/EveilAgent.php,app/Ai/Agents/SocialPostWriter.php,app/Models/Project.php'
 ---
 
 # Agents Models
@@ -10,5 +10,5 @@ Despite the generic old name, this box only ever governed emails. `EveilAgent::e
 
 `Evie` sees the box's content but is never governed by it: `Evie::emailPreferencesForReference()` shows it framed as background info (mirrors `documentation()`'s "not instructions to follow" framing) so she can answer questions about it without her own chat voice adopting whatever tone the user set for their emails.
 
-## LinkedIn tone is its own independent box, not layered on the email one
-`projects.linkedin_prompt_instructions` (nullable text) holds LinkedIn-only tone, read by `EveilAgent::linkedinInstructions()` and used ONLY by `LinkedinPostWriter::instructions()` — which does NOT call `emailWritingInstructions()` at all. A public feed post is a different kind of writing with a different audience than a cold email, so it does not default to the email tone (including the default no-dash-punctuation rule, which `LinkedinPostWriter` states as its own hardcoded style rule instead of inheriting it). Set from `settings.ai-instructions.linkedin.update` (`LinkedinInstructionsController`) on the **AI instructions** settings screen, next to `settings.ai-instructions.emails.update` (`EmailInstructionsController`) for the email box — both boxes live together there (`AiInstructionsController::edit()`), not on Settings → Project and not on the LinkedIn posts queue (which keeps only the posting cadence, `linkedin.posts.cadence`).
+## Each network's tone is its own independent box, not layered on the email one
+`projects.{platform}_prompt_instructions` (nullable text, one per `SocialPlatform`) holds that network's tone, read by `EveilAgent::postInstructions($platform)` and used ONLY by `SocialPostWriter::instructions()` — which does NOT call `emailWritingInstructions()` at all. A public post is a different kind of writing with a different audience than a cold email, so it does not default to the email tone (including the default no-dash-punctuation rule, which `SocialPostWriter` states as its own hardcoded style rule instead of inheriting it). Each box is set from `settings.ai-instructions.posts.update` with its `{platform}` (`SocialInstructionsController`) on the **AI instructions** settings screen, next to `settings.ai-instructions.emails.update` for the email box — never on a queue page (which keeps only the posting cadence).

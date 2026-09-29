@@ -23,6 +23,7 @@ export default defineConfig({
                         { text: 'The timeline', link: '/product/timeline' },
                         { text: 'Chatting with Evie', link: '/product/evie' },
                         { text: 'Posting to LinkedIn', link: '/product/linkedin' },
+                        { text: 'Posting to X and Bluesky', link: '/product/social' },
                         { text: 'Replying on Reddit', link: '/product/reddit' },
                         { text: 'SEO articles', link: '/product/seo' },
                     ],

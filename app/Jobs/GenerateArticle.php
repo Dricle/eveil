@@ -25,7 +25,7 @@ use Illuminate\Support\Facades\Notification;
 
 /**
  * One article: gather every signal Eveil already has, ask `ArticleWriter`
- * once, keep the draft. Same shape as `GenerateLinkedinPost`.
+ * once, keep the draft. Same shape as `GenerateSocialPost`.
  *
  * `$brief` is set when Evie queued it from a conversation ("we just shipped
  * X"), `$ideaId` when the user clicked "Write it" on an idea: the article is
@@ -169,7 +169,7 @@ class GenerateArticle implements ShouldQueue
 
     /**
      * The oldest Won company no article is about yet, same rule as
-     * `GenerateLinkedinPost::pendingClientWin()`.
+     * `GenerateSocialPost::pendingClientWin()`.
      */
     private function pendingClientWin(): ?Company
     {

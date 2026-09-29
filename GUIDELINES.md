@@ -79,12 +79,22 @@ by role puts unrelated jobs on one settings/pricing line):
   suggestions as a free by-product of the same call. Not an SEO audit tool.
 - **Sales**: knowledge base + target profile → qualified companies, verified contacts,
   outreach sequences, handled replies.
-- **Inbound** (Reddit and SEO articles shipped, X/Bluesky later): target profile +
+- **Inbound** (Reddit, SEO articles, LinkedIn, X and Bluesky shipped): target profile +
   knowledge base → anchored channel opportunities, drafted for review; companies crossed
   along the way feed back into discovery. Reddit shipped in a more conservative shape
   than "published per the autonomy setting" implies: always draft-and-copy, never an
   autonomous publish, since there is no API path at all right now, not merely an
-  autonomy-level choice.
+  autonomy-level choice. LinkedIn, X and Bluesky share one post model, one
+  writer and one driver interface (a network is a `platform` value, not a table
+  of its own), with one nav entry per network so a new user sees at a glance
+  where Eveil posts. They split by cost rather than by risk: LinkedIn and
+  Bluesky publish per their own autonomy setting (LinkedIn by OAuth, Bluesky by
+  app password, since atproto OAuth needs a public HTTPS client URL a
+  self-hosted laptop does not have); X's API is paid per post, so X is copy,
+  post by hand, paste the URL back, the same shape as Reddit, until users ask
+  for the API. None reads or answers replies. A client win is always drafted
+  twice, naming the client and not, and only the anonymous one ever publishes
+  on its own.
 
 A target profile can target a *customer* or a *partner* - whoever already touches the
 customer (an accountant serving 50 restaurants is a partner profile with far better

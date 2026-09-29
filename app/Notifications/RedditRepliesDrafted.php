@@ -10,7 +10,7 @@ use Illuminate\Notifications\Notification;
 
 /**
  * Sent to a project's own users when a scan writes at least one new Reddit
- * reply draft. Copy of `LinkedinPostDrafted`'s reasoning.
+ * reply draft. Copy of `SocialPostDrafted`'s reasoning.
  */
 class RedditRepliesDrafted extends Notification implements ShouldQueue
 {

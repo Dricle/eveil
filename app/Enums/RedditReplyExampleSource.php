@@ -3,7 +3,7 @@
 namespace App\Enums;
 
 /**
- * Copy of `LinkedinPostExampleSource`. Exactly two trusted sources feed the
+ * Copy of `SocialPostExampleSource`. Exactly two trusted sources feed the
  * shared `reddit_reply_examples` pool: a superadmin typing one in by hand,
  * or `FetchRedditReplyStats` crossing the real, externally-measured score
  * threshold. A user's own "mark as proven" click never writes here - it

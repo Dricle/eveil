@@ -5,6 +5,7 @@ namespace App\Ai\Agents;
 use App\Ai\AgentSettings;
 use App\Ai\Middleware\RecordsAgentRun;
 use App\Ai\ProviderCredentials;
+use App\Enums\SocialPlatform;
 use App\Models\AgentRun;
 use App\Models\Project;
 use Illuminate\Support\Str;
@@ -93,8 +94,8 @@ abstract class EveilAgent implements Agent, HasMiddleware
      * attention for nothing. Not appended to `Evie` either - see
      * `Evie::emailPreferencesForReference()` for why the chat needs to know
      * about this box without being governed by it. Not appended to
-     * `LinkedinPostWriter` - a public feed post has its own box,
-     * `linkedinInstructions()` below, since it is a different kind of writing
+     * `SocialPostWriter` - a public post has its own box per network,
+     * `postInstructions()` below, since it is a different kind of writing
      * with its own audience and does not default to the email tone.
      *
      * Placed last and stated as overriding, because that is what the user
@@ -119,15 +120,15 @@ abstract class EveilAgent implements Agent, HasMiddleware
     }
 
     /**
-     * LinkedIn's own tone, independent of `emailWritingInstructions()` above:
-     * a public feed post under the user's own name is a different kind of
-     * writing than a cold email, with its own audience, so it gets its own
-     * box rather than inheriting the email one by default. Only
-     * `LinkedinPostWriter` calls this.
+     * One network's own tone (`{platform}_prompt_instructions`), independent
+     * of `emailWritingInstructions()` above: a public post under the user's
+     * own name is a different kind of writing than a cold email, with its own
+     * audience, so each network gets its own box rather than inheriting the
+     * email one. Only `SocialPostWriter` calls this.
      */
-    protected function linkedinInstructions(): string
+    protected function postInstructions(SocialPlatform $platform): string
     {
-        $instructions = trim((string) $this->project->linkedin_prompt_instructions);
+        $instructions = trim((string) $this->project->getAttribute($platform->instructionsColumn()));
 
         if ($instructions === '') {
             return '';
@@ -136,7 +137,7 @@ abstract class EveilAgent implements Agent, HasMiddleware
         return <<<PROMPT
 
 
-            The user's own instructions for how this product writes LinkedIn posts.
+            The user's own instructions for how this product writes {$platform->label()} posts.
             Where they disagree with anything above, follow these:
 
             {$instructions}

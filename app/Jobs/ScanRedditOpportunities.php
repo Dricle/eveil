@@ -30,7 +30,7 @@ use Illuminate\Support\Str;
 /**
  * One scan cycle for one project: gather candidates from BOTH discovery
  * mechanisms, triage them in one shared batch, draft up to 3 reply angles
- * for each accepted thread. Mirrors `GenerateLinkedinPost`'s shape.
+ * for each accepted thread. Mirrors `GenerateSocialPost`'s shape.
  */
 class ScanRedditOpportunities implements ShouldQueue
 {

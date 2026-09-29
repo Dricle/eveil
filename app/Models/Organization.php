@@ -78,11 +78,11 @@ class Organization extends Model
     }
 
     /**
-     * @return HasMany<LinkedinAccount, $this>
+     * @return HasMany<SocialAccount, $this>
      */
-    public function linkedinAccounts(): HasMany
+    public function socialAccounts(): HasMany
     {
-        return $this->hasMany(LinkedinAccount::class);
+        return $this->hasMany(SocialAccount::class);
     }
 
     public function roleOf(User $user): ?OrganizationRole

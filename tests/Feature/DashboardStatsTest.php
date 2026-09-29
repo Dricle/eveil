@@ -4,9 +4,9 @@ use App\Cloud\Models\CreditTransaction;
 use App\Enums\DiscoveryRunStatus;
 use App\Enums\DiscoveryTaskKind;
 use App\Enums\DiscoveryTaskStatus;
-use App\Enums\LinkedinPostStatus;
 use App\Enums\MessageDirection;
 use App\Enums\RedditReplyStatus;
+use App\Enums\SocialPostStatus;
 use App\Models\AgentRun;
 use App\Models\Article;
 use App\Models\Campaign;
@@ -15,11 +15,11 @@ use App\Models\Company;
 use App\Models\DiscoveryRun;
 use App\Models\DiscoveryTask;
 use App\Models\Lead;
-use App\Models\LinkedinPost;
 use App\Models\Message;
 use App\Models\Organization;
 use App\Models\Project;
 use App\Models\RedditReply;
+use App\Models\SocialPost;
 use App\Models\User;
 
 function dashboardUser(): array
@@ -181,9 +181,10 @@ it('lists every draft and unanswered reply waiting on a person, this project onl
     RedditReply::factory()->create(['project_id' => $project->id, 'status' => RedditReplyStatus::Published]);
     RedditReply::factory()->create(['project_id' => $otherProject->id]);
 
-    LinkedinPost::factory()->create(['project_id' => $project->id]);
-    LinkedinPost::factory()->create(['project_id' => $project->id, 'status' => LinkedinPostStatus::Rejected]);
-    LinkedinPost::factory()->create(['project_id' => $otherProject->id]);
+    SocialPost::factory()->linkedin()->create(['project_id' => $project->id]);
+    SocialPost::factory()->x()->create(['project_id' => $project->id]);
+    SocialPost::factory()->linkedin()->create(['project_id' => $project->id, 'status' => SocialPostStatus::Rejected]);
+    SocialPost::factory()->linkedin()->create(['project_id' => $otherProject->id]);
 
     Article::factory()->create(['project_id' => $project->id]);
     Article::factory()->published()->create(['project_id' => $project->id]);
@@ -203,7 +204,7 @@ it('lists every draft and unanswered reply waiting on a person, this project onl
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->has('review.redditReplies', 2)
-            ->has('review.linkedinPosts', 1)
+            ->has('review.socialPosts', 2)
             ->has('review.conversations', 1)
             ->has('review.articles', 1)
             ->where('review.conversations.0.id', $todo->id));

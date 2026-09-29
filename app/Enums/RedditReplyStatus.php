@@ -3,7 +3,7 @@
 namespace App\Enums;
 
 /**
- * Three real states, not five - copy of `LinkedinPostStatus`'s reasoning.
+ * Three real states, not five - copy of `SocialPostStatus`'s reasoning.
  * `Approved` never existed: marking a draft posted (or publishing it, on the
  * dropped-OAuth path this product no longer has) IS the approval. `Failed`
  * is deliberately absent too: nothing here can fail an API call any more

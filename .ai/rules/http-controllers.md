@@ -1,17 +1,18 @@
 ---
 paths:
-  - 'app/Ai/Agents/LinkedinPostWriter.php,app/Services/Linkedin/**,app/Models/LinkedinAccount.php,app/Models/LinkedinPost.php,app/Http/Controllers/Linkedin*.php'
+  - 'app/Ai/Agents/SocialPostWriter.php,app/Services/Linkedin/**,app/Services/Bluesky/**,app/Services/Social/**,app/Models/SocialAccount.php,app/Models/SocialPost.php,app/Http/Controllers/Linkedin*.php,app/Http/Controllers/Social*.php,app/Jobs/GenerateSocialPost.php'
 ---
 
-# Http Controllers
+# Social posting
 
-## LinkedIn posting: personal profile only, evidence-driven, always draft-and-approve
-Scope is deliberately narrow: personal-profile posting via LinkedIn's official API (`w_member_social`, self-serve OAuth). No Company Page posting, no comment automation on other people's posts, no connection-request/DM automation — all three need either LinkedIn's gated Community Management API (unknown approval timeline) or a session-automation vendor, both explicitly rejected for this project (open-source, no vendor lock-in decided yet). Company Page content is a separate copy-paste-only feature (issue #32), no OAuth.
+## LinkedIn, X and Bluesky share one model, one writer, one driver interface
+All three networks live on `social_posts` / `social_accounts` / `social_post_examples` with a `platform` column (`App\Enums\SocialPlatform`). One agent writes for all of them (`SocialPostWriter`, told which network: length and form differ, not voice), one job generates (`GenerateSocialPost`, one network per job), and each network has a driver behind `App\Services\Social\SocialClientInterface`, resolved by `SocialPlatform::client()`. Per-network settings are `{platform}_*` columns on `projects` (`_post_frequency`, `_next_post_at`, `_autonomy_level`, `_prompt_instructions`), read through the enum's column helpers, never by hardcoding a network. Adding a network is an enum case, a driver, and those columns. Each network is its own nav entry (`social.posts.index` with `{platform}`), deliberately, so a first-time user sees at a glance where Eveil posts.
 
-Content sources are evidence-driven, never generic: `LinkedinPostWriter` gets ALL available signals (knowledge base facts, a pending client-won company, recent news via `App\Services\Linkedin\NewsSearch` reusing the same SearXNG infra as discovery, today's date for optional seasonal framing) in ONE call and picks/justifies itself — no PHP-hardcoded source priority. A client-won result always produces a named AND an anonymized sibling post in the same call; approving one in `LinkedinPostController::approve()` auto-rejects the other via `LinkedinPost::sibling()`.
+What differs per network:
+- **LinkedIn**: official API, personal profile only (`w_member_social`, OAuth). No Company Page posting, no comment automation, no connection-request/DM automation: those need LinkedIn's gated Community Management API or a session-automation vendor, both rejected. Stats need a SECOND developer app (see `.ai/rules/support-models.md`).
+- **Bluesky**: its free API with an app password, not atproto OAuth (which needs a public HTTPS client-metadata URL a self-hosted laptop does not have).
+- **X**: never through its API, which is paid per call. `XClient` is deliberately inert: the user copies the draft, posts it, and pastes the URL back (`SocialPostController::publish()`). X has no account row, no autonomy column (always supervised) and no stats.
 
-Every post is draft-and-approve, regardless of `projects.autonomy_level` — publishing to a public feed under the user's name is treated differently from a private 1:1 email. `App\Ai\Tools\DraftLinkedinPost` (Evie's tool) only ever creates a draft row, never publishes: mirrors the existing "no tool sends" rule for reply tools. Exactly one code path publishes: `PublishLinkedinPost` job, dispatched only from `LinkedinPostController::approve()`.
+Autonomy: `SocialPlatform::autonomyLevel()`. Autonomous publishes on its own, except a named client-win variant (only the anonymized one ever goes out alone, its sibling is rejected) and a project with several accounts on that network. A post Evie asks for (a `brief`) never auto-publishes: no Evie tool publishes.
 
-`LinkedinPost` is project-scoped (`BelongsToProject`) so routes take `int $linkedinPost` and look it up manually, never route-model-bound (same trap as `target-profiles.destroy`). `LinkedinAccount` is org-owned/project-granted like `EmailAccount`, not project-scoped.
-
-Comment read/reply on your own post has no implemented method yet (`LinkedinClient`) — LinkedIn's exact API shape needs verifying against their live docs at build time, not assumed from training-data knowledge.
+`SocialPost` is project-scoped (`BelongsToProject`), so routes take `int $socialPost` and look it up, never route-model-bound. `SocialAccount` is org-owned/project-granted like `EmailAccount`.

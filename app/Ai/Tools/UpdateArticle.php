@@ -12,7 +12,7 @@ use Stringable;
 
 /**
  * Rewrites an article draft in place, on the user's feedback - what the SEO
- * page's own edit does. Draft only, same reasoning as `UpdateLinkedinPost`:
+ * page's own edit does. Draft only, same reasoning as `UpdateSocialPost`:
  * a published article is already live on the user's site, and changing the
  * copy here would no longer match what is there.
  */

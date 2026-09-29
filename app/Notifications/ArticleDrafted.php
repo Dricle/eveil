@@ -11,7 +11,7 @@ use Illuminate\Notifications\Notification;
 /**
  * Sent to a project's own users when the scheduled cadence writes a new
  * article. Never sent for one Evie queued: the user is already in the
- * conversation that asked for it. Same shape as `LinkedinPostDrafted`.
+ * conversation that asked for it. Same shape as `SocialPostDrafted`.
  */
 class ArticleDrafted extends Notification implements ShouldQueue
 {

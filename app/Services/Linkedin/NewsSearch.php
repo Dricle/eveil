@@ -11,7 +11,7 @@ use Throwable;
  * Plain SearXNG lookup for recent industry news to react to - the same
  * self-hosted, no-API-key, both-editions infrastructure
  * `App\Services\Discovery\Sources\WebSearchSource` already calls, not a new
- * vendor. No LLM call here: `LinkedinPostWriter` judges relevance itself,
+ * vendor. No LLM call here: `SocialPostWriter` judges relevance itself,
  * this only fetches candidates.
  *
  * An empty or failed search is normal, same resilience note as

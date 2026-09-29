@@ -3,7 +3,7 @@
 namespace App\Enums;
 
 /**
- * Same three states as `LinkedinPostStatus`. `Published` is self-reported:
+ * Same three states as `SocialPostStatus`. `Published` is self-reported:
  * the user pasted the article into their own CMS and gave its URL back.
  */
 enum ArticleStatus: string

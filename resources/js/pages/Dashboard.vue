@@ -3,11 +3,12 @@ import { Head, router, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 import ArticleCard from '@/components/ArticleCard.vue'
 import ConversationPanel from '@/components/ConversationPanel.vue'
-import LinkedinPostCard from '@/components/LinkedinPostCard.vue'
 import RedditThreadCard from '@/components/RedditThreadCard.vue'
+import SocialPostCard from '@/components/SocialPostCard.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { openEvieChat } from '@/composables/useChatPanel'
 import { groupThreads } from '@/lib/reddit'
+import { PLATFORM_LABEL } from '@/lib/social'
 import { relativeUrl } from '@/lib/utils'
 import { inbox, onboarding as onboardingRoute } from '@/routes'
 import campaignRoutes from '@/routes/campaigns'
@@ -18,7 +19,7 @@ import organizationBilling from '@/routes/settings/organization/billing'
 import mailboxSettings from '@/routes/settings/mailboxes'
 import autonomySettings from '@/routes/settings/autonomy'
 import targets from '@/routes/targets'
-import type { Article, Conversation, DashboardCampaign, DashboardDiscoveryRun, DashboardReply, DashboardStats, LinkedinAccount, LinkedinPost, Mailbox, Recommendation, RedditReply } from '@/types'
+import type { Article, Conversation, DashboardCampaign, DashboardDiscoveryRun, DashboardReply, DashboardStats, Mailbox, Recommendation, RedditReply, SocialAccount, SocialPost } from '@/types'
 import { CLASSIFICATIONS } from '@/types/inbox'
 
 defineOptions({ layout: AppLayout })
@@ -30,6 +31,7 @@ const props = defineProps<{
     autonomy: {
         email: 'supervised' | 'semi_auto' | 'autonomous'
         linkedin: 'supervised' | 'autonomous'
+        bluesky: 'supervised' | 'autonomous'
     }
     newLeadsCount: number
     openRecommendations: Recommendation[]
@@ -39,8 +41,8 @@ const props = defineProps<{
     latestReplies: DashboardReply[]
     review: {
         redditReplies: RedditReply[]
-        linkedinPosts: LinkedinPost[]
-        linkedinAccounts: LinkedinAccount[]
+        socialPosts: SocialPost[]
+        socialAccounts: SocialAccount[]
         conversations: Conversation[]
         articles: Article[]
     }
@@ -54,7 +56,7 @@ const toast = useToast()
 // is one experience. Held as a kind and an id, not the item itself, same as
 // `Inbox.vue`: after an action the page reloads, the item leaves the list,
 // and the modal closes on its own because the id no longer finds anything.
-type ReviewKind = 'reddit' | 'linkedin' | 'email' | 'article'
+type ReviewKind = 'reddit' | 'social' | 'email' | 'article'
 
 const redditThreads = computed(() => groupThreads(props.review.redditReplies))
 
@@ -67,11 +69,11 @@ const reviewItems = computed(() => [
         title: thread.threadTitle ?? 'Reddit thread',
         detail: `${thread.subreddit ? `r/${thread.subreddit} · ` : ''}${thread.replies.length} ${thread.replies.length === 1 ? 'draft' : 'drafts'}`
     })),
-    ...props.review.linkedinPosts.map(post => ({
-        kind: 'linkedin' as ReviewKind,
+    ...props.review.socialPosts.map(post => ({
+        kind: 'social' as ReviewKind,
         id: String(post.id),
-        icon: 'i-lucide-linkedin',
-        label: 'LinkedIn post',
+        icon: 'i-lucide-at-sign',
+        label: `${PLATFORM_LABEL[post.platform]} post`,
         title: post.body.split('\n')[0],
         detail: post.evidence
     })),
@@ -98,8 +100,8 @@ const reviewing = ref<{ kind: ReviewKind, id: string } | null>(null)
 const reviewThread = computed(() => reviewing.value?.kind === 'reddit'
     ? redditThreads.value.find(thread => thread.permalink === reviewing.value!.id) ?? null
     : null)
-const reviewPost = computed(() => reviewing.value?.kind === 'linkedin'
-    ? props.review.linkedinPosts.find(post => String(post.id) === reviewing.value!.id) ?? null
+const reviewSocialPost = computed(() => reviewing.value?.kind === 'social'
+    ? props.review.socialPosts.find(post => String(post.id) === reviewing.value!.id) ?? null
     : null)
 const reviewConversation = computed(() => reviewing.value?.kind === 'email'
     ? props.review.conversations.find(conversation => String(conversation.id) === reviewing.value!.id) ?? null
@@ -110,7 +112,7 @@ const reviewArticle = computed(() => reviewing.value?.kind === 'article'
     : null)
 
 const reviewOpen = computed({
-    get: () => reviewThread.value !== null || reviewPost.value !== null || reviewConversation.value !== null || reviewArticle.value !== null,
+    get: () => reviewThread.value !== null || reviewSocialPost.value !== null || reviewConversation.value !== null || reviewArticle.value !== null,
     set: (value: boolean) => {
         if (!value) {
             reviewing.value = null
@@ -152,6 +154,8 @@ const AUTONOMY_LABEL = {
 const autonomyRows = computed(() => [
     { channel: 'Email', level: props.autonomy.email, notches: 3, index: ['supervised', 'semi_auto', 'autonomous'].indexOf(props.autonomy.email) },
     { channel: 'LinkedIn', level: props.autonomy.linkedin, notches: 2, index: ['supervised', 'autonomous'].indexOf(props.autonomy.linkedin) },
+    { channel: 'Bluesky', level: props.autonomy.bluesky, notches: 2, index: ['supervised', 'autonomous'].indexOf(props.autonomy.bluesky) },
+    { channel: 'X', level: 'supervised' as const, notches: 1, index: 0 },
     { channel: 'Reddit', level: 'supervised' as const, notches: 1, index: 0 }
 ])
 
@@ -693,10 +697,10 @@ const topupPercent = computed(() => {
                     v-if="reviewThread"
                     :thread="reviewThread"
                 />
-                <LinkedinPostCard
-                    v-else-if="reviewPost"
-                    :post="reviewPost"
-                    :linkedin-accounts="review.linkedinAccounts"
+                <SocialPostCard
+                    v-else-if="reviewSocialPost"
+                    :post="reviewSocialPost"
+                    :accounts="review.socialAccounts.filter(account => account.platform === reviewSocialPost!.platform)"
                 />
                 <ArticleCard
                     v-else-if="reviewArticle"

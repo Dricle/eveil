@@ -16,7 +16,7 @@ use Illuminate\Support\Collection;
  * in, deliberately: a real, externally-measured number is trusted the way a
  * self-reported click is not (see `.ai/rules` and `RedditReplyController::promote()`).
  *
- * Runs across every project on the instance, same as `FetchLinkedinPostStats`:
+ * Runs across every project on the instance, same as `FetchSocialPostStats`:
  * there is no `CurrentProject` set from a console command, so `RedditReply`'s
  * `BelongsToProject` scope simply does not apply here.
  *

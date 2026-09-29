@@ -12,10 +12,13 @@ Tone is separate from cadence: **Settings → AI instructions** has its own "How
 
 Every draft has to trace to something real — never a generic "5 tips" post. On each cadence tick, the writer looks at everything currently available and picks the strongest angle:
 
+- **One of your own articles**, published from the [SEO page](/product/seo) in the last month and not shared on LinkedIn yet.
 - **A knowledge base fact** — a feature, a proof point, your value proposition — the steady fallback when nothing more timely exists.
 - **A client you just won** — when a company's status changes to Won, two versions get drafted: one naming the client, one that doesn't ("a new client in logistics"). You choose which goes out; approving one automatically rejects the other.
 - **Relevant industry news** — a recent headline connected to your sector or a named competitor, when there's a genuine angle worth commenting on. Skipped entirely when nothing relevant turns up that cycle.
-- **Whatever you tell Evie about** — "we just shipped X, write a post about it" drafts a post the same way, into the same queue.
+- **Whatever you tell Evie about** — "we just shipped X, write a LinkedIn post about it" has the same writer draft it from that brief, into the same queue. A post asked for this way always waits for you, whatever the autonomy setting.
+
+The same writer drafts for [X and Bluesky](/product/social), each with its own queue, cadence and tone box.
 
 ## Approving a draft
 
@@ -29,4 +32,4 @@ If more than one LinkedIn account is granted to the project, approving asks whic
 
 Once a post is published, a **"Mark as successful"** button appears on it. Clicking it only ever helps *this project's* own future drafts — the writer sees your past successful posts from this project the same way it sees rejected ones. It never affects any other project, so there's nothing to moderate.
 
-Separately, if your instance has performance polling configured (see the self-hosted docs), a connected account can opt in from **Settings → LinkedIn** to have its published posts checked daily for real engagement. A post that crosses a like-count threshold is automatically added to an **instance-wide bank** of proven posts — shared across every project on the instance, the same idea as Eveil's proven-email bank. Because that number is measured by LinkedIn itself rather than self-reported, it's trusted the way a click alone isn't. A superadmin can also add examples to that bank by hand from **App Settings → LinkedIn post examples**.
+Separately, if your instance has performance polling configured (see the self-hosted docs), a connected account can opt in from **Settings → LinkedIn** to have its published posts checked daily for real engagement. A post that crosses a like-count threshold is automatically added to an **instance-wide bank** of proven posts — shared across every project on the instance, the same idea as Eveil's proven-email bank. Because that number is measured by LinkedIn itself rather than self-reported, it's trusted the way a click alone isn't. A superadmin can also add examples to that bank by hand, and set the threshold, from **App Settings → Post examples** (LinkedIn tab).

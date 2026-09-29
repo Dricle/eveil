@@ -16,7 +16,7 @@ use Stringable;
  * X"), or about one of the open article ideas. Evie writes the brief, not the article: `ArticleWriter` writes every
  * article, so one from chat reads like one from the cadence, and a thousand
  * words never have to pass through a chat turn. Needs no approval, same
- * reasoning as `DraftLinkedinPost`: it only drafts, nothing is published.
+ * reasoning as `DraftSocialPost`: it only drafts, nothing is published.
  */
 class DraftArticle implements Tool
 {

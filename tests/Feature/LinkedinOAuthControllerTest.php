@@ -1,9 +1,10 @@
 <?php
 
-use App\Enums\LinkedinAccountStatus;
-use App\Models\LinkedinAccount;
+use App\Enums\SocialAccountStatus;
+use App\Enums\SocialPlatform;
 use App\Models\Organization;
 use App\Models\Project;
+use App\Models\SocialAccount;
 use App\Models\User;
 use App\Support\CurrentProject;
 use App\Support\LinkedinCredentials;
@@ -46,12 +47,14 @@ it('connects a LinkedIn account on a valid callback', function () {
         ->get(route('oauth.linkedin.callback', ['code' => 'a-code', 'state' => 'the-state']))
         ->assertRedirect(route('settings.linkedin.index', $project));
 
-    $account = LinkedinAccount::query()->where('organization_id', $organization->id)->sole();
+    $account = SocialAccount::query()->where('organization_id', $organization->id)->sole();
 
-    expect($account->member_urn)->toBe('urn:li:person:abc123')
+    expect($account->platform)->toBe(SocialPlatform::Linkedin)
+        ->and($account->external_id)->toBe('urn:li:person:abc123')
         ->and($account->display_name)->toBe('Clement Rigo')
-        ->and($account->access_token)->toBe('at-1')
-        ->and($account->status)->toBe(LinkedinAccountStatus::Active);
+        ->and($account->secret)->toBe('at-1')
+        ->and($account->refresh_secret)->toBe('rt-1')
+        ->and($account->status)->toBe(SocialAccountStatus::Active);
 });
 
 it('refuses a callback whose state does not match', function () {
@@ -64,7 +67,7 @@ it('refuses a callback whose state does not match', function () {
         ->get(route('oauth.linkedin.callback', ['code' => 'a-code', 'state' => 'tampered']))
         ->assertRedirect(route('settings.linkedin.index', $project));
 
-    expect(LinkedinAccount::count())->toBe(0);
+    expect(SocialAccount::count())->toBe(0);
     Http::assertNothingSent();
 });
 
@@ -77,6 +80,6 @@ it('sends a callback with no project in session to the app home', function () {
         ->get(route('oauth.linkedin.callback', ['code' => 'a-code', 'state' => 'the-state']))
         ->assertRedirect(route('app.home'));
 
-    expect(LinkedinAccount::count())->toBe(0);
+    expect(SocialAccount::count())->toBe(0);
     Http::assertNothingSent();
 });

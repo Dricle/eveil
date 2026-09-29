@@ -12,33 +12,39 @@ use App\Models\SocialAccount;
 use App\Services\Bluesky\BlueskyClient;
 use App\Services\Bluesky\SignInRefused;
 use App\Support\CurrentProject;
+use App\Support\LinkedinCredentials;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Connected accounts. `index`/`store` are Bluesky's own screen, connected
- * with an app password: connecting the same account again replaces its
- * password, which is also how a revoked one is fixed. `update`/`destroy`
- * serve LinkedIn and Bluesky alike: granting an account to projects and
- * disconnecting it work the same whatever the network.
+ * The accounts an organization has connected, one settings page per network
+ * (`settings/Linkedin`, `settings/Bluesky`). Listing, granting to projects
+ * and disconnecting work the same whatever the network; only connecting
+ * differs: LinkedIn goes through OAuth (`LinkedinOAuthController`), Bluesky
+ * through an app password (`store()`), where connecting the same account
+ * again replaces its password, which is also how a revoked one is fixed.
  */
 class SocialAccountController extends Controller
 {
     public function __construct(private CurrentProject $currentProject) {}
 
-    public function index(): Response
+    public function index(SocialPlatform $platform, LinkedinCredentials $credentials): Response
     {
         $organization = $this->currentProject->organization();
 
-        return Inertia::render('settings/Bluesky', [
+        return Inertia::render('settings/'.ucfirst($platform->value), [
             'accounts' => SocialAccountResource::collection(
-                $organization->socialAccounts()->where('platform', SocialPlatform::Bluesky)->with('projects')->orderBy('id')->get()
+                $organization->socialAccounts()->where('platform', $platform)->with('projects')->orderBy('id')->get()
             ),
             'projects' => ProjectResource::collection(
                 $organization->projects()->orderBy('name')->get()->each->setRelation('organization', $organization)
             ),
+            // LinkedIn's "Connect performance polling" button only exists at
+            // all once the superadmin has configured its second app - a
+            // feature that is invisible, not just inert, without it.
+            ...($platform === SocialPlatform::Linkedin ? ['statsConfigured' => $credentials->isStatsConfigured()] : []),
         ]);
     }
 

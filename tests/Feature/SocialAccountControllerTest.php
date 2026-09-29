@@ -108,3 +108,53 @@ it('lets Evie edit only a draft', function () {
     expect((string) $answer)->toContain('already published')
         ->and($draft->fresh()->body)->toBe('Shorter.');
 });
+
+it('lists only this organization\'s accounts on the network the page is for', function () {
+    $user = User::factory()->create();
+    $organization = Organization::factory()->create();
+    $organization->users()->attach($user, ['role' => 'owner']);
+    $project = Project::factory()->for($organization)->create();
+    app(CurrentProject::class)->set($project);
+
+    SocialAccount::factory()->linkedin()->create(['organization_id' => $organization->id]);
+    SocialAccount::factory()->create(['organization_id' => $organization->id]);
+    SocialAccount::factory()->linkedin()->create();
+
+    $this->actingAs($user)->get(route('settings.linkedin.index'))
+        ->assertInertia(fn ($page) => $page->component('settings/Linkedin')->has('accounts', 1)->has('statsConfigured'));
+
+    $this->actingAs($user)->get(route('settings.bluesky.index'))
+        ->assertInertia(fn ($page) => $page->component('settings/Bluesky')->has('accounts', 1)->missing('statsConfigured'));
+});
+
+it('grants a connected account to chosen projects only', function () {
+    $user = User::factory()->create();
+    $organization = Organization::factory()->create();
+    $organization->users()->attach($user, ['role' => 'owner']);
+    $project = Project::factory()->for($organization)->create();
+    $other = Project::factory()->for($organization)->create();
+
+    app(CurrentProject::class)->set($project);
+
+    $account = SocialAccount::factory()->linkedin()->create(['organization_id' => $organization->id]);
+
+    $this->actingAs($user)
+        ->from(route('settings.linkedin.index'))
+        ->put(route('settings.social-accounts.update', $account), ['projects' => [$project->id]])
+        ->assertRedirect(route('settings.linkedin.index'));
+
+    expect($account->projects->pluck('id')->all())->toBe([$project->id]);
+    expect($other->fresh()->socialAccounts()->count())->toBe(0);
+});
+
+it('cannot remove another organization\'s LinkedIn account', function () {
+    $user = User::factory()->create();
+    $organization = Organization::factory()->create();
+    $organization->users()->attach($user, ['role' => 'owner']);
+    $project = Project::factory()->for($organization)->create();
+    app(CurrentProject::class)->set($project);
+
+    $theirs = SocialAccount::factory()->linkedin()->create();
+
+    $this->actingAs($user)->delete(route('settings.social-accounts.destroy', $theirs))->assertNotFound();
+});

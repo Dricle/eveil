@@ -61,7 +61,6 @@ use App\Http\Controllers\InboxController;
 use App\Http\Controllers\KnownClientController;
 use App\Http\Controllers\LeadImportController;
 use App\Http\Controllers\LeadNoteController;
-use App\Http\Controllers\LinkedinAccountController;
 use App\Http\Controllers\LinkedinOAuthController;
 use App\Http\Controllers\LinkedinStatsOAuthController;
 use App\Http\Controllers\MailboxController;
@@ -245,7 +244,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
              * The posting cadence lives on each network's queue instead: it
              * is a decision about that queue's rhythm, not the account.
              */
-            Route::get('linkedin', [LinkedinAccountController::class, 'index'])->name('linkedin.index');
+            Route::get('linkedin', [SocialAccountController::class, 'index'])->defaults('platform', 'linkedin')->name('linkedin.index');
             Route::get('linkedin/connect', [LinkedinOAuthController::class, 'redirect'])
                 ->name('linkedin.connect');
             /*
@@ -260,7 +259,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
              * No OAuth callback for Bluesky: an app password is checked
              * on submit. X has no account at all: it is posted by hand.
              */
-            Route::get('bluesky', [SocialAccountController::class, 'index'])->name('bluesky.index');
+            Route::get('bluesky', [SocialAccountController::class, 'index'])->defaults('platform', 'bluesky')->name('bluesky.index');
             Route::post('bluesky', [SocialAccountController::class, 'store'])->name('bluesky.store');
             Route::put('social-accounts/{socialAccount}', [SocialAccountController::class, 'update'])
                 ->name('social-accounts.update');

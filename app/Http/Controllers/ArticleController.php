@@ -58,16 +58,18 @@ class ArticleController extends Controller
     /**
      * "I published it": the URL is what the next draft reads to avoid
      * writing the same article again, and it is fetched into the shared
-     * page cache in the background.
+     * page cache in the background. Posting again on a live article
+     * corrects a mistyped URL and keeps the original publication date.
      */
     public function publish(ArticlePublishRequest $request, int $article): RedirectResponse
     {
         $url = $request->validated('published_url');
+        $article = Article::query()->findOrFail($article);
 
-        Article::query()->findOrFail($article)->update([
+        $article->update([
             'status' => ArticleStatus::Published,
             'published_url' => $url,
-            'published_at' => now(),
+            'published_at' => $article->published_at ?? now(),
         ]);
 
         FetchPublishedArticle::dispatch($url);

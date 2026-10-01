@@ -81,6 +81,22 @@ it('marks an article published with its URL and reads the page', function () {
     Queue::assertPushed(FetchPublishedArticle::class, fn (FetchPublishedArticle $job): bool => $job->url === 'https://acme.test/blog/widgets');
 });
 
+it('corrects the URL of a live article, keeping its publication date', function () {
+    Queue::fake();
+    [$user, $project] = articleSetup();
+    $article = Article::factory()->published()->create(['project_id' => $project->id, 'published_at' => now()->subWeek()]);
+    $publishedAt = $article->published_at;
+
+    $this->actingAs($user)
+        ->post(route('seo.articles.publish', $article), ['published_url' => 'https://acme.test/blog/fixed'])
+        ->assertRedirect();
+
+    expect($article->fresh())
+        ->published_url->toBe('https://acme.test/blog/fixed')
+        ->published_at->toEqual($publishedAt);
+    Queue::assertPushed(FetchPublishedArticle::class, fn (FetchPublishedArticle $job): bool => $job->url === 'https://acme.test/blog/fixed');
+});
+
 it('refuses to mark published without a URL', function () {
     [$user, $project] = articleSetup();
     $article = Article::factory()->create(['project_id' => $project->id]);

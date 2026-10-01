@@ -116,7 +116,7 @@ function confirmPublish () {
     router.post(articleRoutes.publish.url({ project: slug.value, article: props.article.id }), { published_url: publishedUrl.value }, {
         preserveScroll: true,
         onSuccess: () => {
-            toast.add({ title: 'Marked as published', color: 'success' })
+            toast.add({ title: props.article.published_url ? 'URL updated' : 'Marked as published', color: 'success' })
             publishOpen.value = false
         },
         onFinish: () => publishing.value = false
@@ -315,13 +315,25 @@ function destroy () {
             />
         </template>
 
-        <a
+        <div
             v-if="article.published_url"
-            :href="article.published_url"
-            target="_blank"
-            rel="noopener"
-            class="block text-sm text-primary"
-        >{{ article.published_url }} ↗</a>
+            class="flex items-center gap-2"
+        >
+            <a
+                :href="article.published_url"
+                target="_blank"
+                rel="noopener"
+                class="truncate text-sm text-primary"
+            >{{ article.published_url }} ↗</a>
+            <UButton
+                icon="i-lucide-pencil"
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                aria-label="Edit URL"
+                @click="publishedUrl = article.published_url; publishOpen = true"
+            />
+        </div>
 
         <p
             v-if="article.status === 'rejected' && article.rejection_reason"
@@ -332,7 +344,7 @@ function destroy () {
 
         <UModal
             v-model:open="publishOpen"
-            title="Mark as published"
+            :title="article.published_url ? 'Edit the published URL' : 'Mark as published'"
         >
             <template #body>
                 <UFormField
@@ -356,7 +368,7 @@ function destroy () {
                 />
                 <UButton
                     color="success"
-                    label="Mark as published"
+                    :label="article.published_url ? 'Save URL' : 'Mark as published'"
                     :disabled="!publishedUrl"
                     :loading="publishing"
                     @click="confirmPublish"

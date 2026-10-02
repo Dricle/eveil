@@ -49,11 +49,9 @@ function seedEvieTurns(Project $project, int $count): void
             'role' => 'user',
             'content' => 'hi',
             'attachments' => '[]',
-            'tool_calls' => '[]',
-            'tool_results' => '[]',
+            'steps' => '[]',
             'usage' => '[]',
             'meta' => '[]',
-            'approval_state' => null,
             'created_at' => now(),
             'updated_at' => now(),
         ]);

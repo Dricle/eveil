@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Ai\Contracts\SpendGuardInterface;
 use App\Ai\ProviderCredentials;
+use App\Ai\RecordsAgentRun;
 use App\Ai\UnmeteredSpend;
 use App\Models\Project;
 use App\Models\User;
@@ -17,11 +18,17 @@ use Carbon\CarbonImmutable;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Laravel\Ai\Events\AgentFailed;
+use Laravel\Ai\Events\AgentPrompted;
+use Laravel\Ai\Events\AgentStreamed;
+use Laravel\Ai\Events\PromptingAgent;
+use Laravel\Ai\Events\StreamingAgent;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -45,9 +52,13 @@ class AppServiceProvider extends ServiceProvider
         // once per process rather than once per agent call.
         $this->app->singleton(ProviderCredentials::class);
 
+        // Holds the rows of the agent runs in flight between their start and
+        // end events.
+        $this->app->singleton(RecordsAgentRun::class);
+
         // Self-hosted spends freely: the operator's own provider key pays, and
         // their provider is what says when the money is gone. Cloud binds its
-        // own guard over this, which is why the metering middleware asks an
+        // own guard over this, which is why the metering listener asks an
         // interface rather than a wallet it would have to know about.
         $this->app->bind(SpendGuardInterface::class, UnmeteredSpend::class);
 
@@ -65,6 +76,13 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        // Every agent run is metered. The dispatcher matches listeners by exact
+        // class (and interfaces), not parents, so the streamed variants are
+        // registered on their own.
+        Event::listen([PromptingAgent::class, StreamingAgent::class], [RecordsAgentRun::class, 'start']);
+        Event::listen([AgentPrompted::class, AgentStreamed::class], [RecordsAgentRun::class, 'succeeded']);
+        Event::listen(AgentFailed::class, [RecordsAgentRun::class, 'failed']);
 
         // Instance scope, distinct from the organization role and from project
         // access: the person who runs the instance decides which models it

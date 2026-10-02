@@ -18,7 +18,7 @@ use Throwable;
  * written, as a draft nobody has sent anything with.
  *
  * The run row is opened by whoever queues this, as `pending`, and carried here
- * so the metering middleware claims it instead of opening a second one.
+ * so the metering listener claims it instead of opening a second one.
  */
 class WriteCampaign implements ShouldQueue
 {
@@ -38,7 +38,7 @@ class WriteCampaign implements ShouldQueue
     }
 
     /**
-     * What the metering middleware cannot see: the job failing before or after
+     * What the metering listener cannot see: the job failing before or after
      * the provider call, which would otherwise leave the row on `pending` for
      * good and the screen spinning.
      */

@@ -42,6 +42,7 @@ use App\Enums\SocialPlatform;
 use Laravel\Ai\Attributes\MaxSteps;
 use Laravel\Ai\Concerns\RemembersConversations;
 use Laravel\Ai\Contracts\HasTools;
+use Laravel\Ai\Models\Conversation;
 use Stringable;
 
 /**
@@ -58,6 +59,27 @@ use Stringable;
 class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversations, HasTools
 {
     use RemembersConversations;
+
+    /**
+     * The participant's newest conversation, empty or not. laravel/ai 1.0
+     * resolves "latest" from the messages table, which never sees the empty
+     * conversation "clear" creates (`EvieChatController::destroy()`), so the
+     * cleared thread would come straight back. Evie is the only agent that
+     * remembers conversations, so the conversations table alone is enough.
+     */
+    public function continueLastConversation(object $as): static
+    {
+        $this->conversationUser = $as;
+
+        $this->conversationId = Conversation::query()
+            ->where('participant_type', Conversation::participantType($as))
+            ->where('participant_id', Conversation::participantKey($as))
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->value('id');
+
+        return $this;
+    }
 
     public function instructions(): Stringable|string
     {

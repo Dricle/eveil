@@ -74,7 +74,7 @@ class EvieChatController extends Controller
             ? Decisions::from($decisions)
             : $request->string('message')->value();
 
-        return $agent->stream($prompt)->usingVercelDataProtocol(true);
+        return $agent->stream($prompt)->usingVercelDataProtocol();
     }
 
     /**

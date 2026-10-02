@@ -17,7 +17,7 @@ use Illuminate\Http\RedirectResponse;
  * resource: a writing, which the user starts and the queue performs.
  *
  * The run row is opened here, `pending`, before the job is queued: the
- * metering middleware only writes one when the provider call begins, so
+ * metering listener only writes one when the provider call begins, so
  * between the click and a worker picking the job up there would be nothing
  * to report.
  */

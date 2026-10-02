@@ -10,7 +10,7 @@ use App\Services\Discovery\SiteCrawler;
 use App\Support\ParsedPage;
 use Illuminate\Support\Collection;
 use Laravel\Ai\Responses\Data\Meta;
-use Laravel\Ai\Responses\Data\Usage;
+use Laravel\Ai\Responses\Data\TextUsage;
 use Laravel\Ai\Responses\StructuredTextResponse;
 
 /**
@@ -55,7 +55,7 @@ it('writes only the recommendations, leaving the rest of the knowledge base unto
                 ],
             ],
             '{}',
-            new Usage(promptTokens: 10, completionTokens: 5),
+            new TextUsage(inputTokens: 10, outputTokens: 5),
             new Meta('anthropic', 'claude-opus-5'),
         ),
     ]);

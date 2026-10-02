@@ -16,7 +16,7 @@ use App\Models\SocialPost;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Ai\Responses\Data\Meta;
-use Laravel\Ai\Responses\Data\Usage;
+use Laravel\Ai\Responses\Data\TextUsage;
 use Laravel\Ai\Responses\StructuredTextResponse;
 
 /**
@@ -28,7 +28,7 @@ function fakeLinkedinWriter(array $structured): void
     SocialPostWriter::fake([new StructuredTextResponse(
         $structured,
         '{}',
-        new Usage(promptTokens: 10, completionTokens: 5),
+        new TextUsage(inputTokens: 10, outputTokens: 5),
         new Meta('anthropic', 'claude-opus-5'),
     )]);
 }

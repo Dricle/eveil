@@ -19,7 +19,7 @@ use App\Notifications\ArticleDrafted;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Ai\Responses\Data\Meta;
-use Laravel\Ai\Responses\Data\Usage;
+use Laravel\Ai\Responses\Data\TextUsage;
 use Laravel\Ai\Responses\StructuredTextResponse;
 
 function fakeArticleResponse(array $structured): StructuredTextResponse
@@ -35,7 +35,7 @@ function fakeArticleResponse(array $structured): StructuredTextResponse
             ...$structured,
         ],
         '{}',
-        new Usage(promptTokens: 10, completionTokens: 5),
+        new TextUsage(inputTokens: 10, outputTokens: 5),
         new Meta('anthropic', 'claude-opus-5'),
     );
 }

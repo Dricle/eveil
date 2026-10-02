@@ -3,14 +3,12 @@
 namespace App\Ai\Agents;
 
 use App\Ai\AgentSettings;
-use App\Ai\Middleware\RecordsAgentRun;
 use App\Ai\ProviderCredentials;
 use App\Enums\SocialPlatform;
 use App\Models\AgentRun;
 use App\Models\Project;
 use Illuminate\Support\Str;
 use Laravel\Ai\Contracts\Agent;
-use Laravel\Ai\Contracts\HasMiddleware;
 use Laravel\Ai\Enums\Lab;
 use Laravel\Ai\Promptable;
 
@@ -23,7 +21,7 @@ use Laravel\Ai\Promptable;
  * database-backed mapping needs: a model change is a settings
  * change, never a deploy.
  */
-abstract class EveilAgent implements Agent, HasMiddleware
+abstract class EveilAgent implements Agent
 {
     use Promptable;
 
@@ -31,7 +29,7 @@ abstract class EveilAgent implements Agent, HasMiddleware
      * The row this call reports into. Set when the run was created before the
      * call. A job queued from a screen writes its `pending` row at dispatch,
      * so the page can say the work is coming while it is still in the queue.
-     * Left null, the metering middleware opens a row of its own.
+     * Left null, `RecordsAgentRun` opens a row of its own.
      */
     public ?AgentRun $run = null;
 
@@ -251,14 +249,6 @@ abstract class EveilAgent implements Agent, HasMiddleware
     public function timeout(): int
     {
         return $this->settings()->timeout(static::slug());
-    }
-
-    /**
-     * @return array<int, object>
-     */
-    public function middleware(): array
-    {
-        return [app(RecordsAgentRun::class)];
     }
 
     private function settings(): AgentSettings

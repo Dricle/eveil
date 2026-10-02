@@ -17,7 +17,7 @@ use Throwable;
  * two, so the request never waits for it.
  *
  * The run row is opened by whoever queues this, as `pending`, and carried here
- * so the metering middleware claims it instead of opening a second one. That
+ * so the metering listener claims it instead of opening a second one. That
  * row is the only record of the work: the job holds no state of its own.
  */
 class DeriveTargets implements ShouldQueue
@@ -44,7 +44,7 @@ class DeriveTargets implements ShouldQueue
     }
 
     /**
-     * A provider that throws is already recorded by the metering middleware.
+     * A provider that throws is already recorded by the metering listener.
      * This covers what it cannot see: the job failing before or after the call
      *. A knowledge base that is not there, a worker that gave up retrying:
      * which would otherwise leave the row on `pending` for good.

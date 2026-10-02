@@ -80,7 +80,7 @@ it('"clear" (DELETE) makes a fresh, empty conversation the project\'s latest rig
     $history = $this->actingAs($user)->withSession(['current_project_id' => $project->id])
         ->getJson(route('chat.show'));
 
-    $history->assertOk()->assertJson(['messages' => []]);
+    $history->assertOk()->assertJsonCount(0, 'messages');
 
     // The very next message, sent with no special flag, lands in that same
     // fresh conversation rather than starting a third one.
@@ -88,4 +88,8 @@ it('"clear" (DELETE) makes a fresh, empty conversation the project\'s latest rig
         ->post(route('chat.store'), ['message' => 'a fresh start'])->streamedContent();
 
     expect(DB::table('agent_conversations')->count())->toBe(2);
+
+    $this->actingAs($user)->withSession(['current_project_id' => $project->id])
+        ->getJson(route('chat.show'))
+        ->assertJsonPath('messages.0.content', 'a fresh start');
 });

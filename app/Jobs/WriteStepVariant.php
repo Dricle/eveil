@@ -17,7 +17,7 @@ use Throwable;
  * for it: the variant appears on the step once it is written.
  *
  * The run row is opened by whoever queues this, as `pending`, and carried
- * here so the metering middleware claims it instead of opening a second one.
+ * here so the metering listener claims it instead of opening a second one.
  *
  * A given `$target` rewrites that variant in place instead of adding a new
  * one, which is the "regenerate this mail" flow rather than "add an A/B
@@ -45,7 +45,7 @@ class WriteStepVariant implements ShouldQueue
     }
 
     /**
-     * What the metering middleware cannot see: the job failing before or
+     * What the metering listener cannot see: the job failing before or
      * after the provider call, which would otherwise leave the row on
      * `pending` for good and the button spinning.
      */

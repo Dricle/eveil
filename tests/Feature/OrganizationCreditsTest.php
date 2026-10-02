@@ -15,7 +15,7 @@ use App\Models\User;
 use App\Notifications\CreditsDepleted;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Ai\Responses\Data\Meta;
-use Laravel\Ai\Responses\Data\Usage;
+use Laravel\Ai\Responses\Data\TextUsage;
 use Laravel\Ai\Responses\StructuredTextResponse;
 use Laravel\Cashier\Events\WebhookReceived;
 
@@ -50,7 +50,7 @@ it('charges the balance only after a successful call, never on a thrown one', fu
         new StructuredTextResponse(
             ['what_it_does' => 'Widgets.'],
             '{}',
-            new Usage(promptTokens: 10, completionTokens: 5),
+            new TextUsage(inputTokens: 10, outputTokens: 5),
             new Meta('anthropic', 'claude-opus-5'),
         ),
     ]);
@@ -142,7 +142,7 @@ it('never charges the operator\'s own organization', function () {
         new StructuredTextResponse(
             ['what_it_does' => 'Widgets.'],
             '{}',
-            new Usage(promptTokens: 10, completionTokens: 5),
+            new TextUsage(inputTokens: 10, outputTokens: 5),
             new Meta('anthropic', 'claude-opus-5'),
         ),
     ]);
@@ -167,7 +167,7 @@ it('still charges an organization the superadmin only belongs to, not owns', fun
         new StructuredTextResponse(
             ['what_it_does' => 'Widgets.'],
             '{}',
-            new Usage(promptTokens: 10, completionTokens: 5),
+            new TextUsage(inputTokens: 10, outputTokens: 5),
             new Meta('anthropic', 'claude-opus-5'),
         ),
     ]);

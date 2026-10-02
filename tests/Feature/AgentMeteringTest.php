@@ -8,12 +8,12 @@ use App\Enums\AgentRunStatus;
 use App\Models\AgentRun;
 use App\Models\Project;
 use Laravel\Ai\Responses\Data\Meta;
-use Laravel\Ai\Responses\Data\Usage;
+use Laravel\Ai\Responses\Data\TextUsage;
 use Laravel\Ai\Responses\StructuredTextResponse;
 use RuntimeException;
 
 /**
- * No agent call goes unmetered. Metering rides on agent middleware, so it
+ * No agent call goes unmetered. Metering rides on the SDK's run events, so it
  * applies to every agent without a call site remembering.
  *
  * Tokens, never money: no provider reports a price, so a cost column would be
@@ -39,7 +39,7 @@ it('records tokens, cost and duration for a successful call', function () {
         new StructuredTextResponse(
             ['what_it_does' => 'Widgets.'],
             '{"what_it_does":"Widgets."}',
-            new Usage(promptTokens: 20_000, completionTokens: 1_000),
+            new TextUsage(inputTokens: 20_000, outputTokens: 1_000),
             new Meta('anthropic', 'claude-opus-5'),
         ),
     ]);
@@ -61,7 +61,7 @@ it('counts cached tokens as input so the meter matches what was sent', function 
         new StructuredTextResponse(
             ['what_it_does' => 'Widgets.'],
             '{}',
-            new Usage(promptTokens: 100, cacheReadInputTokens: 200, cacheWriteInputTokens: 50),
+            new TextUsage(inputTokens: 350, cacheReadInputTokens: 200, cacheWriteInputTokens: 50),
             new Meta('anthropic', 'claude-opus-5'),
         ),
     ]);
@@ -74,8 +74,8 @@ it('counts cached tokens as input so the meter matches what was sent', function 
 it('records a failed run and rethrows', function () {
     WebsiteAnalyst::fake(fn () => throw new RuntimeException('provider exploded'));
 
-    // Middleware rather than an event listener precisely so a throwing provider
-    // is recorded as failed instead of leaving a row stuck on "running".
+    // `AgentFailed` closes the row, so a throwing provider is recorded as
+    // failed instead of leaving a row stuck on "running".
     expect(fn () => analyst()->prompt('Analyse this.'))
         ->toThrow(RuntimeException::class, 'provider exploded');
 
@@ -141,7 +141,7 @@ it('records the provider that answered, not the one that was asked', function ()
         new StructuredTextResponse(
             ['what_it_does' => 'Widgets.'],
             '{}',
-            new Usage(promptTokens: 10, completionTokens: 5),
+            new TextUsage(inputTokens: 10, outputTokens: 5),
             new Meta('gemini', 'gemini-3.7-flash'),
         ),
     ]);
@@ -158,7 +158,7 @@ it('keeps the SDK invocation id, which is what the step and tool events are keye
         new StructuredTextResponse(
             ['what_it_does' => 'Widgets.'],
             '{}',
-            new Usage(promptTokens: 10, completionTokens: 5),
+            new TextUsage(inputTokens: 10, outputTokens: 5),
             new Meta('anthropic', 'claude-opus-5'),
         ),
     ]);

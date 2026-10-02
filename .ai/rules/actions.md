@@ -10,7 +10,7 @@ paths:
 
 The line to hold:
 - **`app/Actions/`**. Use cases. Fetch, call a service or an agent, persist, return. Invoked by a command, a controller or a job. No HTTP parsing, no prompt text, no schema.
-- **`app/Ai/`**: anything that IS AI: the agent classes and their prompts, `AgentSettings`, `ModelPricing`, the metering middleware.
+- **`app/Ai/`**: anything that IS AI: the agent classes and their prompts, `AgentSettings`, `ModelPricing`, the metering listener.
 - **`app/Services/<Domain>/`**: the machinery an action drives, one folder per subsystem: `Services/Discovery/` holds `SiteCrawler`, `PageFetcher`, `JsonLd`, `ListingHarvester`, `EmailVerifier` and the sources.
 
 The mistake to avoid: a class does not belong in `app/Ai/` because it mentions an agent, only because it IS one. `AnalyzeWebsite` calls an agent and contains no AI itself, so it is an action.

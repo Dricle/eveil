@@ -79,6 +79,18 @@ it('stores a named contact with the address published on the site', function () 
         ->and($lead->language)->toBe('fr');
 });
 
+it('skips people the model returned as bare strings', function () {
+    companyWithSite();
+    ContactExtractor::fake([extraction(people: [
+        'Marie Dupont',
+        ['first_name' => 'Jean', 'last_name' => 'Martin', 'email' => 'jean.martin@friterie.be'],
+    ])]);
+
+    $this->artisan('eveil:find-contacts')->assertSuccessful();
+
+    expect(Lead::sole()->email)->toBe('jean.martin@friterie.be');
+});
+
 it('infers the other addresses from the shape of a published one', function () {
     companyWithSite();
     ContactExtractor::fake([extraction(people: [

@@ -167,6 +167,12 @@ class FindContacts
         $leads = new Collection;
 
         foreach ($extracted['people'] ?? [] as $person) {
+            // The schema asks for objects, but a model sometimes answers with
+            // bare strings ("Marie Dupont"); there is no email to keep in those.
+            if (! is_array($person)) {
+                continue;
+            }
+
             $lead = $this->storePerson($company, $person, $pattern, $domain);
 
             if ($lead !== null) {

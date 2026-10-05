@@ -327,11 +327,12 @@ watch(() => props.project, fill, { immediate: true, deep: true })
         <UCard v-if="openRecommendations.length">
             <template #header>
                 <h2 class="font-medium">
-                    Acquisition ideas
+                    Ideas
                 </h2>
                 <p class="mt-1 text-sm text-muted">
-                    Levers the product is missing, each grounded in something specific
-                    the portrait or the repo actually shows. Still open ones only - the
+                    Acquisition levers and features competitors have that the product is
+                    missing, each grounded in something specific the portrait, the repo or
+                    a competitor's site actually shows. Still open ones only - the
                     Dashboard is where you mark one done or discuss it with Evie.
                 </p>
             </template>
@@ -347,6 +348,13 @@ watch(() => props.project, fill, { immediate: true, deep: true })
                             {{ idea.idea }}
                         </p>
                         <div class="flex shrink-0 gap-1.5">
+                            <UBadge
+                                v-if="idea.kind === 'feature'"
+                                color="info"
+                                variant="subtle"
+                                size="sm"
+                                label="Missing feature"
+                            />
                             <UBadge
                                 :color="idea.impact === 'high' ? 'success' : idea.impact === 'medium' ? 'warning' : 'neutral'"
                                 variant="subtle"

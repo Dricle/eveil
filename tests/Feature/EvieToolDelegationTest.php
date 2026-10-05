@@ -9,6 +9,7 @@ use App\Ai\Tools\DeleteAllLeads;
 use App\Ai\Tools\DeleteCompanyNote;
 use App\Ai\Tools\DeleteLeadNote;
 use App\Ai\Tools\DeleteTargetProfile;
+use App\Ai\Tools\FindFeatureGaps;
 use App\Ai\Tools\FindNewTargetProfiles;
 use App\Ai\Tools\GetCampaign;
 use App\Ai\Tools\GetCompany;
@@ -31,6 +32,7 @@ use App\Enums\TargetProfileSource;
 use App\Enums\TargetProfileType;
 use App\Jobs\DeriveTargets;
 use App\Jobs\Discovery\PlanDiscovery;
+use App\Jobs\FindFeatureGaps as FindFeatureGapsJob;
 use App\Jobs\RefreshAcquisitionIdeas as RefreshAcquisitionIdeasJob;
 use App\Models\AgentRun;
 use App\Models\Campaign;
@@ -522,6 +524,28 @@ it('starts a targeted re-read for acquisition ideas', function () {
 
     expect($run->status)->toBe(AgentRunStatus::Pending)
         ->and($result)->toContain('re-reading the site');
+});
+
+it('starts reading competitor sites for missing features', function () {
+    Queue::fake();
+
+    $project = Project::factory()->create(['knowledge_base' => ['competitors' => ['RouteCo']]]);
+
+    (new FindFeatureGaps($project))->handle(new Request);
+
+    Queue::assertPushed(FindFeatureGapsJob::class, fn (FindFeatureGapsJob $job): bool => $job->project->is($project));
+
+    expect(AgentRun::query()->withoutGlobalScopes()->sole()->status)->toBe(AgentRunStatus::Pending);
+});
+
+it('refuses to look for feature gaps when no competitor is named', function () {
+    Queue::fake();
+
+    $result = (new FindFeatureGaps(Project::factory()->create(['knowledge_base' => []])))->handle(new Request);
+
+    Queue::assertNothingPushed();
+
+    expect($result)->toContain('no competitors');
 });
 
 it('reads one target profile\'s full criteria', function () {

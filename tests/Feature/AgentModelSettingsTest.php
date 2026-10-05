@@ -159,6 +159,7 @@ it('lists every agent it finds in the code, not a hand-kept list', function () {
     expect(app(AgentSettings::class)->known())->toBe([
         'article-writer',
         'company-qualifier',
+        'competitor-analyst',
         'contact-extractor',
         'contact-page-finder',
         'discovery-planner',

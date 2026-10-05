@@ -6,6 +6,7 @@ use App\Casts\EncryptedCredential;
 use App\Enums\ArticleFrequency;
 use App\Enums\AutonomyLevel;
 use App\Enums\OrganizationRole;
+use App\Enums\RecommendationKind;
 use App\Enums\RecommendationStatus;
 use App\Enums\RedditScanFrequency;
 use App\Enums\SocialPostFrequency;
@@ -317,9 +318,10 @@ class Project extends Model
     }
 
     /**
-     * Every acquisition idea the Website agent has ever proposed, normalised:
-     * a row written before `status` existed reads as `proposed`, the same
-     * default a fresh idea gets. Identity is `key`, same as `openQuestions()`.
+     * Every idea ever proposed, normalised: a row written before `status`
+     * existed reads as `proposed`, the same default a fresh idea gets, and one
+     * written before `kind` existed reads as an acquisition lever, the only
+     * kind there was. Identity is `key`, same as `openQuestions()`.
      *
      * @return list<array<string, mixed>>
      */
@@ -338,6 +340,9 @@ class Project extends Model
                 'status' => is_string($r['status'] ?? null) && $r['status'] !== ''
                     ? $r['status']
                     : RecommendationStatus::Proposed->value,
+                'kind' => is_string($r['kind'] ?? null) && $r['kind'] !== ''
+                    ? $r['kind']
+                    : RecommendationKind::Acquisition->value,
             ])
             ->all());
     }
@@ -367,12 +372,16 @@ class Project extends Model
      * whatever the agent just proposed and write back only what this
      * returns, never the rest of the knowledge base.
      *
+     * Scoped to one `kind`: a website re-read only replaces the open
+     * acquisition levers, and leaves the open feature gaps
+     * `App\Actions\FindFeatureGaps` proposed alone, and the reverse.
+     *
      * @return list<array<string, mixed>>
      */
-    public function mergeRecommendations(mixed $recommendations): array
+    public function mergeRecommendations(mixed $recommendations, RecommendationKind $kind = RecommendationKind::Acquisition): array
     {
-        $decided = collect($this->recommendations())
-            ->reject(fn (array $r): bool => $r['status'] === RecommendationStatus::Proposed->value)
+        $kept = collect($this->recommendations())
+            ->reject(fn (array $r): bool => $r['status'] === RecommendationStatus::Proposed->value && $r['kind'] === $kind->value)
             ->keyBy('key');
 
         $fresh = collect(is_array($recommendations) ? $recommendations : [])
@@ -384,10 +393,11 @@ class Project extends Model
                 'impact' => (string) $r['impact'],
                 'effort' => (string) $r['effort'],
                 'status' => RecommendationStatus::Proposed->value,
+                'kind' => $kind->value,
             ])
             ->keyBy('key');
 
-        return array_values($decided->union($fresh)->all());
+        return array_values($kept->union($fresh)->all());
     }
 
     /**

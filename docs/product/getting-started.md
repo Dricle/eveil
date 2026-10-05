@@ -10,6 +10,8 @@ Paste your product's URL. Eveil's Website AI crawls it into a knowledge base and
 
 It also proposes acquisition ideas your site is missing — a referral scheme, editorial content, a trade fair — each grounded in something specific it found, never generic advice. These show up on the Dashboard while at least one is still open: mark one done or not interested with a click, or talk it through with [Evie](/product/evie).
 
+When your site names competitors, Eveil then reads their sites too and lists the features they sell that your product doesn't have yet, each citing which competitor offers it. Same Dashboard card, same done or not interested.
+
 ## 3. Review and approve
 
 Eveil finds and qualifies companies matching a target profile, extracts contacts, and drafts outreach. You review and approve — the step builder underneath is there when you need manual control, not required for the default flow.

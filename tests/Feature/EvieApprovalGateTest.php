@@ -2,6 +2,7 @@
 
 use App\Ai\Tools\CreateSequence;
 use App\Ai\Tools\Evie\ProposeSuggestedReplies;
+use App\Ai\Tools\FindFeatureGaps;
 use App\Ai\Tools\GetCampaign;
 use App\Ai\Tools\GetDiscoveryRunStatus;
 use App\Ai\Tools\ListCampaigns;
@@ -26,6 +27,7 @@ it('gates the tools that dispatch a real action', function () {
     $create = (new CreateSequence($project))->shouldRequestApproval(new Request);
     $update = (new UpdateSequence($project))->shouldRequestApproval(new Request);
     $refresh = (new RefreshAcquisitionIdeas($project))->shouldRequestApproval(new Request);
+    $featureGaps = (new FindFeatureGaps($project))->shouldRequestApproval(new Request);
 
     expect($start)->not->toBeNull()
         ->and($start->reason)->toContain('discovery run')
@@ -34,7 +36,9 @@ it('gates the tools that dispatch a real action', function () {
         ->and($update)->not->toBeNull()
         ->and($update->reason)->toContain('steps')
         ->and($refresh)->not->toBeNull()
-        ->and($refresh->reason)->toContain('acquisition ideas');
+        ->and($refresh->reason)->toContain('acquisition ideas')
+        ->and($featureGaps)->not->toBeNull()
+        ->and($featureGaps->reason)->toContain('competitors');
 });
 
 it('never gates the read-only lookups', function () {

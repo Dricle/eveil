@@ -132,7 +132,7 @@ function decideRecommendation (recommendation: Recommendation, status: 'done' | 
 }
 
 function discussRecommendations () {
-    openEvieChat('Let\'s discuss the acquisition ideas.')
+    openEvieChat('Let\'s discuss the open ideas.')
 }
 
 const CAMPAIGN_STATUS: Record<string, { label: string, color: string }> = {
@@ -498,7 +498,7 @@ const topupPercent = computed(() => {
                     <template #header>
                         <div class="flex items-center justify-between gap-2">
                             <h3 class="text-sm font-semibold">
-                                Acquisition ideas
+                                Ideas
                             </h3>
                             <UButton
                                 icon="i-lucide-sparkles"
@@ -525,6 +525,13 @@ const topupPercent = computed(() => {
                             </p>
                             <div class="mt-2 flex items-center justify-between gap-2">
                                 <div class="flex shrink-0 gap-1.5">
+                                    <UBadge
+                                        v-if="recommendation.kind === 'feature'"
+                                        color="info"
+                                        variant="subtle"
+                                        size="sm"
+                                        label="Missing feature"
+                                    />
                                     <UBadge
                                         :color="recommendation.impact === 'high' ? 'success' : recommendation.impact === 'medium' ? 'warning' : 'neutral'"
                                         variant="subtle"

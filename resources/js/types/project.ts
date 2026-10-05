@@ -40,9 +40,10 @@ export type RepoFindings = {
 }
 
 /**
- * An acquisition lever the product is missing, grounded in specific
- * evidence (ADR-032). `status` is decided by the user or by Evie on their
- * behalf, never by a re-analysis once it's past `proposed`.
+ * An acquisition lever the product is missing, or (`kind: 'feature'`) a
+ * capability competitors have that it lacks, grounded in specific evidence
+ * (ADR-032). `status` is decided by the user or by Evie on their behalf,
+ * never by a re-analysis once it's past `proposed`.
  */
 export type Recommendation = {
     key: string
@@ -51,6 +52,7 @@ export type Recommendation = {
     impact: 'high' | 'medium' | 'low'
     effort: 'high' | 'medium' | 'low'
     status: 'proposed' | 'done' | 'archived'
+    kind: 'acquisition' | 'feature'
 }
 
 /**

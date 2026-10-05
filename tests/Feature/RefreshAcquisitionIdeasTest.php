@@ -24,6 +24,7 @@ function projectPendingRefresh(): array
             'key_features' => ['Route planning'],
             'recommendations' => [
                 ['key' => 'referral_program', 'idea' => 'Referral program', 'evidence' => 'No referral flow.', 'impact' => 'high', 'effort' => 'medium', 'status' => 'done'],
+                ['key' => 'feature_driver_app', 'idea' => 'Driver app', 'evidence' => 'RouteCo sells one.', 'impact' => 'high', 'effort' => 'high', 'kind' => 'feature'],
             ],
         ],
         // Set even though nothing here should read it: proves the merge
@@ -70,6 +71,8 @@ it('writes only the recommendations, leaving the rest of the knowledge base unto
         // The decided one survives untouched (ADR-032), the new one is added.
         ->and($recommendations['referral_program']['status'])->toBe('done')
         ->and($recommendations['sector_case_studies']['status'])->toBe('proposed')
+        // An open feature gap is not this re-read's to replace.
+        ->and($recommendations['feature_driver_app']['status'])->toBe('proposed')
         ->and($run->fresh()->status)->toBe(AgentRunStatus::Succeeded);
 });
 
@@ -83,5 +86,5 @@ it('marks the run failed and leaves recommendations alone on an empty crawl', fu
     expect($run->fresh())
         ->status->toBe(AgentRunStatus::Failed)
         ->error->not->toBeNull()
-        ->and($project->fresh()->recommendations())->toHaveCount(1);
+        ->and($project->fresh()->recommendations())->toHaveCount(2);
 });

@@ -2,6 +2,7 @@
 
 namespace App\Ai\Tools;
 
+use App\Enums\RecommendationKind;
 use App\Enums\RecommendationStatus;
 use App\Models\Project;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -23,9 +24,11 @@ class ProposeRecommendation implements Tool
     public function description(): Stringable|string
     {
         return <<<'TEXT'
-        Adds a new acquisition idea to the project's open list, the same shape
+        Adds a new idea to the project's open list, the same shape
         WebsiteAnalyst proposes: a concrete lever, evidence for why it's
-        missing, and an impact/effort ranking. Only for a lever genuinely new
+        missing, and an impact/effort ranking. kind "feature" is for a product
+        capability competitors have and this product lacks; anything else is
+        an acquisition lever. Only for a lever genuinely new
         to the list - read GetKnowledgeBase first and use UpdateRecommendation
         instead when the user is really asking to change one that's already
         there.
@@ -47,6 +50,7 @@ class ProposeRecommendation implements Tool
                 'impact' => $request->string('impact')->value(),
                 'effort' => $request->string('effort')->value(),
                 'status' => RecommendationStatus::Proposed->value,
+                'kind' => $request->string('kind', RecommendationKind::Acquisition->value)->value(),
             ],
         ];
 
@@ -90,6 +94,8 @@ class ProposeRecommendation implements Tool
             'effort' => $schema->string()->enum(['high', 'medium', 'low'])
                 ->description('How much building or running this lever would plausibly take.')
                 ->required(),
+            'kind' => $schema->string()->enum(['acquisition', 'feature'])
+                ->description('"feature" for a capability competitors have that this product lacks. Defaults to "acquisition".'),
         ];
     }
 }

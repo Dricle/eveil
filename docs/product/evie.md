@@ -18,11 +18,13 @@ Shipped something new? Tell Evie in chat. It reads the current knowledge base, a
 
 ## Discussing acquisition ideas
 
-The Website AI also proposes acquisition levers your product is missing — a referral scheme, a comparison page, an offer to a specific kind of customer — each grounded in something specific your site or knowledge base shows is absent, never generic advice. They show up on the Dashboard, under "Acquisition ideas", only while at least one is still open.
+The Website AI also proposes acquisition levers your product is missing — a referral scheme, a comparison page, an offer to a specific kind of customer — each grounded in something specific your site or knowledge base shows is absent, never generic advice. They show up on the Dashboard, under "Ideas", only while at least one is still open, next to the features your competitors have and you don't (marked "Missing feature").
 
 Click "Discuss with Evie" to talk through what's open — it opens the chat and starts the conversation. Tell it you're doing one and it marks it done; tell it you're not interested and it archives it, which is final: an archived idea never comes back on a later re-analysis. It can also reword an idea's evidence or ranking when you correct it, or add a new one straight from what you just told it in chat. The same Done/Reject buttons sit on each idea directly, for marking one by hand without a conversation.
 
 Ask it for a fresh look ("is there anything new I'm missing?") and it re-reads the whole site looking for new ideas — a real crawl, so it pauses for your approval first, same as starting a discovery run. This only ever touches the acquisition ideas: the rest of the knowledge base (what it does, features, positioning) is left exactly as it is, even if you've just corrected something else in the same conversation.
+
+Ask it what your competitors have that you don't and it reads their sites for missing features, again pausing for approval first. It only reads competitors already in your knowledge base, so tell it about a new one first and it adds it.
 
 ## Drafting a LinkedIn post
 

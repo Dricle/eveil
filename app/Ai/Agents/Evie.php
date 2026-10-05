@@ -15,6 +15,7 @@ use App\Ai\Tools\DismissArticleIdea;
 use App\Ai\Tools\DraftArticle;
 use App\Ai\Tools\DraftSocialPost;
 use App\Ai\Tools\Evie\ProposeSuggestedReplies;
+use App\Ai\Tools\FindFeatureGaps;
 use App\Ai\Tools\FindNewTargetProfiles;
 use App\Ai\Tools\GetArticle;
 use App\Ai\Tools\GetCampaign;
@@ -153,6 +154,13 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
         as they are, whatever UpdateKnowledgeBase has set them to), so it's
         safe to call even mid-conversation about a feature the user just told
         you about. It pauses for approval first, same as StartDiscovery.
+
+        Some open ideas have kind "feature": capabilities the named
+        competitors sell that this product lacks, found by FindFeatureGaps.
+        Same lifecycle, same UpdateRecommendation. FindFeatureGaps itself is
+        a real crawl of the competitors' sites, for when the user asks what
+        competitors have that they don't; it pauses for approval first and
+        only reads competitors already in the knowledge base.
 
         CreateTargetProfile and UpdateTargetProfile are the same kind of
         tool again, this time on a profile's own criteria: use
@@ -362,6 +370,7 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
             new GetKnowledgeBase($this->project),
             new UpdateKnowledgeBase($this->project),
             new ProposeRecommendation($this->project),
+            new FindFeatureGaps($this->project),
             new UpdateRecommendation($this->project),
             new RefreshAcquisitionIdeas($this->project),
             new ListCampaigns($this->project),

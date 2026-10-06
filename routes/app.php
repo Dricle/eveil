@@ -74,6 +74,7 @@ use App\Http\Controllers\ProjectKnowledgeBaseController;
 use App\Http\Controllers\RecommendationStatusController;
 use App\Http\Controllers\RedditCadenceController;
 use App\Http\Controllers\RedditReplyController;
+use App\Http\Controllers\Settings\ApiTokenController;
 use App\Http\Controllers\Settings\MemberController;
 use App\Http\Controllers\SocialAccountController;
 use App\Http\Controllers\SocialCadenceController;
@@ -195,6 +196,16 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
             Route::get('autonomy', [AutonomyController::class, 'edit'])->name('autonomy.edit');
             Route::put('autonomy', [AutonomyController::class, 'update'])->name('autonomy.update');
+
+            /*
+             * Tokens for `routes/api.php`. Project-scoped: the project owns
+             * each token, so a token reaches this project and nothing else.
+             */
+            Route::get('api-tokens', [ApiTokenController::class, 'index'])->name('api-tokens.index');
+            Route::post('api-tokens', [ApiTokenController::class, 'store'])->name('api-tokens.store');
+            Route::delete('api-tokens/{token}', [ApiTokenController::class, 'destroy'])
+                ->whereNumber('token')
+                ->name('api-tokens.destroy');
 
             /*
              * Every writing-tone box together - see `AiInstructionsController`.

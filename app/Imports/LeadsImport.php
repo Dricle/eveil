@@ -87,21 +87,27 @@ class LeadsImport implements OnEachRow, SkipsEmptyRows, WithHeadingRow
 
     public function onRow(Row $row): void
     {
+        // The row number the person sees in their spreadsheet, heading row
+        // included: anything else makes the report useless to check against.
+        $this->add($row->toArray(), $row->getIndex());
+    }
+
+    /**
+     * One contact, from a file row or from the API, reported under `$line`.
+     *
+     * @param  array<string, mixed>  $values
+     */
+    public function add(array $values, int $line): void
+    {
         if ($this->truncated || $this->imported + $this->duplicates + count($this->rejected) >= self::MAX_ROWS) {
             $this->truncated = true;
 
             return;
         }
 
-        /** @var array<string, mixed> $values */
-        $values = $row->toArray();
-
         $email = mb_strtolower(trim((string) ($values['email'] ?? '')));
         $linkedin = trim((string) ($values['linkedin_url'] ?? ''));
 
-        // The row number the person sees in their spreadsheet, heading row
-        // included: anything else makes the report useless to check against.
-        $line = $row->getIndex();
         $reason = $this->reject($email, $linkedin);
 
         if ($reason !== null) {

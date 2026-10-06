@@ -90,6 +90,9 @@ unlimited mailboxes, unlimited leads, your data on your own machine.
   `Message-ID` so a reply always attaches to the lead it answers.
 - **A bounce circuit breaker**, scoped per mailbox, that pauses sending before
   a bad batch burns a domain's reputation, not per campaign, per address.
+- **An API for the rest of your stack.** Per-project tokens to read companies,
+  contacts and campaigns into a CRM, push contacts in, enrol them, or ask for a
+  social post. See the [API docs](https://docs.eveil.cloud/product/api).
 - **Self-hosted and AGPL-3.0.** Four containers, five minutes, your data never
   leaves your machine unless you choose the cloud edition.
 - **No dark patterns.** No open-tracking pixel, no mailbox warm-up, no OAuth

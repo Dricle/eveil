@@ -2,10 +2,14 @@
 
 namespace App\Models;
 
+use App\Enums\CampaignLeadStatus;
 use App\Enums\CampaignStatus;
+use App\Enums\MessageDirection;
 use App\Models\Concerns\BelongsToProject;
 use Database\Factories\CampaignFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -52,6 +56,32 @@ class Campaign extends Model
     public function campaignLeads(): HasMany
     {
         return $this->hasMany(CampaignLead::class);
+    }
+
+    /**
+     * What a campaign list reports about each one: steps, who is still in the
+     * sequence, everyone ever enrolled, how many got at least one message each
+     * way, and when the next mail is owed. A campaign nobody is in has to read
+     * differently from one that started fine.
+     *
+     * @param  Builder<self>  $query
+     */
+    #[Scope]
+    protected function withDeliveryCounts(Builder $query): void
+    {
+        $query
+            ->withCount([
+                'steps',
+                'campaignLeads',
+                'campaignLeads as live_leads_count' => fn ($leads) => $leads
+                    ->whereIn('status', CampaignLeadStatus::live()),
+                'campaignLeads as sent_leads_count' => fn ($leads) => $leads
+                    ->whereHas('messages', fn ($messages) => $messages->where('direction', MessageDirection::Outbound)),
+                'campaignLeads as replied_leads_count' => fn ($leads) => $leads
+                    ->whereHas('messages', fn ($messages) => $messages->where('direction', MessageDirection::Inbound)),
+            ])
+            ->withMin(['campaignLeads as next_action_at' => fn ($leads) => $leads
+                ->whereIn('status', CampaignLeadStatus::live())], 'next_action_at');
     }
 
     /**

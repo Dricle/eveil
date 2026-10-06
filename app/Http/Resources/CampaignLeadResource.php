@@ -21,6 +21,7 @@ class CampaignLeadResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'contact_id' => $this->lead_id,
             'name' => trim("{$this->lead?->first_name} {$this->lead?->last_name}") ?: null,
             'email' => $this->lead?->email,
             'company' => $this->lead?->company?->name,

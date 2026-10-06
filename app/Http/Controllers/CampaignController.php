@@ -9,7 +9,6 @@ use App\Actions\WriteMissingCampaigns;
 use App\Ai\Agents\SequenceWriter;
 use App\Ai\Agents\VariantWriter;
 use App\Enums\AgentRunStatus;
-use App\Enums\CampaignLeadStatus;
 use App\Enums\MessageDirection;
 use App\Enums\ReplyClassification;
 use App\Http\Requests\CampaignRequest;
@@ -50,23 +49,7 @@ class CampaignController extends Controller
             'campaigns' => CampaignResource::collection(
                 Campaign::query()
                     ->with('targetProfile')
-                    ->withCount([
-                        'steps',
-                        'campaignLeads as live_leads_count' => fn ($leads) => $leads
-                            ->whereIn('status', CampaignLeadStatus::live()),
-                        // What the footer reports: everyone ever enrolled who
-                        // got at least one message each way, same aggregates
-                        // the dashboard's own campaign list already counts.
-                        'campaignLeads as sent_leads_count' => fn ($leads) => $leads
-                            ->whereHas('messages', fn ($messages) => $messages->where('direction', MessageDirection::Outbound)),
-                        'campaignLeads as replied_leads_count' => fn ($leads) => $leads
-                            ->whereHas('messages', fn ($messages) => $messages->where('direction', MessageDirection::Inbound)),
-                    ])
-                    // The list is where the switch is thrown, so it has to say
-                    // what the switch did: a campaign nobody is in reads exactly
-                    // like one that started fine.
-                    ->withMin(['campaignLeads as next_action_at' => fn ($leads) => $leads
-                        ->whereIn('status', CampaignLeadStatus::live())], 'next_action_at')
+                    ->withDeliveryCounts()
                     ->latest('id')
                     ->get()
             ),

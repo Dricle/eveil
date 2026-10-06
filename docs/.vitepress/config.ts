@@ -26,6 +26,7 @@ export default defineConfig({
                         { text: 'Posting to X and Bluesky', link: '/product/social' },
                         { text: 'Replying on Reddit', link: '/product/reddit' },
                         { text: 'SEO articles', link: '/product/seo' },
+                        { text: 'API', link: '/product/api' },
                     ],
                 },
             ],

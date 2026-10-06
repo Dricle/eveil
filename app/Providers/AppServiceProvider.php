@@ -15,11 +15,14 @@ use App\Support\CurrentProject;
 use App\Support\DisposableDomains;
 use App\Support\Settings;
 use Carbon\CarbonImmutable;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
@@ -98,6 +101,11 @@ class AppServiceProvider extends ServiceProvider
         // for the model, so without this the route parameter would stay the
         // raw slug string and never become a `Project` at all.
         Route::bind('project', fn (string $slug) => Project::where('slug', $slug)->firstOrFail());
+
+        // Per project, since a token IS a project: two scripts sharing one
+        // project share its budget, and one project's sync cannot starve
+        // another's.
+        RateLimiter::for('api', fn (Request $request) => Limit::perMinute(60)->by($request->user()?->getKey() ?? $request->ip()));
     }
 
     /**

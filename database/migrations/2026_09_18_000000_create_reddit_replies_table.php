@@ -41,7 +41,7 @@ return new class extends Migration
             // Which buyer-intent query surfaced it, seo_thread only.
             $table->string('search_query')->nullable();
 
-            // value_comment|soft_mention|dm_invite.
+            // value_comment|soft_mention|direct_mention|dm_invite.
             $table->string('angle');
 
             // Shown beside the draft in the approval queue, same discipline

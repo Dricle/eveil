@@ -8,14 +8,14 @@ use App\Models\Project;
 use App\Models\RedditReply;
 
 /**
- * The "I wrote my own" path: the user ignored all three drafted angles and
+ * The "I wrote my own" path: the user ignored all the drafted angles and
  * posted their own reply instead, but still wants Eveil tracking its score
  * and folding it into the writer's examples once it earns that
  * (`FetchRedditReplyStats`, same threshold as a drafted angle - see
  * `.ai/rules/controllers-actions.md`, nothing here bypasses it).
  *
- * Stored as a fourth angle rather than overwriting a drafted row, so the
- * three original drafts stay intact for comparison. Rejects them the same
+ * Stored as its own angle rather than overwriting a drafted row, so the
+ * original drafts stay intact for comparison. Rejects them the same
  * way `RedditReplyController::approve()` rejects sibling angles: only one
  * angle per thread can ever be published.
  */

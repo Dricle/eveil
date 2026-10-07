@@ -18,6 +18,7 @@ const toast = useToast()
 const ANGLE_LABEL = {
     value_comment: 'Value comment',
     soft_mention: 'Soft mention',
+    direct_mention: 'Direct mention',
     dm_invite: 'DM invite',
     user_written: 'Written by you'
 }
@@ -346,7 +347,7 @@ function promote (reply: RedditReply) {
                 <div class="space-y-4">
                     <UFormField
                         label="What you posted"
-                        description="The actual text you posted, not one of the three drafts - this is what Eveil learns from once it earns enough upvotes."
+                        description="The actual text you posted, not one of the drafts - this is what Eveil learns from once it earns enough upvotes."
                     >
                         <UTextarea
                             v-model="manualBody"

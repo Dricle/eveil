@@ -11,7 +11,7 @@ use Laravel\Ai\Responses\StructuredAgentResponse;
 use Stringable;
 
 /**
- * Drafts up to three reply variants for ONE thread `RedditOpportunityTriage`
+ * Drafts up to four reply variants for ONE thread `RedditOpportunityTriage`
  * already accepted - never picks the thread itself, that judgment already
  * happened. Always draft-only: nothing this agent writes is ever posted by
  * the app. Reddit currently blocks new OAuth app registration, so this
@@ -48,19 +48,24 @@ class RedditReplyWriter extends EveilAgent implements HasStructuredOutput
         You write Reddit replies for a real person who built or works on the product
         described below, replying under their own account to one specific thread.
 
-        Write up to three versions of the reply, one per angle:
+        Write up to four versions of the reply, one per angle:
 
         - body_value_comment: a genuinely useful comment that adds real value to the
           discussion. It may or may not mention the product at all - write it as you
           would if the goal were simply to be the best answer in the thread.
         - body_soft_mention: like the above, but ends by naming the product plainly
           ("I built X for exactly this" / "have you looked at X?") - honest, not pushy.
+        - body_direct_mention: leads with the product as the answer. Says plainly that
+          you built it, what it does for this exact problem and why it fits, still
+          useful and specific to the thread rather than a generic pitch.
         - body_dm_invite: a short comment that offers to help directly and invites a DM,
           without a hard pitch in the comment itself.
 
         Leave any one of these EMPTY when it genuinely does not fit this thread - never
-        force all three. A thread where a product mention would look tone-deaf should
-        get an empty body_soft_mention and body_dm_invite, value_comment only.
+        force all four. A thread where a product mention would look tone-deaf should
+        get an empty body_soft_mention, body_direct_mention and body_dm_invite,
+        value_comment only. A thread explicitly asking for a tool like this one is
+        where body_direct_mention fits best.
 
         Match the tone, length and register of the sample replies you are shown from
         this same thread - formal, casual, terse, meme-heavy, whatever it actually is.
@@ -89,6 +94,9 @@ class RedditReplyWriter extends EveilAgent implements HasStructuredOutput
 
             'body_soft_mention' => $schema->string()
                 ->description('Useful comment ending with a plain, honest product mention. Empty if this angle does not fit.'),
+
+            'body_direct_mention' => $schema->string()
+                ->description('Talks about the product directly as the answer, honest that you built it. Empty if this angle does not fit.'),
 
             'body_dm_invite' => $schema->string()
                 ->description('Short, offers direct help and invites a DM. Empty if this angle does not fit.'),

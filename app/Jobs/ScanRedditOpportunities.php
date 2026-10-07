@@ -183,6 +183,7 @@ class ScanRedditOpportunities implements ShouldQueue
         $variants = [
             [RedditReplyAngle::ValueComment, (string) ($structured['body_value_comment'] ?? '')],
             [RedditReplyAngle::SoftMention, (string) ($structured['body_soft_mention'] ?? '')],
+            [RedditReplyAngle::DirectMention, (string) ($structured['body_direct_mention'] ?? '')],
             [RedditReplyAngle::DmInvite, (string) ($structured['body_dm_invite'] ?? '')],
         ];
 

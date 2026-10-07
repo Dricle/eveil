@@ -96,6 +96,32 @@ it('drafts only the angles the writer actually filled in, from an accepted candi
         ->and(AgentRun::where('agent', RedditReplyWriter::slug())->count())->toBe(1);
 });
 
+it('stores a direct mention draft alongside the other angles', function () {
+    $project = scannableProject();
+
+    RedditOpportunityTriage::fake([[
+        'items' => [[
+            'permalink' => 'https://www.reddit.com/r/SaaS/comments/xyz789/what_do_you_use/def456/',
+            'is_opportunity' => true,
+            'reason' => 'Asking for exactly this tool.',
+        ]],
+    ]]);
+
+    RedditReplyWriter::fake([[
+        'body_value_comment' => 'A useful answer.',
+        'body_soft_mention' => '',
+        'body_direct_mention' => 'I built a tool for exactly this, here is how it helps.',
+        'body_dm_invite' => '',
+    ]]);
+
+    ScanRedditOpportunities::dispatchSync($project);
+
+    expect(RedditReply::pluck('body', 'angle')->all())->toBe([
+        RedditReplyAngle::ValueComment->value => 'A useful answer.',
+        RedditReplyAngle::DirectMention->value => 'I built a tool for exactly this, here is how it helps.',
+    ]);
+});
+
 it('drafts nothing when triage rejects every candidate, and never calls the writer', function () {
     $project = scannableProject();
 

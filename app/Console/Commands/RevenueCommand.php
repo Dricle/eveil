@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Cloud\Models\CreditTransaction;
+use Carbon\CarbonInterface;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -52,7 +53,10 @@ class RevenueCommand extends Command
             }
 
             $label = $month->format('F Y');
-            $query->whereBetween('created_at', [$month->startOfMonth(), $month->copy()->endOfMonth()]);
+            // Both ends copied: this app's date class is immutable, but a
+            // bare `$month->endOfMonth()` under a mutable one would move the
+            // start of the range to the end of it and silently report nothing.
+            $query->whereBetween('created_at', [$month->copy()->startOfMonth(), $month->copy()->endOfMonth()]);
         }
 
         $purchases = $query->with('organization:id,name')->orderBy('created_at')->get();
@@ -114,6 +118,9 @@ class RevenueCommand extends Command
     }
 
     /**
+     * `first()` is the earliest purchase, not an arbitrary one: `handle()`
+     * orders by `created_at` before grouping, and grouping preserves order.
+     *
      * @param  Collection<int, CreditTransaction>  $purchases
      */
     private function buyers(Collection $purchases): void
@@ -121,18 +128,21 @@ class RevenueCommand extends Command
         $this->line('');
         $this->line('  Who paid:');
 
-        $rows = $purchases
-            ->groupBy('organization_id')
-            ->map(fn (Collection $group): array => [
-                $group->first()?->organization?->name ?? 'deleted organization',
+        $rows = [];
+
+        foreach ($purchases->groupBy('organization_id') as $group) {
+            /** @var CreditTransaction $earliest */
+            $earliest = $group->first();
+
+            $rows[] = [
+                $earliest->organization->name,
                 $group->whereNotNull('amount_cents')->isEmpty()
                     ? 'unknown'
-                    : number_format($group->sum('amount_cents') / 100, 2).' '.strtoupper($group->first()?->currency ?? ''),
+                    : number_format($group->sum('amount_cents') / 100, 2).' '.strtoupper((string) $earliest->currency),
                 $group->sum('credits'),
-                $group->min('created_at')?->toDateString() ?? '',
-            ])
-            ->values()
-            ->all();
+                $earliest->created_at?->toDateString() ?? '',
+            ];
+        }
 
         $this->table(['Organization', 'Paid', 'Credits', 'First purchase'], $rows);
     }
@@ -143,7 +153,7 @@ class RevenueCommand extends Command
      * nobody meant, and a report silently covering the wrong month is the one
      * failure mode here that looks like an answer.
      */
-    private function month(): ?Carbon
+    private function month(): ?CarbonInterface
     {
         $option = $this->option('month');
 

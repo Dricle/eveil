@@ -53,7 +53,7 @@ class GrantCreditsOnCheckout
          * "already processed", not an error.
          */
         try {
-            DB::transaction(function () use ($organization, $credits, $event): void {
+            DB::transaction(function () use ($organization, $credits, $amountCents, $currency, $event): void {
                 $organization->increment('credits_balance', $credits, ['out_of_credit_notified_at' => null]);
 
                 CreditTransaction::create([

@@ -23,6 +23,8 @@ class OrganizationBillingController extends Controller
         return Inertia::render('settings/OrganizationBilling', [
             // Only ever a success/cancel echo from Stripe Checkout's redirect.
             'checkout' => $request->query('checkout'),
+            // Advisory, for the analytics event only - see `StartCheckout`.
+            'checkoutAmountCents' => $request->integer('amount_cents') ?: null,
             'onTrial' => $organization->isOnTrial(),
             'balance' => $organization->credits_balance,
             'creditsPerDollar' => $this->settings->int('billing.credits_per_dollar'),

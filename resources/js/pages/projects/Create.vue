@@ -2,6 +2,7 @@
 import { Form, Head, usePage } from '@inertiajs/vue3'
 import { computed, onMounted, useTemplateRef } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
+import { track } from '@/lib/analytics'
 import { store } from '@/routes/projects'
 
 defineOptions({ layout: AppLayout })
@@ -65,6 +66,7 @@ onMounted(() => {
                     v-slot="{ errors, processing }"
                     v-bind="store.form()"
                     class="space-y-4"
+                    @success="track('analysis_started', { prefilled: prefillUrl ? 'yes' : 'no' })"
                 >
                     <UFormField
                         label="Name"

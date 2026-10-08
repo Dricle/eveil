@@ -3,6 +3,7 @@ import { Head, router, usePage, usePoll } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import CampaignSwitch from '@/components/CampaignSwitch.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
+import { track } from '@/lib/analytics'
 import { relativeUrl } from '@/lib/utils'
 // Suffixed on purpose: an import named `campaigns` would shadow the prop of
 // that name in every template expression, silently.
@@ -125,7 +126,7 @@ function timing (campaign: Campaign): string | null {
                     :loading="writing"
                     :disabled="writing || !profile"
                     :label="writing ? 'Writing…' : 'Write a sequence'"
-                    @click="router.post(campaignRoutes.generate.url({ project: page.props.currentProject!.slug }), { target_profile: profile })"
+                    @click="router.post(campaignRoutes.generate.url({ project: page.props.currentProject!.slug }), { target_profile: profile }, { onSuccess: () => track('sequence_created', { scope: 'one' }) })"
                 />
 
                 <!-- One click for every segment that has none. Doing it one
@@ -137,7 +138,7 @@ function timing (campaign: Campaign): string | null {
                     variant="subtle"
                     :disabled="writing"
                     :label="`Write the ${uncovered.length} missing`"
-                    @click="router.post(campaignRoutes.generate.missing.url({ project: page.props.currentProject!.slug }))"
+                    @click="router.post(campaignRoutes.generate.missing.url({ project: page.props.currentProject!.slug }), {}, { onSuccess: () => track('sequence_created', { scope: 'missing' }) })"
                 />
             </div>
         </div>
@@ -162,7 +163,7 @@ function timing (campaign: Campaign): string | null {
                     :loading="writing"
                     :disabled="writing"
                     :label="writing ? 'Writing…' : 'Write them now'"
-                    @click="router.post(campaignRoutes.generate.missing.url({ project: page.props.currentProject!.slug }))"
+                    @click="router.post(campaignRoutes.generate.missing.url({ project: page.props.currentProject!.slug }), {}, { onSuccess: () => track('sequence_created', { scope: 'missing' }) })"
                 />
             </template>
         </UAlert>

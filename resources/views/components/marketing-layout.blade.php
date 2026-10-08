@@ -72,11 +72,7 @@
         </style>
         <script>document.documentElement.classList.add('js')</script>
 
-        <script
-            src="https://rybbit.dricle.be/api/script.js"
-            data-site-id="c2bb312ab031"
-            defer
-        ></script>
+        <x-analytics />
     </head>
     <body class="marketing font-sans antialiased">
         @include('marketing.partials.header')

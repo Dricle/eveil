@@ -20,12 +20,14 @@ use Illuminate\Support\Carbon;
  * @property int $organization_id
  * @property string $type
  * @property int $credits
+ * @property int|null $amount_cents what was actually paid - null on a debit, on a trial grant, and on any purchase recorded before the column existed
+ * @property string|null $currency
  * @property string|null $agent
  * @property int|null $agent_run_id
  * @property string|null $stripe_event_id
  * @property Carbon|null $created_at
  */
-#[Fillable(['organization_id', 'type', 'credits', 'agent', 'agent_run_id', 'stripe_event_id'])]
+#[Fillable(['organization_id', 'type', 'credits', 'amount_cents', 'currency', 'agent', 'agent_run_id', 'stripe_event_id'])]
 class CreditTransaction extends Model
 {
     /** @use HasFactory<CreditTransactionFactory> */

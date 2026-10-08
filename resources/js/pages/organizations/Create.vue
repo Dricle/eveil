@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
+import { track } from '@/lib/analytics'
 import { store } from '@/routes/organizations'
 
 defineOptions({ layout: AppLayout })
@@ -25,6 +26,7 @@ defineOptions({ layout: AppLayout })
                 v-slot="{ errors, processing }"
                 v-bind="store.form()"
                 class="space-y-4"
+                @success="track('organization_created')"
             >
                 <UFormField
                     label="Name"

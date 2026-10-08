@@ -26,6 +26,32 @@ return [
      */
     'edition' => env('APP_EDITION', 'self'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Product analytics
+    |--------------------------------------------------------------------------
+    |
+    | Rybbit, self-hosted alongside the rest of the estate. Deployment, not a
+    | product decision: which instance to report to is a property of where this
+    | copy runs, and no screen should offer to point it somewhere else.
+    |
+    | Loaded ONLY on the cloud edition. A self-hosted instance must never phone
+    | home - it is somebody else's box running AGPL code, and silent telemetry
+    | out of it would be indefensible however anonymous the payload. The edition
+    | gate is the guarantee, which is why it lives in `shouldLoad()` below and
+    | not in an env flag a deployment could get wrong in the unsafe direction.
+    |
+    | The site id is not a secret (it ships in the page to every visitor), so it
+    | is defaulted rather than required: cloud keeps reporting after a deploy
+    | that forgets the variable, instead of going quietly blind.
+    |
+    */
+
+    'analytics' => [
+        'host' => env('ANALYTICS_HOST', 'https://rybbit.dricle.be'),
+        'site_id' => env('ANALYTICS_SITE_ID', 'c2bb312ab031'),
+    ],
+
     'sources' => [
         'searxng' => [
             'url' => env('SEARXNG_URL', 'http://searxng:8080'),

@@ -31,6 +31,12 @@ class GrantCreditsOnCheckout
             return;
         }
 
+        // `amount_total` is null on a session that collected nothing (a saved
+        // payment method, a fully discounted total), which is not the same
+        // fact as "zero was paid" - keep it null rather than recording a 0.
+        $amountCents = isset($session['amount_total']) ? (int) $session['amount_total'] : null;
+        $currency = isset($session['currency']) ? (string) $session['currency'] : null;
+
         $organization = Organization::query()->where('stripe_id', $stripeId)->first();
 
         if ($organization === null) {
@@ -54,6 +60,11 @@ class GrantCreditsOnCheckout
                     'organization_id' => $organization->id,
                     'type' => 'grant_purchase',
                     'credits' => $credits,
+                    // What Stripe says was collected, not what we asked for:
+                    // a discount or a currency conversion makes the two differ,
+                    // and the ledger has to agree with the payout.
+                    'amount_cents' => $amountCents,
+                    'currency' => $currency,
                     'stripe_event_id' => $event->payload['id'],
                 ]);
             });

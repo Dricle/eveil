@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { Form, Head, Link } from '@inertiajs/vue3'
+import { onMounted } from 'vue'
 import AuthCard from '@/layouts/AuthCard.vue'
+import { track } from '@/lib/analytics'
 import { login } from '@/routes'
 
 // The action comes from the server, not from Wayfinder: with sign-ups closed
@@ -9,6 +11,10 @@ const props = defineProps<{
     action: string
     url?: string | null
 }>()
+
+// Reaching the form is the start of the funnel, not submitting it: the gap
+// between the two is the number worth knowing.
+onMounted(() => track('signup_started', { from_landing_url: props.url ? 'yes' : 'no' }))
 </script>
 
 <template>
@@ -20,6 +26,7 @@ const props = defineProps<{
             :action="action"
             method="post"
             class="space-y-4"
+            @success="track('signup_completed')"
         >
             <UFormField
                 label="Your name"

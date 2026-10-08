@@ -3,6 +3,7 @@ import { Head, router, usePage, usePoll } from '@inertiajs/vue3'
 import { computed, watch } from 'vue'
 import OpenQuestions from '@/components/OpenQuestions.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
+import { track } from '@/lib/analytics'
 // Suffixed on purpose: an import sharing a name with a prop shadows that prop in
 // every template expression, silently. `searches` and `knowledgeBase` are both
 // props here.
@@ -206,7 +207,7 @@ const LISTS = ['key_features', 'competitors', 'proof_points'] as const
                 <UButton
                     icon="i-lucide-check"
                     label="That's right, find who buys it"
-                    @click="router.post(targetRoutes.derive.url({ project: projectSlug }), {}, { preserveScroll: true })"
+                    @click="router.post(targetRoutes.derive.url({ project: projectSlug }), {}, { preserveScroll: true, onSuccess: () => track('targets_derived') })"
                 />
                 <UButton
                     color="neutral"
@@ -282,7 +283,7 @@ const LISTS = ['key_features', 'competitors', 'proof_points'] as const
                 <UButton
                     icon="i-lucide-radar"
                     label="Start looking for them"
-                    @click="router.post(searchRoutes.searches.url({ project: projectSlug }), {}, { preserveScroll: true })"
+                    @click="router.post(searchRoutes.searches.url({ project: projectSlug }), {}, { preserveScroll: true, onSuccess: () => track('lead_search_started') })"
                 />
                 <UButton
                     color="neutral"

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { Form, Head, usePage } from '@inertiajs/vue3'
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import SettingsLayout from '@/layouts/SettingsLayout.vue'
+import { track } from '@/lib/analytics'
 import billingRoutes from '@/routes/settings/organization/billing'
 import type { CreditTransactionRow, ProjectCreditRow } from '@/types'
 
@@ -12,6 +13,7 @@ const page = usePage()
 
 const props = defineProps<{
     checkout: string | null
+    checkoutAmountCents: number | null
     onTrial: boolean
     balance: number
     creditsPerDollar: number
@@ -29,6 +31,17 @@ const highestSpend = computed(() => Math.max(1, ...props.creditsByProject.map(ro
 
 const topUpDollars = ref(20)
 const topUpCredits = computed(() => Math.floor(topUpDollars.value * props.creditsPerDollar))
+
+// The only place a completed purchase can be reported from a browser: the
+// webhook that grants the credits runs with nobody watching. Somebody who
+// pays and closes the tab before Stripe redirects is therefore missing from
+// this event but present in `credit_transactions`, which is why the ledger
+// and not this is what `eveil:revenue` counts.
+onMounted(() => {
+    if (props.checkout === 'success') {
+        track('topup_completed', { amount_cents: props.checkoutAmountCents ?? 0 })
+    }
+})
 
 // A draft synced from props, not a one-time `ref(props.x)`: Inertia keeps
 // this component instance alive across the save redirect, so a plain ref
@@ -138,6 +151,7 @@ function describe (row: CreditTransactionRow): string {
                 v-slot="{ processing }"
                 v-bind="billingRoutes.checkout.form({ project: page.props.currentProject!.slug })"
                 class="flex flex-wrap items-end gap-3"
+                @start="track('topup_checkout_started', { amount_cents: Math.round(topUpDollars * 100) })"
             >
                 <UFormField label="Amount ($)">
                     <UInput

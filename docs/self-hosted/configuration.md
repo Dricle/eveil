@@ -27,6 +27,14 @@ Deployment-only settings — the things an env file sets and no in-app screen sh
 
   Any SMTP-compatible provider works — Postmark, Mailgun, Amazon SES, Brevo, Cloudflare, a Google Workspace or Microsoft 365 mailbox, or a mail server you already run. It's Laravel's own mail configuration, nothing Eveil-specific to it. Send yourself a password-reset mail once it's up to confirm it actually left.
 
+## Analytics and telemetry
+
+**A self-hosted instance sends us nothing.** There is no usage reporting, no licence check, no anonymous statistics, no error reporting to us, no call home of any kind. The analytics tag that measures the hosted service is rendered only when `APP_EDITION=cloud`, so on your instance the page it would sit in has no tag at all and no request is ever made.
+
+`ANALYTICS_HOST` and `ANALYTICS_SITE_ID` exist for the hosted service and are inert here: setting them on a `self` instance does nothing, because the edition is what decides, not the variables. If you want product analytics on your own instance, point them at an analytics server of your own and build with `APP_EDITION=cloud` — but note that the cloud edition also turns on the marketing site and the billing code.
+
+To see how the product is actually being used on your own instance, use [`eveil:funnel-report`](/self-hosted/commands#eveil-funnel-report), which reads your own database and sends nothing anywhere.
+
 ## Keys
 
 `APP_KEY` and `CREDENTIALS_KEY` are generated on first boot into the storage volume, at `storage/app/.keys.env`, and every later boot reuses them. Read them with:

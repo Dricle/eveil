@@ -37,7 +37,17 @@ class StartCheckout
                 ],
                 'quantity' => 1,
             ]], [
-                'success_url' => route('settings.organization.billing.edit', ['checkout' => 'success']),
+                // `amount_cents` rides along purely so the billing page can
+                // report a completed top-up to analytics, which the webhook
+                // that actually grants the credits cannot do: it has no
+                // browser. It is echoed back by Stripe from a URL the customer
+                // could edit, so it is never read for anything that moves a
+                // balance - the ledger row written from the webhook is the
+                // authoritative amount.
+                'success_url' => route('settings.organization.billing.edit', [
+                    'checkout' => 'success',
+                    'amount_cents' => $amountCents,
+                ]),
                 'cancel_url' => route('settings.organization.billing.edit'),
                 'metadata' => ['credits' => $credits],
                 // Cashier sets `customer_update.name` for tax ID collection

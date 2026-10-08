@@ -84,6 +84,8 @@ class AutoTopUp
                 'organization_id' => $organization->id,
                 'type' => 'grant_purchase',
                 'credits' => $credits,
+                'amount_cents' => $amountCents,
+                'currency' => $organization->preferredCurrency(),
                 'stripe_event_id' => $stripePaymentIntentId,
             ]);
         });

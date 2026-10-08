@@ -75,3 +75,33 @@ php artisan eveil:agent-model target-profile-deriver    # show or change one
 ```
 
 Show or change which model an agent runs on, from the command line rather than the settings screen — the same values a settings screen edits, useful over SSH on a box with no browser open.
+
+### `eveil:funnel-report`
+
+```bash
+php artisan eveil:funnel-report                              # the table
+php artisan eveil:funnel-report --json                        # the same figures, machine-readable
+php artisan eveil:funnel-report --exclude-internal="Acme Ltd" # leave your own account out
+```
+
+How many organizations on this instance reached each stage of the product: created a project, ran a site analysis, derived a target profile, ran a lead search, got leads, created a sequence, actually sent an email, paid for credits.
+
+Counted per organization rather than per row, so one team creating four projects counts once. Every figure is read from the database as it stands, so the report covers everything that ever happened on the instance, not just activity since the report was added.
+
+`--exclude-internal` takes a comma-separated list of organization names to drop — worth using for the account you test with yourself, which otherwise reaches every stage and makes an idle instance look busy.
+
+### `eveil:revenue`
+
+```bash
+php artisan eveil:revenue                  # the current calendar month
+php artisan eveil:revenue --month=2026-09  # a specific one
+php artisan eveil:revenue --all            # every purchase ever
+```
+
+What was actually collected for credit top-ups, grouped by currency, with the organizations that paid.
+
+Credit top-ups are for whatever amount the customer chooses, so there is no fixed product or price to group them by and billing dashboards have nothing to total. This reads the credit ledger instead, which records the amount alongside the credits granted.
+
+Trial grants and agent debits are never counted: neither is money. Purchases recorded before the ledger stored an amount are reported separately rather than counted as zero.
+
+A self-hosted instance bills nobody, so this prints a notice and stops.

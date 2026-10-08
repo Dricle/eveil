@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { router, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
+import { openEvieChat } from '@/composables/useChatPanel'
 import type { RedditThread } from '@/lib/reddit'
 import redditReplyRoutes from '@/routes/reddit/replies'
 import type { RedditReply } from '@/types'
@@ -10,6 +11,12 @@ import type { RedditReply } from '@/types'
 // draft exactly the same way.
 const props = defineProps<{
     thread: RedditThread
+}>()
+
+// Emitted when the user hands a draft to Evie, so a modal around this card
+// can close and let the chat panel show.
+const emit = defineEmits<{
+    rework: []
 }>()
 
 const page = usePage()
@@ -28,6 +35,22 @@ const STATUS = {
     published: { color: 'success' as const, label: 'Posted' },
     rejected: { color: 'neutral' as const, label: 'Rejected' }
 }
+
+const selectedReplyId = ref<string | number>()
+
+// Falls back to the first angle whenever the selected one leaves this thread
+// (rejected, deleted, or a poll reshuffling the list).
+const activeReply = computed(() => props.thread.replies.find(reply => String(reply.id) === String(selectedReplyId.value)) ?? props.thread.replies[0])
+
+const activeReplyId = computed({
+    get: () => activeReply.value ? String(activeReply.value.id) : undefined,
+    set: value => selectedReplyId.value = value
+})
+
+const angleTabs = computed(() => props.thread.replies.map(reply => ({
+    label: ANGLE_LABEL[reply.angle],
+    value: String(reply.id)
+})))
 
 const isDraft = computed(() => props.thread.replies.every(reply => reply.status === 'draft'))
 
@@ -98,6 +121,11 @@ function confirmWriteManual () {
         },
         onFinish: () => submittingManual.value = false
     })
+}
+
+function rework (reply: RedditReply) {
+    openEvieChat(`Let's rework the ${ANGLE_LABEL[reply.angle].toLowerCase()} Reddit reply #${reply.id} on "${props.thread.threadTitle ?? props.thread.permalink}".`)
+    emit('rework')
 }
 
 function openReject (reply: RedditReply) {
@@ -204,104 +232,112 @@ function promote (reply: RedditReply) {
             {{ thread.evidence }}
         </p>
 
-        <div class="grid gap-3 md:grid-cols-3">
-            <div
-                v-for="reply in thread.replies"
-                :key="reply.id"
-                class="space-y-2 rounded-lg p-3 ring ring-default"
+        <!-- One angle at a time: up to four drafts side by side squeezed
+             each body into a narrow column, and a long one ran off the card. -->
+        <UTabs
+            v-model="activeReplyId"
+            :items="angleTabs"
+            :content="false"
+            variant="link"
+        />
+
+        <div
+            v-if="activeReply"
+            class="space-y-3"
+        >
+            <div class="flex flex-wrap items-center gap-2">
+                <UBadge
+                    :color="STATUS[activeReply.status].color"
+                    variant="subtle"
+                    :label="STATUS[activeReply.status].label"
+                />
+                <UBadge
+                    v-if="activeReply.promoted_at"
+                    color="success"
+                    variant="subtle"
+                    label="Marked as proven"
+                />
+                <span
+                    v-if="activeReply.status === 'published' && activeReply.stats_checked_at"
+                    class="text-sm text-dimmed"
+                >Score: {{ activeReply.score }}</span>
+            </div>
+
+            <p class="whitespace-pre-line rounded-lg bg-elevated/50 p-4 text-sm">
+                {{ activeReply.body }}
+            </p>
+
+            <p
+                v-if="activeReply.status === 'rejected' && activeReply.rejection_reason"
+                class="text-sm text-dimmed"
             >
-                <div class="flex flex-wrap items-center gap-2">
-                    <UBadge
+                Rejected: {{ activeReply.rejection_reason }}
+            </p>
+
+            <a
+                v-if="activeReply.comment_permalink"
+                :href="activeReply.comment_permalink"
+                target="_blank"
+                rel="noopener"
+                class="text-sm text-primary"
+            >View the posted comment ↗</a>
+
+            <div class="flex flex-wrap items-center gap-2">
+                <UButton
+                    icon="i-lucide-copy"
+                    color="neutral"
+                    variant="subtle"
+                    size="sm"
+                    label="Copy"
+                    @click="copy(activeReply.body)"
+                />
+                <template v-if="activeReply.status === 'draft'">
+                    <UButton
+                        icon="i-lucide-sparkles"
                         color="neutral"
-                        variant="outline"
-                        :label="ANGLE_LABEL[reply.angle]"
-                    />
-                    <UBadge
-                        :color="STATUS[reply.status].color"
                         variant="subtle"
-                        :label="STATUS[reply.status].label"
-                    />
-                </div>
-
-                <p class="whitespace-pre-line text-sm">
-                    {{ reply.body }}
-                </p>
-
-                <div class="flex flex-wrap items-center gap-2">
-                    <UButton
-                        icon="i-lucide-copy"
-                        color="neutral"
-                        variant="ghost"
-                        size="xs"
-                        label="Copy"
-                        @click="copy(reply.body)"
+                        size="sm"
+                        label="Rework with Evie"
+                        @click="rework(activeReply)"
                     />
                     <UButton
-                        v-if="reply.status === 'draft'"
                         icon="i-lucide-check"
                         color="success"
                         variant="subtle"
-                        size="xs"
+                        size="sm"
                         label="Mark as posted"
-                        :loading="approving === reply.id"
-                        @click="openMarkPosted(reply)"
+                        :loading="approving === activeReply.id"
+                        @click="openMarkPosted(activeReply)"
                     />
                     <UButton
-                        v-if="reply.status === 'draft'"
                         icon="i-lucide-x"
                         color="error"
                         variant="ghost"
-                        size="xs"
+                        size="sm"
                         label="Reject"
-                        @click="openReject(reply)"
+                        @click="openReject(activeReply)"
                     />
-                    <UButton
-                        v-if="reply.status === 'published' && !reply.promoted_at"
-                        icon="i-lucide-thumbs-up"
-                        color="success"
-                        variant="ghost"
-                        size="xs"
-                        label="Mark as proven"
-                        :loading="promoting === reply.id"
-                        @click="promote(reply)"
-                    />
-                    <UBadge
-                        v-if="reply.promoted_at"
-                        color="success"
-                        variant="subtle"
-                        label="Marked as proven"
-                    />
-                    <UButton
-                        icon="i-lucide-trash"
-                        color="neutral"
-                        variant="ghost"
-                        size="xs"
-                        :loading="deleting === reply.id"
-                        @click="destroy(reply)"
-                    />
-                </div>
-
-                <p
-                    v-if="reply.status === 'published' && reply.stats_checked_at"
-                    class="text-sm text-dimmed"
-                >
-                    Score: {{ reply.score }}
-                </p>
-
-                <a
-                    v-if="reply.comment_permalink"
-                    :href="reply.comment_permalink"
-                    target="_blank"
-                    rel="noopener"
-                    class="text-sm text-primary"
-                >View the posted comment</a>
-
-                <p
-                    v-if="reply.status === 'rejected' && reply.rejection_reason"
-                    class="text-sm text-dimmed"
-                >
-                    Rejected: {{ reply.rejection_reason }}
-                </p>
+                </template>
+                <UButton
+                    v-if="activeReply.status === 'published' && !activeReply.promoted_at"
+                    icon="i-lucide-thumbs-up"
+                    color="success"
+                    variant="ghost"
+                    size="sm"
+                    label="Mark as proven"
+                    :loading="promoting === activeReply.id"
+                    @click="promote(activeReply)"
+                />
+                <UButton
+                    icon="i-lucide-trash"
+                    color="neutral"
+                    variant="ghost"
+                    size="sm"
+                    class="ml-auto"
+                    aria-label="Delete this draft"
+                    :loading="deleting === activeReply.id"
+                    @click="destroy(activeReply)"
+                />
             </div>
         </div>
 

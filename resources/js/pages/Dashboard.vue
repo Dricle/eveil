@@ -703,6 +703,7 @@ const topupPercent = computed(() => {
                 <RedditThreadCard
                     v-if="reviewThread"
                     :thread="reviewThread"
+                    @rework="reviewOpen = false"
                 />
                 <SocialPostCard
                     v-else-if="reviewSocialPost"

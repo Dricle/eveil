@@ -175,9 +175,12 @@ class SeoThreadFinder
     }
 
     /**
+     * A thread's own post by its permalink, as Arctic Shift stores it. Public
+     * so `GetRedditReply` can show Evie the thread a draft answers.
+     *
      * @return array<string, mixed>|null
      */
-    private function fetchPost(string $permalink): ?array
+    public function fetchPost(string $permalink): ?array
     {
         try {
             $response = Http::timeout((int) config('eveil.sources.reddit.timeout'))

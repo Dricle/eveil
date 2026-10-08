@@ -4,6 +4,7 @@ import { computed, ref, watch } from 'vue'
 import RedditThreadCard from '@/components/RedditThreadCard.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { groupThreads } from '@/lib/reddit'
+import type { RedditThread } from '@/lib/reddit'
 import redditReplyRoutes from '@/routes/reddit/replies'
 import type { RedditReply } from '@/types'
 
@@ -41,6 +42,18 @@ const TABS = [
 const activeTab = ref('draft')
 
 const threads = computed(() => groupThreads(props.replies.filter(reply => reply.status === activeTab.value)))
+
+const selectedPermalink = ref<string | null>(null)
+
+// Falls back to the first thread whenever the selected one leaves the list
+// (posted, rejected, deleted, or another tab), so the right pane is never empty.
+const selectedThread = computed(() => threads.value.find(thread => thread.permalink === selectedPermalink.value) ?? threads.value[0])
+
+function threadLabel (thread: RedditThread): string {
+    return thread.source === 'subreddit_scan'
+        ? (thread.subreddit ? `r/${thread.subreddit}` : 'Tracked subreddit')
+        : `Google: ${thread.searchQuery}`
+}
 
 const scanning = ref(false)
 
@@ -116,14 +129,34 @@ function scan () {
             :content="false"
         />
 
-        <RedditThreadCard
-            v-for="thread in threads"
-            :key="thread.permalink"
-            :thread="thread"
-        />
+        <div
+            v-if="threads.length"
+            class="grid items-start gap-4 lg:grid-cols-[20rem_1fr]"
+        >
+            <nav class="divide-y divide-default overflow-hidden rounded-lg ring ring-default lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
+                <button
+                    v-for="thread in threads"
+                    :key="thread.permalink"
+                    type="button"
+                    class="block w-full space-y-1 p-3 text-left transition-colors hover:bg-elevated/50"
+                    :class="thread.permalink === selectedThread?.permalink ? 'bg-elevated' : ''"
+                    @click="selectedPermalink = thread.permalink"
+                >
+                    <span class="block truncate text-xs text-muted">{{ threadLabel(thread) }}</span>
+                    <span class="line-clamp-2 block text-sm font-medium">{{ thread.threadTitle ?? thread.permalink }}</span>
+                    <span class="block text-xs text-dimmed">{{ thread.replies.length }} {{ thread.replies.length === 1 ? 'reply' : 'replies' }}</span>
+                </button>
+            </nav>
+
+            <RedditThreadCard
+                v-if="selectedThread"
+                :key="selectedThread.permalink"
+                :thread="selectedThread"
+            />
+        </div>
 
         <p
-            v-if="!threads.length"
+            v-else
             class="rounded-lg p-6 text-sm text-muted ring ring-default"
         >
             {{ activeTab === 'draft' ? 'No drafts yet. Turn on scanning above, or scan now.' : `No ${TABS.find(tab => tab.value === activeTab)!.label.toLowerCase()} replies.` }}

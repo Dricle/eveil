@@ -27,6 +27,8 @@ Any angle that genuinely doesn't fit a given thread is left out — you might se
 
 Nothing posts on its own. Each drafted angle shows the body with a **Copy** button and a link to the real thread on reddit.com. Copy it, paste it on Reddit yourself, then come back and click **Mark as posted**. Rejecting or posting one angle for a thread automatically rejects the other one or two drafted for the same thread — only one angle per thread can ever go out.
 
+**Rework with Evie** on a draft opens the chat on it: ask for changes in plain words ("too long", "less salesy") and she rewrites that draft in place, after reading the Reddit post it answers so the reply still fits the question. Only a draft can be reworked.
+
 **Reject vs. delete** work the same way they do everywhere else in Eveil: delete removes the draft with no trace, reject keeps it with an optional reason ("too pushy", "wrong tone") that's fed back to the writer so it doesn't repeat the mistake next time.
 
 ## Writing your own reply

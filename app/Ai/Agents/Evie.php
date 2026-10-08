@@ -23,6 +23,7 @@ use App\Ai\Tools\GetCompany;
 use App\Ai\Tools\GetContact;
 use App\Ai\Tools\GetDiscoveryRunStatus;
 use App\Ai\Tools\GetKnowledgeBase;
+use App\Ai\Tools\GetRedditReply;
 use App\Ai\Tools\GetTargetProfile;
 use App\Ai\Tools\ListArticleIdeas;
 use App\Ai\Tools\ListArticles;
@@ -36,6 +37,7 @@ use App\Ai\Tools\StartDiscovery;
 use App\Ai\Tools\UpdateArticle;
 use App\Ai\Tools\UpdateKnowledgeBase;
 use App\Ai\Tools\UpdateRecommendation;
+use App\Ai\Tools\UpdateRedditReply;
 use App\Ai\Tools\UpdateSequence;
 use App\Ai\Tools\UpdateSocialPost;
 use App\Ai\Tools\UpdateTargetProfile;
@@ -253,6 +255,12 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
         not only the edited part, and keep everything they did not ask to change
         word for word. UpdateArticle only works on a draft.
 
+        Same for a Reddit reply draft: GetRedditReply to read it and the Reddit
+        post it answers, then UpdateRedditReply with the whole new body. The
+        reply must still answer what that post actually asks. Keep its
+        angle (a direct mention still mentions the product) unless the user
+        asks otherwise, and keep it reading like a real Redditor typed it.
+
         When the obvious next replies are predictable, offer them with
         ProposeSuggestedReplies instead of making the user type. Skip it when
         there is nothing obvious to suggest.
@@ -389,6 +397,8 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
             new UpdateArticle($this->project),
             new ListArticleIdeas($this->project),
             new DismissArticleIdea($this->project),
+            new GetRedditReply($this->project),
+            new UpdateRedditReply($this->project),
             new ProposeSuggestedReplies,
         ];
     }

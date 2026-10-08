@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { router, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
+import { openEvieChat } from '@/composables/useChatPanel'
 import type { RedditThread } from '@/lib/reddit'
 import redditReplyRoutes from '@/routes/reddit/replies'
 import type { RedditReply } from '@/types'
@@ -10,6 +11,12 @@ import type { RedditReply } from '@/types'
 // draft exactly the same way.
 const props = defineProps<{
     thread: RedditThread
+}>()
+
+// Emitted when the user hands a draft to Evie, so a modal around this card
+// can close and let the chat panel show.
+const emit = defineEmits<{
+    rework: []
 }>()
 
 const page = usePage()
@@ -98,6 +105,11 @@ function confirmWriteManual () {
         },
         onFinish: () => submittingManual.value = false
     })
+}
+
+function rework (reply: RedditReply) {
+    openEvieChat(`Let's rework the ${ANGLE_LABEL[reply.angle].toLowerCase()} Reddit reply #${reply.id} on "${props.thread.threadTitle ?? props.thread.permalink}".`)
+    emit('rework')
 }
 
 function openReject (reply: RedditReply) {
@@ -235,6 +247,15 @@ function promote (reply: RedditReply) {
                         size="xs"
                         label="Copy"
                         @click="copy(reply.body)"
+                    />
+                    <UButton
+                        v-if="reply.status === 'draft'"
+                        icon="i-lucide-sparkles"
+                        color="neutral"
+                        variant="ghost"
+                        size="xs"
+                        label="Rework with Evie"
+                        @click="rework(reply)"
                     />
                     <UButton
                         v-if="reply.status === 'draft'"

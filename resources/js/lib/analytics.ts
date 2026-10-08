@@ -15,8 +15,8 @@
  * file as attribution (where did the person come from, where did they stall)
  * and the database as the source of truth for whether something happened.
  */
-export type FunnelEvent =
-    | 'signup_started'
+export type FunnelEvent
+    = | 'signup_started'
     | 'signup_completed'
     | 'organization_created'
     | 'analysis_started'

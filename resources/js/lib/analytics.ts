@@ -17,14 +17,14 @@
  */
 export type FunnelEvent
     = | 'signup_started'
-    | 'signup_completed'
-    | 'organization_created'
-    | 'analysis_started'
-    | 'targets_derived'
-    | 'lead_search_started'
-    | 'sequence_created'
-    | 'topup_checkout_started'
-    | 'topup_completed'
+        | 'signup_completed'
+        | 'organization_created'
+        | 'analysis_started'
+        | 'targets_derived'
+        | 'lead_search_started'
+        | 'sequence_created'
+        | 'topup_checkout_started'
+        | 'topup_completed'
 
 type EventProperties = Record<string, string | number | boolean>
 

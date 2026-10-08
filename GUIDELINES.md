@@ -27,17 +27,21 @@ never a purchased list, and turns that into outbound across the channels a small
 cannot staff for manually. Three pillars, built in this order:
 - **Cold email** (shipped end to end): discovery, qualification, contact-finding,
   verified sending from the user's own mailbox, reply handling.
-- **Content** (LinkedIn shipped, more platforms planned): agent-drafted posts on the
-  founder's own profile, approval workflow.
-- **Ad management** (roadmap): the same knowledge base and target profiles driving paid
-  channels.
+- **Content** (shipped: LinkedIn, X and Bluesky posts, SEO articles, Reddit replies):
+  agent-drafted from the knowledge base and target profiles, approval workflow.
+- **Ad management** (roadmap, next): the same knowledge base and target profiles driving
+  paid channels.
+
+The public site presents Eveil as this whole marketing tool, with cold email as the core
+channel and the deepest one, and ad management shown discreetly as "in the works". Never
+pitch it as a cold email tool alone, nor hide that email is where it is strongest.
 
 "Organic" describes how the first two pillars find and reach people - never a purchased
 list, never rented data - not a claim that ad spend itself is organic; ad management is a
 paid channel built on the same engine, added deliberately rather than pretended away.
 
 No single competitor spans all three: lemlist/Instantly/Smartlead cover cold email,
-Linki/Taplio/AuthoredUp cover LinkedIn content, and none of them derive targeting from
+Linki/Taplio/AuthoredUp cover LinkedIn content, SEO writers cover articles alone, and none of them derive targeting from
 the product URL the way Eveil does. That combination, not any one pillar, is the
 defensible slot - state it as such rather than borrowing one competitor's category.
 
@@ -381,21 +385,19 @@ detection → auto-pause → unified inbox) and the "cloud edition" backbone (or
 roles, invitations, per-project access, pay-as-you-go billing) are both built. What's
 still ahead, tracked as [GitHub Issues](https://github.com/Dricle/eveil/issues):
 
-- The **inbound half**: agents publishing to SEO articles, X/Bluesky, LinkedIn -
-  driven by the target profile, not a content calendar (that's the one thing no
-  competitor doing "AI CMO" content generation can copy). The Reddit slice of this
-  shipped first, exactly in the shape this section anticipated: an LLM drafts (both
-  live subreddit threads and evergreen "best X" search results, tagged by target
-  profile), a human copies and publishes - no OAuth needed for that shape at all, which
-  turned out to matter directly: Reddit is currently blocking new API app registration,
-  so the alternative (agents publishing outbound) is not even available right now.
-  Everything else here stays blocked until the outbound loop above is airtight, same
-  reasoning as before: inbound is otherwise the *cheap* half of the problem (no
-  deliverability, no address verification, no IMAP, no consequence for a mediocre
-  draft), and shipping it before outbound would produce a worse clone of an existing
-  competitor that additionally can't send an email.
+- ~~The **inbound half**~~ (shipped): SEO articles, X/Bluesky and LinkedIn posts and
+  Reddit replies, all driven by the target profile, not a content calendar (that's the
+  one thing no competitor doing "AI CMO" content generation can copy). Reddit shipped
+  first, in the shape anticipated here: an LLM drafts (live subreddit threads and
+  evergreen "best X" search results, tagged by target profile), a human copies and
+  publishes, with no OAuth needed, which mattered because Reddit is currently blocking
+  new API app registration. It came after the outbound loop on purpose: inbound is the
+  *cheap* half of the problem (no deliverability, no address verification, no IMAP, no
+  consequence for a mediocre draft), and shipping it first would have produced a worse
+  clone of an existing competitor that additionally can't send an email.
+- **Ad management**: the third pillar, next up.
 - LinkedIn outbound (its own container, real anti-detection cost - a product in itself).
-- A public API, an MCP server, CRM webhooks.
+- An MCP server, CRM webhooks (the public API shipped).
 - Third-party lead-provider drivers (Apollo, Hunter), third-party email verification
   drivers, official business registries as a discovery source, headless-browser
   rendering for JS-only directories.

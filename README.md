@@ -15,14 +15,21 @@
   <img src="https://img.shields.io/badge/limits-none-0b7d92.svg" alt="No artificial limits">
 </p>
 
-Enter your product's website, Eveil reads it, works out who buys it, goes
-looking for those companies, finds the people at them, writes the email
-sequence, sends it from your own mailbox, and reads the replies.
+Enter your product's website. Eveil reads it, works out who buys it, then
+markets it for you across every channel a small team can't staff by hand:
 
-Your own AI CMO, running its own army of agents. Lead discovery and outreach
-are B2B; LinkedIn, X and Bluesky posting, Reddit reply drafting and SEO
-articles (all evidence-driven) already work for anyone building an online presence, B2C solo founders
-included.
+- **Cold email**, the core: finds the companies and the people at them, writes
+  the sequence, sends it from your own mailbox and reads the replies.
+- **Social posts** on LinkedIn, X and Bluesky, drafted from what Eveil knows
+  about your product and queued for your approval.
+- **SEO articles** for your own blog, on what your buyers search for and your
+  site doesn't answer yet.
+- **Reddit replies** in the threads where your buyers already ask for help.
+
+All of it reads the same knowledge base, so no channel contradicts another.
+Lead discovery and outreach are B2B; the content channels work for anyone
+building an online presence, B2C solo founders included. Next on the roadmap:
+ad management, driven by the same knowledge base and target profiles.
 
 That's automation of the same work a human researcher would do by hand:
 searching the web for the right companies and people, then writing to them one
@@ -41,8 +48,8 @@ unlimited mailboxes, unlimited leads, your data on your own machine.
 > posting (Bluesky published for you, X copied and posted by you), and so is
 > Reddit reply drafting - manual-publish only for now, since Reddit is
 > currently blocking new API app registration - and SEO articles for your own
-> blog. Not built yet: a public API,
-> commenting on someone else's LinkedIn post. See
+> blog, plus a public API for the rest of your stack. Not built yet: ad
+> management (next up), commenting on someone else's LinkedIn post. See
 > [Issues](https://github.com/Dricle/eveil/issues) for exactly what's left.
 
 ---

@@ -1,645 +1,530 @@
-@php use Illuminate\Support\Facades\Route; @endphp
+@php
+    use Illuminate\Support\Facades\Route;
+
+    $channels = [
+        ['icon' => 'mail', 'name' => 'Cold email'],
+        ['icon' => 'linkedin', 'name' => 'LinkedIn'],
+        ['icon' => 'x', 'name' => 'X'],
+        ['icon' => 'bluesky', 'name' => 'Bluesky'],
+        ['icon' => 'arrow-big-up', 'name' => 'Reddit'],
+        ['icon' => 'file-text', 'name' => 'SEO articles'],
+    ];
+
+    $steps = [
+        ['n' => '01', 'title' => 'Paste your URL', 'text' => 'That is the whole setup. Add a GitHub repo if you want a deeper technical read.'],
+        ['n' => '02', 'title' => 'Eveil learns your product', 'text' => 'It reads your site, writes a product portrait and works out who buys it and why. You correct anything it got wrong.'],
+        ['n' => '03', 'title' => 'Agents work every channel', 'text' => 'Emails, posts, articles and replies, all written from that same understanding. You approve as much or as little as you want.'],
+    ];
+
+    $emailStages = [
+        ['icon' => 'scan-search', 'title' => 'Finds the companies', 'text' => 'Real companies that fit, read live and scored with the sentence that justifies it. Never a purchased list.'],
+        ['icon' => 'user-round-search', 'title' => 'Finds the people', 'text' => 'The ones who would actually answer, found on the company\'s own pages, with addresses verified for free.'],
+        ['icon' => 'send', 'title' => 'Writes and sends', 'text' => 'A sequence in the prospect\'s language, sent from your own mailbox at a human pace.'],
+        ['icon' => 'reply', 'title' => 'Handles the replies', 'text' => 'Replies read back into one inbox. It pauses, reschedules, asks for the right contact, or suppresses.'],
+    ];
+
+    $contentChannels = [
+        [
+            'key' => 'social',
+            'label' => 'LinkedIn, X & Bluesky',
+            'title' => 'Posts that sound like you',
+            'text' => 'A fact about your product, a client you just won, your latest article or relevant industry news, drafted for each network and queued for approval. LinkedIn and Bluesky publish through their official APIs; X you copy and post yourself.',
+        ],
+        [
+            'key' => 'seo',
+            'label' => 'SEO',
+            'title' => 'Articles your buyers search for',
+            'text' => 'Finds what your buyers search for and your site does not answer yet: a missing feature page, a competitor comparison, a question asked on Reddit. Written in your site\'s language, ready to publish.',
+        ],
+        [
+            'key' => 'reddit',
+            'label' => 'Reddit',
+            'title' => 'Replies in the right threads',
+            'text' => 'Finds live subreddit threads and the "best X" discussions already ranking on Google, then drafts a genuinely useful reply in the thread\'s own tone for you to post.',
+        ],
+    ];
+
+    $autonomyLevels = [
+        ['icon' => 'eye', 'name' => 'Supervised', 'text' => 'You approve every lead, email and post before it goes out.', 'default' => false],
+        ['icon' => 'sliders-horizontal', 'name' => 'Semi-auto', 'text' => 'Research and writing run on their own. Sending waits for you.', 'default' => true],
+        ['icon' => 'zap', 'name' => 'Autonomous', 'text' => 'End to end without you, breakers armed.', 'default' => false],
+    ];
+
+    $breakers = ['Bounce rate', 'Spam complaints', 'Negative replies'];
+
+    $principles = [
+        ['icon' => 'ban', 'title' => 'No purchased database', 'text' => 'Every lead was found and read live.'],
+        ['icon' => 'eye-off', 'title' => 'No tracking pixels', 'text' => 'No open rates, no rewritten links.'],
+        ['icon' => 'bot', 'title' => 'No warm-up bot network', 'text' => 'Your real mailbox, at a human pace.'],
+        ['icon' => 'hand', 'title' => 'No LinkedIn automation', 'text' => 'Posts on your profile, never fake connection requests.'],
+    ];
+
+    $faqs = [
+        ['q' => 'Is Eveil only for cold email?', 'a' => 'No. Cold email is where it started and still the deepest channel, but the same agents now post on LinkedIn, X and Bluesky, write SEO articles for your blog and find Reddit threads worth answering. Paid ads are next.'],
+        ['q' => 'Whose mailbox does it send from?', 'a' => 'Yours. Plain SMTP, no relay and no shared sending domain, so replies land where you already read mail. Presets cover Infomaniak, OVH, Gandi, Zoho, Gmail and Microsoft 365.'],
+        ['q' => 'Where do the leads come from?', 'a' => 'A bundled search engine and the companies\' own pages, read live at qualification time. No purchased database, and no paid data API needed to start.'],
+        ['q' => 'Can I see and change what the AI decided?', 'a' => 'At every step. The product portrait comes back for correction before anything is written, target profiles are editable, every draft can be rewritten, and your edits are never overwritten.'],
+        ['q' => 'Will I get a surprise AI bill?', 'a' => 'There is no bill, only a balance. Credits are prepaid at one flat rate, never expire, and auto top-up only fires at the threshold you set.'],
+        ['q' => 'Can I move to self-hosted later?', 'a' => 'It is the same AGPL-3.0 codebase: Docker, five minutes, your own AI key. Nothing is missing.'],
+    ];
+
+    $signupUrl = Route::has('register') ? route('register') : route('home');
+@endphp
 <x-marketing-layout
-    :title="config('app.name') . ' - open-source outreach'"
-    description="Give a URL and what you sell. Eveil finds the companies that need it, writes the outreach, drafts your LinkedIn, X and Bluesky posts, and finds Reddit threads worth replying to. Open source, self-hostable."
+    :title="config('app.name') . ' - your AI marketing team, from one URL'"
+    description="Paste your product URL. Eveil finds clients by cold email, posts on LinkedIn, X and Bluesky, writes SEO articles and joins the right Reddit threads. Open source, self-hostable."
 >
     <div class="border-b border-[rgba(232,236,242,.08)] px-4 py-2.5 flex flex-wrap justify-center items-center gap-3 text-[13px] text-[rgba(232,236,242,.72)] text-center">
         <span class="font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[#6fd3ec] border border-[rgba(111,211,236,.35)] rounded-full px-[9px] py-[2px]">Free trial</span>
-        <span>5,000 credits at signup. Enough for one full campaign, through to replies. No card.</span>
+        <span>5,000 credits at signup. No card.</span>
     </div>
 
-    <section id="top" class="border-b border-[rgba(232,236,242,.08)]">
-        <div class="max-w-[1180px] mx-auto px-6 pt-16 pb-12 sm:pt-20 sm:pb-16 lg:pt-24 lg:pb-20 text-center">
-            <div class="inline-flex items-center gap-[9px] border border-[rgba(232,236,242,.14)] bg-[rgba(232,236,242,.03)] rounded-full px-[14px] py-[6px] font-[Geist_Mono,monospace] text-[11.5px] tracking-[.06em] uppercase text-[rgba(232,236,242,.7)] mb-6">
-                <span class="w-[6px] h-[6px] rounded-full bg-[#6fd3ec] block"></span>
-                <span>Open source, AGPL-3.0</span>
+    {{-- Hero --}}
+    <section id="top" class="relative overflow-hidden border-b border-[rgba(232,236,242,.08)]">
+        <div class="hero-glow absolute inset-0 pointer-events-none" aria-hidden="true"></div>
+        <div class="hero-grid absolute inset-0 pointer-events-none" aria-hidden="true"></div>
+
+        <div class="relative max-w-[1180px] mx-auto px-6 pt-16 pb-12 sm:pt-20 sm:pb-16 lg:pt-24 lg:pb-20 text-center">
+            <div class="reveal inline-flex items-center gap-[9px] border border-[rgba(232,236,242,.14)] bg-[rgba(232,236,242,.03)] rounded-full px-[14px] py-[6px] font-[Geist_Mono,monospace] text-[11.5px] tracking-[.06em] uppercase text-[rgba(232,236,242,.7)] mb-6">
+                <span class="anim-pulse w-[6px] h-[6px] rounded-full bg-[#6fd3ec] block"></span>
+                <span>AI marketing, open source</span>
             </div>
-            <h1 class="font-[Sora,sans-serif] font-semibold text-[38px] sm:text-[50px] lg:text-[68px] leading-[1.04] tracking-[-.035em] mx-auto mb-[22px] max-w-[20ch] [text-wrap:balance]">
-                You don't have time to run marketing.<br>Now you don't need to.</h1>
-            <p class="text-[16px] sm:text-[18.5px] leading-[1.6] max-w-[64ch] mx-auto mb-[18px] text-[rgba(232,236,242,.66)] [text-wrap:pretty]">
-                Paste your product URL. Eveil reads the site, works out who buys it, finds those companies and the
-                people at them, writes and sends the outreach from your own mailbox, reads the replies, drafts
-                LinkedIn, X and Bluesky posts about what you're building, and finds Reddit threads worth replying to. You approve
-                as much or as little as you want.</p>
+            <h1 class="reveal font-[Sora,sans-serif] font-semibold text-[38px] sm:text-[50px] lg:text-[68px] leading-[1.04] tracking-[-.035em] mx-auto mb-[22px] max-w-[18ch] [text-wrap:balance]" style="--delay: .08s">
+                Your marketing team, from a <span class="bg-[linear-gradient(90deg,#6fd3ec,#a8b8ff)] bg-clip-text text-transparent">single URL.</span></h1>
+            <p class="reveal text-[17px] sm:text-[19px] leading-[1.6] max-w-[56ch] mx-auto mb-8 sm:mb-10 text-[rgba(232,236,242,.66)] [text-wrap:pretty]" style="--delay: .16s">
+                Paste your product URL. Eveil learns what you sell and who buys it, then finds you clients by
+                email, posts for you on social media, writes your SEO articles and joins the right Reddit threads.</p>
 
-            <p class="text-[14px] sm:text-[15px] leading-[1.6] max-w-[58ch] mx-auto mb-8 sm:mb-10 text-[rgba(232,236,242,.48)] [text-wrap:pretty]">
-                Not a purchased contact list, and not a pool of pre-warmed inboxes sending on your behalf. It
-                automates the same research and outreach a person would do by hand, from the mailbox you already
-                own.</p>
-
-            <form action="{{ Route::has('register') ? route('register') : route('home') }}" method="get"
-                  class="max-w-[600px] mx-auto bg-[linear-gradient(180deg,rgba(232,236,242,.055),rgba(232,236,242,.02))] border border-[rgba(232,236,242,.12)] rounded-2xl p-5 text-left">
+            <form action="{{ $signupUrl }}" method="get" style="--delay: .24s"
+                  class="reveal max-w-[600px] mx-auto bg-[linear-gradient(180deg,rgba(232,236,242,.055),rgba(232,236,242,.02))] border border-[rgba(232,236,242,.12)] rounded-2xl p-5 text-left shadow-[0_20px_60px_-20px_rgba(111,211,236,.25)]">
                 <label for="url"
                        class="block font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[rgba(232,236,242,.5)] mb-[9px]">Your
                     product URL</label>
                 <div class="flex gap-[9px]">
                     <input id="url" name="url" type="url" required placeholder="https://yourproduct.com" class="field flex-1 min-w-0 font-[Geist_Mono,monospace]">
-                    <button type="submit" class="cta-btn border-0 rounded-lg font-[Sora,sans-serif] font-semibold text-[15px] px-[22px] py-3 cursor-pointer whitespace-nowrap">
+                    <button type="submit" class="cta-btn group inline-flex items-center gap-2 border-0 rounded-lg font-[Sora,sans-serif] font-semibold text-[15px] px-[22px] py-3 cursor-pointer whitespace-nowrap">
                         Start free
+                        <x-marketing.icon name="arrow-right" class="w-4 h-4 transition-transform group-hover:translate-x-[3px]" />
                     </button>
                 </div>
-                <p class="mt-[13px] text-[13.5px] text-[rgba(232,236,242,.5)]">5,000 credits, no card, no setup
-                    wizard. It shows you a product portrait to correct before it writes a word.</p>
+                <p class="mt-[13px] text-[13.5px] text-[rgba(232,236,242,.5)]">No card, no setup wizard. You see
+                    what it understood before it writes a word.</p>
             </form>
 
-            <div class="flex gap-5 sm:gap-7 justify-center mt-8 font-[Geist_Mono,monospace] text-[11.5px] tracking-[.05em] uppercase text-[rgba(232,236,242,.42)] flex-wrap">
-                <span>Self-hostable</span>
-                <span>Your own mailbox</span>
-                <span>No tracking pixels</span>
+            <div class="mt-10">
+                <div class="reveal font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[rgba(232,236,242,.4)] mb-4" style="--delay: .3s">
+                    One knowledge base, every channel
+                </div>
+                <ul class="flex flex-wrap justify-center gap-[10px]">
+                    @foreach ($channels as $channel)
+                        <li class="reveal" style="--delay: {{ .34 + $loop->index * .06 }}s">
+                            <span class="anim-float inline-flex items-center gap-2 border border-[rgba(232,236,242,.12)] bg-[#101520] rounded-full pl-3 pr-4 py-[7px] text-[14px] text-[rgba(232,236,242,.82)]" style="--delay: {{ $loop->index * .4 }}s">
+                                <x-marketing.icon :name="$channel['icon']" class="w-4 h-4 text-[#6fd3ec]" />
+                                {{ $channel['name'] }}
+                            </span>
+                        </li>
+                    @endforeach
+                    <li class="reveal" style="--delay: .7s">
+                        <span class="inline-flex items-center gap-2 border border-dashed border-[rgba(232,236,242,.16)] rounded-full px-4 py-[7px] text-[14px] text-[rgba(232,236,242,.42)]">
+                            <x-marketing.icon name="megaphone" class="w-4 h-4" />
+                            Ads <span class="font-[Geist_Mono,monospace] text-[10px] tracking-[.08em] uppercase">soon</span>
+                        </span>
+                    </li>
+                </ul>
             </div>
 
-            <figure class="mt-14 border border-[rgba(232,236,242,.12)] rounded-2xl overflow-hidden bg-[#101520]">
+            <figure class="reveal mt-14 border border-[rgba(232,236,242,.12)] rounded-2xl overflow-hidden bg-[#101520] shadow-[0_40px_120px_-40px_rgba(111,211,236,.35)]" style="--delay: .2s">
                 <div class="flex items-center gap-[7px] px-[14px] py-[11px] border-b border-[rgba(232,236,242,.08)]">
                     <span class="w-[9px] h-[9px] rounded-full bg-[rgba(232,236,242,.18)] block"></span>
                     <span class="w-[9px] h-[9px] rounded-full bg-[rgba(232,236,242,.18)] block"></span>
                     <span class="w-[9px] h-[9px] rounded-full bg-[rgba(232,236,242,.18)] block"></span>
-                    <span class="font-[Geist_Mono,monospace] text-[11px] text-[rgba(232,236,242,.4)] ml-[10px]">discovery run / live</span>
+                    <span class="font-[Geist_Mono,monospace] text-[11px] text-[rgba(232,236,242,.4)] ml-[10px]">project dashboard</span>
                 </div>
-                <img src="{{ asset('screenshot.png') }}" alt="Eveil dashboard" class="block w-full h-auto">
+                <img src="{{ asset('screenshot.png') }}" alt="Eveil project dashboard" class="block w-full h-auto">
             </figure>
-            <figcaption class="mt-3 text-[13px] text-[rgba(232,236,242,.42)]">Project Dashboard
-            </figcaption>
         </div>
     </section>
 
+    {{-- How it works --}}
     <section id="how" class="border-b border-[rgba(232,236,242,.08)]">
         <div class="max-w-[1180px] mx-auto px-6 py-16 lg:py-20">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-[60px] md:items-end mb-8 lg:mb-11">
-                <div>
-                    <div class="font-[Geist_Mono,monospace] text-[11.5px] tracking-[.1em] uppercase text-[#6fd3ec] mb-[14px]">
-                        How it works
-                    </div>
-                    <h2 class="font-[Sora,sans-serif] font-semibold text-[28px] sm:text-[34px] lg:text-[40px] leading-[1.12] tracking-[-.03em]">
-                        Five stages between a URL and a qualified lead.</h2>
-                </div>
-                <p class="text-[rgba(232,236,242,.62)] max-w-[48ch]">Every company gets a fit score and the
-                    sentence that justifies it. The pipeline runs over a bundled, self-hosted search engine, so no paid
-                    data API is required to start and no purchased list appears anywhere in it.</p>
+            <div class="reveal font-[Geist_Mono,monospace] text-[11.5px] tracking-[.1em] uppercase text-[#6fd3ec] mb-[14px]">
+                How it works
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-[14px]">
-                <div class="bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-5 pt-[22px] pb-[26px]">
-                    <div class="font-[Geist_Mono,monospace] text-[11.5px] text-[#6fd3ec] mb-[14px]">
-                        01
-                    </div>
-                    <h4 class="font-[Sora,sans-serif] font-semibold text-[17.5px] tracking-[-.02em] mb-2">
-                        Search planning</h4>
-                    <p class="text-[14px] text-[rgba(232,236,242,.58)]">Target profiles become the actual
-                        queries that will find those companies.</p>
-                </div>
-                <div class="bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-5 pt-[22px] pb-[26px]">
-                    <div class="font-[Geist_Mono,monospace] text-[11.5px] text-[#6fd3ec] mb-[14px]">
-                        02
-                    </div>
-                    <h4 class="font-[Sora,sans-serif] font-semibold text-[17.5px] tracking-[-.02em] mb-2">
-                        Qualification</h4>
-                    <p class="text-[14px] text-[rgba(232,236,242,.58)]">Each company is read and scored for
-                        fit, with the reasoning attached.</p>
-                </div>
-                <div class="bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-5 pt-[22px] pb-[26px]">
-                    <div class="font-[Geist_Mono,monospace] text-[11.5px] text-[#6fd3ec] mb-[14px]">
-                        03
-                    </div>
-                    <h4 class="font-[Sora,sans-serif] font-semibold text-[17.5px] tracking-[-.02em] mb-2">
-                        Contact discovery</h4>
-                    <p class="text-[14px] text-[rgba(232,236,242,.58)]">The people who would actually answer,
-                        found on the company's own pages.</p>
-                </div>
-                <div class="bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-5 pt-[22px] pb-[26px]">
-                    <div class="font-[Geist_Mono,monospace] text-[11.5px] text-[#6fd3ec] mb-[14px]">
-                        04
-                    </div>
-                    <h4 class="font-[Sora,sans-serif] font-semibold text-[17.5px] tracking-[-.02em] mb-2">
-                        Pattern inference</h4>
-                    <p class="text-[14px] text-[rgba(232,236,242,.58)]">The company's email convention,
-                        inferred rather than guessed one address at a time.</p>
-                </div>
-                <div class="bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-5 pt-[22px] pb-[26px]">
-                    <div class="font-[Geist_Mono,monospace] text-[11.5px] text-[#6fd3ec] mb-[14px]">
-                        05
-                    </div>
-                    <h4 class="font-[Sora,sans-serif] font-semibold text-[17.5px] tracking-[-.02em] mb-2">
-                        Verification</h4>
-                    <p class="text-[14px] text-[rgba(232,236,242,.58)]">Addresses checked before a single
-                        mail is queued. Free, always.</p>
-                </div>
-            </div>
-            <p class="mt-5 text-[13.5px] text-[rgba(232,236,242,.42)] max-w-[74ch]">A market that turns
-                out to be forty companies is reported as a result, not padded with noise to fill a quota.</p>
+            <h2 class="reveal font-[Sora,sans-serif] font-semibold text-[28px] sm:text-[34px] lg:text-[40px] leading-[1.12] tracking-[-.03em] mb-8 lg:mb-11 max-w-[24ch]">
+                One input. Everything else is drafted for you.</h2>
+            <ol class="grid grid-cols-1 md:grid-cols-3 gap-[14px]">
+                @foreach ($steps as $step)
+                    <li class="reveal lift bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl overflow-hidden" style="--delay: {{ $loop->index * .12 }}s">
+                        <div class="h-[168px] border-b border-[rgba(232,236,242,.07)] bg-[radial-gradient(80%_90%_at_50%_100%,rgba(111,211,236,.08),transparent)] flex items-center justify-center px-6" aria-hidden="true">
+                            @if ($loop->index === 0)
+                                {{-- A URL being typed --}}
+                                <div class="w-full max-w-[260px]">
+                                    <div class="flex items-center gap-2 border border-[rgba(232,236,242,.16)] bg-[#0b0e14] rounded-lg px-3 py-[10px]">
+                                        <x-marketing.icon name="globe" class="w-4 h-4 shrink-0 text-[rgba(232,236,242,.45)]" />
+                                        <span class="anim-typing font-[Geist_Mono,monospace] text-[13px] text-[#e8ecf2]">yourproduct.com</span>
+                                        <span class="anim-blink w-[2px] h-4 bg-[#6fd3ec] -ml-1"></span>
+                                    </div>
+                                    <div class="mt-3 ml-auto w-fit inline-flex items-center gap-1 rounded-md bg-[#6fd3ec] text-[#06222c] font-[Sora,sans-serif] font-semibold text-[12px] px-3 py-[6px] float-right">
+                                        Start <x-marketing.icon name="arrow-right" class="w-3 h-3" />
+                                    </div>
+                                </div>
+                            @elseif ($loop->index === 1)
+                                {{-- The product portrait filling in --}}
+                                <div class="w-full max-w-[260px] border border-[rgba(232,236,242,.12)] bg-[#0b0e14] rounded-lg p-4">
+                                    <div class="flex items-center gap-2 mb-3 text-[12px] font-[Geist_Mono,monospace] uppercase tracking-[.06em] text-[rgba(232,236,242,.55)]">
+                                        <x-marketing.icon name="sparkles" class="w-4 h-4 text-[#6fd3ec]" /> Product portrait
+                                    </div>
+                                    @foreach (['Sells', 'Buyers', 'Why they switch'] as $row)
+                                        <div class="flex items-center gap-2 mb-[9px] last:mb-0">
+                                            <span class="w-[86px] shrink-0 text-[11.5px] text-[rgba(232,236,242,.5)]">{{ $row }}</span>
+                                            <span class="mock-line anim-fill flex-1 !bg-[rgba(111,211,236,.35)]" style="--delay: {{ $loop->index * .35 }}s"></span>
+                                            <x-marketing.icon name="check" class="anim-pop w-[14px] h-[14px] text-[#6fd3ec]" style="--delay: {{ $loop->index * .35 }}s" />
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                {{-- One brain fanning out to every channel --}}
+                                <div class="relative w-full max-w-[260px] h-[136px]">
+                                    <svg viewBox="0 0 260 136" class="absolute inset-0 w-full h-full" fill="none">
+                                        @foreach ([0, 23, 46, 69, 92, 114] as $top)
+                                            <path d="M58 68 C 130 68, 130 {{ $top + 11 }}, 224 {{ $top + 11 }}" stroke="rgba(111,211,236,.4)" stroke-width="1.2" class="anim-flow" />
+                                        @endforeach
+                                    </svg>
+                                    <div class="anim-pulse absolute left-[14px] top-[46px] w-11 h-11 rounded-xl bg-[#6fd3ec] text-[#06222c] flex items-center justify-center">
+                                        <x-marketing.icon name="brain" class="w-6 h-6" />
+                                    </div>
+                                    @foreach ($channels as $channel)
+                                        <div class="absolute right-[14px] w-[22px] h-[22px] rounded-md border border-[rgba(232,236,242,.16)] bg-[#101520] flex items-center justify-center text-[#6fd3ec]" style="top: {{ $loop->index * 23 - ($loop->last ? 1 : 0) }}px">
+                                            <x-marketing.icon :name="$channel['icon']" class="w-3 h-3" />
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+                        <div class="px-6 pt-[22px] pb-7">
+                            <div class="font-[Geist_Mono,monospace] text-[12px] text-[#6fd3ec] mb-[10px]">{{ $step['n'] }}</div>
+                            <h3 class="font-[Sora,sans-serif] font-semibold text-[20px] tracking-[-.02em] mb-[10px]">{{ $step['title'] }}</h3>
+                            <p class="text-[15px] text-[rgba(232,236,242,.6)]">{{ $step['text'] }}</p>
+                        </div>
+                    </li>
+                @endforeach
+            </ol>
         </div>
     </section>
 
-    <section id="agents" class="border-b border-[rgba(232,236,242,.08)] bg-[#0d1119]">
+    {{-- Channels --}}
+    <section id="channels" class="border-b border-[rgba(232,236,242,.08)] bg-[#0d1119]">
         <div class="max-w-[1180px] mx-auto px-6 py-16 lg:py-20">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-[60px] md:items-end mb-8 lg:mb-11">
-                <div>
+                <div class="reveal">
                     <div class="font-[Geist_Mono,monospace] text-[11.5px] tracking-[.1em] uppercase text-[#6fd3ec] mb-[14px]">
-                        The team
+                        What it does
                     </div>
                     <h2 class="font-[Sora,sans-serif] font-semibold text-[28px] sm:text-[34px] lg:text-[40px] leading-[1.12] tracking-[-.03em]">
-                        One team of agents, one knowledge base.</h2>
+                        Outreach and content, from the same brain.</h2>
                 </div>
-                <p class="text-[rgba(232,236,242,.62)] max-w-[48ch]">Every stage from discovery to sending,
-                    and every channel you publish to, reads the same understanding of your product, so nothing is
-                    re-explained and nothing contradicts itself.</p>
+                <p class="reveal text-[rgba(232,236,242,.62)] max-w-[48ch]" style="--delay: .1s">Every agent reads the same understanding of
+                    your product and your buyers, so nothing is explained twice and no channel contradicts another.</p>
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[14px]">
-                <div class="bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-6 pt-[26px] pb-7">
-                    <div class="font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[rgba(232,236,242,.45)] mb-3">
-                        Research
+
+            {{-- Cold email: the core channel gets the wide card --}}
+            <div class="reveal border border-[rgba(111,211,236,.35)] bg-[linear-gradient(180deg,rgba(111,211,236,.07),rgba(111,211,236,.015))] rounded-2xl p-6 sm:p-8 lg:p-10 mb-[14px]">
+                <div class="grid grid-cols-1 lg:grid-cols-[.9fr_1.1fr] gap-8 lg:gap-12">
+                    <div>
+                        <div class="flex items-center gap-3 mb-4">
+                            <span class="w-9 h-9 rounded-lg bg-[rgba(111,211,236,.14)] text-[#6fd3ec] flex items-center justify-center">
+                                <x-marketing.icon name="mail" class="w-5 h-5" />
+                            </span>
+                            <span class="font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[#6fd3ec]">Cold email</span>
+                            <span class="font-[Geist_Mono,monospace] text-[10px] tracking-[.08em] uppercase text-[rgba(232,236,242,.55)] border border-[rgba(232,236,242,.18)] rounded-full px-2 py-[1px]">Core</span>
+                        </div>
+                        <h3 class="font-[Sora,sans-serif] font-semibold text-[26px] sm:text-[30px] leading-[1.15] tracking-[-.025em] mb-4">
+                            From a URL to replies in your inbox.</h3>
+                        <p class="text-[15.5px] text-[rgba(232,236,242,.64)] mb-4">Eveil does the research and
+                            outreach a person would do by hand, at a scale no person has time for. From the mailbox you
+                            already own, with daily caps, gradual ramp-up and circuit breakers that stop sending the
+                            moment something looks wrong.</p>
+                        <p class="text-[14px] text-[rgba(232,236,242,.45)] mb-6">A market that turns out to be forty
+                            companies is reported as forty, never padded to fill a quota.</p>
+
+                        {{-- A reply landing in the inbox --}}
+                        <div class="anim-float max-w-[380px] border border-[rgba(232,236,242,.12)] bg-[#0b0e14] rounded-xl p-4 shadow-[0_20px_50px_-25px_rgba(0,0,0,.8)]" aria-hidden="true">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="anim-pulse w-2 h-2 rounded-full bg-[#5ee0a0] block"></span>
+                                <span class="font-[Geist_Mono,monospace] text-[10.5px] tracking-[.08em] uppercase text-[#5ee0a0]">New reply</span>
+                                <span class="ml-auto font-[Geist_Mono,monospace] text-[10.5px] text-[rgba(232,236,242,.35)]">2 min ago</span>
+                            </div>
+                            <div class="text-[13.5px] font-semibold mb-1">Re: your product for their team</div>
+                            <div class="text-[13.5px] text-[rgba(232,236,242,.6)]">"Interesting timing, we were just looking at this. Free for a call Thursday?"</div>
+                        </div>
                     </div>
-                    <h4 class="font-[Sora,sans-serif] font-semibold text-[20px] tracking-[-.02em] mb-[10px]">
-                        Knowledge base</h4>
-                    <p class="text-[14.5px] text-[rgba(232,236,242,.6)]">Site analysis, plus an optional
-                        linked GitHub repo for a deeper technical read. Ask it questions. Set one writing style for the
-                        whole project: tone, language, banned words.</p>
+                    <ol class="grid grid-cols-1 sm:grid-cols-2 gap-[12px] content-start">
+                        @foreach ($emailStages as $stage)
+                            <li class="reveal lift bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-5 py-5" style="--delay: {{ .1 + $loop->index * .08 }}s">
+                                <div class="flex items-center justify-between mb-3">
+                                    <span class="w-9 h-9 rounded-lg bg-[rgba(111,211,236,.1)] text-[#6fd3ec] flex items-center justify-center">
+                                        <x-marketing.icon :name="$stage['icon']" class="w-[18px] h-[18px]" />
+                                    </span>
+                                    <span class="font-[Geist_Mono,monospace] text-[11.5px] text-[rgba(232,236,242,.35)]">0{{ $loop->iteration }}</span>
+                                </div>
+                                <h4 class="font-[Sora,sans-serif] font-semibold text-[17px] tracking-[-.02em] mb-[6px]">{{ $stage['title'] }}</h4>
+                                <p class="text-[14px] text-[rgba(232,236,242,.58)]">{{ $stage['text'] }}</p>
+                            </li>
+                        @endforeach
+                    </ol>
                 </div>
-                <div class="bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-6 pt-[26px] pb-7">
-                    <div class="font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[rgba(232,236,242,.45)] mb-3">
-                        Strategy
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-[14px]">
+                @foreach ($contentChannels as $channel)
+                    <div class="reveal lift bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl overflow-hidden" style="--delay: {{ $loop->index * .1 }}s">
+                        <div class="h-[150px] border-b border-[rgba(232,236,242,.07)] bg-[radial-gradient(80%_90%_at_50%_100%,rgba(111,211,236,.07),transparent)] flex items-center justify-center px-5" aria-hidden="true">
+                            @if ($channel['key'] === 'social')
+                                <div class="w-full max-w-[220px] border border-[rgba(232,236,242,.12)] bg-[#0b0e14] rounded-lg p-3">
+                                    <div class="flex items-center gap-2 mb-3">
+                                        <span class="w-6 h-6 rounded-full bg-[linear-gradient(135deg,#6fd3ec,#a8b8ff)] block"></span>
+                                        <span class="mock-line w-16"></span>
+                                        <span class="ml-auto flex gap-1 text-[rgba(232,236,242,.5)]">
+                                            <x-marketing.icon name="linkedin" class="w-3 h-3" />
+                                            <x-marketing.icon name="x" class="w-3 h-3" />
+                                            <x-marketing.icon name="bluesky" class="w-3 h-3" />
+                                        </span>
+                                    </div>
+                                    <span class="mock-line mb-[6px]"></span>
+                                    <span class="mock-line w-4/5 mb-3"></span>
+                                    <div class="flex items-center justify-between">
+                                        <span class="font-[Geist_Mono,monospace] text-[9.5px] tracking-[.06em] uppercase text-[rgba(232,236,242,.4)]">Awaiting approval</span>
+                                        <span class="anim-pulse rounded bg-[#6fd3ec] text-[#06222c] text-[10.5px] font-semibold px-2 py-[2px]">Approve</span>
+                                    </div>
+                                </div>
+                            @elseif ($channel['key'] === 'seo')
+                                <div class="w-full max-w-[220px] border border-[rgba(232,236,242,.12)] bg-[#0b0e14] rounded-lg p-3">
+                                    <div class="flex items-center gap-2 mb-2 text-[rgba(232,236,242,.45)]">
+                                        <x-marketing.icon name="scan-search" class="w-3 h-3" />
+                                        <span class="mock-line flex-1 !h-[5px]"></span>
+                                    </div>
+                                    <div class="font-[Geist_Mono,monospace] text-[9.5px] text-[#5ee0a0] mb-1">yourproduct.com/blog</div>
+                                    <div class="text-[12px] font-semibold text-[#a8c4ff] leading-tight mb-2">Your product vs. the usual suspects</div>
+                                    <span class="mock-line w-full mb-[5px] !h-[5px]"></span>
+                                    <div class="flex items-center gap-1 text-[#5ee0a0] text-[11px] font-semibold">
+                                        <x-marketing.icon name="trending-up" class="w-[14px] h-[14px]" /> Ranking
+                                    </div>
+                                </div>
+                            @else
+                                <div class="w-full max-w-[220px] border border-[rgba(232,236,242,.12)] bg-[#0b0e14] rounded-lg p-3">
+                                    <div class="flex gap-2">
+                                        <div class="flex flex-col items-center text-[#ff7a45]">
+                                            <x-marketing.icon name="arrow-big-up" class="w-4 h-4" />
+                                            <span class="text-[10.5px] font-semibold">284</span>
+                                        </div>
+                                        <div class="flex-1">
+                                            <div class="text-[11.5px] leading-tight mb-2">What tool do you use for this?</div>
+                                            <div class="border-l-2 border-[rgba(111,211,236,.5)] pl-2">
+                                                <span class="font-[Geist_Mono,monospace] text-[9px] tracking-[.06em] uppercase text-[#6fd3ec]">Your draft</span>
+                                                <span class="mock-line anim-shimmer mt-1 mb-[5px] !h-[5px]"></span>
+                                                <span class="mock-line anim-shimmer w-3/4 !h-[5px]"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                        <div class="px-6 pt-[22px] pb-7">
+                            <div class="font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[#6fd3ec] mb-3">{{ $channel['label'] }}</div>
+                            <h3 class="font-[Sora,sans-serif] font-semibold text-[20px] tracking-[-.02em] mb-[10px]">{{ $channel['title'] }}</h3>
+                            <p class="text-[14.5px] text-[rgba(232,236,242,.6)]">{{ $channel['text'] }}</p>
+                        </div>
                     </div>
-                    <h4 class="font-[Sora,sans-serif] font-semibold text-[20px] tracking-[-.02em] mb-[10px]">
-                        Target profiles</h4>
-                    <p class="text-[14.5px] text-[rgba(232,236,242,.6)]">Who buys the product and why they
-                        switch: derived, always editable. Customer profiles and partner profiles, for reach through
-                        whoever already touches the customer.</p>
-                </div>
-                <div class="bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-6 pt-[26px] pb-7">
-                    <div class="font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[rgba(232,236,242,.45)] mb-3">
-                        Prospecting
+                @endforeach
+                <div id="roadmap" class="reveal border border-dashed border-[rgba(232,236,242,.16)] rounded-xl overflow-hidden" style="--delay: .3s">
+                    <div class="h-[150px] border-b border-dashed border-[rgba(232,236,242,.1)] flex items-center justify-center px-5" aria-hidden="true">
+                        <div class="w-full max-w-[220px] border border-dashed border-[rgba(232,236,242,.14)] rounded-lg p-3">
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="w-7 h-7 rounded-md bg-[rgba(232,236,242,.06)] text-[rgba(232,236,242,.5)] flex items-center justify-center">
+                                    <x-marketing.icon name="megaphone" class="w-4 h-4" />
+                                </span>
+                                <span class="mock-line anim-shimmer flex-1"></span>
+                            </div>
+                            <span class="mock-line anim-shimmer mb-[6px]"></span>
+                            <span class="mock-line anim-shimmer w-2/3"></span>
+                        </div>
                     </div>
-                    <h4 class="font-[Sora,sans-serif] font-semibold text-[20px] tracking-[-.02em] mb-[10px]">
-                        Companies &amp; contacts</h4>
-                    <p class="text-[14.5px] text-[rgba(232,236,242,.6)]">Approval workflow, status per
-                        contact, search across everything discovered, and import when you already have a list.</p>
-                </div>
-                <div class="bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-6 pt-[26px] pb-7">
-                    <div class="font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[rgba(232,236,242,.45)] mb-3">
-                        Copy
+                    <div class="px-6 pt-[22px] pb-7">
+                        <div class="flex items-center gap-2 font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[rgba(232,236,242,.45)] mb-3">
+                            <span class="anim-pulse w-[6px] h-[6px] rounded-full bg-[rgba(111,211,236,.6)] block"></span>
+                            In the works
+                        </div>
+                        <h3 class="font-[Sora,sans-serif] font-semibold text-[20px] tracking-[-.02em] mb-[10px] text-[rgba(232,236,242,.82)]">Ad management</h3>
+                        <p class="text-[14.5px] text-[rgba(232,236,242,.5)]">The same knowledge base and target
+                            profiles, driving your paid campaigns. Audiences and ad copy derived from what Eveil already
+                            knows about your buyers.</p>
                     </div>
-                    <h4 class="font-[Sora,sans-serif] font-semibold text-[20px] tracking-[-.02em] mb-[10px]">
-                        Campaigns &amp; sequences</h4>
-                    <p class="text-[14.5px] text-[rgba(232,236,242,.6)]">Generated sequences with reorderable
-                        steps and variants. Regenerate one missing step on its own, without rewriting the sequence
-                        around it.</p>
-                </div>
-                <div class="bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-6 pt-[26px] pb-7">
-                    <div class="font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[rgba(232,236,242,.45)] mb-3">
-                        Delivery
-                    </div>
-                    <h4 class="font-[Sora,sans-serif] font-semibold text-[20px] tracking-[-.02em] mb-[10px]">
-                        Sending &amp; deliverability</h4>
-                    <p class="text-[14.5px] text-[rgba(232,236,242,.6)]">Plain SMTP from your own mailbox,
-                        with no relay and no shared domain. Daily caps, ramp-up, pacing spread across the day, never
-                        bursty.</p>
-                </div>
-                <div class="bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-6 pt-[26px] pb-7">
-                    <div class="font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[rgba(232,236,242,.45)] mb-3">
-                        Conversation
-                    </div>
-                    <h4 class="font-[Sora,sans-serif] font-semibold text-[20px] tracking-[-.02em] mb-[10px]">
-                        Unified inbox</h4>
-                    <p class="text-[14.5px] text-[rgba(232,236,242,.6)]">Replies read back over IMAP and
-                        threaded on the mail's own Message-ID. The reply handler pauses, reschedules, asks for the right
-                        contact, or suppresses.</p>
-                </div>
-                <div class="bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-6 pt-[26px] pb-7">
-                    <div class="font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[rgba(232,236,242,.45)] mb-3">
-                        Infrastructure
-                    </div>
-                    <h4 class="font-[Sora,sans-serif] font-semibold text-[20px] tracking-[-.02em] mb-[10px]">
-                        Mailbox management</h4>
-                    <p class="text-[14.5px] text-[rgba(232,236,242,.6)]">SMTP and IMAP with presets for
-                        Infomaniak, OVH, Gandi, Zoho, Gmail and Microsoft 365. A connection test that names the exact
-                        cause of a refusal.</p>
-                </div>
-                <div class="bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-6 pt-[26px] pb-7">
-                    <div class="font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[rgba(232,236,242,.45)] mb-3">
-                        Channels
-                    </div>
-                    <h4 class="font-[Sora,sans-serif] font-semibold text-[20px] tracking-[-.02em] mb-[10px]">
-                        LinkedIn posting</h4>
-                    <p class="text-[14.5px] text-[rgba(232,236,242,.6)]">Official API, personal profile.
-                        A knowledge-base fact, a client you just won, or relevant industry news, drafted and queued
-                        for your approval. No automation of connection requests or messages.</p>
-                </div>
-                <div class="bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-6 pt-[26px] pb-7">
-                    <div class="font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[rgba(232,236,242,.45)] mb-3">
-                        Channels
-                    </div>
-                    <h4 class="font-[Sora,sans-serif] font-semibold text-[20px] tracking-[-.02em] mb-[10px]">
-                        X &amp; Bluesky posting</h4>
-                    <p class="text-[14.5px] text-[rgba(232,236,242,.6)]">Short posts from the same evidence, plus
-                        your own new articles, with your link in every one. Bluesky publishes through its free API;
-                        X you copy and post yourself, no paid API needed.</p>
-                </div>
-                <div class="bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-6 pt-[26px] pb-7">
-                    <div class="font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[rgba(232,236,242,.45)] mb-3">
-                        Channels
-                    </div>
-                    <h4 class="font-[Sora,sans-serif] font-semibold text-[20px] tracking-[-.02em] mb-[10px]">
-                        Reddit replies</h4>
-                    <p class="text-[14.5px] text-[rgba(232,236,242,.6)]">Finds live subreddit threads and evergreen
-                        "best X" discussions already ranking on Google, drafts a genuinely useful reply in the
-                        thread's own tone, and queues it for you to copy and post yourself.</p>
-                </div>
-                <div class="bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-6 pt-[26px] pb-7">
-                    <div class="font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[rgba(232,236,242,.45)] mb-3">
-                        Channels
-                    </div>
-                    <h4 class="font-[Sora,sans-serif] font-semibold text-[20px] tracking-[-.02em] mb-[10px]">
-                        SEO articles</h4>
-                    <p class="text-[14.5px] text-[rgba(232,236,242,.6)]">Articles for your own blog on what your
-                        buyers search for and your site doesn't answer: an uncovered feature, a competitor
-                        comparison, a question asked on Reddit. In your site's language, ready to paste.</p>
-                </div>
-                <div class="bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-6 pt-[26px] pb-7">
-                    <div class="font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[rgba(232,236,242,.45)] mb-3">
-                        Team
-                    </div>
-                    <h4 class="font-[Sora,sans-serif] font-semibold text-[20px] tracking-[-.02em] mb-[10px]">
-                        Organizations &amp; roles</h4>
-                    <p class="text-[14.5px] text-[rgba(232,236,242,.6)]">Three separate permission scopes,
-                        instance, organization and project, never merged into one role column. Invitations and
-                        multi-project grants in both editions.</p>
-                </div>
-                <div class="bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-6 pt-[26px] pb-7">
-                    <div class="font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[rgba(232,236,242,.45)] mb-3">
-                        Compliance
-                    </div>
-                    <h4 class="font-[Sora,sans-serif] font-semibold text-[20px] tracking-[-.02em] mb-[10px]">
-                        Retention &amp; erasure</h4>
-                    <p class="text-[14.5px] text-[rgba(232,236,242,.6)]">Automatic purge on CNIL-referenced
-                        defaults. Erasure keeps a one-way hash only, enough to refuse re-contacting someone forever.</p>
                 </div>
             </div>
         </div>
     </section>
 
+    {{-- Control --}}
     <section class="border-b border-[rgba(232,236,242,.08)]">
         <div class="max-w-[1180px] mx-auto px-6 py-16 lg:py-20 grid grid-cols-1 lg:grid-cols-[1fr_1.1fr] gap-8 lg:gap-16 lg:items-center">
-            <div>
+            <div class="reveal">
                 <div class="font-[Geist_Mono,monospace] text-[11.5px] tracking-[.1em] uppercase text-[#6fd3ec] mb-[14px]">
-                    Autonomy
+                    You stay in charge
                 </div>
                 <h2 class="font-[Sora,sans-serif] font-semibold text-[28px] sm:text-[34px] lg:text-[40px] leading-[1.12] tracking-[-.03em] mb-[18px]">
-                    Three notches. The safety valves never move.</h2>
-                <p class="mb-3 text-[rgba(232,236,242,.62)]">Autonomy removes approval checkpoints, not
-                    guardrails. Circuit breakers apply at every notch, autonomous included: bounce rate, spam
-                    complaints, negative-reply rate, auth failures.</p>
-                <p class="text-[rgba(232,236,242,.62)]">Plus a bounce breaker scoped per mailbox and a
-                    three-layer suppression list: project, mailbox, instance.</p>
-                <p class="mt-3 text-[rgba(232,236,242,.62)]">Set per channel: let email run on its own while
-                    LinkedIn posts still wait for your approval.</p>
+                    Choose how much it does on its own.</h2>
+                <p class="text-[rgba(232,236,242,.62)] mb-3">Set it per channel: let email run by itself while your
+                    LinkedIn posts still wait for a yes.</p>
+                <p class="text-[rgba(232,236,242,.62)] mb-6">The safety checks never switch off. Bounce rate, spam
+                    complaints and negative replies are watched at every level, and a tripped breaker stops the send.</p>
+                <div class="inline-flex flex-wrap items-center gap-2 border border-[rgba(232,236,242,.1)] bg-[#101520] rounded-xl px-4 py-3" aria-hidden="true">
+                    <x-marketing.icon name="shield-check" class="w-5 h-5 text-[#5ee0a0]" />
+                    @foreach ($breakers as $breaker)
+                        <span class="inline-flex items-center gap-[6px] text-[12.5px] text-[rgba(232,236,242,.7)] border border-[rgba(232,236,242,.1)] rounded-full px-[10px] py-[3px]">
+                            <span class="anim-pulse w-[6px] h-[6px] rounded-full bg-[#5ee0a0] block" style="animation-delay: {{ $loop->index * .5 }}s"></span>
+                            {{ $breaker }}
+                        </span>
+                    @endforeach
+                </div>
             </div>
             <div class="grid gap-3">
-                <div class="border border-[rgba(232,236,242,.09)] bg-[#101520] rounded-xl px-[22px] py-5 grid grid-cols-[auto_1fr] gap-4 items-baseline">
-                    <span class="font-[Geist_Mono,monospace] text-[11px] text-[rgba(232,236,242,.35)]">01</span>
-                    <div>
-                        <div class="font-[Sora,sans-serif] font-semibold text-[19px] tracking-[-.02em] mb-[5px]">
-                            Supervised
+                @foreach ($autonomyLevels as $level)
+                    <div @class([
+                        'reveal lift rounded-xl px-[22px] py-5 flex items-start gap-4',
+                        'border border-[rgba(111,211,236,.4)] bg-[linear-gradient(180deg,rgba(111,211,236,.09),rgba(111,211,236,.03))]' => $level['default'],
+                        'border border-[rgba(232,236,242,.09)] bg-[#101520]' => ! $level['default'],
+                    ]) style="--delay: {{ $loop->index * .1 }}s">
+                        <span @class([
+                            'w-10 h-10 shrink-0 rounded-lg flex items-center justify-center',
+                            'bg-[#6fd3ec] text-[#06222c]' => $level['default'],
+                            'bg-[rgba(232,236,242,.06)] text-[rgba(232,236,242,.7)]' => ! $level['default'],
+                        ])>
+                            <x-marketing.icon :name="$level['icon']" class="w-5 h-5" />
+                        </span>
+                        <div>
+                            <div class="flex items-baseline gap-[10px] mb-[5px]">
+                                <span class="font-[Sora,sans-serif] font-semibold text-[19px] tracking-[-.02em]">{{ $level['name'] }}</span>
+                                @if ($level['default'])
+                                    <span class="font-[Geist_Mono,monospace] text-[10.5px] tracking-[.08em] uppercase text-[#6fd3ec]">default</span>
+                                @endif
+                            </div>
+                            <p class="text-[14px] text-[rgba(232,236,242,.62)]">{{ $level['text'] }}</p>
                         </div>
-                        <p class="text-[14px] text-[rgba(232,236,242,.58)]">You approve every company,
-                            contact and mail before it moves.</p>
                     </div>
-                </div>
-                <div class="border border-[rgba(111,211,236,.4)] bg-[linear-gradient(180deg,rgba(111,211,236,.09),rgba(111,211,236,.03))] rounded-xl px-[22px] py-5 grid grid-cols-[auto_1fr] gap-4 items-baseline">
-                    <span class="font-[Geist_Mono,monospace] text-[11px] text-[#6fd3ec]">02</span>
-                    <div>
-                        <div class="flex items-baseline gap-[10px] mb-[5px]">
-                            <span class="font-[Sora,sans-serif] font-semibold text-[19px] tracking-[-.02em]">Semi-auto</span>
-                            <span class="font-[Geist_Mono,monospace] text-[10.5px] tracking-[.08em] uppercase text-[#6fd3ec]">default</span>
-                        </div>
-                        <p class="text-[14px] text-[rgba(232,236,242,.66)]">Research and writing run on their
-                            own. Sending is the one thing that waits for you.</p>
-                    </div>
-                </div>
-                <div class="border border-[rgba(232,236,242,.09)] bg-[#101520] rounded-xl px-[22px] py-5 grid grid-cols-[auto_1fr] gap-4 items-baseline">
-                    <span class="font-[Geist_Mono,monospace] text-[11px] text-[rgba(232,236,242,.35)]">03</span>
-                    <div>
-                        <div class="font-[Sora,sans-serif] font-semibold text-[19px] tracking-[-.02em] mb-[5px]">
-                            Autonomous
-                        </div>
-                        <p class="text-[14px] text-[rgba(232,236,242,.58)]">End to end without you. Breakers
-                            stay armed and a tripped one stops the send.</p>
-                    </div>
-                </div>
+                @endforeach
             </div>
         </div>
     </section>
 
-    <section id="editions" class="border-b border-[rgba(232,236,242,.08)] bg-[#0d1119]">
+    {{-- Principles --}}
+    <section class="border-b border-[rgba(232,236,242,.08)] bg-[#0d1119]">
         <div class="max-w-[1180px] mx-auto px-6 py-16 lg:py-20">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-[60px] md:items-end mb-7 lg:mb-10">
-                <div>
-                    <div class="font-[Geist_Mono,monospace] text-[11.5px] tracking-[.1em] uppercase text-[#6fd3ec] mb-[14px]">
-                        Editions
+            <div class="reveal font-[Geist_Mono,monospace] text-[11.5px] tracking-[.1em] uppercase text-[#6fd3ec] mb-[14px]">
+                Marketing you won't be embarrassed by
+            </div>
+            <h2 class="reveal font-[Sora,sans-serif] font-semibold text-[28px] sm:text-[34px] lg:text-[40px] leading-[1.12] tracking-[-.03em] mb-8 lg:mb-10 max-w-[26ch]">
+                Some things are missing on purpose.</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[14px]">
+                @foreach ($principles as $principle)
+                    <div class="reveal border-t border-[rgba(232,236,242,.14)] pt-5" style="--delay: {{ $loop->index * .08 }}s">
+                        <span class="w-10 h-10 mb-4 rounded-lg border border-[rgba(255,122,122,.25)] bg-[rgba(255,122,122,.06)] text-[#ff9a9a] flex items-center justify-center">
+                            <x-marketing.icon :name="$principle['icon']" class="w-5 h-5" />
+                        </span>
+                        <h3 class="font-[Sora,sans-serif] font-semibold text-[18px] tracking-[-.02em] mb-[6px]">{{ $principle['title'] }}</h3>
+                        <p class="text-[14.5px] text-[rgba(232,236,242,.58)]">{{ $principle['text'] }}</p>
                     </div>
-                    <h2 class="font-[Sora,sans-serif] font-semibold text-[28px] sm:text-[34px] lg:text-[40px] leading-[1.12] tracking-[-.03em]">
-                        Same code. No feature gate.</h2>
-                </div>
-                <p class="text-[rgba(232,236,242,.62)] max-w-[48ch]">Nothing is withheld from self-hosted to
-                    make cloud look better. Cloud sells convenience and a head start.</p>
-            </div>
-            <div class="border border-[rgba(232,236,242,.1)] rounded-2xl overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full min-w-[560px] border-collapse text-[14.5px] text-left">
-                        <thead>
-                        <tr class="bg-[rgba(232,236,242,.04)]">
-                            <th class="px-[18px] py-[14px] font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[rgba(232,236,242,.45)] font-medium w-1/5">
-                                What matters
-                            </th>
-                            <th class="px-[18px] py-[14px] font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[rgba(232,236,242,.45)] font-medium">
-                                Self-hosted
-                            </th>
-                            <th class="px-[18px] py-[14px] font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[#6fd3ec] font-medium">
-                                Cloud
-                            </th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr>
-                            <td class="px-[18px] py-[15px] border-t border-[rgba(232,236,242,.08)] font-medium">Cost
-                            </td>
-                            <td class="px-[18px] py-[15px] border-t border-[rgba(232,236,242,.08)] text-[rgba(232,236,242,.62)]">
-                                Free, forever. AGPL-3.0.
-                            </td>
-                            <td class="px-[18px] py-[15px] border-t border-[rgba(232,236,242,.08)] text-[rgba(232,236,242,.75)] bg-[rgba(111,211,236,.045)]">
-                                Pay-as-you-go credits, no subscription.
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="px-[18px] py-[15px] border-t border-[rgba(232,236,242,.08)] font-medium">AI
-                                provider
-                            </td>
-                            <td class="px-[18px] py-[15px] border-t border-[rgba(232,236,242,.08)] text-[rgba(232,236,242,.62)]">
-                                Bring your own key: Anthropic, OpenAI, whichever you already pay for.
-                            </td>
-                            <td class="px-[18px] py-[15px] border-t border-[rgba(232,236,242,.08)] text-[rgba(232,236,242,.75)] bg-[rgba(111,211,236,.045)]">
-                                Included, metered in credits.
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="px-[18px] py-[15px] border-t border-[rgba(232,236,242,.08)] font-medium">Your
-                                data
-                            </td>
-                            <td class="px-[18px] py-[15px] border-t border-[rgba(232,236,242,.08)] text-[rgba(232,236,242,.62)]">
-                                Never leaves your machine.
-                            </td>
-                            <td class="px-[18px] py-[15px] border-t border-[rgba(232,236,242,.08)] text-[rgba(232,236,242,.75)] bg-[rgba(111,211,236,.045)]">
-                                Hosted, managed, backed up for you.
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="px-[18px] py-[15px] border-t border-[rgba(232,236,242,.08)] font-medium">
-                                Mailboxes, seats, multi-user
-                            </td>
-                            <td class="px-[18px] py-[15px] border-t border-[rgba(232,236,242,.08)] text-[rgba(232,236,242,.62)]">
-                                Unlimited. Organizations, roles and invitations included.
-                            </td>
-                            <td class="px-[18px] py-[15px] border-t border-[rgba(232,236,242,.08)] text-[rgba(232,236,242,.75)] bg-[rgba(111,211,236,.045)]">
-                                Identical. Same code, same limits.
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="px-[18px] py-[15px] border-t border-[rgba(232,236,242,.08)] font-medium">Cold
-                                start
-                            </td>
-                            <td class="px-[18px] py-[15px] border-t border-[rgba(232,236,242,.08)] text-[rgba(232,236,242,.62)]">
-                                Learns on its own, in isolation. An instance gets smarter over time as data comes in — what kind of mail works best, which new websites are worth discovering, and so on.
-                            </td>
-                            <td class="px-[18px] py-[15px] border-t border-[rgba(232,236,242,.08)] text-[rgba(232,236,242,.75)] bg-[rgba(111,211,236,.045)]">
-                                Already smart. You benefit from a knowledge base that's already big and keeps growing.
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="px-[18px] py-[15px] border-t border-[rgba(232,236,242,.08)] font-medium">Setup
-                            </td>
-                            <td class="px-[18px] py-[15px] border-t border-[rgba(232,236,242,.08)] text-[rgba(232,236,242,.62)]">
-                                Docker, five minutes, your own reverse proxy for TLS.
-                            </td>
-                            <td class="px-[18px] py-[15px] border-t border-[rgba(232,236,242,.08)] text-[rgba(232,236,242,.75)] bg-[rgba(111,211,236,.045)]">
-                                An account. Nothing to run.
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="flex gap-3 mt-7 flex-wrap">
-                <a href="#top" class="cta-btn py-[11px] px-[22px] rounded-lg font-[Sora,sans-serif] font-semibold text-[15px]">Start
-                    on cloud</a>
-                <a href="https://github.com/Dricle/eveil" class="ghost-btn border border-[rgba(232,236,242,.18)] py-[11px] px-[22px] rounded-lg font-[Sora,sans-serif] font-semibold text-[15px]">Self-host
-                    it</a>
+                @endforeach
             </div>
         </div>
     </section>
 
+    {{-- Pricing & editions --}}
     <section id="pricing" class="border-b border-[rgba(232,236,242,.08)]">
         <div class="max-w-[1180px] mx-auto px-6 py-16 lg:py-20">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-[60px] md:items-end mb-8 lg:mb-11">
-                <div>
+                <div class="reveal">
                     <div class="font-[Geist_Mono,monospace] text-[11.5px] tracking-[.1em] uppercase text-[#6fd3ec] mb-[14px]">
                         Pricing
                     </div>
                     <h2 class="font-[Sora,sans-serif] font-semibold text-[28px] sm:text-[34px] lg:text-[40px] leading-[1.12] tracking-[-.03em]">
-                        Credits. No plans, no tiers, no recurring invoice.</h2>
+                        Credits, not subscriptions.</h2>
                 </div>
-                <p class="text-[rgba(232,236,242,.62)] max-w-[48ch]">Top up whatever you choose at one flat
-                    published rate. Auto top-up on a threshold, Stripe's own hosted portal for invoices and cards.</p>
+                <p class="reveal text-[rgba(232,236,242,.62)] max-w-[48ch]" style="--delay: .1s">Top up what you want at one flat rate. Credits
+                    never expire, and there are no plans, tiers or per-seat fees.</p>
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[14px]">
-                <div class="bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-6 py-7">
-                    <div class="font-[Sora,sans-serif] font-semibold text-[40px] leading-none tracking-[-.03em] mb-3">
-                        €0.10
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-[14px]">
+                @foreach ([['5,000', 'credits free at signup. Enough for a full campaign through to replies.'], ['€0.10', 'per qualified lead, all in: found, read, written to and delivered.'], ['€0', 'for verification, sending and reading replies. Always.']] as [$figure, $caption])
+                    <div class="reveal lift bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-6 py-7" style="--delay: {{ $loop->index * .08 }}s">
+                        <div class="font-[Sora,sans-serif] font-semibold text-[40px] leading-none tracking-[-.03em] mb-3">{{ $figure }}</div>
+                        <div class="text-[14px] text-[rgba(232,236,242,.58)]">{{ $caption }}</div>
                     </div>
-                    <div class="text-[13.5px] text-[rgba(232,236,242,.58)]">per qualified lead, all in: found, read,
-                        written to and delivered.
+                @endforeach
+            </div>
+
+            <div id="editions" class="mt-[14px] grid grid-cols-1 md:grid-cols-2 gap-[14px]">
+                <div class="reveal lift border border-[rgba(111,211,236,.35)] bg-[linear-gradient(180deg,rgba(111,211,236,.07),rgba(111,211,236,.015))] rounded-xl px-6 py-7 flex flex-col">
+                    <div class="flex items-center gap-2 font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[#6fd3ec] mb-3">
+                        <x-marketing.icon name="cloud" class="w-4 h-4" /> Cloud
                     </div>
+                    <h3 class="font-[Sora,sans-serif] font-semibold text-[22px] tracking-[-.02em] mb-[10px]">Nothing to run.</h3>
+                    <p class="text-[14.5px] text-[rgba(232,236,242,.6)] mb-6">Hosted and backed up for you, AI
+                        included and metered in credits. Starts with a knowledge base that is already big and keeps
+                        growing.</p>
+                    <a href="#top" class="cta-btn mt-auto self-start py-[11px] px-[22px] rounded-lg font-[Sora,sans-serif] font-semibold text-[15px]">Start free</a>
                 </div>
-                <div class="bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-6 py-7">
-                    <div class="font-[Sora,sans-serif] font-semibold text-[40px] leading-none tracking-[-.03em] mb-3">
-                        3,500
+                <div class="reveal lift bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-6 py-7 flex flex-col" style="--delay: .1s">
+                    <div class="flex items-center gap-2 font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[rgba(232,236,242,.45)] mb-3">
+                        <x-marketing.icon name="server" class="w-4 h-4" /> Self-hosted
                     </div>
-                    <div class="text-[13.5px] text-[rgba(232,236,242,.58)]">credits for a full 100-lead campaign, end
-                        to end. Roughly one exported contact on Apollo.
-                    </div>
-                </div>
-                <div class="bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-6 py-7">
-                    <div class="font-[Sora,sans-serif] font-semibold text-[40px] leading-none tracking-[-.03em] mb-3">
-                        5,000
-                    </div>
-                    <div class="text-[13.5px] text-[rgba(232,236,242,.58)]">credits free at signup, enough for one
-                        full campaign through to replies.
-                    </div>
-                </div>
-                <div class="bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-6 py-7">
-                    <div class="font-[Sora,sans-serif] font-semibold text-[40px] leading-none tracking-[-.03em] mb-3">
-                        €0
-                    </div>
-                    <div class="text-[13.5px] text-[rgba(232,236,242,.58)]">for verification, SMTP sends and IMAP
-                        reads. Always. Credits never expire.
-                    </div>
+                    <h3 class="font-[Sora,sans-serif] font-semibold text-[22px] tracking-[-.02em] mb-[10px]">Free forever. AGPL-3.0.</h3>
+                    <p class="text-[14.5px] text-[rgba(232,236,242,.6)] mb-6">Docker, five minutes, your own AI key.
+                        Same code with no feature gate: unlimited mailboxes and seats, and your data never leaves your
+                        machine.</p>
+                    <a href="https://github.com/Dricle/eveil" class="ghost-btn mt-auto self-start border border-[rgba(232,236,242,.18)] py-[11px] px-[22px] rounded-lg font-[Sora,sans-serif] font-semibold text-[15px]">View on GitHub</a>
                 </div>
             </div>
         </div>
     </section>
 
-    <section class="border-b border-[rgba(232,236,242,.08)] bg-[#0d1119]">
-        <div class="max-w-[1180px] mx-auto px-6 py-16 lg:py-20">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-[60px] md:items-end mb-7 lg:mb-10">
-                <div>
-                    <div class="font-[Geist_Mono,monospace] text-[11.5px] tracking-[.1em] uppercase text-[#6fd3ec] mb-[14px]">
-                        What we don't do
-                    </div>
-                    <h2 class="font-[Sora,sans-serif] font-semibold text-[28px] sm:text-[34px] lg:text-[40px] leading-[1.12] tracking-[-.03em]">
-                        Five things missing on purpose.</h2>
-                </div>
-                <p class="text-[rgba(232,236,242,.62)] max-w-[48ch]">These are product decisions, not gaps.
-                    The only signal worth tracking is a positive reply.</p>
-            </div>
-            <div class="grid border-t border-[rgba(232,236,242,.08)]">
-                <div class="py-5 border-b border-[rgba(232,236,242,.08)] grid grid-cols-1 md:grid-cols-[270px_1fr] gap-2 md:gap-6 md:items-baseline">
-                    <h4 class="font-[Sora,sans-serif] font-semibold text-[19px] tracking-[-.02em]">
-                        No open or click tracking</h4>
-                    <p class="text-[rgba(232,236,242,.58)] text-[14.5px]">No pixel, no link rewriting, no
-                        open-rate metric anywhere in the product.</p>
-                </div>
-                <div class="py-5 border-b border-[rgba(232,236,242,.08)] grid grid-cols-1 md:grid-cols-[270px_1fr] gap-2 md:gap-6 md:items-baseline">
-                    <h4 class="font-[Sora,sans-serif] font-semibold text-[19px] tracking-[-.02em]">
-                        No mailbox warm-up</h4>
-                    <p class="text-[rgba(232,236,242,.58)] text-[14.5px]">A real, already-warm mailbox
-                        sending at a human pace, not a fresh domain ramped by a bot network.</p>
-                </div>
-                <div class="py-5 border-b border-[rgba(232,236,242,.08)] grid grid-cols-1 md:grid-cols-[270px_1fr] gap-2 md:gap-6 md:items-baseline">
-                    <h4 class="font-[Sora,sans-serif] font-semibold text-[19px] tracking-[-.02em]">
-                        No OAuth</h4>
-                    <p class="text-[rgba(232,236,242,.58)] text-[14.5px]">SMTP and IMAP credentials only, in
-                        both editions.</p>
-                </div>
-                <div class="py-5 border-b border-[rgba(232,236,242,.08)] grid grid-cols-1 md:grid-cols-[270px_1fr] gap-2 md:gap-6 md:items-baseline">
-                    <h4 class="font-[Sora,sans-serif] font-semibold text-[19px] tracking-[-.02em]">
-                        No unsubscribe link</h4>
-                    <p class="text-[rgba(232,236,242,.58)] text-[14.5px]">Opt-out is a sentence a person
-                        could have typed: reply STOP. Never a compliance footer.</p>
-                </div>
-                <div class="py-5 border-b border-[rgba(232,236,242,.08)] grid grid-cols-1 md:grid-cols-[270px_1fr] gap-2 md:gap-6 md:items-baseline">
-                    <h4 class="font-[Sora,sans-serif] font-semibold text-[19px] tracking-[-.02em]">
-                        No purchased database</h4>
-                    <p class="text-[rgba(232,236,242,.58)] text-[14.5px]">Every lead shown was found and read
-                        live, not pulled from a stale list.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section class="border-b border-[rgba(232,236,242,.08)]">
-        <div class="max-w-[1180px] mx-auto px-6 py-16 lg:py-20">
-            <div class="font-[Geist_Mono,monospace] text-[11.5px] tracking-[.1em] uppercase text-[#6fd3ec] mb-[14px]">
-                Who it's for
-            </div>
-            <h2 class="font-[Sora,sans-serif] font-semibold text-[28px] sm:text-[34px] lg:text-[40px] leading-[1.12] tracking-[-.03em] mb-8 lg:mb-10">
-                Three people, one codebase.</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[14px]">
-                <div class="bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-6 py-7">
-                    <div class="font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[rgba(232,236,242,.45)] mb-3">
-                        Self-hosted
-                    </div>
-                    <h4 class="font-[Sora,sans-serif] font-semibold text-[20px] tracking-[-.02em] mb-[10px]">
-                        Technical solo founder</h4>
-                    <p class="text-[14.5px] text-[rgba(232,236,242,.6)]">Operational in fifteen minutes, with
-                        no third-party API key to sign up for beyond the AI provider you already pay for.</p>
-                </div>
-                <div class="bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-6 py-7">
-                    <div class="font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[#6fd3ec] mb-3">
-                        Cloud
-                    </div>
-                    <h4 class="font-[Sora,sans-serif] font-semibold text-[20px] tracking-[-.02em] mb-[10px]">
-                        Small growth team</h4>
-                    <p class="text-[14.5px] text-[rgba(232,236,242,.6)]">Multi-user and managed hosting, with
-                        billing you can predict: a balance you top up, not an invoice that surprises you.</p>
-                </div>
-                <div class="bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-6 py-7">
-                    <div class="font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[rgba(232,236,242,.45)] mb-3">
-                        Self-hosted
-                    </div>
-                    <h4 class="font-[Sora,sans-serif] font-semibold text-[20px] tracking-[-.02em] mb-[10px]">
-                        Instance superadmin</h4>
-                    <p class="text-[14.5px] text-[rgba(232,236,242,.6)]">Configure the AI provider, choose a
-                        model per agent and close registration from a screen, not by editing files.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
+    {{-- FAQ --}}
     <section class="border-b border-[rgba(232,236,242,.08)] bg-[#0d1119]">
         <div class="max-w-[1180px] mx-auto px-6 py-16 lg:py-20 grid grid-cols-1 lg:grid-cols-[.8fr_1.2fr] gap-8 lg:gap-[60px]">
-            <div>
+            <div class="reveal">
                 <div class="font-[Geist_Mono,monospace] text-[11.5px] tracking-[.1em] uppercase text-[#6fd3ec] mb-[14px]">
                     Questions
                 </div>
                 <h2 class="font-[Sora,sans-serif] font-semibold text-[28px] sm:text-[34px] lg:text-[40px] leading-[1.12] tracking-[-.03em]">
                     Before you paste a URL.</h2>
             </div>
-            <div class="border-t border-[rgba(232,236,242,.08)]">
-                <details class="border-b border-[rgba(232,236,242,.08)] py-5">
-                    <summary class="font-[Sora,sans-serif] font-semibold text-[18px] tracking-[-.02em] flex justify-between gap-4">
-                        <span>Whose mailbox does it send from?</span><span class="text-[#6fd3ec]">+</span></summary>
-                    <p class="mt-3 text-[rgba(232,236,242,.6)] max-w-[62ch]">Yours. Plain SMTP, no relay and
-                        no shared sending domain, so your replies land where you already read mail. Presets cover
-                        Infomaniak, OVH, Gandi, Zoho, Gmail and Microsoft 365.</p>
-                </details>
-                <details class="border-b border-[rgba(232,236,242,.08)] py-5">
-                    <summary class="font-[Sora,sans-serif] font-semibold text-[18px] tracking-[-.02em] flex justify-between gap-4">
-                        <span>Where do the leads come from?</span><span class="text-[#6fd3ec]">+</span></summary>
-                    <p class="mt-3 text-[rgba(232,236,242,.6)] max-w-[62ch]">A bundled, self-hosted search
-                        engine and the companies' own pages, read live at qualification time. No purchased database, and
-                        no paid data API required to start.</p>
-                </details>
-                <details class="border-b border-[rgba(232,236,242,.08)] py-5">
-                    <summary class="font-[Sora,sans-serif] font-semibold text-[18px] tracking-[-.02em] flex justify-between gap-4">
-                        <span>Can I see and change what the AI decided?</span><span class="text-[#6fd3ec]">+</span>
-                    </summary>
-                    <p class="mt-3 text-[rgba(232,236,242,.6)] max-w-[62ch]">At every step. The product
-                        portrait comes back for correction before anything is written, target profiles are editable,
-                        sequences are reorderable, and hand-edits are never overwritten by a re-derivation.</p>
-                </details>
-                <details class="border-b border-[rgba(232,236,242,.08)] py-5">
-                    <summary class="font-[Sora,sans-serif] font-semibold text-[18px] tracking-[-.02em] flex justify-between gap-4">
-                        <span>What language does it write in?</span><span class="text-[#6fd3ec]">+</span></summary>
-                    <p class="mt-3 text-[rgba(232,236,242,.6)] max-w-[62ch]">The prospect's. Language is
-                        detected per lead's own market rather than fixed per project, so a mail follows the person
-                        receiving it.</p>
-                </details>
-                <details class="border-b border-[rgba(232,236,242,.08)] py-5">
-                    <summary class="font-[Sora,sans-serif] font-semibold text-[18px] tracking-[-.02em] flex justify-between gap-4">
-                        <span>Will I get a surprise AI bill?</span><span class="text-[#6fd3ec]">+</span></summary>
-                    <p class="mt-3 text-[rgba(232,236,242,.6)] max-w-[62ch]">There is no bill, only a
-                        balance. Credits are prepaid at one flat rate, never expire, and auto top-up only fires at the
-                        threshold you set. Invoices and cards live in Stripe's hosted portal.</p>
-                </details>
-                <details class="border-b border-[rgba(232,236,242,.08)] py-5">
-                    <summary class="font-[Sora,sans-serif] font-semibold text-[18px] tracking-[-.02em] flex justify-between gap-4">
-                        <span>Can I move to self-hosted later?</span><span class="text-[#6fd3ec]">+</span></summary>
-                    <p class="mt-3 text-[rgba(232,236,242,.6)] max-w-[62ch]">It's the same AGPL-3.0
-                        codebase: Docker, five minutes, your own reverse proxy for TLS. Bring your own AI key and
-                        nothing is missing.</p>
-                </details>
+            <div class="reveal border-t border-[rgba(232,236,242,.08)]" style="--delay: .1s">
+                @foreach ($faqs as $faq)
+                    <details class="group border-b border-[rgba(232,236,242,.08)] py-5">
+                        <summary class="font-[Sora,sans-serif] font-semibold text-[18px] tracking-[-.02em] flex justify-between gap-4">
+                            <span>{{ $faq['q'] }}</span>
+                            <x-marketing.icon name="plus" class="w-5 h-5 shrink-0 text-[#6fd3ec] transition-transform duration-300 group-open:rotate-45" />
+                        </summary>
+                        <p class="mt-3 text-[rgba(232,236,242,.6)] max-w-[62ch]">{{ $faq['a'] }}</p>
+                    </details>
+                @endforeach
             </div>
         </div>
     </section>
 
-    <section>
-        <div class="max-w-[1180px] mx-auto px-6 py-16 sm:py-20 lg:py-24 text-center">
-            <h2 class="font-[Sora,sans-serif] font-semibold text-[34px] sm:text-[42px] lg:text-[52px] leading-[1.06] tracking-[-.035em] mx-auto mb-5 max-w-[22ch]">
-                Give it a URL. Read the replies.</h2>
-            <p class="mx-auto mb-8 max-w-[54ch] text-[rgba(232,236,242,.62)] text-[16px] sm:text-[17px]">5,000 credits at
-                signup, capped to one project and to leads actually discovered. Enough for a full campaign through to
-                replies.</p>
-            <form action="{{ Route::has('register') ? route('register') : route('home') }}" method="get"
-                  class="flex gap-[9px] justify-center max-w-[520px] mx-auto">
-                <input type="url" name="url" required placeholder="https://yourproduct.com" class="field flex-1 min-w-0 font-[Geist_Mono,monospace] bg-[#101520] px-[14px] py-[13px]">
-                <button type="submit" class="cta-btn border-0 rounded-lg font-[Sora,sans-serif] font-semibold text-[15px] px-6 py-[13px] cursor-pointer">
+    {{-- Final CTA --}}
+    <section class="relative overflow-hidden">
+        <div class="hero-glow absolute inset-0 pointer-events-none rotate-180" aria-hidden="true"></div>
+        <div class="relative max-w-[1180px] mx-auto px-6 py-16 sm:py-20 lg:py-24 text-center">
+            <h2 class="reveal font-[Sora,sans-serif] font-semibold text-[34px] sm:text-[42px] lg:text-[52px] leading-[1.06] tracking-[-.035em] mx-auto mb-5 max-w-[20ch]">
+                Give it a URL. Get back to building.</h2>
+            <p class="reveal mx-auto mb-8 max-w-[50ch] text-[rgba(232,236,242,.62)] text-[16px] sm:text-[17px]" style="--delay: .08s">5,000 free
+                credits, no card. See what Eveil understood about your product in a few minutes.</p>
+            <form action="{{ $signupUrl }}" method="get" style="--delay: .16s"
+                  class="reveal flex gap-[9px] justify-center max-w-[520px] mx-auto">
+                <input type="url" name="url" required aria-label="Your product URL" placeholder="https://yourproduct.com" class="field flex-1 min-w-0 font-[Geist_Mono,monospace] bg-[#101520] px-[14px] py-[13px]">
+                <button type="submit" class="cta-btn group inline-flex items-center gap-2 border-0 rounded-lg font-[Sora,sans-serif] font-semibold text-[15px] px-6 py-[13px] cursor-pointer">
                     Start free
+                    <x-marketing.icon name="arrow-right" class="w-4 h-4 transition-transform group-hover:translate-x-[3px]" />
                 </button>
             </form>
         </div>

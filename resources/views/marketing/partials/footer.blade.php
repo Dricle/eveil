@@ -19,7 +19,7 @@
         <div class="flex flex-col gap-[10px] text-[14px]">
             <div class="font-[Geist_Mono,monospace] text-[10.5px] tracking-[.08em] uppercase text-[rgba(232,236,242,.38)] mb-[2px]">Product</div>
             <a href="{{ route('home') }}#how" class="text-[rgba(232,236,242,.7)]">How it works</a>
-            <a href="{{ route('home') }}#agents" class="text-[rgba(232,236,242,.7)]">Agents</a>
+            <a href="{{ route('home') }}#channels" class="text-[rgba(232,236,242,.7)]">Channels</a>
             <a href="{{ route('home') }}#pricing" class="text-[rgba(232,236,242,.7)]">Pricing</a>
             <a href="{{ route('home') }}#editions" class="text-[rgba(232,236,242,.7)]">Cloud vs self-hosted</a>
             <a href="{{ route('blog.index') }}" class="text-[rgba(232,236,242,.7)]">Blog</a>

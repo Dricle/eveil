@@ -15,7 +15,7 @@
         </a>
         <nav class="hidden lg:flex gap-6 text-[14.5px] ml-auto">
             <a href="{{ route('home') }}#how" class="text-[rgba(232,236,242,.72)]">How it works</a>
-            <a href="{{ route('home') }}#agents" class="text-[rgba(232,236,242,.72)]">Agents</a>
+            <a href="{{ route('home') }}#channels" class="text-[rgba(232,236,242,.72)]">Channels</a>
             <a href="{{ route('home') }}#editions" class="text-[rgba(232,236,242,.72)]">Self-hosted</a>
             <a href="{{ route('home') }}#pricing" class="text-[rgba(232,236,242,.72)]">Pricing</a>
             <a href="{{ route('blog.index') }}" class="text-[rgba(232,236,242,.72)]">Blog</a>

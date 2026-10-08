@@ -36,7 +36,41 @@
 
             .marketing .legal-h2 { font-family: 'Sora', sans-serif; font-weight: 600; font-size: 24px; letter-spacing: -.025em; margin: 0 0 12px; }
             .marketing .legal-p { margin: 0 0 32px; color: rgba(232, 236, 242, .68); }
+
+            .marketing .hero-glow { background: radial-gradient(60% 50% at 50% 0%, rgba(111, 211, 236, .16), transparent 70%), radial-gradient(40% 40% at 85% 30%, rgba(111, 140, 236, .08), transparent 70%); }
+            .marketing .hero-grid { background-image: radial-gradient(rgba(232, 236, 242, .09) 1px, transparent 1px); background-size: 26px 26px; mask-image: radial-gradient(70% 60% at 50% 30%, #000 30%, transparent 75%); }
+            .marketing .lift { transition: transform .25s ease, border-color .25s ease, background-color .25s ease; }
+            .marketing .lift:hover { transform: translateY(-3px); border-color: rgba(111, 211, 236, .35); }
+            .marketing .mock-line { display: block; height: 7px; border-radius: 4px; background: rgba(232, 236, 242, .12); }
+
+            .js .reveal { opacity: 0; transform: translateY(18px); transition: opacity .7s ease, transform .7s cubic-bezier(.2, .7, .2, 1); transition-delay: var(--delay, 0s); }
+            .js .reveal.is-visible { opacity: 1; transform: none; }
+
+            @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+            @keyframes blink { 50% { opacity: 0; } }
+            @keyframes typing { 0%, 10% { width: 0; } 45%, 85% { width: 16ch; } 100% { width: 0; } }
+            @keyframes flow { to { stroke-dashoffset: -20; } }
+            @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(111, 211, 236, .45); } 100% { box-shadow: 0 0 0 10px rgba(111, 211, 236, 0); } }
+            @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+            @keyframes fill { 0% { transform: scaleX(0); } 40%, 100% { transform: scaleX(1); } }
+            @keyframes pop { 0%, 30% { opacity: 0; transform: scale(.6); } 45%, 100% { opacity: 1; transform: scale(1); } }
+
+            .marketing .anim-float { animation: float 5s ease-in-out infinite; animation-delay: var(--delay, 0s); }
+            .marketing .anim-blink { animation: blink 1s steps(1) infinite; }
+            .marketing .anim-typing { overflow: hidden; white-space: nowrap; animation: typing 6s steps(16) infinite; }
+            .marketing .anim-flow { stroke-dasharray: 4 6; animation: flow 1.2s linear infinite; }
+            .marketing .anim-pulse { animation: pulse-ring 1.8s ease-out infinite; }
+            .marketing .anim-shimmer { background: linear-gradient(90deg, rgba(232, 236, 242, .06) 25%, rgba(232, 236, 242, .16) 50%, rgba(232, 236, 242, .06) 75%); background-size: 200% 100%; animation: shimmer 2.4s linear infinite; }
+            .marketing .anim-fill { transform-origin: left; animation: fill 4s ease-out infinite; animation-delay: var(--delay, 0s); }
+            .marketing .anim-pop { animation: pop 4s ease-out infinite; animation-delay: var(--delay, 0s); }
+
+            @media (prefers-reduced-motion: reduce) {
+                .marketing *, .marketing *::before, .marketing *::after { animation: none !important; transition: none !important; }
+                .js .reveal { opacity: 1; transform: none; }
+                .marketing .anim-typing { width: 16ch; }
+            }
         </style>
+        <script>document.documentElement.classList.add('js')</script>
 
         <script
             src="https://rybbit.dricle.be/api/script.js"
@@ -50,5 +84,22 @@
         {{ $slot }}
 
         @include('marketing.partials.footer')
+
+        <script>
+            (() => {
+                const elements = document.querySelectorAll('.reveal');
+                if (!('IntersectionObserver' in window)) {
+                    elements.forEach(element => element.classList.add('is-visible'));
+                    return;
+                }
+                const observer = new IntersectionObserver(entries => entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                        observer.unobserve(entry.target);
+                    }
+                }), { rootMargin: '0px 0px -8% 0px' });
+                elements.forEach(element => observer.observe(element));
+            })();
+        </script>
     </body>
 </html>

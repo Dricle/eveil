@@ -2,6 +2,7 @@
 
 use App\Cloud\Http\Controllers\BlogController;
 use App\Cloud\Http\Controllers\ContactFormController;
+use App\Cloud\Http\Controllers\SitemapController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -44,3 +45,14 @@ Route::post('/contact', [ContactFormController::class, 'store'])
 
 Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
 Route::get('/blog/{article}/{slug?}', [BlogController::class, 'show'])->whereNumber('article')->name('blog.show');
+
+Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
+
+// A route rather than `public/robots.txt`, because the Sitemap line only
+// makes sense on the edition that has one: a self-hosted instance pointing a
+// crawler at its own /sitemap.xml would be pointing it at a 404.
+Route::get('/robots.txt', fn () => response(
+    "User-agent: *\nDisallow:\n".(config('eveil.edition') === 'cloud' ? 'Sitemap: '.route('sitemap')."\n" : ''),
+    200,
+    ['Content-Type' => 'text/plain']
+))->name('robots');

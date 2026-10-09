@@ -1,18 +1,14 @@
 <x-marketing-layout
     :title="$article->title . ' - ' . config('app.name')"
     :description="$article->meta_description ?? $article->title"
+    :social-title="$article->title"
+    :canonical="$canonical"
+    type="article"
 >
-    <script type="application/ld+json">{!! json_encode([
-        '@context' => 'https://schema.org',
-        '@type' => 'BlogPosting',
-        'headline' => $article->title,
-        'description' => $article->meta_description,
-        'datePublished' => $article->published_at?->toIso8601String(),
-        'dateModified' => $article->updated_at?->toIso8601String(),
-        'inLanguage' => $article->language,
-        'mainEntityOfPage' => route('blog.show', [$article->id, Str::slug($article->title)]),
-        'publisher' => ['@type' => 'Organization', 'name' => 'Eveil', 'url' => route('home')],
-    ], JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) !!}</script>
+    {{-- Assembled in the controller, not here: schema.org's keys start with an
+         at-sign, and Blade compiles one of them as a directive wherever it
+         appears, inside a string literal included. --}}
+    <script type="application/ld+json">{!! json_encode($structuredData, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) !!}</script>
 
     <main class="mx-auto max-w-[760px] px-6 pt-[72px] pb-[88px]">
         <a href="{{ route('blog.index') }}" class="mb-8 inline-block font-[Geist_Mono,monospace] text-[11.5px] tracking-[.1em] uppercase">← Blog</a>

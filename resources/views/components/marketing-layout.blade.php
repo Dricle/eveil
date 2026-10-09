@@ -1,4 +1,5 @@
-@props(['title', 'description'])
+@props(['title', 'description', 'canonical' => null, 'socialTitle' => null, 'type' => 'website'])
+@php($url = $canonical ?? url()->current())
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
@@ -7,7 +8,22 @@
 
         <title>{{ $title }}</title>
         <meta name="description" content="{{ $description }}">
+        <link rel="canonical" href="{{ $url }}">
+
+        {{-- `socialTitle` because a share card has no room for the " - Eveil"
+             the <title> needs, and `canonical` because the blog answers the
+             same article at every slug while only one should be indexed. --}}
+        <meta property="og:type" content="{{ $type }}">
+        <meta property="og:site_name" content="{{ config('app.name') }}">
+        <meta property="og:title" content="{{ $socialTitle ?? $title }}">
+        <meta property="og:description" content="{{ $description }}">
+        <meta property="og:url" content="{{ $url }}">
         <meta property="og:image" content="{{ asset('og.png') }}">
+
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:title" content="{{ $socialTitle ?? $title }}">
+        <meta name="twitter:description" content="{{ $description }}">
+        <meta name="twitter:image" content="{{ asset('og.png') }}">
 
         <link rel="icon" href="/icon.svg" type="image/svg+xml">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">

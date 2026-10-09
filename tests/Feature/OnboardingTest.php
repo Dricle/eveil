@@ -3,6 +3,7 @@
 use App\Enums\AgentRunStatus;
 use App\Enums\AnalysisStatus;
 use App\Enums\AnalysisType;
+use App\Jobs\AnalyzeProject;
 use App\Jobs\DeriveTargets;
 use App\Models\AgentRun;
 use App\Models\DiscoveryRun;
@@ -137,6 +138,27 @@ it('starts one search per segment left switched on, and never a second for the s
 
     expect(DiscoveryRun::query()->count())->toBe(2);
 });
+
+it('reads the site again after a failed read, and only then', function (AnalysisStatus $status, int $dispatched) {
+    [$user, $project] = newcomer();
+
+    ProjectAnalysis::factory()->create([
+        'project_id' => $project->id,
+        'type' => AnalysisType::Website,
+        'status' => $status,
+    ]);
+
+    $this->actingAs($user);
+    forProject($project);
+
+    $this->post(route('onboarding.analysis'))->assertRedirect();
+
+    // A read still running would be doubled by a second click.
+    Queue::assertPushed(AnalyzeProject::class, $dispatched);
+})->with([
+    'failed' => [AnalysisStatus::Failed, 1],
+    'running' => [AnalysisStatus::Running, 0],
+]);
 
 it('says the run is under way once a search exists', function () {
     [$user, $project] = newcomer();

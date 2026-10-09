@@ -49,6 +49,11 @@ const connecting = ref(false)
 // long as the search takes to be accepted.
 const starting = ref(false)
 
+// The failed read a retry was asked from. The new row only exists once a
+// worker picks the job up, so until then this one is still the latest and
+// would put the error straight back on screen.
+const retryingFromAnalysisId = ref<number | null>(null)
+
 // Where the run has actually got to. Derived rather than stored: every one of
 // these is a fact about the project, and a column saying "step 3" would be one
 // more thing able to disagree with reality.
@@ -70,7 +75,7 @@ const step = computed(() => {
         return confirmedTargets.value && !hasMailbox.value ? 'mailbox' : 'review_targets'
     }
 
-    if (props.analysis?.status === 'failed') {
+    if (props.analysis?.status === 'failed' && props.analysis.id !== retryingFromAnalysisId.value) {
         return 'failed'
     }
 
@@ -125,6 +130,14 @@ function startSearching () {
     router.post(searchRoutes.searches.url({ project: projectSlug.value }), {}, {
         preserveScroll: true,
         onError: () => starting.value = false
+    })
+}
+
+function retryAnalysis () {
+    retryingFromAnalysisId.value = props.analysis?.id ?? null
+    router.post(searchRoutes.analysis.url({ project: projectSlug.value }), {}, {
+        preserveScroll: true,
+        onError: () => retryingFromAnalysisId.value = null
     })
 }
 
@@ -205,6 +218,11 @@ function confirmTargets () {
             :description="analysis?.error ?? 'Check the address and try again.'"
         >
             <template #actions>
+                <UButton
+                    icon="i-lucide-rotate-ccw"
+                    label="Try again"
+                    @click="retryAnalysis"
+                />
                 <UButton
                     color="neutral"
                     variant="subtle"

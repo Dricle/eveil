@@ -66,6 +66,7 @@ use App\Http\Controllers\LinkedinStatsOAuthController;
 use App\Http\Controllers\MailboxController;
 use App\Http\Controllers\MailboxReactivateController;
 use App\Http\Controllers\MailboxTestController;
+use App\Http\Controllers\OnboardingAnalysisController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\OnboardingSearchController;
 use App\Http\Controllers\OrganizationController;
@@ -159,6 +160,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::get('onboarding', [OnboardingController::class, 'show'])->name('onboarding');
         Route::post('onboarding/searches', [OnboardingSearchController::class, 'store'])
             ->name('onboarding.searches');
+        Route::post('onboarding/analysis', [OnboardingAnalysisController::class, 'store'])
+            ->name('onboarding.analysis');
 
         /*
          * The persistent chat panel: app-wide, not tied to any one page's

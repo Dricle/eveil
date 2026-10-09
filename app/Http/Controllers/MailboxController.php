@@ -26,7 +26,7 @@ class MailboxController extends Controller
 {
     public function __construct(private CurrentProject $currentProject) {}
 
-    public function index(): Response
+    public function index(Request $request): Response
     {
         $organization = $this->currentProject->organization();
 
@@ -46,6 +46,11 @@ class MailboxController extends Controller
             // Said out loud on the screen it affects: an instance quietly sending
             // every mail to one address looks exactly like outreach working.
             'redirectTo' => config('eveil.outreach.redirect_to'),
+            // Sent here by the guided run rather than found in the menu. The
+            // form opens by itself and saving goes back to the step, instead
+            // of leaving somebody on a settings screen with nothing saying
+            // what they had been in the middle of.
+            'fromOnboarding' => $request->query('from') === 'onboarding',
         ]);
     }
 
@@ -56,6 +61,10 @@ class MailboxController extends Controller
         $mailbox = $organization->emailAccounts()->create($request->safe()->except('projects'));
 
         $mailbox->projects()->sync($request->validated('projects', []));
+
+        if ($request->boolean('from_onboarding')) {
+            return to_route('onboarding');
+        }
 
         return to_route('settings.mailboxes.index');
     }

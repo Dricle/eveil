@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router, usePage, usePoll } from '@inertiajs/vue3'
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import OpenQuestions from '@/components/OpenQuestions.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 // Suffixed on purpose: an import sharing a name with a prop shadows that prop in
@@ -9,6 +9,7 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import companyRoutes from '@/routes/companies'
 import searchRoutes from '@/routes/onboarding'
 import knowledgeBaseRoutes from '@/routes/settings/knowledge-base'
+import mailboxRoutes from '@/routes/settings/mailboxes'
 import targetRoutes from '@/routes/targets'
 import type { Analysis, KnowledgeBase, OpenQuestion, TargetProfile } from '@/types'
 
@@ -26,6 +27,16 @@ const props = defineProps<{
 const page = usePage()
 const projectSlug = computed(() => page.props.currentProject!.slug)
 
+// The shared flag the "no mailbox connected" banner already uses, read the
+// other way round. True here means this project can actually send.
+const hasMailbox = computed(() => page.props.setup?.mailbox === false)
+
+// Agreeing to the segments, which is a position within this screen rather than
+// a fact about the project: there is no column for "has seen the mailbox step"
+// and adding one would be a third thing able to disagree with the other two.
+// Reloading simply puts the segments back in front of you, which is harmless.
+const confirmedTargets = ref(false)
+
 // Where the run has actually got to. Derived rather than stored: every one of
 // these is a fact about the project, and a column saying "step 3" would be one
 // more thing able to disagree with reality.
@@ -39,7 +50,12 @@ const step = computed(() => {
     }
 
     if (props.profiles.length > 0) {
-        return 'review_targets'
+        // The mailbox is asked for between agreeing to the segments and the
+        // first search, because the search is the step that spends credits and
+        // the send is the step that pays them back. Ending the run on the
+        // search means a trial can be spent in full without a mail ever
+        // leaving, and the banner on every screen does not stop that.
+        return confirmedTargets.value && !hasMailbox.value ? 'mailbox' : 'review_targets'
     }
 
     if (props.analysis?.status === 'failed') {
@@ -64,13 +80,25 @@ watch(working, busy => busy ? poll.start() : poll.stop())
 const STEPS = [
     { key: 'product', label: 'Reading your site' },
     { key: 'targets', label: 'Working out who buys it' },
+    { key: 'mailbox', label: 'Connecting your mailbox' },
     { key: 'search', label: 'Looking for them' }
 ] as const
 
 function state (key: typeof STEPS[number]['key']) {
-    const order = ['product', 'targets', 'search']
+    // The one stage that is not positional: it can be satisfied from another
+    // screen, or have been satisfied before this project existed, and it can
+    // be skipped. Skipped is deliberately not done — a tick here on a run
+    // that went past it without a mailbox would be the screen agreeing that
+    // nothing is outstanding.
+    if (key === 'mailbox') {
+        return hasMailbox.value
+            ? 'done'
+            : step.value === 'mailbox' ? 'current' : 'waiting'
+    }
+
+    const order = ['product', 'targets', 'mailbox', 'search']
     const reached = {
-        analysing: 0, failed: 0, review_product: 1, deriving: 1, review_targets: 2, searching: 3
+        analysing: 0, failed: 0, review_product: 1, deriving: 1, review_targets: 2, mailbox: 2, searching: 4
     }[step.value] ?? 0
 
     const index = order.indexOf(key)
@@ -79,6 +107,24 @@ function state (key: typeof STEPS[number]['key']) {
 }
 
 const LISTS = ['key_features', 'competitors', 'proof_points'] as const
+
+function startSearching () {
+    router.post(searchRoutes.searches.url({ project: projectSlug.value }), {}, { preserveScroll: true })
+}
+
+/**
+ * Agreeing to the segments. With a mailbox already attached this is what it
+ * has always been, a single click that starts the search; without one it stops
+ * at the mailbox step first, which is the only point in the run where asking
+ * for it is still cheap.
+ */
+function confirmTargets () {
+    confirmedTargets.value = true
+
+    if (hasMailbox.value) {
+        startSearching()
+    }
+}
 </script>
 
 <template>
@@ -279,10 +325,13 @@ const LISTS = ['key_features', 'competitors', 'proof_points'] as const
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
+                <!-- Agreeing goes through the mailbox first when there is
+                     none. The search itself is unchanged: it is still one
+                     click away, and skipping is still allowed. -->
                 <UButton
                     icon="i-lucide-radar"
                     label="Start looking for them"
-                    @click="router.post(searchRoutes.searches.url({ project: projectSlug }), {}, { preserveScroll: true })"
+                    @click="confirmTargets"
                 />
                 <UButton
                     color="neutral"
@@ -298,7 +347,48 @@ const LISTS = ['key_features', 'competitors', 'proof_points'] as const
             </p>
         </div>
 
-        <!-- 4. Done: the searching is under way and this page has nothing
+        <!-- 4. Where the mail will go out from, asked before the search and
+             not after it. Searching and qualifying are what spend the credits;
+             sending is what they were spent for. A run that ends at the search
+             can empty a balance and still have shown nobody a single mail. -->
+        <div
+            v-else-if="step === 'mailbox'"
+            class="space-y-3 rounded-lg p-4 ring ring-default"
+        >
+            <p class="font-medium">
+                Where should the mail go out from?
+            </p>
+
+            <p class="text-sm text-muted">
+                Your own mailbox, over ordinary SMTP, with replies read back
+                over IMAP. Nothing is relayed through us, so what arrives is a
+                message from you. Pick your provider on the next screen and the
+                host names and ports fill themselves in.
+            </p>
+
+            <div class="flex flex-wrap items-center gap-2">
+                <UButton
+                    icon="i-lucide-mail"
+                    label="Connect a mailbox"
+                    @click="router.get(mailboxRoutes.index.url({ project: projectSlug }, { query: { from: 'onboarding' } }))"
+                />
+                <UButton
+                    color="neutral"
+                    variant="ghost"
+                    label="Skip, start the search anyway"
+                    @click="startSearching"
+                />
+            </div>
+
+            <p class="text-sm text-dimmed">
+                Skipping is fine, and it is not free: the search and the
+                qualifying spend credits, and without a mailbox the campaign
+                written from them sits still. You can come back to this from
+                Settings at any point.
+            </p>
+        </div>
+
+        <!-- 5. Done: the searching is under way and this page has nothing
              left to do. -->
         <div
             v-else

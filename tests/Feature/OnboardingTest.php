@@ -231,3 +231,63 @@ it('asks what the site never said, at the moment the portrait is reviewed', func
             ->where('openQuestions.0.question', 'Which countries do you deliver to?')
             ->where('openQuestions.0.answer', null));
 });
+
+/**
+ * @return array<string, mixed>
+ */
+function mailboxForm(Project $project, bool $fromOnboarding): array
+{
+    return [
+        'name' => 'Contact',
+        'from_name' => 'Marcel',
+        'from_email' => 'marcel@friterie.test',
+        'smtp_host' => 'ssl0.ovh.net',
+        'smtp_port' => 587,
+        'smtp_username' => 'marcel@friterie.test',
+        'smtp_password' => 'secret',
+        'smtp_encryption' => 'starttls',
+        'imap_host' => 'ssl0.ovh.net',
+        'imap_port' => 993,
+        'imap_username' => 'marcel@friterie.test',
+        'imap_password' => 'secret',
+        'imap_encryption' => 'tls',
+        'daily_limit' => 30,
+        'projects' => [$project->id],
+        ...($fromOnboarding ? ['from_onboarding' => '1'] : []),
+    ];
+}
+
+it('puts somebody back in the run after they connect the mailbox it asked for', function () {
+    [$user, $project] = newcomer();
+
+    $this->actingAs($user);
+    forProject($project);
+
+    // The settings screen has to know it is standing in for a step, because
+    // saving means something different here: the run is waiting.
+    $this->get(route('settings.mailboxes.index', ['from' => 'onboarding']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('fromOnboarding', true));
+
+    $this->post(route('settings.mailboxes.store'), mailboxForm($project, true))
+        ->assertRedirect(route('onboarding'));
+
+    // And the project can now actually send, which is the only version of
+    // this that counts: a mailbox granted to nothing leaves the banner up and
+    // the campaign empty, which is exactly the state the step exists to stop.
+    $this->get(route('onboarding'))
+        ->assertInertia(fn ($page) => $page->where('setup.mailbox', false));
+});
+
+it('leaves somebody on the settings screen when that is where they came from', function () {
+    [$user, $project] = newcomer();
+
+    $this->actingAs($user);
+    forProject($project);
+
+    $this->get(route('settings.mailboxes.index'))
+        ->assertInertia(fn ($page) => $page->where('fromOnboarding', false));
+
+    $this->post(route('settings.mailboxes.store'), mailboxForm($project, false))
+        ->assertRedirect(route('settings.mailboxes.index'));
+});

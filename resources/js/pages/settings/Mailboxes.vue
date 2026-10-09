@@ -11,10 +11,12 @@ defineOptions({ layout: [AppLayout, [SettingsLayout, { title: 'Mailboxes' }]] })
 
 // Inline rather than a type alias imported through the barrel: an alias there
 // silently declares no props at all.
-defineProps<{
+const props = defineProps<{
     mailboxes: Mailbox[]
     projects: Project[]
     redirectTo: string | null
+    /** Sent here by the guided run, which is waiting for this to be done. */
+    fromOnboarding: boolean
 }>()
 
 const page = usePage()
@@ -23,7 +25,10 @@ const page = usePage()
 // would mean a form per row and a password field per row, when the whole screen
 // is normally used twice: once at setup, once when a password changes.
 const editing = ref<Mailbox | null>(null)
-const creating = ref(false)
+// Open on arrival when the run sent somebody here: they clicked "connect a
+// mailbox" one screen ago, and a settings page with the form shut is one more
+// button between them and the thing they already asked for.
+const creating = ref(props.fromOnboarding)
 const preset = ref<string | undefined>()
 const testing = ref<number | null>(null)
 const reactivating = ref<number | null>(null)
@@ -50,7 +55,13 @@ function blank () {
         signature: '',
         daily_limit: 30,
         max_bounce_rate: null as number | null,
-        projects: [] as number[]
+        // Empty is the safe default for a mailbox added from the menu. For one
+        // added from the guided run it is the wrong one: the run is blocked on
+        // this project being able to send, and an unticked box would create a
+        // mailbox that still cannot, with nothing on screen saying why.
+        projects: (props.fromOnboarding && page.props.currentProject
+            ? [page.props.currentProject.id]
+            : []) as number[]
     }
 }
 
@@ -546,6 +557,16 @@ function note () {
                     type="hidden"
                     name="projects[]"
                     :value="id"
+                >
+
+                <!-- Saving goes back to the step that sent them here. Carried
+                     on the form rather than read from the referrer, which is
+                     absent on an Inertia POST. -->
+                <input
+                    v-if="fromOnboarding && !editing"
+                    type="hidden"
+                    name="from_onboarding"
+                    value="1"
                 >
 
                 <div class="flex items-center justify-between gap-3">

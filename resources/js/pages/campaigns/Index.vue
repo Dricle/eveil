@@ -142,6 +142,17 @@ function timing (campaign: Campaign): string | null {
             </div>
         </div>
 
+        <!-- Starting a sequence from this list can succeed and still enrol
+             nobody. The row's own counters read as zero either way, so the
+             reason has to be said once, here. -->
+        <UAlert
+            v-if="page.props.status"
+            color="warning"
+            variant="subtle"
+            icon="i-lucide-info"
+            :description="String(page.props.status)"
+        />
+
         <!-- A segment with no sequence does not appear on a list of
              sequences, so nothing else on this page can point at it. -->
         <UAlert

@@ -1032,3 +1032,51 @@ it('does not enrol into another project\'s campaign', function () {
         ->post(route('campaigns.enrol', $stranger->id))
         ->assertNotFound();
 });
+
+it('says why a sequence it just started has nobody in it', function () {
+    [$user, $project, $mailbox] = sender();
+
+    contactable($project);
+    $campaign = sequence($project);
+
+    // Nothing to send from. Enrolment refuses, returns a plain zero, and the
+    // campaign goes Active anyway: on screen that is indistinguishable from a
+    // start that worked, which is how four accounts in a row spent a trial
+    // without a mail ever leaving.
+    $mailbox->projects()->detach($project);
+
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->put(route('campaigns.status', $campaign), ['status' => 'active'])
+        ->assertRedirect()
+        ->assertSessionHas('status', fn (string $said): bool => str_contains($said, 'no mailbox'));
+
+    expect(CampaignLead::query()->count())->toBe(0);
+});
+
+it('does not blame the mailbox when there is one and nobody was eligible', function () {
+    [$user, $project] = sender();
+
+    $campaign = sequence($project);
+
+    // A project that can send, with nobody to send to: the same zero, a
+    // different place to go and look.
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->put(route('campaigns.status', $campaign), ['status' => 'active'])
+        ->assertSessionHas('status', fn (string $said): bool => ! str_contains($said, 'no mailbox'));
+});
+
+it('says nothing at all when the sequence actually filled', function () {
+    [$user, $project] = sender();
+
+    contactable($project);
+    $campaign = sequence($project);
+
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->put(route('campaigns.status', $campaign), ['status' => 'active'])
+        ->assertSessionMissing('status');
+
+    expect(CampaignLead::query()->count())->toBe(1);
+});

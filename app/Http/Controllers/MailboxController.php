@@ -57,7 +57,10 @@ class MailboxController extends Controller
 
         $mailbox->projects()->sync($request->validated('projects', []));
 
-        return to_route('settings.mailboxes.index');
+        // The same form is rendered on the settings screen and inside the
+        // guided run, so where to go back to is whichever one posted it. The
+        // fallback matters: with no referrer, `back()` alone lands on `/`.
+        return back(fallback: route('settings.mailboxes.index'));
     }
 
     public function update(MailboxRequest $request, int $mailbox): RedirectResponse

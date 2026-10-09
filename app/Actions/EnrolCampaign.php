@@ -44,12 +44,7 @@ class EnrolCampaign
      */
     public function handle(Campaign $campaign): int
     {
-        // Just a probe for "can this project send at all" and for the
-        // opt-out/toxic suppression check below, both account-independent.
-        // Real assignment happens per lead at first send.
-        $probe = EmailAccount::query()
-            ->sendableFor($campaign->project)
-            ->first();
+        $probe = $this->probe($campaign);
 
         // No mailbox attached to this project, so there is nothing to send
         // from. Deliberately not an exception: the campaign stays active and
@@ -91,6 +86,31 @@ class EnrolCampaign
         }
 
         return $enrolled;
+    }
+
+    /**
+     * Whether this project has anything to send from at all.
+     *
+     * Public because a return of zero from `handle()` has two unrelated
+     * meanings, nobody eligible or nothing to send from, and they are not
+     * fixed in the same place. A screen that cannot tell them apart sends
+     * somebody to look at their leads for a problem that is in settings.
+     */
+    public function canSendFor(Campaign $campaign): bool
+    {
+        return $this->probe($campaign) !== null;
+    }
+
+    /**
+     * Just a probe for "can this project send at all" and for the
+     * opt-out/toxic suppression check, both account-independent. Real
+     * assignment happens per lead at first send.
+     */
+    private function probe(Campaign $campaign): ?EmailAccount
+    {
+        return EmailAccount::query()
+            ->sendableFor($campaign->project)
+            ->first();
     }
 
     /**

@@ -70,5 +70,16 @@ const items = computed<NavigationMenuItem[]>(() => [
         </div>
 
         <UNavigationMenu :items="items" />
+
+        <!-- Starting a sequence can succeed and still enrol nobody. The
+             endpoint says which of the two reasons applies, and until now
+             neither campaign tab read it. -->
+        <UAlert
+            v-if="page.props.status"
+            color="warning"
+            variant="subtle"
+            icon="i-lucide-info"
+            :description="String(page.props.status)"
+        />
     </div>
 </template>

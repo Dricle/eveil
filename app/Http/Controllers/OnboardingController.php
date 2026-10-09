@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Ai\Agents\TargetProfileDeriver;
 use App\Http\Resources\ProjectAnalysisResource;
+use App\Http\Resources\ProjectResource;
 use App\Http\Resources\TargetProfileResource;
 use App\Models\AgentRun;
 use App\Models\DiscoveryRun;
@@ -31,6 +32,7 @@ class OnboardingController extends Controller
     public function show(): Response
     {
         $project = $this->currentProject->getOrFail()->load('latestAnalysis');
+        $organization = $this->currentProject->organization();
         $profiles = TargetProfile::query()->orderBy('id')->get();
 
         return Inertia::render('Onboarding', [
@@ -50,6 +52,14 @@ class OnboardingController extends Controller
                 ->latestFor(TargetProfileDeriver::slug())
                 ->first()?->isInFlight() ?? false,
             'searches' => DiscoveryRun::query()->count(),
+            // The mailbox step connects one here instead of sending somebody
+            // to the settings screen, and that form asks which of the
+            // organization's projects may send through the address.
+            // `setRelation` rather than `with('organization')`: every row is
+            // already this same, already-loaded organization.
+            'projects' => ProjectResource::collection(
+                $organization->projects()->orderBy('name')->get()->each->setRelation('organization', $organization)
+            ),
         ]);
     }
 }

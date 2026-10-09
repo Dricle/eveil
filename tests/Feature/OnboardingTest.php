@@ -3,6 +3,7 @@
 use App\Enums\AgentRunStatus;
 use App\Enums\AnalysisStatus;
 use App\Enums\AnalysisType;
+use App\Jobs\AnalyzeProject;
 use App\Jobs\DeriveTargets;
 use App\Models\AgentRun;
 use App\Models\DiscoveryRun;
@@ -138,6 +139,27 @@ it('starts one search per segment left switched on, and never a second for the s
     expect(DiscoveryRun::query()->count())->toBe(2);
 });
 
+it('reads the site again after a failed read, and only then', function (AnalysisStatus $status, int $dispatched) {
+    [$user, $project] = newcomer();
+
+    ProjectAnalysis::factory()->create([
+        'project_id' => $project->id,
+        'type' => AnalysisType::Website,
+        'status' => $status,
+    ]);
+
+    $this->actingAs($user);
+    forProject($project);
+
+    $this->post(route('onboarding.analysis'))->assertRedirect();
+
+    // A read still running would be doubled by a second click.
+    Queue::assertPushed(AnalyzeProject::class, $dispatched);
+})->with([
+    'failed' => [AnalysisStatus::Failed, 1],
+    'running' => [AnalysisStatus::Running, 0],
+]);
+
 it('says the run is under way once a search exists', function () {
     [$user, $project] = newcomer();
 
@@ -230,4 +252,71 @@ it('asks what the site never said, at the moment the portrait is reviewed', func
             ->where('openQuestions.0.key', 'service_area')
             ->where('openQuestions.0.question', 'Which countries do you deliver to?')
             ->where('openQuestions.0.answer', null));
+});
+
+/**
+ * @return array<string, mixed>
+ */
+function mailboxForm(Project $project): array
+{
+    return [
+        'name' => 'Contact',
+        'from_name' => 'Marcel',
+        'from_email' => 'marcel@friterie.test',
+        'smtp_host' => 'ssl0.ovh.net',
+        'smtp_port' => 587,
+        'smtp_username' => 'marcel@friterie.test',
+        'smtp_password' => 'secret',
+        'smtp_encryption' => 'starttls',
+        'imap_host' => 'ssl0.ovh.net',
+        'imap_port' => 993,
+        'imap_username' => 'marcel@friterie.test',
+        'imap_password' => 'secret',
+        'imap_encryption' => 'tls',
+        'daily_limit' => 30,
+        'projects' => [$project->id],
+    ];
+}
+
+it('puts somebody back on the screen they connected the mailbox from', function () {
+    [$user, $project] = newcomer();
+
+    $this->actingAs($user);
+    forProject($project);
+
+    // The guided run renders the same form the settings screen does, so where
+    // saving lands has to be wherever it was posted from: a fixed destination
+    // is the wrong one half the time, and the run is what is waiting.
+    $this->get(route('onboarding'))->assertOk();
+
+    $this->post(route('settings.mailboxes.store'), mailboxForm($project))
+        ->assertRedirect(route('onboarding'));
+
+    // And the project can now actually send, which is the only version of
+    // this that counts: a mailbox granted to nothing leaves the banner up and
+    // the campaign empty.
+    $this->get(route('onboarding'))
+        ->assertInertia(fn ($page) => $page->where('setup.mailbox', false));
+
+    $this->get(route('settings.mailboxes.index'))->assertOk();
+
+    $this->post(route('settings.mailboxes.store'), [...mailboxForm($project), 'from_email' => 'spare@friterie.test'])
+        ->assertRedirect(route('settings.mailboxes.index'));
+});
+
+it('starts the search for a project with no mailbox attached', function () {
+    [$user, $project] = newcomer();
+
+    $profile = TargetProfile::factory()->create(['project_id' => $project->id, 'is_active' => true]);
+
+    expect($project->emailAccounts()->exists())->toBeFalse();
+
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->post(route('onboarding.searches'))
+        ->assertRedirect();
+
+    // Nothing about the mailbox stands between somebody and the search. It is
+    // asked for on the way past, and skipping it costs a click.
+    expect(DiscoveryRun::query()->where('target_profile_id', $profile->id)->exists())->toBeTrue();
 });

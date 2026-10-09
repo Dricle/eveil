@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3'
+import { Head, usePage } from '@inertiajs/vue3'
 import { computed } from 'vue'
 import CampaignHeader from '@/components/CampaignHeader.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
+import { relativeUrl } from '@/lib/utils'
+import mailboxRoutes from '@/routes/settings/mailboxes'
 import type { CampaignLead, CampaignStatus, Pipeline, SendingState } from '@/types'
 
 defineOptions({ layout: AppLayout })
@@ -19,6 +21,13 @@ const props = defineProps<{
     leads: CampaignLead[]
     leadsTotal: number
 }>()
+
+const page = usePage()
+
+// `sending.mailboxes` is every mailbox the PROJECT has, not the ones already
+// pinned to this run, so an empty list means there is nothing to send from at
+// all. It is the one blocker the user has to leave this screen to fix.
+const noMailbox = computed(() => props.sending.mailboxes.length === 0)
 
 // The funnel in the order the work goes, so a gap reads as a gap.
 const STAGES = [
@@ -42,8 +51,12 @@ const blocker = computed(() => {
         return 'This sequence is not running. Nothing leaves until it is started.'
     }
 
-    if (!props.sending.mailboxes.length) {
-        return 'Nobody is in this sequence, so no mailbox is pinned to it yet.'
+    // This used to read "nobody is in this sequence, so no mailbox is pinned
+    // to it yet", which named the wrong thing: the list is the project's
+    // mailboxes, and none of them is a settings problem rather than an
+    // enrolment one. People went looking at their leads for it.
+    if (noMailbox.value) {
+        return 'No mailbox is connected to this project, so nothing can be sent. The sequence is kept as it is and starts by itself once one is connected.'
     }
 
     if (!props.sending.window_open) {
@@ -110,6 +123,18 @@ const blocker = computed(() => {
             for the whole sequence.
         </p>
 
+        <!-- Started, and still empty. Enrolment refuses to put anybody into a
+             sequence with nothing to send from, and returns a plain zero for
+             it: on screen that was indistinguishable from having no leads. -->
+        <p
+            v-else-if="noMailbox"
+            class="rounded-lg p-4 text-sm text-muted ring ring-default"
+        >
+            Nobody is in this sequence, and nobody can be while the project
+            has no mailbox. Everyone found since is enrolled as soon as one
+            is connected.
+        </p>
+
         <!-- "Active" and "sending right now" are not the same thing, and
              the gap between them is where this screen used to say nothing. -->
         <div class="space-y-3 rounded-lg p-4 ring ring-default">
@@ -126,6 +151,19 @@ const blocker = computed(() => {
                         Sending is paced: one mail per mailbox per tick, never outside
                         {{ sending.window.start }}:00 to {{ sending.window.end }}:00.
                     </p>
+
+                    <!-- The only blocker on this screen whose fix is on
+                         another one. -->
+                    <UButton
+                        v-if="noMailbox"
+                        class="mt-2"
+                        color="neutral"
+                        variant="subtle"
+                        size="sm"
+                        icon="i-lucide-mail"
+                        label="Connect a mailbox"
+                        :to="relativeUrl(mailboxRoutes.index.url({ project: page.props.currentProject!.slug }))"
+                    />
                 </div>
             </div>
 

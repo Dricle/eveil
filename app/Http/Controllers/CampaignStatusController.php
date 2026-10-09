@@ -33,8 +33,14 @@ class CampaignStatusController extends Controller
 
         $campaign->update(['status' => $status]);
 
-        if ($activating) {
-            $this->enrol->handle($campaign);
+        if ($activating && $this->enrol->handle($campaign) === 0) {
+            // A start that enrolled nobody looks exactly like a start that
+            // worked: the button flips to Pause and the screen fills with
+            // zeroes. Which of the two reasons applies decides where the user
+            // should be looking next, so the sentence names it.
+            return back()->with('status', $this->enrol->canSendFor($campaign)
+                ? 'Started, but nobody joined the sequence: everyone this project can write to is already in one, waiting for your go-ahead, or suppressed.'
+                : 'Started, but nobody joined the sequence: this project has no mailbox, so there is nothing to send from. Connect one and the people are enrolled by themselves.');
         }
 
         return back();

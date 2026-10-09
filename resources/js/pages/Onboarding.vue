@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, router, usePage, usePoll } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
+import MailboxForm from '@/components/MailboxForm.vue'
 import OpenQuestions from '@/components/OpenQuestions.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 // Suffixed on purpose: an import sharing a name with a prop shadows that prop in
@@ -9,9 +10,8 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import companyRoutes from '@/routes/companies'
 import searchRoutes from '@/routes/onboarding'
 import knowledgeBaseRoutes from '@/routes/settings/knowledge-base'
-import mailboxRoutes from '@/routes/settings/mailboxes'
 import targetRoutes from '@/routes/targets'
-import type { Analysis, KnowledgeBase, OpenQuestion, TargetProfile } from '@/types'
+import type { Analysis, KnowledgeBase, OpenQuestion, Project, TargetProfile } from '@/types'
 
 defineOptions({ layout: AppLayout })
 
@@ -22,6 +22,8 @@ const props = defineProps<{
     profiles: TargetProfile[]
     deriving: boolean
     searches: number
+    /** Which projects a mailbox connected here may be granted to. */
+    projects: Project[]
 }>()
 
 const page = usePage()
@@ -37,11 +39,21 @@ const hasMailbox = computed(() => page.props.setup?.mailbox === false)
 // Reloading simply puts the segments back in front of you, which is harmless.
 const confirmedTargets = ref(false)
 
+// The same form the Mailboxes settings screen uses, opened here instead of
+// navigating to it: the run is two buttons from finishing and a settings page
+// is a worse place to be standing when it does.
+const connecting = ref(false)
+
+// Set the moment a search is posted. Saving a mailbox satisfies the step it
+// was asked on, so without this the screen drops back to the segments for as
+// long as the search takes to be accepted.
+const starting = ref(false)
+
 // Where the run has actually got to. Derived rather than stored: every one of
 // these is a fact about the project, and a column saying "step 3" would be one
 // more thing able to disagree with reality.
 const step = computed(() => {
-    if (props.searches > 0) {
+    if (props.searches > 0 || starting.value) {
         return 'searching'
     }
 
@@ -109,14 +121,17 @@ function state (key: typeof STEPS[number]['key']) {
 const LISTS = ['key_features', 'competitors', 'proof_points'] as const
 
 function startSearching () {
-    router.post(searchRoutes.searches.url({ project: projectSlug.value }), {}, { preserveScroll: true })
+    starting.value = true
+    router.post(searchRoutes.searches.url({ project: projectSlug.value }), {}, {
+        preserveScroll: true,
+        onError: () => starting.value = false
+    })
 }
 
 /**
  * Agreeing to the segments. With a mailbox already attached this is what it
- * has always been, a single click that starts the search; without one it stops
- * at the mailbox step first, which is the only point in the run where asking
- * for it is still cheap.
+ * has always been, a single click that starts the search; without one the
+ * mailbox step comes first, and both of its buttons start the search.
  */
 function confirmTargets () {
     confirmedTargets.value = true
@@ -326,11 +341,11 @@ function confirmTargets () {
 
             <div class="flex flex-wrap items-center gap-2">
                 <!-- Agreeing goes through the mailbox first when there is
-                     none. The search itself is unchanged: it is still one
-                     click away, and skipping is still allowed. -->
+                     none, so this does not promise the search: it says what
+                     it does, and the next screen is the one that starts it. -->
                 <UButton
-                    icon="i-lucide-radar"
-                    label="Start looking for them"
+                    icon="i-lucide-check"
+                    label="These look right"
                     @click="confirmTargets"
                 />
                 <UButton
@@ -362,20 +377,24 @@ function confirmTargets () {
             <p class="text-sm text-muted">
                 Your own mailbox, over ordinary SMTP, with replies read back
                 over IMAP. Nothing is relayed through us, so what arrives is a
-                message from you. Pick your provider on the next screen and the
-                host names and ports fill themselves in.
+                message from you. Pick your provider in the form and the host
+                names and ports fill themselves in.
             </p>
 
+            <!-- Both of these start the search. The mailbox is worth asking
+                 for here, because searching and qualifying are what spend the
+                 credits and sending is what they were spent for, but it is an
+                 ask and not a gate. -->
             <div class="flex flex-wrap items-center gap-2">
                 <UButton
                     icon="i-lucide-mail"
                     label="Connect a mailbox"
-                    @click="router.get(mailboxRoutes.index.url({ project: projectSlug }, { query: { from: 'onboarding' } }))"
+                    @click="connecting = true"
                 />
                 <UButton
                     color="neutral"
                     variant="ghost"
-                    label="Skip, start the search anyway"
+                    label="Skip for now"
                     @click="startSearching"
                 />
             </div>
@@ -416,5 +435,17 @@ function confirmTargets () {
                 />
             </div>
         </div>
+
+        <!-- Outside the step it belongs to: saving moves the run on, and a
+             modal nested in the panel that is about to be replaced would be
+             torn down before its own success callback ran. The project
+             waiting on the mailbox is ticked, otherwise this saves one the
+             campaign still may not send through. -->
+        <MailboxForm
+            v-model:open="connecting"
+            :projects="projects"
+            :default-projects="page.props.currentProject ? [page.props.currentProject.id] : []"
+            @saved="startSearching"
+        />
     </div>
 </template>

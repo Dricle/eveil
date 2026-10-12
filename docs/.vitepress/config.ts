@@ -38,6 +38,10 @@ export default defineConfig({
                     items: [
                         { text: 'Installation', link: '/self-hosted/installation' },
                         { text: 'Configuration', link: '/self-hosted/configuration' },
+                        // Directly after Configuration, which is where the
+                        // sending mailbox gets connected: the next thing to
+                        // know is that you are then the sender of record.
+                        { text: 'What you are responsible for', link: '/self-hosted/responsibilities' },
                         { text: 'Commands', link: '/self-hosted/commands' },
                         { text: 'Updating', link: '/self-hosted/updating' },
                         { text: 'Backup', link: '/self-hosted/backup' },

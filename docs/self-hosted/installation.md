@@ -5,7 +5,20 @@ Eveil self-hosted ships as a Docker Compose stack: nginx, PHP-FPM, queue workers
 ## Requirements
 
 - Docker and Docker Compose
+- A 64-bit host, x86-64 or ARM — see [Architecture](#architecture) below
 - Your own SMTP/IMAP email account(s) to send from — Eveil never relays through a shared ESP, since cold outreach through a shared sender gets accounts banned
+
+You are also the sender of every mail an instance writes, which carries obligations the software cannot meet on your behalf. [What you are responsible for](/self-hosted/responsibilities) is the page for that, and it is worth reading before the first campaign rather than after it.
+
+### Architecture
+
+**linux/amd64 and linux/arm64. Nothing else.**
+
+Every image the stack pulls publishes both — `postgres:18-alpine`, `redis:8-alpine` and `searxng/searxng`, as do the two optional profiles (`degoog`, `flaresolverr`). `app` is built here from `php:8.5-fpm`, which publishes both as well.
+
+What rules out 32-bit ARM and 32-bit x86, even though several of those images do publish them, is the front-end build: `deploy/Dockerfile` installs Node from NodeSource, which ships `amd64` and `arm64` only and stops with "unsupported architecture" on anything else. So a 64-bit OS on an ARM board is the supported shape and a 32-bit one is not — on a Raspberry Pi, the 64-bit image rather than the 32-bit one.
+
+Development and day-to-day running happen on amd64, and arm64 is not covered by CI. Treat an ARM host as something to try rather than something proved for you, and open an issue if it breaks.
 
 ## 1. Clone and configure
 

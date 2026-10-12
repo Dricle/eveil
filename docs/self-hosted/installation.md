@@ -7,13 +7,22 @@ Eveil self-hosted ships as a Docker Compose stack: nginx, PHP-FPM, queue workers
 - Docker and Docker Compose
 - Your own SMTP/IMAP email account(s) to send from — Eveil never relays through a shared ESP, since cold outreach through a shared sender gets accounts banned
 
-## 1. Clone and configure
+## 1. Download and configure
+
+There is no clone and nothing to compile: `app` runs a prebuilt image from GitHub's container registry. Three files go in an empty directory — the compose file, your `.env`, and the bundled search engine's settings.
 
 ```bash
-git clone https://github.com/Dricle/eveil.git
-cd eveil
-cp deploy/.env.example .env
+mkdir -p eveil/docker/searxng && cd eveil
+
+base=https://raw.githubusercontent.com/Dricle/eveil/main
+curl -fsSL -o compose.deploy.yaml        $base/compose.deploy.yaml
+curl -fsSL -o .env                       $base/deploy/.env.example
+curl -fsSL -o docker/searxng/settings.yml $base/docker/searxng/settings.yml
 ```
+
+::: tip Pinning a release
+`main` tracks the newest release, and `.env` leaves `EVEIL_VERSION` empty, which means the `latest` image. To pin instead, swap `main` for a release tag in the three URLs above and set the matching `EVEIL_VERSION` in `.env` — the tag `v1.2.0` publishes the image `1.2.0`, without the `v`. Releases are listed on [the repository's releases page](https://github.com/Dricle/eveil/releases).
+:::
 
 Edit `.env` and fill in:
 
@@ -24,20 +33,35 @@ Edit `.env` and fill in:
 | `SEARXNG_SECRET` | Any long random string. Only signs the bundled search engine's own requests. |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Optional. Set them and the first account is created on boot; leave them empty and the setup screen asks instead. |
 | `APP_PORT` | Optional, **defaults to `80`**. The host port the app is published on — change it if something already holds 80. |
+| `EVEIL_VERSION` | Optional, **defaults to `latest`**. The published image to run, e.g. `1.2.0`. See the tip above. |
 
 Leave `APP_KEY` and `CREDENTIALS_KEY` empty: they're generated on first boot into the storage volume, and every later boot reuses them (see [Keys](/self-hosted/configuration#keys) in Configuration). Fill them in only if you'd rather manage them yourself — anything set there wins.
 
 ## 2. Start the stack
 
 ```bash
+docker compose -f compose.deploy.yaml pull
 docker compose -f compose.deploy.yaml up -d
 ```
 
-Run this from the **repository root**, not from `deploy/` — Compose reads its project directory from wherever the compose file lives, and `deploy/` has no `.env` of its own.
+Run both from the directory holding `compose.deploy.yaml` and `.env` — Compose reads its project directory from wherever the compose file lives, and the `docker/searxng/settings.yml` the stack mounts is resolved relative to it.
 
 ::: tip
-`compose.deploy.yaml` is the shipped self-hosted stack. It is a **separate file** from `compose.yaml` at the repo root, which is Laravel Sail for development (mounts source, shifted ports, runs Vite) — don't confuse the two. If typing `-f compose.deploy.yaml` on every command gets old, put `COMPOSE_FILE=compose.deploy.yaml` in `.env` and drop the flag from every command on this page.
+`compose.deploy.yaml` is the shipped self-hosted stack. It is a **separate file** from `compose.yaml` in the repository, which is Laravel Sail for development (mounts source, shifted ports, runs Vite) — don't confuse the two. If typing `-f compose.deploy.yaml` on every command gets old, put `COMPOSE_FILE=compose.deploy.yaml` in `.env` and drop the flag from every command on this page.
 :::
+
+### Building it yourself instead
+
+The published image is built from this repository by [the release workflow](https://github.com/Dricle/eveil/blob/main/.github/workflows/release.yml), from the tag it is named after. If you'd rather compile what you run, or you're working on a patched instance, clone the repository and add `compose.build.yaml` as a second `-f`:
+
+```bash
+git clone https://github.com/Dricle/eveil.git
+cd eveil
+cp deploy/.env.example .env
+docker compose -f compose.deploy.yaml -f compose.build.yaml up -d --build
+```
+
+That overlay changes exactly one thing — where `app`'s image comes from. Everything else on this page applies unchanged, and the clone already contains everything the download above fetched.
 
 ### What runs
 

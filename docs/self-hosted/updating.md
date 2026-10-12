@@ -1,23 +1,40 @@
 # Updating
 
 ```bash
-git pull
-docker compose -f compose.deploy.yaml up -d --build
+docker compose -f compose.deploy.yaml pull
+docker compose -f compose.deploy.yaml up -d
 ```
 
-Migrations run automatically on boot (`php artisan migrate --force --isolated`, in the container's entrypoint) — there is no separate migration step to remember.
+If `EVEIL_VERSION` is pinned in `.env`, change it to the release you want first — otherwise pulling finds exactly the image already running. Releases are listed on [the repository's releases page](https://github.com/Dricle/eveil/releases).
 
-`./update.sh` at the repository root wraps this (plus stashing local changes and stopping the stack first) if you'd rather run one command.
+`./update.sh` wraps the two commands if you'd rather run one. It is not in the install download; fetch it with `curl -fsSLO https://raw.githubusercontent.com/Dricle/eveil/main/update.sh && chmod +x update.sh`.
+
+## What an update does, and what it doesn't
+
+- **Replaces the `app` image.** Only the containers whose image actually changed are recreated.
+- **Runs migrations**, on boot, from the container's entrypoint (`php artisan migrate --force --isolated`). There is no separate step to remember.
+- **Leaves your data alone.** Postgres, Redis and the storage volume are untouched, and so are `APP_KEY` and `CREDENTIALS_KEY` — they live in the storage volume and every boot reuses them.
+- **Does not change `compose.deploy.yaml` or `.env`.** Those are your copies. A release that adds a service or a variable says so in its release notes; re-download the compose file then.
 
 ::: tip
-There's no changelog yet. Until there is, `git log` between your current commit and the one you're pulling is the closest thing — most commits explain the *why*, not just the *what*.
+There's no changelog yet. Until there is, the [releases page](https://github.com/Dricle/eveil/releases) and the commits between two tags are the closest thing — most commits explain the *why*, not just the *what*.
 :::
 
 ## Rolling back
 
+Set `EVEIL_VERSION` in `.env` to the previous release, then:
+
 ```bash
-git checkout <previous-tag-or-commit>
-docker compose -f compose.deploy.yaml up -d --build
+docker compose -f compose.deploy.yaml up -d
 ```
 
-Migrations only ever add, they're not rolled back automatically — if a migration between the two versions needs reversing, that's a manual `php artisan migrate:rollback` against the `app` container. [Back up first](/self-hosted/backup) if you're rolling back across anything non-trivial.
+**A migration that has already run is not undone by this.** Migrations only ever add, and nothing rolls them back automatically — if one between the two versions needs reversing, that's a manual `php artisan migrate:rollback` against the `app` container, and the older image has to be able to live with the newer schema until you do. [Back up first](/self-hosted/backup) if you're rolling back across anything non-trivial.
+
+## If you build from source
+
+```bash
+git pull
+docker compose -f compose.deploy.yaml -f compose.build.yaml up -d --build
+```
+
+Everything above about migrations and data applies the same way; the image is compiled locally instead of pulled. `./update.sh` is for the pull-based install and does not build.

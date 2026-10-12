@@ -38,9 +38,12 @@ jobs:
       # knowing that amd64 built and arm64 did not is the useful outcome.
       fail-fast: false
       matrix:
+        # Both runners are pinned to the same Ubuntu generation. `ubuntu-latest`
+        # would move under us while the arm64 label stays put, leaving the two
+        # halves of one manifest built on different distributions.
         include:
           - platform: linux/amd64
-            runner: ubuntu-latest
+            runner: ubuntu-24.04
           - platform: linux/arm64
             runner: ubuntu-24.04-arm
 

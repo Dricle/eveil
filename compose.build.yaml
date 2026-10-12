@@ -1,0 +1,23 @@
+# Builds `app` from this source tree instead of pulling the published image.
+# An overlay on `compose.deploy.yaml`, never used on its own - it names no
+# ports, volumes or dependencies, only where the image comes from:
+#
+#   docker compose -f compose.deploy.yaml -f compose.build.yaml up -d --build
+#
+# For contributors, for anyone running a patched instance, and for anyone who
+# would rather compile what they run than trust a registry. The result is the
+# same image `compose.deploy.yaml` pulls, built from whatever is checked out.
+#
+# Keeping it in a second file rather than leaving `build:` beside `image:` in
+# the deploy file is what makes the documented install work without a clone:
+# Compose resolves `build.context` against the compose file's own directory,
+# and someone who only downloaded that one file has no source tree for it to
+# point at.
+services:
+    app:
+        build:
+            context: .
+            dockerfile: deploy/Dockerfile
+        # Nothing refers to this tag; it exists so the build does not leave a
+        # dangling `<none>` image behind on every rebuild.
+        image: 'eveil:local'

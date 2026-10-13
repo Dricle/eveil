@@ -9,7 +9,9 @@ defineOptions({ layout: [AppLayout, [SettingsLayout, { title: 'API' }]] })
 defineProps<{
     tokens: { id: number, name: string, last_used_at: string | null, created_at: string }[]
     plainTextToken: string | null
+    canManageTokens: boolean
     apiUrl: string
+    mcpUrl: string
 }>()
 
 const page = usePage()
@@ -34,9 +36,12 @@ function revoke (id: number) {
 
     <div class="space-y-6">
         <p class="text-sm text-muted">
-            A token reaches this project and nothing else. Send it as
+            A token reaches every project of this organization. Send it as
             <code>Authorization: Bearer &lt;token&gt;</code> to
-            <code>{{ apiUrl }}</code>.
+            <code>{{ apiUrl }}</code>, or use it as an MCP server at
+            <code>{{ mcpUrl }}</code>. An assistant that connects by signing in
+            needs no token: give it <code>{{ mcpUrl }}</code>, and find it later
+            under your account's connected assistants.
             <a
                 href="https://docs.eveil.cloud/product/api"
                 target="_blank"
@@ -65,7 +70,15 @@ function revoke (id: number) {
             </template>
         </UAlert>
 
+        <p
+            v-if="!canManageTokens"
+            class="text-sm text-muted"
+        >
+            Only the organization's owners and admins can create or revoke tokens.
+        </p>
+
         <Form
+            v-if="canManageTokens"
             v-slot="{ errors, processing }"
             v-bind="apiTokenRoutes.store.form({ project: page.props.currentProject!.slug })"
             reset-on-success
@@ -104,6 +117,7 @@ function revoke (id: number) {
                     </div>
                 </div>
                 <UButton
+                    v-if="canManageTokens"
                     color="error"
                     variant="ghost"
                     label="Revoke"

@@ -39,6 +39,8 @@ They're kept separate on purpose: `APP_KEY` encrypts cookies and sessions, `CRED
 
 **Back these up with the database** — see [Backup](/self-hosted/backup). A database dump without them is worthless, and losing `CREDENTIALS_KEY` means reconnecting every mailbox by hand. Set them in `.env` yourself instead if you'd rather manage rotation directly: whatever's set there wins, and the auto-generated copy in the volume is then never read.
 
+The storage volume also holds `oauth-private.key` and `oauth-public.key`, generated on first boot too. They sign the sessions of assistants connected to the [MCP server](/product/api#mcp) by signing in. Losing them is nothing like losing `CREDENTIALS_KEY`: those assistants simply have to connect again.
+
 ## In-app settings
 
 Product-level tuning (AI model per agent, discovery budgets, crawl limits, verification toggles) lives in the database, not `.env`, so it can be changed from a settings screen without a redeploy. These are seeded with sensible defaults on first migration.

@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Laravel\Cashier\Billable;
+use Laravel\Sanctum\HasApiTokens;
 
 /**
  * The billable entity in cloud. Self-hosted still gets one, created
@@ -49,7 +50,7 @@ use Laravel\Cashier\Billable;
 class Organization extends Model
 {
     /** @use HasFactory<OrganizationFactory> */
-    use Billable, HasFactory, HasSlug;
+    use Billable, HasApiTokens, HasFactory, HasSlug;
 
     /**
      * @return BelongsToMany<User, $this>

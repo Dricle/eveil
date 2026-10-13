@@ -27,11 +27,13 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Inertia\Inertia;
 use Laravel\Ai\Events\AgentFailed;
 use Laravel\Ai\Events\AgentPrompted;
 use Laravel\Ai\Events\AgentStreamed;
 use Laravel\Ai\Events\PromptingAgent;
 use Laravel\Ai\Events\StreamingAgent;
+use Laravel\Passport\Passport;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -102,10 +104,28 @@ class AppServiceProvider extends ServiceProvider
         // raw slug string and never become a `Project` at all.
         Route::bind('project', fn (string $slug) => Project::where('slug', $slug)->firstOrFail());
 
-        // Per project, since a token IS a project: two scripts sharing one
-        // project share its budget, and one project's sync cannot starve
-        // another's.
-        RateLimiter::for('api', fn (Request $request) => Limit::perMinute(60)->by($request->user()?->getKey() ?? $request->ip()));
+        // Per token owner: a project for an API token, a user for an OAuth
+        // one (the MCP server). Two scripts sharing one project share its
+        // budget, and one project's sync cannot starve another's. Keyed by
+        // class too, or project 3 and user 3 would share a bucket.
+        RateLimiter::for('api', fn (Request $request) => Limit::perMinute(60)->by(
+            $request->user() === null ? $request->ip() : $request->user()::class.':'.$request->user()->getKey()
+        ));
+
+        // In the storage volume, which survives a rebuilt container: keys
+        // regenerated on every update would sign every connected assistant
+        // out. `deploy/entrypoint.sh` creates them on first boot.
+        Passport::loadKeysFrom(storage_path('app'));
+
+        // The consent screen an assistant sends its user to, in the app's own
+        // look rather than Passport's bare Blade page.
+        Passport::authorizationView(fn (array $parameters) => Inertia::render('oauth/Authorize', [
+            'client' => $parameters['client']->name,
+            'authToken' => $parameters['authToken'],
+            // Posted by a plain form: both answers redirect off-site, which an
+            // Inertia visit cannot follow.
+            'csrfToken' => csrf_token(),
+        ])->toResponse(request()));
     }
 
     /**

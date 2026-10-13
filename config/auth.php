@@ -42,6 +42,13 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        // OAuth, for the MCP server only (`routes/ai.php`): an assistant that
+        // cannot send an API token signs in as its user instead.
+        'api' => [
+            'driver' => 'passport',
+            'provider' => 'users',
+        ],
     ],
 
     /*

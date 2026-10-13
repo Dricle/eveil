@@ -6,6 +6,7 @@ use App\Cloud\Http\Controllers\CheckoutController;
 use App\Cloud\Http\Controllers\OrganizationBillingController;
 use App\Cloud\Http\Controllers\PaymentMethodController;
 use App\Http\Controllers\Account\AccountDeletionController;
+use App\Http\Controllers\Account\ConnectedAssistantController;
 use App\Http\Controllers\Account\TwoFactorController;
 use App\Http\Controllers\AiInstructionsController;
 use App\Http\Controllers\AppHomeController;
@@ -201,8 +202,9 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             Route::put('autonomy', [AutonomyController::class, 'update'])->name('autonomy.update');
 
             /*
-             * Tokens for `routes/api.php`. Project-scoped: the project owns
-             * each token, so a token reaches this project and nothing else.
+             * Tokens for `routes/api.php` and the MCP server. Organization-
+             * scoped: the organization owns each token, which reaches all of
+             * its projects.
              */
             Route::get('api-tokens', [ApiTokenController::class, 'index'])->name('api-tokens.index');
             Route::post('api-tokens', [ApiTokenController::class, 'store'])->name('api-tokens.store');
@@ -737,6 +739,10 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::inertia('profile', 'account/Profile')->name('profile');
         Route::inertia('password', 'account/Password')->name('password');
         Route::get('two-factor', [TwoFactorController::class, 'edit'])->name('two-factor');
+        Route::get('assistants', [ConnectedAssistantController::class, 'index'])->name('assistants.index');
+        Route::delete('assistants/{client}', [ConnectedAssistantController::class, 'destroy'])
+            ->whereUuid('client')
+            ->name('assistants.destroy');
         Route::inertia('delete', 'account/Delete')->name('delete');
 
         Route::delete('/', [AccountDeletionController::class, 'destroy'])->name('destroy');

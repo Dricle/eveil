@@ -4,6 +4,7 @@ import type { NavigationMenuItem } from '@nuxt/ui'
 import { computed } from 'vue'
 import { relativeUrl } from '@/lib/utils'
 import { deleteMethod, password, profile, twoFactor } from '@/routes/account'
+import assistants from '@/routes/account/assistants'
 
 defineProps<{
     title: string
@@ -20,6 +21,7 @@ const items = computed<NavigationMenuItem[]>(() =>
             icon: 'i-lucide-shield-check',
             to: relativeUrl(twoFactor.url())
         },
+        { label: 'Connected assistants', icon: 'i-lucide-bot', to: relativeUrl(assistants.index.url()) },
         {
             label: 'Delete account',
             icon: 'i-lucide-trash-2',

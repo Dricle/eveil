@@ -81,6 +81,16 @@ case "$1" in
         # into an instance nobody can reach to fix it.
         php artisan eveil:install || echo 'Could not create the admin from the environment; use the setup screen instead.'
 
+        # The keys OAuth tokens are signed with, for assistants that connect
+        # to the MCP server by signing in. In the storage volume
+        # (`Passport::loadKeysFrom`), so an update does not sign every one of
+        # them out. Losing them is not a disaster like CREDENTIALS_KEY: the
+        # assistants simply have to connect again.
+        if [ ! -f /var/www/storage/app/oauth-private.key ]; then
+            php artisan passport:keys
+            chown www-data:www-data /var/www/storage/app/oauth-private.key /var/www/storage/app/oauth-public.key
+        fi
+
         php artisan config:cache
         php artisan route:cache
         php artisan event:cache

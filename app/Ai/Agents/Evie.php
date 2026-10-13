@@ -42,9 +42,11 @@ use App\Ai\Tools\UpdateSequence;
 use App\Ai\Tools\UpdateSocialPost;
 use App\Ai\Tools\UpdateTargetProfile;
 use App\Enums\SocialPlatform;
+use Illuminate\Support\Str;
 use Laravel\Ai\Attributes\MaxSteps;
 use Laravel\Ai\Concerns\RemembersConversations;
 use Laravel\Ai\Contracts\HasTools;
+use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Models\Conversation;
 use Stringable;
 
@@ -61,6 +63,54 @@ use Stringable;
 #[MaxSteps(12)]
 class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversations, HasTools
 {
+    /**
+     * Every tool Evie has on a project, in the order she is given them. Also
+     * the toolbelt of the API and the MCP server (`toolbelt()`): whatever she
+     * can do in the app, an integration or another assistant can do too.
+     *
+     * @var list<class-string<Tool>>
+     */
+    public const TOOLS = [
+        ListTargetProfiles::class,
+        GetTargetProfile::class,
+        CreateTargetProfile::class,
+        UpdateTargetProfile::class,
+        DeleteTargetProfile::class,
+        ListCompanies::class,
+        GetCompany::class,
+        GetContact::class,
+        AddLeadNote::class,
+        DeleteLeadNote::class,
+        AddCompanyNote::class,
+        DeleteCompanyNote::class,
+        DeleteAllCompanies::class,
+        DeleteAllLeads::class,
+        GetKnowledgeBase::class,
+        UpdateKnowledgeBase::class,
+        ProposeRecommendation::class,
+        FindFeatureGaps::class,
+        UpdateRecommendation::class,
+        RefreshAcquisitionIdeas::class,
+        ListCampaigns::class,
+        GetCampaign::class,
+        GetDiscoveryRunStatus::class,
+        StartDiscovery::class,
+        FindNewTargetProfiles::class,
+        CreateSequence::class,
+        UpdateSequence::class,
+        DraftSocialPost::class,
+        ListSocialPosts::class,
+        UpdateSocialPost::class,
+        ListArticles::class,
+        GetArticle::class,
+        DraftArticle::class,
+        UpdateArticle::class,
+        ListArticleIdeas::class,
+        DismissArticleIdea::class,
+        GetRedditReply::class,
+        UpdateRedditReply::class,
+    ];
+
     use RemembersConversations;
 
     /**
@@ -361,45 +411,20 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
     public function tools(): iterable
     {
         return [
-            new ListTargetProfiles($this->project),
-            new GetTargetProfile($this->project),
-            new CreateTargetProfile($this->project),
-            new UpdateTargetProfile($this->project),
-            new DeleteTargetProfile($this->project),
-            new ListCompanies($this->project),
-            new GetCompany($this->project),
-            new GetContact($this->project),
-            new AddLeadNote($this->project),
-            new DeleteLeadNote($this->project),
-            new AddCompanyNote($this->project),
-            new DeleteCompanyNote($this->project),
-            new DeleteAllCompanies($this->project),
-            new DeleteAllLeads($this->project),
-            new GetKnowledgeBase($this->project),
-            new UpdateKnowledgeBase($this->project),
-            new ProposeRecommendation($this->project),
-            new FindFeatureGaps($this->project),
-            new UpdateRecommendation($this->project),
-            new RefreshAcquisitionIdeas($this->project),
-            new ListCampaigns($this->project),
-            new GetCampaign($this->project),
-            new GetDiscoveryRunStatus($this->project),
-            new StartDiscovery($this->project),
-            new FindNewTargetProfiles($this->project),
-            new CreateSequence($this->project),
-            new UpdateSequence($this->project),
-            new DraftSocialPost($this->project),
-            new ListSocialPosts($this->project),
-            new UpdateSocialPost($this->project),
-            new ListArticles($this->project),
-            new GetArticle($this->project),
-            new DraftArticle($this->project),
-            new UpdateArticle($this->project),
-            new ListArticleIdeas($this->project),
-            new DismissArticleIdea($this->project),
-            new GetRedditReply($this->project),
-            new UpdateRedditReply($this->project),
+            ...array_map(fn (string $tool): Tool => new $tool($this->project), self::TOOLS),
+            // Chat only: it fills the suggestion chips under her answer.
             new ProposeSuggestedReplies,
         ];
+    }
+
+    /**
+     * `TOOLS` by the name the API and the MCP server call them, kebab-cased
+     * (`list-target-profiles`).
+     *
+     * @return array<string, class-string<Tool>>
+     */
+    public static function toolbelt(): array
+    {
+        return array_combine(array_map(fn (string $tool): string => Str::kebab(class_basename($tool)), self::TOOLS), self::TOOLS);
     }
 }

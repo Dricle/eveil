@@ -73,5 +73,10 @@ jobs:
       - name: Setup Application
         run: composer setup
 
+      # The OAuth guard behind `/mcp` reads its signing keys from disk
+      # (`Passport::loadKeysFrom`), and they are gitignored.
+      - name: Generate Passport keys
+        run: php artisan passport:keys
+
       - name: Run CI Checks
         run: composer ci:check

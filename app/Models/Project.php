@@ -24,7 +24,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
-use Laravel\Sanctum\HasApiTokens;
 
 /**
  * One product to promote. Everything the Sales agent touches hangs off this.
@@ -65,7 +64,7 @@ use Laravel\Sanctum\HasApiTokens;
 class Project extends Model
 {
     /** @use HasFactory<ProjectFactory> */
-    use HasApiTokens, HasFactory, HasSlug {
+    use HasFactory, HasSlug {
         HasSlug::slugExists as private slugTakenInDatabase;
     }
 

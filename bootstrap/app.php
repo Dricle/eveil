@@ -4,6 +4,7 @@ use App\Ai\OutOfCredit;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SetCurrentProject;
 use App\Http\Middleware\SetTokenProject;
+use App\Http\Middleware\SetTokenScope;
 use App\Http\Middleware\ShareTargetProfiles;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -40,7 +41,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'project.set' => SetCurrentProject::class,
-            'project.token' => SetTokenProject::class,
+            'token.scope' => SetTokenScope::class,
+            'token.project' => SetTokenProject::class,
             'targets.share' => ShareTargetProfiles::class,
         ]);
 

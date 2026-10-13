@@ -6,31 +6,45 @@ The API lives at `/api/v1` on your instance: `https://eveil.cloud/api/v1` on the
 
 ## Tokens
 
-A token belongs to **one project** and reaches that project only. There is no way to point it at another one, so give each integration its own token on the project it works with.
+A token belongs to your **organization** and reaches every one of its projects. Each request names the project it is about, in the URL.
 
-Create one from **Settings → API**, under the Project group. Give it a name that says what uses it ("CRM sync"). The token is shown **once**, right after you create it: copy it then. Eveil keeps only a hash of it and cannot show it again. Lost it? Revoke it and create another.
+Create one from **Settings → API**, under the Organization group. Only the organization's owners and admins can create or revoke tokens, since a token reaches projects a member may not be able to open. Give it a name that says what uses it ("CRM sync"). The token is shown **once**, right after you create it: copy it then. Eveil keeps only a hash of it and cannot show it again. Lost it? Revoke it and create another.
 
 Tokens start with `eveil_`, so secret scanners (GitHub's included) can spot one committed by mistake. The same screen lists every token with when it was last used. **Revoke** cuts it off immediately.
 
 Send the token as a bearer token on every request:
 
 ```bash
-curl https://eveil.cloud/api/v1/companies \
+curl https://eveil.cloud/api/v1/projects \
   -H "Authorization: Bearer eveil_..." \
   -H "Accept: application/json"
 ```
 
+## Projects
+
+`GET /projects` lists the projects the token reaches, by name:
+
+```json
+{
+  "data": [
+    { "id": 1, "name": "Acme Analytics", "slug": "acme-analytics", "url": "https://acme.example", "analyzed": true, "organization_id": 1, "organization_name": "Acme" }
+  ]
+}
+```
+
+Every other path in this page sits under one project, by its `slug`: `GET /companies` below means `GET /api/v1/projects/acme-analytics/companies`. A project of another organization answers `404`, exactly like one that does not exist.
+
 ## Conventions
 
 - **Lists are paginated**, 50 items per page, oldest first. The items are in `data`; `links.next` is the next page, or `null` on the last one. Add `?page=2` to fetch a page directly.
-- **Ids are numbers.** An id that belongs to another project answers `404`, exactly like one that does not exist.
+- **Ids are numbers.** An id that belongs to another project answers `404`, exactly like one that does not exist, even one of the same organization.
 - **Errors** are JSON with a `message`. A request that fails validation answers `422` with an `errors` object, keyed by field.
-- **Rate limit**: 60 requests a minute per project. Past that, `429` with a `Retry-After` header.
+- **Rate limit**: 60 requests a minute per organization, all its tokens together. Past that, `429` with a `Retry-After` header.
 
 | Status | Meaning |
 | --- | --- |
 | `401` | No token, a wrong one, or a revoked one. |
-| `404` | Nothing with that id in this project. |
+| `404` | No such project for this token, or nothing with that id in the project. |
 | `409` | The action does not apply right now (see enrolling below). |
 | `422` | The request body is invalid. |
 | `429` | Too many requests. Wait `Retry-After` seconds. |
@@ -191,3 +205,85 @@ Added addresses are not checked on the way in: the check before the first send i
 `platform` is `linkedin`, `x` or `bluesky`. `brief` is optional, up to 2000 characters: with one, the post is about that, and it always waits for your approval in the app whatever the network's autonomy setting, the same as asking [Evie](/product/evie) for a post. Without one, Eveil picks its subject the way it does on the cadence (see [LinkedIn](/product/linkedin)).
 
 The answer is `202` straight away: the post is written in the background and appears in the network's queue in the app a minute or so later.
+
+## Everything else
+
+The rest of what you can do in the app, and what [Evie](/product/evie) can do for you, has an endpoint too. Bodies and answers use the same fields the app shows; each endpoint below is under the project, as above.
+
+| Endpoint | Does |
+| --- | --- |
+| `GET /target-profiles`, `GET /target-profiles/{id}` | Who the project is looking for. |
+| `POST /target-profiles`, `PUT /target-profiles/{id}` | Write one, whole: `name`, `type` (`customer` or `partner`), the lists (`sectors`, `geography`, `job_titles`, `technologies`, `trigger_signals`, `search_queries`, arrays of strings) and the optional texts. A profile written here is yours: the next suggestion run leaves it alone. |
+| `DELETE /target-profiles/{id}` | Delete one. |
+| `GET /discovery-runs`, `GET /discovery-runs/{id}` | Searches for new companies, newest first, with their status and what they found. Filter with `?target_profile_id=`. |
+| `POST /discovery-runs` | Start one for `target_profile_id`. Optional `guidance` steers this run only ("only around Lyon"), without changing the profile. |
+| `POST /discovery-runs/{id}/cancel` | Stop a run that is still going. A finished one is left as it ended. |
+| `GET /companies/{id}/notes`, `POST`, `PATCH /companies/{id}/notes/{note}`, `DELETE` | A company's timeline, newest first. `body` is the text. A note written through the API has no author. |
+| `GET /contacts/{id}/notes`, `POST`, `PATCH /contacts/{id}/notes/{note}`, `DELETE` | A person's timeline, the same way. |
+| `DELETE /companies`, `DELETE /contacts` | Delete every company, or every person, of the project, to start discovery over. Answers how many went. |
+| `GET /knowledge-base`, `PUT /knowledge-base` | What Eveil knows about your product, the portrait every email and post starts from. A correction written here survives the next site analysis, as one made in the app does. |
+| `GET /recommendations`, `POST /recommendations` | The acquisition and feature ideas on the dashboard. Each has a `key`. A new one takes `idea`, `evidence`, `impact` and `effort` (`high`, `medium`, `low`) and optionally `kind` (`acquisition` or `feature`). |
+| `PATCH /recommendations/{key}` | Correct an idea, or decide it: `status` `done` or `archived`. |
+| `DELETE /recommendations/{key}` | Remove one for good. Archiving keeps it on record as decided; this does not. |
+| `POST /campaigns`, `PUT /campaigns/{id}` | Write a sequence whole: `target_profile_id` and `name` (when creating), and `steps`, each `{ "type": "email", "subject": ..., "body": ..., "intent": ... }` or `{ "type": "wait", "delay_hours": 72 }`. A new campaign is a draft; only a draft can be rewritten (`409` otherwise), and the steps sent replace all of them. Activate it in the app. |
+| `DELETE /campaigns/{id}` | Delete a campaign, and where everyone in it stood. Mails already sent stay in the inbox. |
+| `GET /social-posts`, `GET /social-posts/{id}`, `PATCH /social-posts/{id}`, `DELETE /social-posts/{id}` | The posts in every network's queue, newest first (`?platform=linkedin`), a draft's `body`, and deleting one. |
+| `GET /articles`, `GET /articles/{id}`, `PATCH /articles/{id}`, `DELETE /articles/{id}` | The blog articles of the SEO page, a draft's `title`, `meta_description` or `body`, and deleting one. |
+| `POST /articles` | Ask for one, about a `brief` or an open idea (`idea_id`). Answers `202`; the draft appears a few minutes later. |
+| `GET /article-ideas`, `DELETE /article-ideas/{id}` | The open article ideas, and dismissing one for good. |
+| `GET /reddit-replies`, `GET /reddit-replies/{id}`, `PATCH /reddit-replies/{id}`, `DELETE /reddit-replies/{id}` | The Reddit replies drafted for you, a draft's `body`, and deleting one. Posting stays in the app. |
+
+Lists of things that grow (runs, posts, articles, replies) are paginated like the others; the short ones (profiles, recommendations, ideas) come whole. A post, article or reply that is no longer a draft answers `409` to an edit. Publishing, approving and activating stay in the app, where you see what will go out.
+
+## MCP
+
+Eveil is also an [MCP](https://modelcontextprotocol.io) server, so an AI assistant can work with your projects directly: "which companies scored above 80 this week?", "add these five people and enrol them in the logistics campaign". It lives at `/mcp` on your instance (`https://eveil.cloud/mcp` on the cloud edition), and an assistant connects to it one of two ways. Either way it moves between projects on its own: ask about any of them in the same conversation.
+
+### Signing in
+
+The simplest way, and the only one for the connectors in Claude's or ChatGPT's web and desktop apps: add `https://eveil.cloud/mcp` (or `https://<your instance>/mcp`) as a custom connector. The assistant sends you to Eveil, you sign in if you aren't already, and click **Connect**.
+
+The assistant then acts as you: it reaches every project you can open in Eveil yourself, in every organization you belong to, no more. Lose access to a project, or leave an organization, and the assistant loses it too, on the spot.
+
+Your connected assistants are listed in your account, under **Connected assistants**. **Disconnect** cuts one off immediately.
+
+### With a token
+
+For a client that can send a header, the same tokens as the API work too, reaching every project of the organization that owns the token. Only owners and admins can create one, on **Settings → API**.
+
+In Claude Code, Cursor or any client that reads an `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "eveil": {
+      "type": "http",
+      "url": "https://eveil.cloud/mcp",
+      "headers": { "Authorization": "Bearer eveil_..." }
+    }
+  }
+}
+```
+
+Or from a terminal with Claude Code:
+
+```bash
+claude mcp add --transport http eveil https://eveil.cloud/mcp \
+  --header "Authorization: Bearer eveil_..."
+```
+
+### Tools
+
+An assistant gets the same tools [Evie](/product/evie) has, every one of them, plus a few only an integration needs. All but `list-projects` take the project's slug as `project`; the assistant finds it with `list-projects`, and may leave it out when only one project is in reach.
+
+| Tool | Does |
+| --- | --- |
+| `list-projects` | The projects in reach, with their slugs. |
+| `list-contacts` | Every person, page by page. |
+| `add-contacts` | Add people you already have, up to 500 at a time. |
+| `list-campaign-leads` | Who is in a campaign and where. |
+| `enrol-campaign-leads` | Add everyone eligible to a running campaign. |
+
+The tools Evie asks you to confirm in chat are marked as such for the assistant too, so it asks you before starting a discovery run or deleting anything.
+
+Lists come 50 at a time: the assistant asks for the next `page` when it needs more. A token shares the API's rate limit, 60 calls a minute per organization for the API and MCP together. A signed-in assistant gets its own 60 a minute, per person.

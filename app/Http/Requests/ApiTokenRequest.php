@@ -2,9 +2,11 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
-
-class ApiTokenRequest extends FormRequest
+/**
+ * A token reaches every project of the organization, so creating one takes a
+ * role that already sees them all, like `ApiTokenRevokeRequest`.
+ */
+class ApiTokenRequest extends ApiTokenRevokeRequest
 {
     /**
      * @return array<string, mixed>

@@ -2,11 +2,10 @@
 
 namespace App\Ai\Tools;
 
+use App\Actions\AddRecommendation;
 use App\Enums\RecommendationKind;
-use App\Enums\RecommendationStatus;
 use App\Models\Project;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
-use Illuminate\Support\Str;
 use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
 use Stringable;
@@ -37,43 +36,15 @@ class ProposeRecommendation implements Tool
 
     public function handle(Request $request): Stringable|string
     {
-        $existingKeys = collect($this->project->recommendations())->pluck('key')->all();
-
-        $key = $this->uniqueKey($request->string('idea')->value(), $existingKeys);
-
-        $recommendations = [
-            ...$this->project->recommendations(),
-            [
-                'key' => $key,
-                'idea' => $request->string('idea')->value(),
-                'evidence' => $request->string('evidence')->value(),
-                'impact' => $request->string('impact')->value(),
-                'effort' => $request->string('effort')->value(),
-                'status' => RecommendationStatus::Proposed->value,
-                'kind' => $request->string('kind', RecommendationKind::Acquisition->value)->value(),
-            ],
-        ];
-
-        $this->project->update([
-            'knowledge_base' => [...$this->project->knowledge_base ?? [], 'recommendations' => $recommendations],
+        $key = app(AddRecommendation::class)->handle($this->project, [
+            'idea' => $request->string('idea')->value(),
+            'evidence' => $request->string('evidence')->value(),
+            'impact' => $request->string('impact')->value(),
+            'effort' => $request->string('effort')->value(),
+            'kind' => $request->string('kind', RecommendationKind::Acquisition->value)->value(),
         ]);
 
         return "Added, key \"{$key}\".";
-    }
-
-    /**
-     * @param  array<int, string>  $existingKeys
-     */
-    private function uniqueKey(string $idea, array $existingKeys): string
-    {
-        $base = Str::slug($idea, '_') ?: 'idea';
-        $key = $base;
-
-        for ($suffix = 2; in_array($key, $existingKeys, true); $suffix++) {
-            $key = "{$base}_{$suffix}";
-        }
-
-        return $key;
     }
 
     /**

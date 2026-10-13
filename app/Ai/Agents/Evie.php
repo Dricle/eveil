@@ -2,49 +2,13 @@
 
 namespace App\Ai\Agents;
 
-use App\Ai\Tools\AddCompanyNote;
-use App\Ai\Tools\AddLeadNote;
-use App\Ai\Tools\CreateSequence;
-use App\Ai\Tools\CreateTargetProfile;
-use App\Ai\Tools\DeleteAllCompanies;
-use App\Ai\Tools\DeleteAllLeads;
-use App\Ai\Tools\DeleteCompanyNote;
-use App\Ai\Tools\DeleteLeadNote;
-use App\Ai\Tools\DeleteTargetProfile;
-use App\Ai\Tools\DismissArticleIdea;
-use App\Ai\Tools\DraftArticle;
-use App\Ai\Tools\DraftSocialPost;
 use App\Ai\Tools\Evie\ProposeSuggestedReplies;
-use App\Ai\Tools\FindFeatureGaps;
-use App\Ai\Tools\FindNewTargetProfiles;
-use App\Ai\Tools\GetArticle;
-use App\Ai\Tools\GetCampaign;
-use App\Ai\Tools\GetCompany;
-use App\Ai\Tools\GetContact;
-use App\Ai\Tools\GetDiscoveryRunStatus;
-use App\Ai\Tools\GetKnowledgeBase;
-use App\Ai\Tools\GetRedditReply;
-use App\Ai\Tools\GetTargetProfile;
-use App\Ai\Tools\ListArticleIdeas;
-use App\Ai\Tools\ListArticles;
-use App\Ai\Tools\ListCampaigns;
-use App\Ai\Tools\ListCompanies;
-use App\Ai\Tools\ListSocialPosts;
-use App\Ai\Tools\ListTargetProfiles;
-use App\Ai\Tools\ProposeRecommendation;
-use App\Ai\Tools\RefreshAcquisitionIdeas;
-use App\Ai\Tools\StartDiscovery;
-use App\Ai\Tools\UpdateArticle;
-use App\Ai\Tools\UpdateKnowledgeBase;
-use App\Ai\Tools\UpdateRecommendation;
-use App\Ai\Tools\UpdateRedditReply;
-use App\Ai\Tools\UpdateSequence;
-use App\Ai\Tools\UpdateSocialPost;
-use App\Ai\Tools\UpdateTargetProfile;
+use App\Ai\Tools\Toolbelt;
 use App\Enums\SocialPlatform;
 use Laravel\Ai\Attributes\MaxSteps;
 use Laravel\Ai\Concerns\RemembersConversations;
 use Laravel\Ai\Contracts\HasTools;
+use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Models\Conversation;
 use Stringable;
 
@@ -361,44 +325,8 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
     public function tools(): iterable
     {
         return [
-            new ListTargetProfiles($this->project),
-            new GetTargetProfile($this->project),
-            new CreateTargetProfile($this->project),
-            new UpdateTargetProfile($this->project),
-            new DeleteTargetProfile($this->project),
-            new ListCompanies($this->project),
-            new GetCompany($this->project),
-            new GetContact($this->project),
-            new AddLeadNote($this->project),
-            new DeleteLeadNote($this->project),
-            new AddCompanyNote($this->project),
-            new DeleteCompanyNote($this->project),
-            new DeleteAllCompanies($this->project),
-            new DeleteAllLeads($this->project),
-            new GetKnowledgeBase($this->project),
-            new UpdateKnowledgeBase($this->project),
-            new ProposeRecommendation($this->project),
-            new FindFeatureGaps($this->project),
-            new UpdateRecommendation($this->project),
-            new RefreshAcquisitionIdeas($this->project),
-            new ListCampaigns($this->project),
-            new GetCampaign($this->project),
-            new GetDiscoveryRunStatus($this->project),
-            new StartDiscovery($this->project),
-            new FindNewTargetProfiles($this->project),
-            new CreateSequence($this->project),
-            new UpdateSequence($this->project),
-            new DraftSocialPost($this->project),
-            new ListSocialPosts($this->project),
-            new UpdateSocialPost($this->project),
-            new ListArticles($this->project),
-            new GetArticle($this->project),
-            new DraftArticle($this->project),
-            new UpdateArticle($this->project),
-            new ListArticleIdeas($this->project),
-            new DismissArticleIdea($this->project),
-            new GetRedditReply($this->project),
-            new UpdateRedditReply($this->project),
+            ...array_map(fn (string $tool): Tool => new $tool($this->project), Toolbelt::TOOLS),
+            // Chat only: it fills the suggestion chips under her answer.
             new ProposeSuggestedReplies,
         ];
     }

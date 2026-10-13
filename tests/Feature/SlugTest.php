@@ -13,7 +13,7 @@ it('de-duplicates against slugs already taken', function () {
     Organization::create(['name' => 'Acme Tools']);
     $third = Organization::create(['name' => 'Acme Tools']);
 
-    expect(Organization::query()->pluck('slug')->all())
+    expect(Organization::query()->orderBy('id')->pluck('slug')->all())
         ->toBe(['acme-tools', 'acme-tools-2', 'acme-tools-3'])
         ->and($third->slug)->toBe('acme-tools-3');
 });

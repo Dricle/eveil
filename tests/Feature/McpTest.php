@@ -1,6 +1,6 @@
 <?php
 
-use App\Ai\Agents\Evie;
+use App\Ai\Tools\Toolbelt;
 use App\Enums\CampaignStatus;
 use App\Models\Campaign;
 use App\Models\Company;
@@ -36,7 +36,7 @@ it('lists every tool to a valid token', function () {
     $this->withToken(Str::after(Project::factory()->create()->organization->createToken('test')->plainTextToken, '|'))
         ->postJson('/mcp', ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/list'])
         ->assertOk()
-        ->assertJsonCount(5 + count(Evie::TOOLS), 'result.tools');
+        ->assertJsonCount(5 + count(Toolbelt::TOOLS), 'result.tools');
 });
 
 it('acts on the project a call names, among its organization only', function () {

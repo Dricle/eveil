@@ -2,11 +2,11 @@
 
 namespace App\Mcp\Servers;
 
-use App\Ai\Agents\Evie;
+use App\Ai\Tools\Toolbelt;
 use App\Mcp\Methods\CallProjectTool;
 use App\Mcp\Tools\AddContacts;
+use App\Mcp\Tools\AiTool;
 use App\Mcp\Tools\EnrolCampaignLeads;
-use App\Mcp\Tools\EvieTool;
 use App\Mcp\Tools\ListCampaignLeads;
 use App\Mcp\Tools\ListContacts;
 use App\Mcp\Tools\ListProjects;
@@ -20,8 +20,8 @@ use Laravel\Mcp\Server\Attributes\Version;
  * organization's projects, and each call names one: `CallProjectTool` sets it
  * before the tool runs, then the `BelongsToProject` scope does the rest.
  *
- * The toolbelt is Evie's, whole (`EvieTool`), so an assistant can do what she
- * can, plus what only an integration needs: finding the projects, paging
+ * The whole `Toolbelt` (`AiTool`), so an assistant can do what Evie can,
+ * plus what only an integration needs: finding the projects, paging
  * through every contact or campaign member, adding contacts, enrolling.
  */
 #[Name('Eveil')]
@@ -49,8 +49,8 @@ class EveilServer extends Server
     {
         $this->addMethod('tools/call', CallProjectTool::class);
 
-        foreach (Evie::toolbelt() as $name => $tool) {
-            $this->tools[] = new EvieTool($name, $tool);
+        foreach (Toolbelt::byName() as $name => $tool) {
+            $this->tools[] = new AiTool($name, $tool);
         }
     }
 }

@@ -8,27 +8,26 @@ use App\Support\CurrentProject;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Arr;
 use Laravel\Ai\Contracts\Approvable;
-use Laravel\Ai\Contracts\Tool as EvieToolContract;
-use Laravel\Ai\Tools\Request as EvieRequest;
+use Laravel\Ai\Contracts\Tool as AiToolContract;
+use Laravel\Ai\Tools\Request as AiRequest;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
 
 /**
- * One of Evie's tools (`Evie::TOOLS`), served over MCP as it is: same
- * description, same arguments plus `project`, same answer. Wrapped rather
- * than rewritten, so a tool added to Evie reaches assistants with no change
- * here.
+ * A project tool (`Toolbelt`), served over MCP as it is: same description,
+ * same arguments plus `project`, same answer. Wrapped rather than rewritten,
+ * so one class serves both Evie in chat and assistants over MCP.
  *
  * A tool Evie asks the user to approve in chat is flagged destructive, which
  * is what makes an MCP client ask its own user before calling it.
  */
-class EvieTool extends Tool
+class AiTool extends Tool
 {
     use ActsOnProject;
 
     /**
-     * @param  class-string<EvieToolContract>  $tool
+     * @param  class-string<AiToolContract>  $tool
      */
     public function __construct(string $name, private string $tool)
     {
@@ -39,7 +38,7 @@ class EvieTool extends Tool
     public function handle(Request $request, CurrentProject $currentProject): Response
     {
         return Response::text((string) $this->instance($currentProject->getOrFail())->handle(
-            new EvieRequest(Arr::except($request->all(), 'project'))
+            new AiRequest(Arr::except($request->all(), 'project'))
         ));
     }
 
@@ -66,7 +65,7 @@ class EvieTool extends Tool
      * Without a project, only for what describes the tool: none of them reads
      * its project before `handle()`.
      */
-    private function instance(?Project $project = null): EvieToolContract
+    private function instance(?Project $project = null): AiToolContract
     {
         return new ($this->tool)($project ?? new Project);
     }

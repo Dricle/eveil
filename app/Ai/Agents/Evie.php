@@ -2,47 +2,9 @@
 
 namespace App\Ai\Agents;
 
-use App\Ai\Tools\AddCompanyNote;
-use App\Ai\Tools\AddLeadNote;
-use App\Ai\Tools\CreateSequence;
-use App\Ai\Tools\CreateTargetProfile;
-use App\Ai\Tools\DeleteAllCompanies;
-use App\Ai\Tools\DeleteAllLeads;
-use App\Ai\Tools\DeleteCompanyNote;
-use App\Ai\Tools\DeleteLeadNote;
-use App\Ai\Tools\DeleteTargetProfile;
-use App\Ai\Tools\DismissArticleIdea;
-use App\Ai\Tools\DraftArticle;
-use App\Ai\Tools\DraftSocialPost;
 use App\Ai\Tools\Evie\ProposeSuggestedReplies;
-use App\Ai\Tools\FindFeatureGaps;
-use App\Ai\Tools\FindNewTargetProfiles;
-use App\Ai\Tools\GetArticle;
-use App\Ai\Tools\GetCampaign;
-use App\Ai\Tools\GetCompany;
-use App\Ai\Tools\GetContact;
-use App\Ai\Tools\GetDiscoveryRunStatus;
-use App\Ai\Tools\GetKnowledgeBase;
-use App\Ai\Tools\GetRedditReply;
-use App\Ai\Tools\GetTargetProfile;
-use App\Ai\Tools\ListArticleIdeas;
-use App\Ai\Tools\ListArticles;
-use App\Ai\Tools\ListCampaigns;
-use App\Ai\Tools\ListCompanies;
-use App\Ai\Tools\ListSocialPosts;
-use App\Ai\Tools\ListTargetProfiles;
-use App\Ai\Tools\ProposeRecommendation;
-use App\Ai\Tools\RefreshAcquisitionIdeas;
-use App\Ai\Tools\StartDiscovery;
-use App\Ai\Tools\UpdateArticle;
-use App\Ai\Tools\UpdateKnowledgeBase;
-use App\Ai\Tools\UpdateRecommendation;
-use App\Ai\Tools\UpdateRedditReply;
-use App\Ai\Tools\UpdateSequence;
-use App\Ai\Tools\UpdateSocialPost;
-use App\Ai\Tools\UpdateTargetProfile;
+use App\Ai\Tools\Toolbelt;
 use App\Enums\SocialPlatform;
-use Illuminate\Support\Str;
 use Laravel\Ai\Attributes\MaxSteps;
 use Laravel\Ai\Concerns\RemembersConversations;
 use Laravel\Ai\Contracts\HasTools;
@@ -63,54 +25,6 @@ use Stringable;
 #[MaxSteps(12)]
 class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversations, HasTools
 {
-    /**
-     * Every tool Evie has on a project, in the order she is given them. Also
-     * the toolbelt of the API and the MCP server (`toolbelt()`): whatever she
-     * can do in the app, an integration or another assistant can do too.
-     *
-     * @var list<class-string<Tool>>
-     */
-    public const TOOLS = [
-        ListTargetProfiles::class,
-        GetTargetProfile::class,
-        CreateTargetProfile::class,
-        UpdateTargetProfile::class,
-        DeleteTargetProfile::class,
-        ListCompanies::class,
-        GetCompany::class,
-        GetContact::class,
-        AddLeadNote::class,
-        DeleteLeadNote::class,
-        AddCompanyNote::class,
-        DeleteCompanyNote::class,
-        DeleteAllCompanies::class,
-        DeleteAllLeads::class,
-        GetKnowledgeBase::class,
-        UpdateKnowledgeBase::class,
-        ProposeRecommendation::class,
-        FindFeatureGaps::class,
-        UpdateRecommendation::class,
-        RefreshAcquisitionIdeas::class,
-        ListCampaigns::class,
-        GetCampaign::class,
-        GetDiscoveryRunStatus::class,
-        StartDiscovery::class,
-        FindNewTargetProfiles::class,
-        CreateSequence::class,
-        UpdateSequence::class,
-        DraftSocialPost::class,
-        ListSocialPosts::class,
-        UpdateSocialPost::class,
-        ListArticles::class,
-        GetArticle::class,
-        DraftArticle::class,
-        UpdateArticle::class,
-        ListArticleIdeas::class,
-        DismissArticleIdea::class,
-        GetRedditReply::class,
-        UpdateRedditReply::class,
-    ];
-
     use RemembersConversations;
 
     /**
@@ -411,20 +325,9 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
     public function tools(): iterable
     {
         return [
-            ...array_map(fn (string $tool): Tool => new $tool($this->project), self::TOOLS),
+            ...array_map(fn (string $tool): Tool => new $tool($this->project), Toolbelt::TOOLS),
             // Chat only: it fills the suggestion chips under her answer.
             new ProposeSuggestedReplies,
         ];
-    }
-
-    /**
-     * `TOOLS` by the name the API and the MCP server call them, kebab-cased
-     * (`list-target-profiles`).
-     *
-     * @return array<string, class-string<Tool>>
-     */
-    public static function toolbelt(): array
-    {
-        return array_combine(array_map(fn (string $tool): string => Str::kebab(class_basename($tool)), self::TOOLS), self::TOOLS);
     }
 }

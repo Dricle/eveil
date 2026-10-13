@@ -12,6 +12,7 @@ use App\Models\TargetProfile;
 use App\Support\CurrentProject;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 use RuntimeException;
 
 /**
@@ -67,5 +68,16 @@ class CampaignController extends Controller
                 ->withDeliveryCounts()
                 ->findOrFail($campaign)
         );
+    }
+
+    /**
+     * Deletes the campaign and, with it, where everyone in it stood. The mails
+     * already sent stay in the inbox.
+     */
+    public function destroy(int $campaign): Response
+    {
+        Campaign::query()->findOrFail($campaign)->delete();
+
+        return response()->noContent();
     }
 }

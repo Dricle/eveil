@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Actions\AddRecommendation;
+use App\Actions\RemoveRecommendation;
 use App\Actions\UpdateRecommendation;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\RecommendationStoreRequest;
 use App\Http\Requests\Api\RecommendationUpdateRequest;
 use App\Support\CurrentProject;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 
 /**
  * The acquisition and feature ideas on the project's dashboard. They have a
@@ -42,5 +44,16 @@ class RecommendationController extends Controller
         abort_unless($update->handle($project, $recommendation, $request->validated()), 404);
 
         return response()->json(collect($project->recommendations())->firstWhere('key', $recommendation));
+    }
+
+    /**
+     * Gone for good. To keep it on record as decided, `PATCH` its status to
+     * `archived` instead.
+     */
+    public function destroy(CurrentProject $currentProject, RemoveRecommendation $remove, string $recommendation): Response
+    {
+        abort_unless($remove->handle($currentProject->getOrFail(), $recommendation), 404);
+
+        return response()->noContent();
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Actions\RunDiscovery;
+use App\Enums\DiscoveryRunStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\DiscoveryRunStoreRequest;
 use App\Http\Resources\DiscoveryRunResource;
@@ -47,5 +48,20 @@ class DiscoveryRunController extends Controller
         );
 
         return DiscoveryRunResource::make($run->load('targetProfile'))->response()->setStatusCode(201);
+    }
+
+    /**
+     * Stops a run that is still going, as the app's Cancel does. A finished
+     * one is left as it ended.
+     */
+    public function cancel(int $discoveryRun): DiscoveryRunResource
+    {
+        $run = DiscoveryRun::query()->with('targetProfile')->findOrFail($discoveryRun);
+
+        if (! $run->status->isTerminal()) {
+            $run->update(['status' => DiscoveryRunStatus::Aborted, 'finished_at' => now()]);
+        }
+
+        return DiscoveryRunResource::make($run);
     }
 }

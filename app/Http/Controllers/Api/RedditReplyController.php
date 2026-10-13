@@ -9,6 +9,7 @@ use App\Http\Resources\RedditReplyResource;
 use App\Models\RedditReply;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 
 /**
  * The Reddit replies drafted for the project, newest first, and their
@@ -37,5 +38,12 @@ class RedditReplyController extends Controller
         $reply->update($request->validated());
 
         return RedditReplyResource::make($reply);
+    }
+
+    public function destroy(int $redditReply): Response
+    {
+        RedditReply::query()->findOrFail($redditReply)->delete();
+
+        return response()->noContent();
     }
 }

@@ -15,6 +15,7 @@ use App\Models\Idea;
 use App\Support\CurrentProject;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 
 /**
  * The blog articles of the SEO page, newest first. Asking for one queues it,
@@ -57,5 +58,12 @@ class ArticleController extends Controller
         $article->update($request->validated());
 
         return ArticleResource::make($article);
+    }
+
+    public function destroy(int $article): Response
+    {
+        Article::query()->findOrFail($article)->delete();
+
+        return response()->noContent();
     }
 }

@@ -95,7 +95,7 @@ return [
     'verification' => [
         // The envelope sender of the SMTP probe. Infrastructure: it has to
         // resolve on the machine doing the probing.
-        'probe_from' => env('EVEIL_PROBE_FROM', 'verify@eveil.local'),
+        'probe_from' => env('EVEIL_PROBE_FROM', 'verify@eveil.cloud'),
     ],
 
     /*

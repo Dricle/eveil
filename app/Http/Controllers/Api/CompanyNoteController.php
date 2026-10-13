@@ -15,6 +15,16 @@ use Illuminate\Http\Response;
  */
 class CompanyNoteController extends Controller
 {
+    /**
+     * Newest first, like the timeline. Not paginated: a timeline is short.
+     */
+    public function index(int $company): JsonResponse
+    {
+        return response()->json(['data' => NoteResource::collection(
+            Company::query()->findOrFail($company)->notes()->with('user')->get()
+        )]);
+    }
+
     public function store(NoteRequest $request, int $company): JsonResponse
     {
         $note = Company::query()->findOrFail($company)->notes()->create([
@@ -23,6 +33,15 @@ class CompanyNoteController extends Controller
         ]);
 
         return NoteResource::make($note)->response()->setStatusCode(201);
+    }
+
+    public function update(NoteRequest $request, int $company, int $note): NoteResource
+    {
+        $note = Company::query()->findOrFail($company)->notes()->with('user')->findOrFail($note);
+
+        $note->update(['body' => $request->string('body')->value()]);
+
+        return NoteResource::make($note);
     }
 
     public function destroy(int $company, int $note): Response

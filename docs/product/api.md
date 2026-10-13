@@ -217,18 +217,21 @@ The rest of what you can do in the app, and what [Evie](/product/evie) can do fo
 | `DELETE /target-profiles/{id}` | Delete one. |
 | `GET /discovery-runs`, `GET /discovery-runs/{id}` | Searches for new companies, newest first, with their status and what they found. Filter with `?target_profile_id=`. |
 | `POST /discovery-runs` | Start one for `target_profile_id`. Optional `guidance` steers this run only ("only around Lyon"), without changing the profile. |
-| `POST /companies/{id}/notes`, `DELETE /companies/{id}/notes/{note}` | A company's timeline. `body` is the text. A note written through the API has no author. |
-| `POST /contacts/{id}/notes`, `DELETE /contacts/{id}/notes/{note}` | A person's timeline, the same way. |
+| `POST /discovery-runs/{id}/cancel` | Stop a run that is still going. A finished one is left as it ended. |
+| `GET /companies/{id}/notes`, `POST`, `PATCH /companies/{id}/notes/{note}`, `DELETE` | A company's timeline, newest first. `body` is the text. A note written through the API has no author. |
+| `GET /contacts/{id}/notes`, `POST`, `PATCH /contacts/{id}/notes/{note}`, `DELETE` | A person's timeline, the same way. |
 | `DELETE /companies`, `DELETE /contacts` | Delete every company, or every person, of the project, to start discovery over. Answers how many went. |
 | `GET /knowledge-base`, `PUT /knowledge-base` | What Eveil knows about your product, the portrait every email and post starts from. A correction written here survives the next site analysis, as one made in the app does. |
 | `GET /recommendations`, `POST /recommendations` | The acquisition and feature ideas on the dashboard. Each has a `key`. A new one takes `idea`, `evidence`, `impact` and `effort` (`high`, `medium`, `low`) and optionally `kind` (`acquisition` or `feature`). |
 | `PATCH /recommendations/{key}` | Correct an idea, or decide it: `status` `done` or `archived`. |
+| `DELETE /recommendations/{key}` | Remove one for good. Archiving keeps it on record as decided; this does not. |
 | `POST /campaigns`, `PUT /campaigns/{id}` | Write a sequence whole: `target_profile_id` and `name` (when creating), and `steps`, each `{ "type": "email", "subject": ..., "body": ..., "intent": ... }` or `{ "type": "wait", "delay_hours": 72 }`. A new campaign is a draft; only a draft can be rewritten (`409` otherwise), and the steps sent replace all of them. Activate it in the app. |
-| `GET /social-posts`, `PATCH /social-posts/{id}` | The posts in every network's queue, newest first (`?platform=linkedin`), and a draft's `body`. |
-| `GET /articles`, `GET /articles/{id}`, `PATCH /articles/{id}` | The blog articles of the SEO page, and a draft's `title`, `meta_description` or `body`. |
+| `DELETE /campaigns/{id}` | Delete a campaign, and where everyone in it stood. Mails already sent stay in the inbox. |
+| `GET /social-posts`, `GET /social-posts/{id}`, `PATCH /social-posts/{id}`, `DELETE /social-posts/{id}` | The posts in every network's queue, newest first (`?platform=linkedin`), a draft's `body`, and deleting one. |
+| `GET /articles`, `GET /articles/{id}`, `PATCH /articles/{id}`, `DELETE /articles/{id}` | The blog articles of the SEO page, a draft's `title`, `meta_description` or `body`, and deleting one. |
 | `POST /articles` | Ask for one, about a `brief` or an open idea (`idea_id`). Answers `202`; the draft appears a few minutes later. |
 | `GET /article-ideas`, `DELETE /article-ideas/{id}` | The open article ideas, and dismissing one for good. |
-| `GET /reddit-replies`, `GET /reddit-replies/{id}`, `PATCH /reddit-replies/{id}` | The Reddit replies drafted for you, and a draft's `body`. Posting stays in the app. |
+| `GET /reddit-replies`, `GET /reddit-replies/{id}`, `PATCH /reddit-replies/{id}`, `DELETE /reddit-replies/{id}` | The Reddit replies drafted for you, a draft's `body`, and deleting one. Posting stays in the app. |
 
 Lists of things that grow (runs, posts, articles, replies) are paginated like the others; the short ones (profiles, recommendations, ideas) come whole. A post, article or reply that is no longer a draft answers `409` to an edit. Publishing, approving and activating stay in the app, where you see what will go out.
 

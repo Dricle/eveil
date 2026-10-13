@@ -2,6 +2,7 @@
 
 use App\Enums\ArticleStatus;
 use App\Enums\CampaignStatus;
+use App\Enums\DiscoveryRunStatus;
 use App\Enums\IdeaStatus;
 use App\Enums\RedditReplyStatus;
 use App\Enums\SocialPostStatus;
@@ -54,7 +55,7 @@ it('manages target profiles, written as the user own', function () {
     $this->withToken($token)->deleteJson(route('api.target-profiles.destroy', [$project, $id]))->assertNoContent();
 });
 
-it('adds and removes notes on a company and a contact, without an author', function () {
+it('reads, writes and removes notes on a company and a contact, without an author', function () {
     $project = Project::factory()->create();
     $company = Company::factory()->for($project)->create();
     $contact = Lead::factory()->for($project)->create();
@@ -65,6 +66,13 @@ it('adds and removes notes on a company and a contact, without an author', funct
         ->assertCreated()
         ->assertJsonPath('author', null)
         ->json('id');
+
+    $this->withToken($token)->patchJson(route('api.companies.notes.update', [$project, $company->id, $note]), ['body' => 'Called them twice.'])
+        ->assertJsonPath('body', 'Called them twice.');
+    $this->withToken($token)->getJson(route('api.companies.notes.index', [$project, $company->id]))
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.body', 'Called them twice.');
+    $this->withToken($token)->getJson(route('api.companies.notes.index', [$project, $foreign->id]))->assertNotFound();
 
     $this->withToken($token)->deleteJson(route('api.companies.notes.destroy', [$project, $company->id, $note]))->assertNoContent();
     $this->withToken($token)->postJson(route('api.contacts.notes.store', [$project, $contact->id]), ['body' => 'Meeting on the 20th.'])->assertCreated();
@@ -175,4 +183,44 @@ it('queues an article from an open idea and dismisses another', function () {
 
     Queue::assertPushed(GenerateArticle::class, fn (GenerateArticle $job): bool => $job->ideaId === $write->id);
     expect($dismiss->fresh()->status)->toBe(IdeaStatus::Dismissed);
+});
+
+it('deletes a campaign, post, article or reply of the project only', function () {
+    $project = Project::factory()->create();
+    $token = resourceToken($project);
+    $rows = [
+        'campaigns' => [Campaign::factory()->for($project)->create(), Campaign::factory()->create()],
+        'social-posts' => [SocialPost::factory()->for($project)->create(), SocialPost::factory()->create()],
+        'articles' => [Article::factory()->for($project)->create(), Article::factory()->create()],
+        'reddit-replies' => [RedditReply::factory()->for($project)->create(), RedditReply::factory()->create()],
+    ];
+
+    foreach ($rows as $resource => [$mine, $theirs]) {
+        $this->withToken($token)->deleteJson(route("api.{$resource}.destroy", [$project, $theirs->id]))->assertNotFound();
+        $this->withToken($token)->deleteJson(route("api.{$resource}.destroy", [$project, $mine->id]))->assertNoContent();
+
+        expect($mine::withoutGlobalScopes()->whereKey($mine->id)->exists())->toBeFalse()
+            ->and($theirs::withoutGlobalScopes()->whereKey($theirs->id)->exists())->toBeTrue();
+    }
+});
+
+it('removes a recommendation for good, by key', function () {
+    $project = Project::factory()->create();
+    $token = resourceToken($project);
+    $key = $this->withToken($token)->postJson(route('api.recommendations.store', $project), ['idea' => 'Partner up', 'evidence' => 'Seen.', 'impact' => 'low', 'effort' => 'low'])->json('key');
+
+    $this->withToken($token)->deleteJson(route('api.recommendations.destroy', [$project, $key]))->assertNoContent();
+    $this->withToken($token)->deleteJson(route('api.recommendations.destroy', [$project, $key]))->assertNotFound();
+
+    expect($project->fresh()->recommendations())->toBe([]);
+});
+
+it('cancels a running discovery run and leaves a finished one alone', function () {
+    $project = Project::factory()->create();
+    $running = DiscoveryRun::factory()->for($project)->create(['status' => DiscoveryRunStatus::Running]);
+    $finished = DiscoveryRun::factory()->for($project)->create(['status' => DiscoveryRunStatus::Succeeded]);
+    $token = resourceToken($project);
+
+    $this->withToken($token)->postJson(route('api.discovery-runs.cancel', [$project, $running->id]))->assertJsonPath('status', 'aborted');
+    $this->withToken($token)->postJson(route('api.discovery-runs.cancel', [$project, $finished->id]))->assertJsonPath('status', 'succeeded');
 });

@@ -16,6 +16,16 @@ use Illuminate\Http\Response;
  */
 class ContactNoteController extends Controller
 {
+    /**
+     * Newest first, like the timeline. Not paginated: a timeline is short.
+     */
+    public function index(int $contact): JsonResponse
+    {
+        return response()->json(['data' => NoteResource::collection(
+            Lead::query()->whereNull('erased_at')->findOrFail($contact)->notes()->with('user')->get()
+        )]);
+    }
+
     public function store(NoteRequest $request, int $contact): JsonResponse
     {
         $note = Lead::query()->whereNull('erased_at')->findOrFail($contact)->notes()->create([
@@ -24,6 +34,15 @@ class ContactNoteController extends Controller
         ]);
 
         return NoteResource::make($note)->response()->setStatusCode(201);
+    }
+
+    public function update(NoteRequest $request, int $contact, int $note): NoteResource
+    {
+        $note = Lead::query()->whereNull('erased_at')->findOrFail($contact)->notes()->with('user')->findOrFail($note);
+
+        $note->update(['body' => $request->string('body')->value()]);
+
+        return NoteResource::make($note);
     }
 
     public function destroy(int $contact, int $note): Response

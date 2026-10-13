@@ -14,6 +14,7 @@ use App\Support\CurrentProject;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 
 /**
  * The posts in each network's queue, newest first, and their drafts' text.
@@ -62,5 +63,17 @@ class SocialPostController extends Controller
         );
 
         return response()->json(['message' => 'Queued.'], 202);
+    }
+
+    public function show(int $socialPost): SocialPostResource
+    {
+        return SocialPostResource::make(SocialPost::query()->with('socialAccount')->findOrFail($socialPost));
+    }
+
+    public function destroy(int $socialPost): Response
+    {
+        SocialPost::query()->findOrFail($socialPost)->delete();
+
+        return response()->noContent();
     }
 }

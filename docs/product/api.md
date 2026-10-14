@@ -143,6 +143,22 @@ One bad contact does not fail the batch. The answer reports what happened to eac
 
 Added addresses are not checked on the way in: the check before the first send is where an address has to prove itself, as with an import. Added people join a campaign like anyone else: on its next enrolment, or when you enrol below.
 
+### Existing clients
+
+`POST /known-clients` does what **Mark existing clients** does on the Companies screen: it marks people and companies you already work with as `client`, so no campaign ever writes to them. Each entry is an email address (that person) or a website (the whole company, and everyone found there):
+
+```json
+{ "entries": ["jean@example.com", "example.org"] }
+```
+
+Up to 500 entries. Someone Eveil doesn't have yet is added already marked, so a later search can't add them as new. It answers how many of each it marked:
+
+```json
+{ "companies": 1, "leads": 1 }
+```
+
+This is how a CRM keeps its customers out of your campaigns: see [Webhooks and CRM sync](/product/webhooks#recipe-your-crm-to-eveil).
+
 ## Campaigns
 
 `GET /campaigns` lists the email campaigns, `GET /campaigns/{id}` returns one with its steps and their variants.

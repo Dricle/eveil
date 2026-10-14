@@ -78,6 +78,8 @@ use App\Http\Controllers\RedditCadenceController;
 use App\Http\Controllers\RedditReplyController;
 use App\Http\Controllers\Settings\ApiTokenController;
 use App\Http\Controllers\Settings\MemberController;
+use App\Http\Controllers\Settings\WebhookController;
+use App\Http\Controllers\Settings\WebhookTestController;
 use App\Http\Controllers\SocialAccountController;
 use App\Http\Controllers\SocialCadenceController;
 use App\Http\Controllers\SocialInstructionsController;
@@ -211,6 +213,19 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             Route::delete('api-tokens/{token}', [ApiTokenController::class, 'destroy'])
                 ->whereNumber('token')
                 ->name('api-tokens.destroy');
+
+            /*
+             * Project-scoped, unlike tokens: one client's CRM must never
+             * receive another client's leads.
+             */
+            Route::get('webhooks', [WebhookController::class, 'index'])->name('webhooks.index');
+            Route::post('webhooks', [WebhookController::class, 'store'])->name('webhooks.store');
+            Route::delete('webhooks/{webhook}', [WebhookController::class, 'destroy'])
+                ->whereNumber('webhook')
+                ->name('webhooks.destroy');
+            Route::post('webhooks/{webhook}/test', [WebhookTestController::class, 'store'])
+                ->whereNumber('webhook')
+                ->name('webhooks.test');
 
             /*
              * Every writing-tone box together - see `AiInstructionsController`.

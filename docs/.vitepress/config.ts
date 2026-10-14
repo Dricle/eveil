@@ -27,6 +27,7 @@ export default defineConfig({
                         { text: 'Replying on Reddit', link: '/product/reddit' },
                         { text: 'SEO articles', link: '/product/seo' },
                         { text: 'API', link: '/product/api' },
+                        { text: 'Webhooks and CRM sync', link: '/product/webhooks' },
                     ],
                 },
             ],

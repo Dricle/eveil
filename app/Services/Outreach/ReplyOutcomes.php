@@ -2,6 +2,7 @@
 
 namespace App\Services\Outreach;
 
+use App\Actions\NotifyWebhooks;
 use App\Actions\SetOutreachStatus;
 use App\Enums\CampaignLeadStatus;
 use App\Enums\OutreachStatus;
@@ -24,7 +25,7 @@ use App\Models\Suppression;
  */
 class ReplyOutcomes
 {
-    public function __construct(private SetOutreachStatus $setStatus) {}
+    public function __construct(private SetOutreachStatus $setStatus, private NotifyWebhooks $webhooks) {}
 
     /**
      * They asked not to be written to again. The only opt-out channel there is,
@@ -169,8 +170,18 @@ class ReplyOutcomes
         ]);
     }
 
+    /**
+     * The first verdict is the one a CRM hears about: the opt-out net and the
+     * agent can both record on the same reply, and one reply is one event.
+     */
     private function record(Message $reply, ReplyClassification $classification): void
     {
+        $first = $reply->classification === null;
+
         $reply->update(['classification' => $classification]);
+
+        if ($first && $classification !== ReplyClassification::AutoReply) {
+            $this->webhooks->replyReceived($reply);
+        }
     }
 }

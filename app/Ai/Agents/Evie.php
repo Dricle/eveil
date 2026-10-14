@@ -82,6 +82,11 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
         DeleteTargetProfile below, nothing is spawned and nothing costs
         beyond the message itself.
 
+        MarkExistingClients needs no approval either: when the user names
+        people or companies they already work with ("we already sell to
+        acme.example and jean@example.com"), mark them so no campaign ever
+        cold-mails an existing client.
+
         UpdateKnowledgeBase is the same kind of tool, aimed at the product
         portrait rather than a timeline: when the user tells you something
         that changes it - a feature just shipped, a new pricing tier, a

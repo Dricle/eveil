@@ -38,8 +38,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class SetOutreachStatus
 {
+    public function __construct(private NotifyWebhooks $webhooks) {}
+
     public function forCompany(Company $company, OutreachStatus $status): void
     {
+        $previous = $company->status;
+
         $company->update(['status' => $status]);
 
         $company->leads()->whereNull('erased_at')->update(['status' => $status]);
@@ -48,10 +52,16 @@ class SetOutreachStatus
         $status === OutreachStatus::Won
             ? $company->leads()->whereNull('erased_at')->whereNull('won_at')->update(['won_at' => now()])
             : $company->leads()->whereNull('erased_at')->update(['won_at' => null]);
+
+        if ($previous !== $status) {
+            $this->webhooks->statusChanged($company, null, $previous);
+        }
     }
 
     public function forLead(Lead $lead, OutreachStatus $status): void
     {
+        $previous = $lead->status;
+
         $lead->update([
             'status' => $status,
             'won_at' => $status === OutreachStatus::Won ? ($lead->won_at ?? now()) : null,
@@ -63,6 +73,10 @@ class SetOutreachStatus
         // relationship, and the relationship is with the company.
         if ($company !== null && $status !== OutreachStatus::Suppressed) {
             $company->update(['status' => $status]);
+        }
+
+        if ($company !== null && $previous !== $status) {
+            $this->webhooks->statusChanged($company, $lead, $previous);
         }
     }
 

@@ -48,7 +48,7 @@ unlimited mailboxes, unlimited leads, your data on your own machine.
 > posting (Bluesky published for you, X copied and posted by you), and so is
 > Reddit reply drafting - manual-publish only for now, since Reddit is
 > currently blocking new API app registration - and SEO articles for your own
-> blog, plus a public API for the rest of your stack. Not built yet: ad
+> blog, plus a public API, an MCP server and CRM webhooks for the rest of your stack. Not built yet: ad
 > management (next up), commenting on someone else's LinkedIn post. See
 > [Issues](https://github.com/Dricle/eveil/issues) for exactly what's left.
 
@@ -102,6 +102,10 @@ unlimited mailboxes, unlimited leads, your data on your own machine.
   them, or ask for a social post. An AI assistant can do the same over MCP,
   connecting with a token or by signing in, across all your projects. See the
   [API docs](https://docs.eveil.cloud/product/api).
+- **Webhooks for your CRM.** A signed request the moment a reply comes in or a
+  deal changes status, per project, with ready-made n8n recipes for HubSpot,
+  Pipedrive and the rest, both ways. See
+  [Webhooks and CRM sync](https://docs.eveil.cloud/product/webhooks).
 - **Self-hosted and AGPL-3.0.** Four containers, five minutes, your data never
   leaves your machine unless you choose the cloud edition.
 - **No dark patterns.** No open-tracking pixel, no mailbox warm-up, no OAuth

@@ -311,3 +311,23 @@ it('refuses the sheet for another project\'s contact, and for an erased one', fu
     // somebody to fill them back in.
     $this->actingAs($user)->get(route('contacts.show', $erased))->assertNotFound();
 });
+
+it('dates a win when it is recorded and clears it when the verdict changes', function () {
+    [$user, $project] = contacter();
+
+    $lead = Lead::factory()->create(['project_id' => $project->id]);
+
+    $this->travelTo(now()->subDay());
+    $this->actingAs($user)->put(route('contacts.status', $lead), ['status' => 'won']);
+    $wonAt = $lead->refresh()->won_at;
+    $this->travelBack();
+
+    expect($wonAt)->not->toBeNull();
+
+    // Saying Won again keeps the original close date.
+    $this->actingAs($user)->put(route('contacts.status', $lead), ['status' => 'won']);
+    expect($lead->refresh()->won_at->equalTo($wonAt))->toBeTrue();
+
+    $this->actingAs($user)->put(route('contacts.status', $lead), ['status' => 'lost']);
+    expect($lead->refresh()->won_at)->toBeNull();
+});

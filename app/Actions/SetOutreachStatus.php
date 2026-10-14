@@ -43,11 +43,19 @@ class SetOutreachStatus
         $company->update(['status' => $status]);
 
         $company->leads()->whereNull('erased_at')->update(['status' => $status]);
+
+        // `won_at` dates the close: the first Won keeps its date, any other verdict clears it.
+        $status === OutreachStatus::Won
+            ? $company->leads()->whereNull('erased_at')->whereNull('won_at')->update(['won_at' => now()])
+            : $company->leads()->whereNull('erased_at')->update(['won_at' => null]);
     }
 
     public function forLead(Lead $lead, OutreachStatus $status): void
     {
-        $lead->update(['status' => $status]);
+        $lead->update([
+            'status' => $status,
+            'won_at' => $status === OutreachStatus::Won ? ($lead->won_at ?? now()) : null,
+        ]);
 
         $company = $lead->company;
 

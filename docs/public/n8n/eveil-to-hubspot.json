@@ -1,0 +1,123 @@
+{
+  "name": "Eveil: interested replies to HubSpot",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Eveil → HubSpot\nEvery interested reply becomes (or updates) a HubSpot contact.\n\n1. **Eveil webhook**: copy its *Production URL*, add it in Eveil under **Settings → Webhooks** with `reply.received`, copy the `whsec_...` secret.\n2. **Sign body**: create a **Crypto** credential, paste the secret as *Hmac Secret*.\n3. **Upsert HubSpot contact**: pick a **HubSpot App Token** credential (a HubSpot private app with the `crm.objects.contacts.write` scope).\n4. Activate, then **Send test** in Eveil.\n\nDocs: https://docs.eveil.cloud/product/webhooks",
+        "height": 340,
+        "width": 420
+      },
+      "id": "6a1f0c0e-0b4e-4c43-9b1a-1f0e2d3c4b5a",
+      "name": "How to set up",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-480, -160]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eveil",
+        "options": {}
+      },
+      "id": "0c4b6e2a-6d1f-4f0e-8a51-3f6a2b7c9d10",
+      "name": "Eveil webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [0, 0],
+      "webhookId": "3f9e7a54-2c1d-4b8e-9f60-7d5c4b3a2e19"
+    },
+    {
+      "parameters": {
+        "action": "hmac",
+        "type": "SHA256",
+        "value": "={{ JSON.stringify($json.body) }}",
+        "dataPropertyName": "signature",
+        "encoding": "hex"
+      },
+      "id": "1d2e3f40-5a6b-4c7d-8e9f-0a1b2c3d4e5f",
+      "name": "Sign body",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [
+            {
+              "id": "9b8a7c6d-5e4f-4a3b-2c1d-0e9f8a7b6c5d",
+              "leftValue": "=sha256={{ $json.signature }}",
+              "rightValue": "={{ $json.headers['x-eveil-signature'] }}",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2e3f4a5b-6c7d-4e8f-9a0b-1c2d3e4f5a6b",
+      "name": "Signed by Eveil?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [
+            {
+              "id": "4c5d6e7f-8a9b-4c0d-9e1f-2a3b4c5d6e7f",
+              "leftValue": "={{ $json.body.event }}",
+              "rightValue": "reply.received",
+              "operator": { "type": "string", "operation": "equals" }
+            },
+            {
+              "id": "5d6e7f8a-9b0c-4d1e-8f2a-3b4c5d6e7f80",
+              "leftValue": "={{ $json.body.reply.classification }}",
+              "rightValue": "interested",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "3f4a5b6c-7d8e-4f9a-8b1c-2d3e4f5a6b7c",
+      "name": "Interested reply?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [660, -100]
+    },
+    {
+      "parameters": {
+        "authentication": "appToken",
+        "resource": "contact",
+        "operation": "upsert",
+        "email": "={{ $json.body.contact.email }}",
+        "additionalFields": {
+          "firstName": "={{ $json.body.contact.first_name ?? '' }}",
+          "lastName": "={{ $json.body.contact.last_name ?? '' }}",
+          "jobTitle": "={{ $json.body.contact.title ?? '' }}",
+          "companyName": "={{ $json.body.company?.name ?? '' }}",
+          "websiteUrl": "={{ $json.body.company?.website ?? '' }}"
+        },
+        "options": {}
+      },
+      "id": "4a5b6c7d-8e9f-4a0b-9c2d-3e4f5a6b7c8d",
+      "name": "Upsert HubSpot contact",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [880, -200]
+    }
+  ],
+  "connections": {
+    "Eveil webhook": { "main": [[{ "node": "Sign body", "type": "main", "index": 0 }]] },
+    "Sign body": { "main": [[{ "node": "Signed by Eveil?", "type": "main", "index": 0 }]] },
+    "Signed by Eveil?": { "main": [[{ "node": "Interested reply?", "type": "main", "index": 0 }], []] },
+    "Interested reply?": { "main": [[{ "node": "Upsert HubSpot contact", "type": "main", "index": 0 }], []] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {}
+}

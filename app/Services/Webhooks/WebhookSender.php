@@ -30,7 +30,10 @@ class WebhookSender
             return $this->record($webhook, null, 'This address points at a private network.');
         }
 
-        $body = json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        // Encoded exactly as JavaScript's JSON.stringify would, line terminators
+        // included: a no-code receiver (the n8n recipe) can only check the
+        // signature by re-serialising the parsed body, so the bytes must match.
+        $body = json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_LINE_TERMINATORS);
 
         try {
             $response = Http::timeout(self::TIMEOUT)

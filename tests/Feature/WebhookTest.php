@@ -77,9 +77,12 @@ it('signs the body and records a failing endpoint, so the job retries', function
     $webhook = Webhook::factory()->for($project)->create(['secret' => 'whsec_test']);
     Http::fake(['hooks.example.com/*' => Http::sequence()->push('', 200)->push('', 500)]);
 
-    expect(app(WebhookSender::class)->send($webhook, ['id' => 'a', 'event' => 'ping']))->toBeNull();
+    expect(app(WebhookSender::class)->send($webhook, ['id' => 'a', 'event' => 'ping', 'body' => "é/\u{2028}"]))->toBeNull();
 
-    Http::assertSent(fn (Request $request): bool => $request->header('X-Eveil-Signature')[0] === 'sha256='.hash_hmac('sha256', $request->body(), 'whsec_test'));
+    // Byte for byte what JSON.stringify writes, or the n8n recipe, which can
+    // only re-serialise the parsed body, rejects a genuine request.
+    Http::assertSent(fn (Request $request): bool => $request->header('X-Eveil-Signature')[0] === 'sha256='.hash_hmac('sha256', $request->body(), 'whsec_test')
+        && $request->body() === '{"id":"a","event":"ping","body":"é/'."\u{2028}".'"}');
 
     expect(fn () => (new DeliverWebhook($webhook, ['id' => 'b', 'event' => 'ping']))->handle(app(WebhookSender::class)))
         ->toThrow(RuntimeException::class);

@@ -2,7 +2,7 @@
 
 Eveil finds the people and gets the reply. The deal itself usually lives in a CRM. Webhooks connect the two: Eveil sends a request to an address of yours the moment something happens, so a hot reply reaches your CRM without anyone copying it over.
 
-Big CRMs don't read Eveil's requests directly. The usual bridge is a no-code automation tool (**n8n**, Zapier, Make): it receives the webhook and creates the contact, deal or task in your CRM, with no code to write. The [n8n recipes](#recipe-eveil-to-your-crm) below show how. If you have your own software, it can receive the requests itself.
+Big CRMs don't read Eveil's requests directly. The usual bridge is a no-code automation tool (**n8n**, Zapier, Make): it receives the webhook and creates the contact, deal or task in your CRM, with no code to write. The [ready-made n8n workflows](#ready-made-n8n-workflows) below do it for you. If you have your own software, it can receive the requests itself.
 
 ## Adding a webhook
 
@@ -92,52 +92,44 @@ const expected = 'sha256=' + crypto.createHmac('sha256', secret).update(rawBody)
 const valid = crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signatureHeader))
 ```
 
+## Ready-made n8n workflows
+
+Two workflows are ready to import, for HubSpot. In n8n, create a workflow, open the **⋯** menu, choose **Import from URL**, and paste the link. Every node comes wired up; a note on the canvas lists what to fill in.
+
+| Workflow | Link to import |
+| --- | --- |
+| Interested replies become HubSpot contacts | `https://docs.eveil.cloud/n8n/eveil-to-hubspot.json` |
+| New HubSpot contacts go to Eveil, customers kept out of campaigns | `https://docs.eveil.cloud/n8n/hubspot-to-eveil.json` |
+
+Using another CRM? Import one anyway and swap the HubSpot node for yours: n8n has nodes for Pipedrive, Salesforce, Zoho, Odoo, Notion, Airtable and many more. The rest of the workflow stays as it is.
+
 ## Recipe: Eveil to your CRM
+
+What `eveil-to-hubspot.json` does, and how to set it up:
 
 ::: v-pre
 
-This n8n workflow turns every interested reply into a contact in your CRM, with the reply attached. The example uses HubSpot; n8n has a node for Pipedrive, Salesforce, Zoho, Odoo, Notion, Airtable and many more, and the steps stay the same.
-
-1. **Webhook** node. Method `POST`, any path (`eveil`). Copy its production URL.
-2. In Eveil, **Settings → Webhooks**: paste the URL, keep `reply.received`, add it, copy the secret.
-3. *(Recommended)* **Crypto** node: action **Hmac**, type **SHA256**, encoding **hex**, secret = the `whsec_...` secret, value = `{{ JSON.stringify($json.body) }}`. Then an **If** node: `sha256={{ $json.data }}` equals `{{ $('Webhook').item.json.headers['x-eveil-signature'] }}`. Stop the flow when it doesn't.
-4. **If** node: `{{ $('Webhook').item.json.body.reply.classification }}` equals `interested`. Use `is one of` with `needs_human` too if you want every reply a person should read.
-5. **HubSpot** node, **Contact → Create or Update**: email = `{{ $('Webhook').item.json.body.contact.email }}`, first and last name from `contact`, company name from `company.name`.
-6. *(Optional)* A second HubSpot node that creates a **note** or a **deal** with `reply.body` as its content, so whoever picks up the deal sees what was said.
-7. Activate the workflow, then **Send test** in Eveil to check it fires.
+1. **Eveil webhook** receives the request. Copy its *Production URL*, add it in Eveil under **Settings → Webhooks** with `reply.received`, and copy the `whsec_...` secret.
+2. **Sign body** recomputes the signature (Crypto node, **Hmac**, SHA256, hex, of `{{ JSON.stringify($json.body) }}`). Create a **Crypto** credential for it and paste the secret as its *Hmac Secret*.
+3. **Signed by Eveil?** compares `sha256={{ $json.signature }}` with the `x-eveil-signature` header, and stops anything that doesn't match.
+4. **Interested reply?** keeps `reply.received` events whose classification is `interested`. Add `needs_human` to the condition if you want every reply a person should read.
+5. **Upsert HubSpot contact** creates or updates the contact: email, first and last name, job title, company name and website. It needs a **HubSpot App Token** credential: a HubSpot private app with the `crm.objects.contacts.write` scope.
+6. Activate the workflow, then **Send test** in Eveil to check it fires.
 
 :::
 
-To follow deals as they move, add a second webhook for `status.changed` (or tick both events on the same one and branch on `body.event`), and update the contact's lifecycle stage from `status`.
+To follow deals as they move, tick `status.changed` on the same webhook, branch on `body.event`, and update the contact's lifecycle stage from `status`. To keep the reply itself in HubSpot, add a node after the upsert that creates a **note** or a **deal** with `reply.body`.
 
 ## Recipe: your CRM to Eveil
 
-::: v-pre
+The other direction: send Eveil the people your CRM already knows. Prospects Eveil hasn't found get a campaign too; customers are marked so Eveil never cold-mails them. This uses the [API](/product/api) rather than a webhook, so you need an API token from **Settings → API**. What `hubspot-to-eveil.json` does:
 
-The other direction: send Eveil the people your CRM already knows. Prospects Eveil hasn't found get a campaign too; customers are marked so Eveil never cold-mails them. This one uses the [API](/product/api) rather than a webhook. You need an API token from **Settings → API**.
+1. **Every hour**, **New HubSpot contacts** asks HubSpot for the contacts created in the last 65 minutes (the overlap is harmless, see below), up to 100. It needs a **HubSpot App Token** credential with `crm.objects.contacts.read`.
+2. **Split customers and prospects** sorts them on HubSpot's lifecycle stage. A customer is sent by email address, or by website when it has none.
+3. **Customers** go to [`POST /known-clients`](/product/api#existing-clients): Eveil marks them as existing clients and never writes to them, even if a later search finds them again. Never send customers to `/contacts` instead: there they would be prospects like anyone else.
+4. **Prospects** go to [`POST /contacts`](/product/api#adding-contacts), all in one request. Someone Eveil already has is left as is, and an address that asked not to be contacted is refused, so sending the same person twice is harmless.
+5. In both HTTP Request nodes, replace `YOUR-PROJECT-SLUG` (and `eveil.cloud` if you self-host), and pick a **Bearer Auth** credential holding the Eveil token.
 
-1. A trigger for new people in your CRM: **HubSpot Trigger** on *Contact created*, or a **Schedule** node followed by a CRM node that lists contacts created since the last run.
-2. **If** node on the CRM's lifecycle stage (or a tag): customers go one way, prospects the other.
-3. **Customers**: an **HTTP Request** node, `POST https://eveil.cloud/api/v1/projects/<your-project-slug>/known-clients`, header `Authorization: Bearer eveil_...`, body `{ "entries": ["{{ $json.properties.email }}"] }` (a website works too, for the whole company). Eveil marks them as existing clients and never writes to them, even if a later search finds them again. Never send customers to `/contacts` instead: there they would be prospects like anyone else.
-4. **Prospects**: an **HTTP Request** node: `POST https://eveil.cloud/api/v1/projects/<your-project-slug>/contacts` (your own domain if you self-host), header `Authorization: Bearer eveil_...`, JSON body:
+To put new prospects straight into a running campaign, add an HTTP Request after **Add prospects**: `POST .../campaigns/<campaign-id>/enrolments`. Unless the project is [Autonomous](/product/autonomy), a new company still waits for your approval in Eveil before its people are written to.
 
-   ```json
-   {
-     "contacts": [
-       {
-         "email": "{{ $json.properties.email }}",
-         "first_name": "{{ $json.properties.firstname }}",
-         "last_name": "{{ $json.properties.lastname }}",
-         "company_name": "{{ $json.properties.company }}",
-         "company_domain": "{{ $json.properties.domain }}"
-       }
-     ]
-   }
-   ```
-
-   Up to 500 contacts per request. Someone Eveil already has is left as is, and an address that asked not to be contacted is refused, so sending the same person twice is harmless.
-5. *(Optional)* After the prospects, another **HTTP Request**: `POST .../campaigns/<campaign-id>/enrolments` adds everyone eligible to a running campaign. Unless the project is [Autonomous](/product/autonomy), a new company still waits for your approval in Eveil before its people are written to.
-
-:::
-
-Both recipes can run together: a person Eveil sends to your CRM and your CRM sends back is recognised as a duplicate, so nothing loops. Marking a customer as a client does send a `status.changed` back; if your flow updates the CRM from it, it only confirms what the CRM already says.
+Both workflows can run together: a person Eveil sends to your CRM and your CRM sends back is recognised as a duplicate, so nothing loops. Marking a customer as a client does send a `status.changed` back; if your flow updates the CRM from it, it only confirms what the CRM already says.

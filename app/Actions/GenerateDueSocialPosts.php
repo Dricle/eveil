@@ -31,8 +31,12 @@ class GenerateDueSocialPosts
         foreach (SocialPlatform::cases() as $platform) {
             Project::query()
                 ->where($platform->frequencyColumn(), '!=', SocialPostFrequency::Off->value)
-                ->whereNotNull($platform->nextPostColumn())
-                ->where($platform->nextPostColumn(), '<=', now())
+                // No date with a cadence on means never drafted: due now. The
+                // first LinkedIn cadence screen saved the frequency alone, and
+                // those projects would otherwise wait forever.
+                ->where(fn (Builder $projects) => $projects
+                    ->whereNull($platform->nextPostColumn())
+                    ->orWhere($platform->nextPostColumn(), '<=', now()))
                 ->when($platform->publishesThroughApi(), fn (Builder $projects) => $projects->whereHas(
                     'socialAccounts',
                     /** @param  Builder<SocialAccount>  $accounts */

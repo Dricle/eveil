@@ -53,6 +53,15 @@ it('skips a due LinkedIn post until an account is connected, the safe default', 
     Queue::assertPushed(GenerateSocialPost::class, fn (GenerateSocialPost $job): bool => $job->platform === SocialPlatform::Linkedin);
 });
 
+it('treats a cadence that is on but has never had a date as due now', function () {
+    Queue::fake();
+    $project = Project::factory()->create(['linkedin_post_frequency' => SocialPostFrequency::Weekly, 'linkedin_next_post_at' => null]);
+    SocialAccount::factory()->linkedin()->create(['organization_id' => $project->organization_id])->projects()->attach($project);
+
+    expect(app(GenerateDueSocialPosts::class)->handle())->toBe(1)
+        ->and($project->fresh()->linkedin_next_post_at->isAfter(now()->addDays(6)))->toBeTrue();
+});
+
 it('leaves a project whose cadence is off or not due yet alone', function () {
     Queue::fake();
     Project::factory()->create(['x_post_frequency' => SocialPostFrequency::Off, 'x_next_post_at' => now()->subDay()]);

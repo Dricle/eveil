@@ -1,0 +1,203 @@
+{
+  "name": "Eveil: HubSpot contacts to Eveil",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## HubSpot → Eveil\nEvery hour, the contacts created in HubSpot since the last run go to Eveil: **customers** are marked as existing clients (never emailed), everyone else is added as a prospect.\n\n1. **New HubSpot contacts**: pick a **HubSpot App Token** credential (private app with `crm.objects.contacts.read`).\n2. **Mark existing clients** and **Add prospects**: replace `YOUR-PROJECT-SLUG` (and the domain if you self-host), and pick a **Bearer Auth** credential holding an Eveil API token (**Settings → API**).\n3. Activate.\n\nUp to 100 new contacts an hour. Docs: https://docs.eveil.cloud/product/webhooks",
+        "height": 360,
+        "width": 440
+      },
+      "id": "7b8c9d0e-1f2a-4b3c-8d4e-5f6a7b8c9d0e",
+      "name": "How to set up",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -520,
+        -180
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "8c9d0e1f-2a3b-4c4d-9e5f-6a7b8c9d0e1f",
+      "name": "Every hour",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.hubapi.com/crm/v3/objects/contacts/search",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ filterGroups: [{ filters: [{ propertyName: 'createdate', operator: 'GTE', value: String($now.minus({ minutes: 65 }).toMillis()) }] }], properties: ['email', 'firstname', 'lastname', 'jobtitle', 'company', 'website', 'lifecyclestage'], limit: 100 }) }}",
+        "options": {}
+      },
+      "id": "9d0e1f2a-3b4c-4d5e-8f6a-7b8c9d0e1f2a",
+      "name": "New HubSpot contacts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Customers are marked as existing clients so Eveil never cold-emails them;\n// everyone else becomes a prospect. One request each, not one per person.\nconst people = ($input.first().json.results ?? []).map(person => person.properties);\nconst domain = website => (website || '').trim().toLowerCase()\n  .replace(/^[a-z]+:\\/\\//, '').replace(/^www\\./, '').split(/[/?#:]/)[0] || null;\n\nconst customers = people\n  .filter(p => p.lifecyclestage === 'customer')\n  .map(p => p.email || domain(p.website))\n  .filter(Boolean);\nconst prospects = people.filter(p => p.lifecyclestage !== 'customer').map(p => ({\n  email: p.email || null,\n  first_name: p.firstname || null,\n  last_name: p.lastname || null,\n  title: p.jobtitle || null,\n  company_name: p.company || null,\n  company_domain: domain(p.website),\n}));\n\nconst out = [];\nif (customers.length) out.push({ json: { kind: 'clients', body: { entries: customers } } });\nif (prospects.length) out.push({ json: { kind: 'contacts', body: { contacts: prospects } } });\nreturn out;"
+      },
+      "id": "0e1f2a3b-4c5d-4e6f-9a7b-8c9d0e1f2a3b",
+      "name": "Split customers and prospects",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1f2a3b4c-5d6e-4f7a-8b9c-0d1e2f3a4b5c",
+              "leftValue": "={{ $json.kind }}",
+              "rightValue": "clients",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2a3b4c5d-6e7f-4a8b-9c0d-1e2f3a4b5c6d",
+      "name": "Customers?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://eveil.cloud/api/v1/projects/YOUR-PROJECT-SLUG/known-clients",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {}
+      },
+      "id": "3b4c5d6e-7f8a-4b9c-8d0e-1f2a3b4c5d6e",
+      "name": "Mark existing clients",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://eveil.cloud/api/v1/projects/YOUR-PROJECT-SLUG/contacts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {}
+      },
+      "id": "4c5d6e7f-8a9b-4c0d-9e1f-2a3b4c5d6e7f",
+      "name": "Add prospects",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        100
+      ]
+    }
+  ],
+  "connections": {
+    "Every hour": {
+      "main": [
+        [
+          {
+            "node": "New HubSpot contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New HubSpot contacts": {
+      "main": [
+        [
+          {
+            "node": "Split customers and prospects",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split customers and prospects": {
+      "main": [
+        [
+          {
+            "node": "Customers?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Customers?": {
+      "main": [
+        [
+          {
+            "node": "Mark existing clients",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Add prospects",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

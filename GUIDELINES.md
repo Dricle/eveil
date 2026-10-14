@@ -397,7 +397,6 @@ still ahead, tracked as [GitHub Issues](https://github.com/Dricle/eveil/issues):
   clone of an existing competitor that additionally can't send an email.
 - **Ad management**: the third pillar, next up.
 - LinkedIn outbound (its own container, real anti-detection cost - a product in itself).
-- An MCP server, CRM webhooks (the public API shipped).
 - Third-party lead-provider drivers (Apollo, Hunter), third-party email verification
   drivers, official business registries as a discovery source, headless-browser
   rendering for JS-only directories.
@@ -420,7 +419,12 @@ Not to be built, even when the temptation shows up:
   filter 275M rows should be pointed elsewhere, not disappointed here.
 - **An ESP relay** (Postmark, SES, etc.) for sending.
 - **Open/click tracking as the headline metric.**
-- **A CRM.** Integrate with one; never become one.
+- **A CRM.** Integrate with one; never become one. The integration is generic: signed
+  per-project webhooks (a classified reply, a status change) plus documented n8n
+  recipes, and the public API for the way back. No native per-CRM connector: no CRM
+  reads our payload directly, but n8n/Zapier/Make bridge to all of them at zero
+  maintenance for us, and the self-hosted crowd already runs n8n. A native connector
+  is worth building only once users name the CRM it would be for.
 - **A task manager.** Acquisition recommendations carry a state (proposed → done/
   archived) that the agent updates from conversation - the moment anything needs manual
   ranking, assignment, or due dates by hand, that's a task manager and it's out.

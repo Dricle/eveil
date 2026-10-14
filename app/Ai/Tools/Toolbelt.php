@@ -26,6 +26,7 @@ class Toolbelt
         ListCompanies::class,
         GetCompany::class,
         GetContact::class,
+        MarkExistingClients::class,
         AddLeadNote::class,
         DeleteLeadNote::class,
         AddCompanyNote::class,

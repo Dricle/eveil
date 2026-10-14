@@ -52,7 +52,7 @@ Click the sparkles icon in the top bar. The panel slides in from the right and p
 
 ## Approval before anything real happens
 
-Evie can look things up freely — target profiles, companies already found, a discovery run's status, the knowledge base — and log a note, correct the knowledge base, or create/correct a target profile itself, all at no cost beyond the message. The moment it wants to do something that will spawn a sub agent (one of Eveil's AI Agents) and creates real work (starting a discovery run, deriving target profiles, drafting a sequence), or something destructive that can't be undone (deleting a target profile), it stops and shows a card asking you to Approve or Deny first. Nothing is dispatched or deleted until you say yes.
+Evie can look things up freely — target profiles, companies already found, a discovery run's status, the knowledge base — and log a note, mark people you already work with as existing clients, correct the knowledge base, or create/correct a target profile itself, all at no cost beyond the message. The moment it wants to do something that will spawn a sub agent (one of Eveil's AI Agents) and creates real work (starting a discovery run, deriving target profiles, drafting a sequence), or something destructive that can't be undone (deleting a target profile), it stops and shows a card asking you to Approve or Deny first. Nothing is dispatched or deleted until you say yes.
 
 ## One conversation per project, and "Clear"
 

@@ -115,7 +115,9 @@ class GenerateSocialPost implements ShouldQueue
                 SocialPostVariant::Named->value => $structured['body_named'] ?? '',
                 SocialPostVariant::Anonymized->value => $structured['body_anonymized'] ?? '',
             ]
-            : ['' => $structured['body'] ?? ''];
+            // A brief about a client win still gets the two-variant shape back
+            // with `body` empty: take the anonymized one rather than drop it.
+            : ['' => ($structured['body'] ?? '') ?: ($structured['body_anonymized'] ?? '') ?: ($structured['body_named'] ?? '')];
 
         return collect($bodies)
             ->map(fn (mixed $body): string => trim((string) $body))

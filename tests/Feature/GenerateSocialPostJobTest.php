@@ -141,3 +141,16 @@ it('writes a post about Evie\'s brief as a draft, never published and never emai
     Http::assertNothingSent();
     Notification::assertNothingSent();
 });
+
+it('keeps the anonymized variant when a brief comes back shaped as a client win', function () {
+    $project = Project::factory()->create();
+    fakeSocialWriter(['source_type' => 'client_won', 'evidence' => 'First customer.', 'body' => '', 'body_named' => 'Acme signed.', 'body_anonymized' => 'A first customer signed.']);
+
+    GenerateSocialPost::dispatchSync($project, SocialPlatform::X, 'We landed our first paying customer.');
+
+    expect(SocialPost::sole())
+        ->body->toBe('A first customer signed.')
+        ->source_type->toBe(SocialPostSourceType::Manual)
+        ->variant->toBeNull()
+        ->status->toBe(SocialPostStatus::Draft);
+});

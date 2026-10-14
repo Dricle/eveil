@@ -49,7 +49,9 @@ return [
     'webhook' => [
         'secret' => env('STRIPE_WEBHOOK_SECRET'),
         'tolerance' => env('STRIPE_WEBHOOK_TOLERANCE', 300),
-        'events' => WebhookCommand::DEFAULT_EVENTS,
+        // `checkout.session.completed` drives credit top-ups and saved
+        // payment methods (app/Cloud/Listeners): Cashier's defaults omit it.
+        'events' => [...WebhookCommand::DEFAULT_EVENTS, 'checkout.session.completed'],
     ],
 
     /*

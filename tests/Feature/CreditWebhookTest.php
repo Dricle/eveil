@@ -3,6 +3,9 @@
 use App\Cloud\Listeners\GrantCreditsOnCheckout;
 use App\Cloud\Models\CreditTransaction;
 use App\Models\Organization;
+use App\Models\User;
+use App\Notifications\CreditsPurchased;
+use Illuminate\Support\Facades\Notification;
 use Laravel\Cashier\Events\WebhookReceived;
 
 function checkoutCompleted(string $eventId, string $stripeCustomer, int $credits): WebhookReceived
@@ -61,4 +64,23 @@ it('ignores a session with no credits in its metadata', function () {
     (new GrantCreditsOnCheckout)->handle(checkoutCompleted('evt_5', 'cus_5', 0));
 
     expect(CreditTransaction::count())->toBe(0);
+});
+
+it('emails the owners once when a purchase is granted, even if the webhook is retried', function () {
+    Notification::fake();
+
+    $organization = Organization::factory()->create();
+    $organization->forceFill(['stripe_id' => 'cus_6', 'credits_balance' => 1])->save();
+    $owner = User::factory()->create();
+    $member = User::factory()->create();
+    $organization->users()->attach($owner, ['role' => 'owner']);
+    $organization->users()->attach($member, ['role' => 'member']);
+    $listener = new GrantCreditsOnCheckout;
+
+    $listener->handle(checkoutCompleted('evt_6', 'cus_6', 15000));
+    $listener->handle(checkoutCompleted('evt_6', 'cus_6', 15000));
+
+    Notification::assertSentTimes(CreditsPurchased::class, 1);
+    Notification::assertSentTo($owner, CreditsPurchased::class, fn (CreditsPurchased $notification) => $notification->credits === 15000 && $notification->balance === 15001);
+    Notification::assertNotSentTo($member, CreditsPurchased::class);
 });

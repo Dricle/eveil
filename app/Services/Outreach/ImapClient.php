@@ -122,7 +122,7 @@ class ImapClient
      *
      * @throws ImapFailure
      */
-    private function connect(EmailAccount $account)
+    protected function connect(EmailAccount $account)
     {
         $encrypted = $account->imap_encryption !== null && $account->imap_encryption !== '';
         $address = ($encrypted ? 'ssl://' : 'tcp://').$account->imap_host.':'.$account->imap_port;
@@ -212,6 +212,22 @@ class ImapClient
 
         while (($line = fgets($socket, 8192)) !== false) {
             $reply .= $line;
+
+            // `{n}` announces n raw bytes: the mail itself. Read them as one
+            // block, or a body line that happens to start with our tag (an
+            // HTML `<a4 ...` split by quoted-printable) passes for the answer.
+            if (preg_match('/\{(\d+)\}\r\n$/', $line, $literal) === 1) {
+                $bytes = (int) $literal[1];
+                $chunk = (string) stream_get_contents($socket, $bytes);
+
+                if (strlen($chunk) < $bytes) {
+                    throw new ImapFailure('Connection dropped while reading a message');
+                }
+
+                $reply .= $chunk;
+
+                continue;
+            }
 
             if (str_starts_with($line, $tag.' ')) {
                 if (! str_starts_with($line, $tag.' OK')) {

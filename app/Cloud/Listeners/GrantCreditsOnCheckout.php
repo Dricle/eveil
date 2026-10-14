@@ -3,9 +3,12 @@
 namespace App\Cloud\Listeners;
 
 use App\Cloud\Models\CreditTransaction;
+use App\Enums\OrganizationRole;
 use App\Models\Organization;
+use App\Notifications\CreditsPurchased;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Laravel\Cashier\Events\WebhookReceived;
 
 /**
@@ -60,6 +63,13 @@ class GrantCreditsOnCheckout
         } catch (QueryException) {
             // Already processed. Stripe retries a webhook until it gets a
             // 2xx; this is what makes that safe to grant nothing twice.
+            return;
         }
+
+        $owners = $organization->users()
+            ->wherePivot('role', OrganizationRole::Owner->value)
+            ->get();
+
+        Notification::send($owners, new CreditsPurchased($organization->name, $credits, $organization->fresh()->credits_balance));
     }
 }

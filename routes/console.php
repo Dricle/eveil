@@ -73,3 +73,13 @@ Schedule::command('eveil:articles-generate-due')->daily();
 // Daily, and it must stay daily: the action reminds about replies that crossed
 // the one-day mark inside the last 24 hours, so each reply mails exactly once.
 Schedule::command('eveil:remind-replies')->daily();
+
+// Spend is the one number that must stay fresh: the budget stop runs right
+// after each read, so hourly is how far past its month an account can run.
+// Google's own reporting lags about three hours, which bounds it anyway.
+Schedule::command('eveil:ads-sync')->hourly();
+
+// One review a day: ads need a day of data before anything changes, and
+// each review is a full model call reading every account. Placed after a
+// sync, so the agent reads the night's numbers.
+Schedule::command('eveil:ads-review')->dailyAt('06:30');

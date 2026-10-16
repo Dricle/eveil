@@ -9,6 +9,7 @@ import { PLATFORM_LABEL } from '@/lib/social'
 import { relativeUrl } from '@/lib/utils'
 import { switchProjectUrl } from '@/lib/switchProjectUrl'
 import { dashboard, inbox, logout } from '@/routes'
+import adRoutes from '@/routes/ads'
 import campaigns from '@/routes/campaigns'
 import companies from '@/routes/companies'
 import redditReplies from '@/routes/reddit/replies'
@@ -144,6 +145,16 @@ const items = computed<NavigationMenuItem[]>(() => {
             active: page.url.startsWith(`/app/${project.slug}/seo`),
             badge: navCounts.value?.seo
                 ? { label: navCounts.value.seo, color: 'primary', variant: 'solid' }
+                : undefined
+        },
+
+        {
+            label: 'Ads',
+            icon: 'i-lucide-megaphone',
+            to: relativeUrl(adRoutes.index.url({ project: project.slug })),
+            active: page.url.startsWith(`/app/${project.slug}/ads`),
+            badge: navCounts.value?.ads
+                ? { label: navCounts.value.ads, color: 'primary', variant: 'solid' }
                 : undefined
         },
 

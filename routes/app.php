@@ -8,6 +8,11 @@ use App\Cloud\Http\Controllers\PaymentMethodController;
 use App\Http\Controllers\Account\AccountDeletionController;
 use App\Http\Controllers\Account\ConnectedAssistantController;
 use App\Http\Controllers\Account\TwoFactorController;
+use App\Http\Controllers\AdAccountController;
+use App\Http\Controllers\AdController;
+use App\Http\Controllers\AdDecisionController;
+use App\Http\Controllers\AdOAuthController;
+use App\Http\Controllers\AdReviewController;
 use App\Http\Controllers\AiInstructionsController;
 use App\Http\Controllers\AppHomeController;
 use App\Http\Controllers\AppSettings\AgentController;
@@ -71,6 +76,7 @@ use App\Http\Controllers\OnboardingAnalysisController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\OnboardingSearchController;
 use App\Http\Controllers\OrganizationController;
+use App\Http\Controllers\PlatformAppController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectKnowledgeBaseController;
 use App\Http\Controllers\RecommendationStatusController;
@@ -292,6 +298,11 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
              */
             Route::get('bluesky', [SocialAccountController::class, 'index'])->defaults('platform', 'bluesky')->name('bluesky.index');
             Route::post('bluesky', [SocialAccountController::class, 'store'])->name('bluesky.store');
+            // An organization's own OAuth app per ad network.
+            Route::get('ad-platforms', [PlatformAppController::class, 'index'])->name('ad-platforms.index');
+            Route::put('ad-platforms/{platform}', [PlatformAppController::class, 'update'])->name('ad-platforms.update');
+            Route::delete('ad-platforms/{platform}', [PlatformAppController::class, 'destroy'])->name('ad-platforms.destroy');
+
             Route::put('social-accounts/{socialAccount}', [SocialAccountController::class, 'update'])
                 ->name('social-accounts.update');
             Route::delete('social-accounts/{socialAccount}', [SocialAccountController::class, 'destroy'])
@@ -390,6 +401,25 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
         // Links in emails sent before the queues merged.
         Route::get('linkedin/posts', fn () => to_route('social.posts.index', 'linkedin'));
+
+        /*
+         * Ads: Eveil runs them inside a monthly budget per account, the
+         * agent proposing and code applying (`AdProposals`). A nav item: the
+         * decision feed changes every day on its own. {platform} is an
+         * `AdPlatform` value; accounts and decisions are numbers looked up
+         * after `project.set`, never route-model-bound.
+         */
+        Route::prefix('ads')->name('ads.')->group(function (): void {
+            Route::get('/', [AdController::class, 'index'])->name('index');
+            Route::get('connect/{platform}', [AdOAuthController::class, 'redirect'])->name('connect');
+            Route::post('reviews', [AdReviewController::class, 'store'])->name('reviews.store');
+
+            Route::whereNumber(['adAccount', 'adDecision'])->group(function (): void {
+                Route::put('accounts/{adAccount}', [AdAccountController::class, 'update'])->name('accounts.update');
+                Route::delete('accounts/{adAccount}', [AdAccountController::class, 'destroy'])->name('accounts.destroy');
+                Route::put('decisions/{adDecision}', [AdDecisionController::class, 'update'])->name('decisions.update');
+            });
+        });
 
         /*
          * SEO: for now the article queue, later more. Nothing publishes on
@@ -666,6 +696,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             ->name('linkedin.callback');
         Route::get('linkedin/stats/callback', [LinkedinStatsOAuthController::class, 'callback'])
             ->name('linkedin.stats.callback');
+        Route::get('ads/{platform}/callback', [AdOAuthController::class, 'callback'])
+            ->name('ads.callback');
     });
 
     /*

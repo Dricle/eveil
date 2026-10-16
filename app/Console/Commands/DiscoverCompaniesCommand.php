@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Actions\RunDiscovery;
+use App\Console\Commands\Concerns\ReadsStringInput;
 use App\Enums\DiscoveryDiagnosis;
 use App\Models\AgentRun;
 use App\Models\CompanyTargetEvaluation;
@@ -26,6 +27,8 @@ use Illuminate\Support\Str;
  */
 class DiscoverCompaniesCommand extends Command
 {
+    use ReadsStringInput;
+
     protected $signature = 'eveil:discover-companies {profile? : Profile id or name. Defaults to the only one}
                                                      {--companies= : Cap on candidates gathered}
                                                      {--qualified= : Cap on companies kept}
@@ -115,7 +118,7 @@ class DiscoverCompaniesCommand extends Command
 
     private function resolveTargetProfile(): ?TargetProfile
     {
-        $needle = $this->argument('profile');
+        $needle = $this->stringArgument('profile');
 
         if ($needle === null) {
             $targetProfiles = TargetProfile::query()->where('is_active', true)->limit(2)->get();

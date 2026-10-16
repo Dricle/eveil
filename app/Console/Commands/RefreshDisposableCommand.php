@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Commands\Concerns\ReadsStringInput;
 use App\Support\DisposableDomains;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
@@ -15,6 +16,8 @@ use Throwable;
  */
 class RefreshDisposableCommand extends Command
 {
+    use ReadsStringInput;
+
     protected $signature = 'eveil:refresh-disposable {--url= : Override the upstream list}';
 
     protected $description = 'Refresh the disposable email domain blocklist';
@@ -23,7 +26,7 @@ class RefreshDisposableCommand extends Command
 
     public function handle(DisposableDomains $disposable): int
     {
-        $url = (string) ($this->option('url') ?: self::UPSTREAM);
+        $url = $this->stringOption('url') ?? self::UPSTREAM;
 
         try {
             $response = Http::timeout(60)->get($url);

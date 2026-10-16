@@ -11,6 +11,7 @@ use App\Models\Setting;
 use App\Models\User;
 use App\Support\Settings;
 use Illuminate\Support\Collection;
+use Laravel\Ai\Ai;
 
 /**
  * Instance scope: what the person who ran the install decides, and nobody else.
@@ -294,7 +295,7 @@ it('suggests the models a provider names for itself, without fixing the choice',
     $this->actingAs(superAdmin())->get(route('app-settings.agents.index'))
         ->assertInertia(fn ($page) => $page->where(
             'models.anthropic',
-            fn (Collection $models): bool => $models->contains('claude-haiku-4-5-20251001'),
+            fn (Collection $models): bool => $models->contains(Ai::textProvider('anthropic')->cheapestTextModel()),
         ));
 
     // And anything else still saves: no list of model ids exists to validate

@@ -6,6 +6,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | --- | --- |
 | app/Actions/EnrolCampaign.php,app/Actions/DispatchDueSends.php | .ai/rules/actions-actions.md |
 | app/Actions/** | .ai/rules/actions.md |
+| app/Services/Ads/**,app/Models/Ad*.php,app/Models/PlatformApp.php,app/Enums/Ad*.php,app/Actions/*Ad*.php,app/Ai/Agents/AdStrategist.php,app/Http/Controllers/Ad*.php | .ai/rules/ads.md |
 | app/Ai/Agents/EveilAgent.php,app/Ai/Agents/SocialPostWriter.php,app/Models/Project.php | .ai/rules/agents-models.md |
 | app/Ai/Agents/** | .ai/rules/agents.md |
 | app/Models/DiscoveryRun.php,app/Jobs/Discovery/ReflectAndExpand.php,app/Ai/Agents/DiscoveryPlanner.php | .ai/rules/ai-agents.md |

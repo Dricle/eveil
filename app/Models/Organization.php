@@ -79,6 +79,17 @@ class Organization extends Model
     }
 
     /**
+     * This organization's own OAuth apps for the ad networks, overriding the
+     * instance's (`PlatformApp::resolve()`).
+     *
+     * @return HasMany<PlatformApp, $this>
+     */
+    public function platformApps(): HasMany
+    {
+        return $this->hasMany(PlatformApp::class);
+    }
+
+    /**
      * @return HasMany<SocialAccount, $this>
      */
     public function socialAccounts(): HasMany

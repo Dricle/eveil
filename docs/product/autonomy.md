@@ -38,6 +38,16 @@ Two things still wait for you in Autonomous: a post that names a client (only th
 
 Same two exceptions as LinkedIn still wait for you in Autonomous: a post that names a client (only the anonymous version goes out on its own), and any post on a project with more than one Bluesky account. New projects start on Supervised. See [Posting to X and Bluesky](/product/social).
 
+## Ads
+
+| | 🟢 Supervised | 🟡 Semi-auto | 🔴 Autonomous |
+|---|---|---|---|
+| **Pausing an ad or campaign, lowering a budget** | Eveil does it | Eveil does it | Eveil does it |
+| **New ad in a running campaign, raising a budget** | You approve | Eveil does it | Eveil does it |
+| **Launching a new campaign** | You approve | You approve | Eveil does it |
+
+Whatever the level, Eveil never spends past the monthly budget you set on each ad account: a decision that would is refused, and once the month is spent every campaign is paused. A budget of zero means Eveil spends nothing on that account. New projects start on Supervised.
+
 ## X
 
 Always supervised. Eveil drafts posts and you post them yourself: posting through X's API is paid per post. See [Posting to X and Bluesky](/product/social).

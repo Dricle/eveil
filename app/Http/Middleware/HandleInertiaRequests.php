@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Actions\InboxFolders;
 use App\Ai\ProviderCredentials;
+use App\Enums\AdDecisionStatus;
 use App\Enums\ArticleStatus;
 use App\Enums\DiscoveryRunStatus;
 use App\Enums\EmailAccountStatus;
@@ -12,6 +13,7 @@ use App\Enums\SocialPlatform;
 use App\Enums\SocialPostStatus;
 use App\Http\Resources\OrganizationResource;
 use App\Http\Resources\ProjectResource;
+use App\Models\AdDecision;
 use App\Models\Article;
 use App\Models\Company;
 use App\Models\DiscoveryRun;
@@ -147,9 +149,9 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * @return array{targets: int, leads: int, inbox: int, reddit: int, seo: int, linkedin: int, x: int, bluesky: int}|null
-     *                                                                                                                      null while no project is selected, so the sidebar shows no
-     *                                                                                                                      badge rather than one for the wrong project
+     * @return array{targets: int, leads: int, inbox: int, reddit: int, seo: int, linkedin: int, x: int, bluesky: int, ads: int}|null
+     *                                                                                                                                null while no project is selected, so the sidebar shows no
+     *                                                                                                                                badge rather than one for the wrong project
      */
     private function navCounts(?User $user): ?array
     {
@@ -192,6 +194,8 @@ class HandleInertiaRequests extends Middleware
             'linkedin' => $drafts(SocialPlatform::Linkedin),
             'x' => $drafts(SocialPlatform::X),
             'bluesky' => $drafts(SocialPlatform::Bluesky),
+            // Decisions waiting for a person, same reasoning as the drafts.
+            'ads' => AdDecision::query()->where('status', AdDecisionStatus::Proposed)->count(),
         ]);
     }
 

@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Actions\DeriveTargetProfiles;
+use App\Console\Commands\Concerns\ReadsStringInput;
 use App\Models\AgentRun;
 use App\Models\Project;
 use App\Models\TargetProfile;
@@ -19,6 +20,8 @@ use RuntimeException;
  */
 class DeriveTargetsCommand extends Command
 {
+    use ReadsStringInput;
+
     protected $signature = 'eveil:derive-targets {project? : Project id, URL or name. Defaults to the only one}
                                              {--fresh : Replace the profiles previously derived by the agent}';
 
@@ -67,7 +70,7 @@ class DeriveTargetsCommand extends Command
 
     private function resolveProject(): ?Project
     {
-        $needle = $this->argument('project');
+        $needle = $this->stringArgument('project');
 
         if ($needle === null) {
             $projects = Project::query()->limit(2)->get();

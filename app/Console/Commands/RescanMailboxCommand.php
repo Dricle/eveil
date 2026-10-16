@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Actions\FetchReplies;
+use App\Console\Commands\Concerns\ReadsStringInput;
 use App\Enums\EmailAccountStatus;
 use App\Models\EmailAccount;
 use Illuminate\Console\Command;
@@ -26,13 +27,15 @@ use Illuminate\Console\Command;
  */
 class RescanMailboxCommand extends Command
 {
+    use ReadsStringInput;
+
     protected $signature = 'eveil:rescan-mailbox {mailbox : Email account id} {--force : Skip the confirmation} {--max-batches=50 : Safety cap on IMAP round-trips (50 mails each)}';
 
     protected $description = 'Rewind one mailbox\'s IMAP cursor and reread every mail, to recover a reply that failed to attribute';
 
     public function handle(FetchReplies $fetch): int
     {
-        $account = EmailAccount::query()->find($this->argument('mailbox'));
+        $account = EmailAccount::query()->find($this->stringArgument('mailbox'));
 
         if ($account === null) {
             $this->error('No email account with that id.');

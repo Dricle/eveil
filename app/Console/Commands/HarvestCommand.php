@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Commands\Concerns\ReadsStringInput;
 use App\Models\Project;
 use App\Services\Discovery\Candidate;
 use App\Services\Discovery\ListingHarvester;
@@ -14,6 +15,8 @@ use Illuminate\Console\Command;
  */
 class HarvestCommand extends Command
 {
+    use ReadsStringInput;
+
     protected $signature = 'eveil:harvest {url : A directory listing page}
                                           {project? : Project id, URL or name. Only needed for the LLM fallback}
                                           {--pages= : Listing pages to follow, defaults to the configured budget}
@@ -23,7 +26,7 @@ class HarvestCommand extends Command
 
     public function handle(ListingHarvester $harvester, CurrentProject $currentProject): int
     {
-        $url = (string) $this->argument('url');
+        $url = $this->stringArgument('url') ?? '';
         $project = $this->option('free') ? null : $this->resolveProject();
 
         if ($project === null && ! $this->option('free')) {
@@ -78,7 +81,7 @@ class HarvestCommand extends Command
 
     private function resolveProject(): ?Project
     {
-        $needle = $this->argument('project');
+        $needle = $this->stringArgument('project');
 
         if ($needle === null) {
             $projects = Project::query()->limit(2)->get();

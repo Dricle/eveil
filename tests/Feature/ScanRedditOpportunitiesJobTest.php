@@ -17,6 +17,7 @@ use App\Models\RedditReplyExample;
 use App\Models\TargetProfile;
 use App\Models\User;
 use App\Notifications\RedditRepliesDrafted;
+use Illuminate\Http\Client\Factory;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 
@@ -353,4 +354,43 @@ it('never reopens an idea the user dismissed', function () {
     ScanRedditOpportunities::dispatchSync($project);
 
     expect(Idea::sole()->status)->toBe(IdeaStatus::Dismissed);
+});
+
+it('splits a large scan into several triage calls so the prompt stays within the context window', function () {
+    $project = scannableProject();
+
+    $comments = collect(range(1, 45))->map(fn (int $i): array => [
+        'permalink' => "/r/SaaS/comments/xyz789/what_do_you_use/c{$i}/",
+        'subreddit' => 'SaaS',
+        'author' => "user{$i}",
+        'body' => "Comment number {$i} looking for a tool.",
+        'link_id' => 't3_xyz789',
+        'id' => "c{$i}",
+    ])->all();
+
+    Http::swap(new Factory);
+    Http::fake([
+        'arctic-shift.photon-reddit.com/api/posts/search*' => Http::response(['data' => []]),
+        'arctic-shift.photon-reddit.com/api/comments/search*' => Http::response(['data' => $comments]),
+    ]);
+
+    RedditOpportunityTriage::fake([
+        ['items' => []],
+        ['items' => [[
+            'permalink' => 'https://www.reddit.com/r/SaaS/comments/xyz789/what_do_you_use/c45/',
+            'is_opportunity' => true,
+            'reason' => 'Asking for exactly this tool.',
+        ]]],
+    ]);
+
+    RedditReplyWriter::fake([[
+        'body_value_comment' => 'A useful answer.',
+        'body_soft_mention' => '',
+        'body_dm_invite' => '',
+    ]]);
+
+    ScanRedditOpportunities::dispatchSync($project);
+
+    expect(AgentRun::where('agent', RedditOpportunityTriage::slug())->count())->toBe(2)
+        ->and(RedditReply::sole()->thread_permalink)->toBe('https://www.reddit.com/r/SaaS/comments/xyz789/what_do_you_use/c45/');
 });

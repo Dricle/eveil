@@ -21,10 +21,11 @@ class FindSubredditsCommand extends Command
 
     public function handle(FindSubreddits $findSubreddits, CurrentProject $currentProject): int
     {
-        $targetProfile = TargetProfile::find((int) $this->argument('target_profile'));
+        $targetProfileId = (int) $this->argument('target_profile');
+        $targetProfile = TargetProfile::find($targetProfileId);
 
         if ($targetProfile === null) {
-            $this->components->error("No target profile with id [{$this->argument('target_profile')}].");
+            $this->components->error("No target profile with id [{$targetProfileId}].");
 
             return self::FAILURE;
         }

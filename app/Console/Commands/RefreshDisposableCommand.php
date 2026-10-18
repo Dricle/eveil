@@ -23,7 +23,8 @@ class RefreshDisposableCommand extends Command
 
     public function handle(DisposableDomains $disposable): int
     {
-        $url = (string) ($this->option('url') ?: self::UPSTREAM);
+        $url = $this->option('url');
+        $url = is_string($url) && $url !== '' ? $url : self::UPSTREAM;
 
         try {
             $response = Http::timeout(60)->get($url);

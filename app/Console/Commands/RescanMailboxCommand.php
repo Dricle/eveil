@@ -32,7 +32,7 @@ class RescanMailboxCommand extends Command
 
     public function handle(FetchReplies $fetch): int
     {
-        $account = EmailAccount::query()->find($this->argument('mailbox'));
+        $account = EmailAccount::query()->find((int) $this->argument('mailbox'));
 
         if ($account === null) {
             $this->error('No email account with that id.');

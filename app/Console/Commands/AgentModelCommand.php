@@ -29,7 +29,7 @@ class AgentModelCommand extends Command
     {
         $agent = $this->argument('agent');
 
-        if ($agent === null) {
+        if (! is_string($agent)) {
             $this->table(
                 ['agent', 'provider', 'model', 'timeout', 'source', 'tokens in / out', 'calls'],
                 collect($agents->known())->map(fn (string $slug): array => $this->row($slug, $agents))->all(),
@@ -57,9 +57,12 @@ class AgentModelCommand extends Command
             return self::SUCCESS;
         }
 
+        $provider = $this->option('provider');
+        $model = $this->option('model');
+
         $agents->save($agent, [
-            'provider' => (string) ($this->option('provider') ?: $agents->providerName($agent)),
-            'model' => (string) ($this->option('model') ?: $agents->model($agent)),
+            'provider' => is_string($provider) && $provider !== '' ? $provider : $agents->providerName($agent),
+            'model' => is_string($model) && $model !== '' ? $model : (string) $agents->model($agent),
             'timeout' => (int) ($this->option('timeout') ?: $agents->timeout($agent)),
         ]);
 

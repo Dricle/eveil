@@ -27,7 +27,7 @@ class ReparseReplyCommand extends Command
 
     public function handle(ImapClient $imap): int
     {
-        $message = Message::query()->with('emailAccount')->find($this->argument('message'));
+        $message = Message::query()->with('emailAccount')->find((int) $this->argument('message'));
 
         if ($message === null || ! $message->direction->isInbound()) {
             $this->error('No inbound message with that id.');

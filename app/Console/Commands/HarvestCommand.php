@@ -23,7 +23,12 @@ class HarvestCommand extends Command
 
     public function handle(ListingHarvester $harvester, CurrentProject $currentProject): int
     {
-        $url = (string) $this->argument('url');
+        $url = $this->argument('url');
+
+        if (! is_string($url)) {
+            return self::FAILURE;
+        }
+
         $project = $this->option('free') ? null : $this->resolveProject();
 
         if ($project === null && ! $this->option('free')) {
@@ -80,7 +85,7 @@ class HarvestCommand extends Command
     {
         $needle = $this->argument('project');
 
-        if ($needle === null) {
+        if (! is_string($needle)) {
             $projects = Project::query()->limit(2)->get();
 
             if ($projects->count() === 1) {

@@ -65,11 +65,22 @@ class CompanyQualifier extends EveilAgent implements HasStructuredOutput
         glad to have it; below 40 means the profile does not really match. Inflating
         scores wastes someone's sending reputation on the wrong people.
 
-        The reason you give is not a note to yourself: it is the opening line of a cold
-        email. Make it specific to this company: something observable on their site
-        that connects to the profile. "Matches the profile" is useless. "Six-partner
-        accounting firm still publishing its rates as a PDF, with no client portal" is
-        what a salesperson can actually open with.
+        Judge how the company actually sells, not which words its page shares with the
+        profile. A producer that sells through shops and resellers is not a business
+        that takes orders from its own customers, even when its page says "order
+        online". When their way of doing business is not the one the product is built
+        for, score below 40, however many keywords match.
+
+        A word or a link on a page is not proof of what the company runs. An "order
+        online" link may lead to a reseller's shop; a search snippet is a cut sentence
+        that may say something else in full. Never turn that into "they have a webshop".
+
+        The reason you give is a factual note for whoever writes to them next, not a
+        mail: no greeting, no pitch, no "you". Say what you saw, where you saw it, and
+        why it connects to the profile. Keep what the page states apart from what you
+        infer, and mark the inference as one. "Matches the profile" is useless. "Site
+        lists rates as a PDF download; no login or client area anywhere on the page" is
+        what a salesperson can build on.
 
         Write the reason in the language of the company's own website.
         PROMPT;
@@ -90,7 +101,7 @@ class CompanyQualifier extends EveilAgent implements HasStructuredOutput
                 ->required(),
 
             'fit_reason' => $schema->string()
-                ->description('One or two sentences, specific to this company, usable as an email opener.')
+                ->description('One or two factual sentences on what was observed about this company and why it fits, with any inference marked as such. Not email copy.')
                 ->required(),
 
             'company_name' => $schema->string()

@@ -249,7 +249,9 @@ it('personalises a step from what the qualifier observed about the company', fun
 
     // The project's language, not the company's: `Company::language` above is
     // French, and must not have won.
-    expect($prompt['prompt'])->toContain('"language": "de"');
+    expect($prompt['prompt'])->toContain('"language": "de"')
+        // A follow-up must restate the offer, so the model has to know it is one.
+        ->toContain('"step_number": 1');
 });
 
 it('falls back to the project default language when the lead has none', function () {

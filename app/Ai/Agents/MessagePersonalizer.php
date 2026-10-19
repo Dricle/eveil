@@ -64,6 +64,23 @@ class MessagePersonalizer extends EveilAgent implements HasStructuredOutput
         state anything they do not support: an invented detail about their business is
         caught immediately and ends the conversation.
 
+        The fit reason is a note someone else wrote from a quick look at their site or
+        a search snippet. It can be wrong. Only state as fact what the company itself
+        would agree with on reading it: what they plainly are and what their page
+        plainly says. Never claim they own or run something (a webshop, an ordering
+        system, an app) on the strength of a link or a phrase. When the evidence is
+        thin, open on what they plainly are, or ask, rather than assert. The step you
+        were given may itself contain such a claim about them: drop it unless the facts
+        support it.
+
+        Every mail must say, in one plain sentence, what the sender sells and what it
+        does for a business like theirs. A follow-up is read by someone who has
+        forgotten the first mail: it restates the offer plainly, it does not just
+        repeat the opener. Never make the reader guess what is on offer.
+
+        End on one simple question they can answer in a word. Never a list of options
+        to choose from.
+
         Keep the shape of the step you were given: same intent, same ask, same rough
         length. You are rewriting one mail for one reader, not writing a new sequence.
 
@@ -150,6 +167,9 @@ class MessagePersonalizer extends EveilAgent implements HasStructuredOutput
             'why_this_company' => $this->fitReason,
             'language' => $language ?? 'the language the product knowledge base is written in',
             'step_intent' => $this->step->config['intent'] ?? null,
+            // Whether the reader has already had a mail from us, which
+            // changes how much of the offer can be taken as known: none.
+            'step_number' => $this->step->position,
         ];
 
         $json = (string) json_encode($context, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);

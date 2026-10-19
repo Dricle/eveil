@@ -25,6 +25,7 @@ class AutonomyController extends Controller
             'emailAutonomyLevel' => $project->email_autonomy_level->value,
             'linkedinAutonomyLevel' => $project->linkedin_autonomy_level->value,
             'blueskyAutonomyLevel' => $project->bluesky_autonomy_level->value,
+            'adsAutonomyLevel' => $project->ads_autonomy_level->value,
         ]);
     }
 

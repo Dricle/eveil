@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Actions\FindSubreddits;
+use App\Console\Commands\Concerns\ReadsStringInput;
 use App\Models\TargetProfile;
 use App\Support\CurrentProject;
 use Illuminate\Console\Command;
@@ -15,17 +16,18 @@ use Illuminate\Console\Command;
  */
 class FindSubredditsCommand extends Command
 {
+    use ReadsStringInput;
+
     protected $signature = 'eveil:find-subreddits {target_profile : Target profile id}';
 
     protected $description = 'Resolve a target profile\'s Reddit topics into real, verified subreddits';
 
     public function handle(FindSubreddits $findSubreddits, CurrentProject $currentProject): int
     {
-        $targetProfileId = (int) $this->argument('target_profile');
-        $targetProfile = TargetProfile::find($targetProfileId);
+        $targetProfile = TargetProfile::find((int) $this->stringArgument('target_profile'));
 
         if ($targetProfile === null) {
-            $this->components->error("No target profile with id [{$targetProfileId}].");
+            $this->components->error("No target profile with id [{$this->stringArgument('target_profile')}].");
 
             return self::FAILURE;
         }

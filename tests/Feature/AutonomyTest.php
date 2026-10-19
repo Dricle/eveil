@@ -35,6 +35,7 @@ it('saves email and LinkedIn autonomy independently', function () {
             'email_autonomy_level' => 'supervised',
             'linkedin_autonomy_level' => 'autonomous',
             'bluesky_autonomy_level' => 'supervised',
+            'ads_autonomy_level' => 'supervised',
         ])
         ->assertSessionHasNoErrors();
 
@@ -51,6 +52,7 @@ it('refuses semi-auto for LinkedIn and Bluesky, which have no step for it to han
             'email_autonomy_level' => 'autonomous',
             'linkedin_autonomy_level' => 'semi_auto',
             'bluesky_autonomy_level' => 'semi_auto',
+            'ads_autonomy_level' => 'supervised',
         ])
         ->assertJsonValidationErrors(['linkedin_autonomy_level', 'bluesky_autonomy_level']);
 
@@ -65,6 +67,7 @@ it('refuses a level that does not exist', function () {
             'email_autonomy_level' => 'whatever',
             'linkedin_autonomy_level' => 'supervised',
             'bluesky_autonomy_level' => 'supervised',
+            'ads_autonomy_level' => 'supervised',
         ])
         ->assertJsonValidationErrors('email_autonomy_level');
 });

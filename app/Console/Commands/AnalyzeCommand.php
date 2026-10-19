@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Actions\AnalyzeWebsite;
 use App\Ai\AgentSettings;
+use App\Console\Commands\Concerns\ReadsStringInput;
 use App\Enums\AnalysisStatus;
 use App\Models\AgentRun;
 use App\Models\Organization;
@@ -21,6 +22,8 @@ use Illuminate\Support\Str;
  */
 class AnalyzeCommand extends Command
 {
+    use ReadsStringInput;
+
     protected $signature = 'eveil:analyze {url : The website to analyse}
                                           {--name= : Project name, defaults to the domain}
                                           {--pages= : Maximum pages to crawl}
@@ -30,8 +33,7 @@ class AnalyzeCommand extends Command
 
     public function handle(AnalyzeWebsite $analyze, CurrentProject $currentProject): int
     {
-        $url = $this->argument('url');
-        $url = is_string($url) ? Url::normalize($url) : null;
+        $url = Url::normalize($this->stringArgument('url') ?? '');
 
         if ($url === null) {
             $this->components->error('That does not look like an http(s) URL.');
@@ -110,11 +112,9 @@ class AnalyzeCommand extends Command
             'slug' => 'default',
         ]);
 
-        $name = $this->option('name');
-
         return Project::create([
             'organization_id' => $organization->id,
-            'name' => is_string($name) && $name !== '' ? $name : (Url::host($url) ?: $url),
+            'name' => $this->stringOption('name') ?? Url::host($url) ?: $url,
             'url' => $url,
         ]);
     }

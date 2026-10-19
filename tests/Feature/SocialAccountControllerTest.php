@@ -78,6 +78,7 @@ it('saves the Bluesky autonomy', function () {
         'email_autonomy_level' => 'supervised',
         'linkedin_autonomy_level' => 'supervised',
         'bluesky_autonomy_level' => 'autonomous',
+        'ads_autonomy_level' => 'supervised',
     ])->assertRedirect(route('settings.autonomy.edit'));
 
     expect($project->fresh())

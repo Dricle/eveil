@@ -10,6 +10,7 @@ import linkedin from '@/routes/settings/linkedin'
 import mailboxes from '@/routes/settings/mailboxes'
 import members from '@/routes/settings/members'
 import bluesky from '@/routes/settings/bluesky'
+import adPlatforms from '@/routes/settings/ad-platforms'
 import project from '@/routes/settings/project'
 import aiInstructions from '@/routes/settings/ai-instructions'
 import autonomy from '@/routes/settings/autonomy'
@@ -51,6 +52,7 @@ const organizationItems = computed<NavigationMenuItem[]>(() => [
     // reference.
     { label: 'LinkedIn', icon: 'i-lucide-share-2', to: relativeUrl(linkedin.index.url({ project: page.props.currentProject!.slug })) },
     { label: 'Bluesky', icon: 'i-lucide-at-sign', to: relativeUrl(bluesky.index.url({ project: page.props.currentProject!.slug })) },
+    { label: 'Ad platforms', icon: 'i-lucide-megaphone', to: relativeUrl(adPlatforms.index.url({ project: page.props.currentProject!.slug })) },
     { label: 'Members', icon: 'i-lucide-users', to: relativeUrl(members.index.url({ project: page.props.currentProject!.slug })) },
     { label: 'API', icon: 'i-lucide-key-round', to: relativeUrl(apiTokens.index.url({ project: page.props.currentProject!.slug })) },
     // Cloud only: self-hosted has no wallet, no plan, nothing this screen

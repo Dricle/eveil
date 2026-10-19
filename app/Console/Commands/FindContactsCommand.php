@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Actions\FindContacts;
+use App\Console\Commands\Concerns\ReadsStringInput;
 use App\Enums\EmailSource;
 use App\Enums\EmailStatus;
 use App\Models\AgentRun;
@@ -20,6 +21,8 @@ use Throwable;
  */
 class FindContactsCommand extends Command
 {
+    use ReadsStringInput;
+
     protected $signature = 'eveil:find-contacts {project? : Project id, URL or name. Defaults to the only one}
                                                 {--limit=10 : How many companies to work through}
                                                 {--fresh : Include companies that already have leads}
@@ -82,7 +85,7 @@ class FindContactsCommand extends Command
 
     private function resolveProject(): ?Project
     {
-        $needle = $this->argument('project');
+        $needle = $this->stringArgument('project');
 
         if (! is_string($needle)) {
             $projects = Project::query()->limit(2)->get();

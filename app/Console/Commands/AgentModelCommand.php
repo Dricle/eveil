@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Ai\AgentSettings;
+use App\Console\Commands\Concerns\ReadsStringInput;
 use App\Models\AgentRun;
 use Illuminate\Console\Command;
 
@@ -17,6 +18,8 @@ use Illuminate\Console\Command;
  */
 class AgentModelCommand extends Command
 {
+    use ReadsStringInput;
+
     protected $signature = 'eveil:agent-model {agent? : Agent slug, e.g. target-profile-deriver}
                                               {--model= : Model id to use}
                                               {--provider= : Provider name, defaults to anthropic}
@@ -27,9 +30,9 @@ class AgentModelCommand extends Command
 
     public function handle(AgentSettings $agents): int
     {
-        $agent = $this->argument('agent');
+        $agent = $this->stringArgument('agent');
 
-        if (! is_string($agent)) {
+        if ($agent === null) {
             $this->table(
                 ['agent', 'provider', 'model', 'timeout', 'source', 'tokens in / out', 'calls'],
                 collect($agents->known())->map(fn (string $slug): array => $this->row($slug, $agents))->all(),
@@ -57,12 +60,9 @@ class AgentModelCommand extends Command
             return self::SUCCESS;
         }
 
-        $provider = $this->option('provider');
-        $model = $this->option('model');
-
         $agents->save($agent, [
-            'provider' => is_string($provider) && $provider !== '' ? $provider : $agents->providerName($agent),
-            'model' => is_string($model) && $model !== '' ? $model : (string) $agents->model($agent),
+            'provider' => $this->stringOption('provider') ?? $agents->providerName($agent),
+            'model' => $this->stringOption('model') ?? $agents->model($agent),
             'timeout' => (int) ($this->option('timeout') ?: $agents->timeout($agent)),
         ]);
 

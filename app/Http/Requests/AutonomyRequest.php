@@ -21,6 +21,9 @@ class AutonomyRequest extends FormRequest
             // Same two notches as LinkedIn. X has no setting: it is always
             // posted by hand.
             'bluesky_autonomy_level' => ['required', Rule::enum(AutonomyLevel::class)->only([AutonomyLevel::Supervised, AutonomyLevel::Autonomous])],
+            // All three notches: semi auto hands over optimizing what runs,
+            // autonomous also opening new campaigns (`AdDecisionType`).
+            'ads_autonomy_level' => ['required', Rule::enum(AutonomyLevel::class)],
         ];
     }
 }

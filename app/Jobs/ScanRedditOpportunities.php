@@ -38,6 +38,12 @@ class ScanRedditOpportunities implements ShouldQueue
 
     private const TONE_SAMPLE_LIMIT = 5;
 
+    /**
+     * ~1500 chars per candidate (3000 for SEO threads) keeps a batch of 40
+     * well under 50k tokens, a quarter of the 200k context window.
+     */
+    private const TRIAGE_BATCH_SIZE = 40;
+
     public function __construct(public Project $project)
     {
         $this->onQueue('ai');
@@ -136,17 +142,19 @@ class ScanRedditOpportunities implements ShouldQueue
      */
     private function triage(Collection $candidates): Collection
     {
-        $run = AgentRun::create([
-            'project_id' => $this->project->id,
-            'agent' => RedditOpportunityTriage::slug(),
-            'status' => AgentRunStatus::Pending,
-        ]);
+        // One call per batch: 50 candidates per subreddit across every
+        // subreddit blew past the model's context window in a single prompt.
+        return $candidates->chunk(self::TRIAGE_BATCH_SIZE)->flatMap(function (Collection $batch): array {
+            $run = AgentRun::create([
+                'project_id' => $this->project->id,
+                'agent' => RedditOpportunityTriage::slug(),
+                'status' => AgentRunStatus::Pending,
+            ]);
 
-        $agent = new RedditOpportunityTriage($this->project, $candidates);
+            $agent = new RedditOpportunityTriage($this->project, $batch->values());
 
-        $response = $agent->recordInto($run)->triage();
-
-        return new Collection($response->structured['items'] ?? []);
+            return $agent->recordInto($run)->triage()->structured['items'] ?? [];
+        })->values();
     }
 
     /**

@@ -120,7 +120,7 @@ class DiscoverCompaniesCommand extends Command
     {
         $needle = $this->stringArgument('profile');
 
-        if ($needle === null) {
+        if (! is_string($needle)) {
             $targetProfiles = TargetProfile::query()->where('is_active', true)->limit(2)->get();
 
             if ($targetProfiles->count() === 1) {

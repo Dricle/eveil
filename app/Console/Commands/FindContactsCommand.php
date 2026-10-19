@@ -87,7 +87,7 @@ class FindContactsCommand extends Command
     {
         $needle = $this->stringArgument('project');
 
-        if ($needle === null) {
+        if (! is_string($needle)) {
             $projects = Project::query()->limit(2)->get();
 
             if ($projects->count() === 1) {

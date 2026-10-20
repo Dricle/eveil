@@ -1093,16 +1093,16 @@
         },
         {
             "name": "grkamil/laravel-telegram-logging",
-            "version": "v1.15.0",
+            "version": "v1.15.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/grkamil/laravel-telegram-logging.git",
-                "reference": "0346907408d6d285d6b35d804469a3d95cd20a62"
+                "reference": "48ab88e096e35ceb8c78753a818884a6b8e4832e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/grkamil/laravel-telegram-logging/zipball/0346907408d6d285d6b35d804469a3d95cd20a62",
-                "reference": "0346907408d6d285d6b35d804469a3d95cd20a62",
+                "url": "https://api.github.com/repos/grkamil/laravel-telegram-logging/zipball/48ab88e096e35ceb8c78753a818884a6b8e4832e",
+                "reference": "48ab88e096e35ceb8c78753a818884a6b8e4832e",
                 "shasum": ""
             },
             "require": {
@@ -1130,9 +1130,9 @@
             "description": "Send logs to Telegram chat via Telegram bot",
             "support": {
                 "issues": "https://github.com/grkamil/laravel-telegram-logging/issues",
-                "source": "https://github.com/grkamil/laravel-telegram-logging/tree/v1.15.0"
+                "source": "https://github.com/grkamil/laravel-telegram-logging/tree/v1.15.1"
             },
-            "time": "2026-05-25T09:08:03+00:00"
+            "time": "2026-10-16T20:22:52+00:00"
         },
         {
             "name": "guzzlehttp/guzzle",

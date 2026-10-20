@@ -143,15 +143,20 @@ just credits spent, with no CSV export before a first payment.
 
 ## Installing
 
-You need Docker and about five minutes.
+You need Docker and about five minutes. No clone, nothing to compile: the app
+runs a prebuilt image, and three files in an empty directory are the whole
+install.
 
 ```bash
-git clone https://github.com/Dricle/eveil.git
-cd eveil
-cp deploy/.env.example .env
+mkdir -p eveil/docker/searxng && cd eveil
+
+base=https://raw.githubusercontent.com/Dricle/eveil/main
+curl -fsSL -o compose.deploy.yaml        $base/compose.deploy.yaml
+curl -fsSL -o .env                       $base/deploy/.env.example
+curl -fsSL -o docker/searxng/settings.yml $base/docker/searxng/settings.yml
 ```
 
-Three values to fill in, two more you can leave alone:
+Three values to fill in, three more you can leave alone:
 
 | Variable | What it is |
 | --- | --- |
@@ -172,6 +177,7 @@ before they can actually send. See [Configuration](https://docs.eveil.cloud/self
 Then bring it up:
 
 ```bash
+docker compose -f compose.deploy.yaml pull
 docker compose -f compose.deploy.yaml up -d
 ```
 
@@ -186,12 +192,18 @@ and [Configuration](https://docs.eveil.cloud/self-hosted/configuration) docs cov
 all of that. `-f compose.deploy.yaml` on every command gets old fast; put
 `COMPOSE_FILE=compose.deploy.yaml` in `.env` and drop it.
 
+Prefer to compile what you run? Clone the repository and add
+`compose.build.yaml` as a second `-f`:
+`docker compose -f compose.deploy.yaml -f compose.build.yaml up -d --build`.
+
 ### Updating
 
 ```bash
-./update.sh
+docker compose -f compose.deploy.yaml pull
+docker compose -f compose.deploy.yaml up -d
 ```
 
+Migrations run on boot; your database, Redis and storage volumes are untouched.
 See [Updating](https://docs.eveil.cloud/self-hosted/updating) for rolling back, and
 [Backup](https://docs.eveil.cloud/self-hosted/backup) before you do.
 

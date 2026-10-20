@@ -1,8 +1,11 @@
-# The self-hosted stack. From a clone of this repository:
+# The self-hosted stack. No clone needed - this file, an `.env` and
+# `docker/searxng/settings.yml` beside it are the whole install:
 #
-#   cp deploy/.env.example .env
-#   # fill in APP_KEY, CREDENTIALS_KEY, the two passwords and ADMIN_*
+#   # fill in the two passwords and ADMIN_* in .env
 #   docker compose -f compose.deploy.yaml up -d
+#
+# `app` pulls a published image. To build it from this source tree instead, add
+# `compose.build.yaml` as a second `-f`; see the comment at the top of that file.
 #
 # At the repository ROOT rather than inside `deploy/` for one practical reason:
 # Compose takes its project directory from wherever the compose file lives, so a
@@ -19,9 +22,10 @@ services:
     # Plain HTTP: TLS belongs to whatever sits in front, which on a self-hosted
     # box is usually a reverse proxy that already has the certificates.
     app:
-        build:
-            context: .
-            dockerfile: deploy/Dockerfile
+        # Swap `latest` for a release, e.g. `1.2.0`, to pin it, so that an
+        # update is a decision you make rather than whatever `latest` resolved
+        # to the last time the image was pulled.
+        image: 'ghcr.io/dricle/eveil:latest'
         restart: unless-stopped
         ports:
             - '${APP_PORT:-80}:80'

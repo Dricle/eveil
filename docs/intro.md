@@ -33,7 +33,7 @@ One codebase, AGPL-3.0, shipped in two editions. Same features either way — cl
 | **Mailboxes** | Unlimited, at no extra cost              | Unlimited, at no extra cost              |
 | **AI provider** | Bring your own API key                   | Supplied                                 |
 | **Data** | Stays on your infrastructure             | Hosted                              |
-| **Updates** | `git pull` + rebuild, on your schedule   | Automatic                                |
+| **Updates** | `docker compose pull`, on your schedule  | Automatic                                |
 | **Support** | Community (GitHub Issues)                | Direct support                           |
 | **Setup time** | A Docker host and ten minutes            | An account                               |
 

@@ -258,18 +258,23 @@ function promote () {
 
         <Form
             v-if="editing"
-            v-slot="{ processing }"
+            v-slot="{ errors, processing }"
             v-bind="socialPostRoutes.update.form({ project: slug, social_post: post.id })"
             class="space-y-2"
             :options="{ preserveScroll: true }"
             @success="editing = false"
         >
-            <UTextarea
-                v-model="editBody"
+            <UFormField
                 name="body"
-                :rows="4"
-                class="w-full"
-            />
+                :error="errors.body"
+            >
+                <UTextarea
+                    v-model="editBody"
+                    name="body"
+                    :rows="4"
+                    class="w-full"
+                />
+            </UFormField>
             <UButton
                 type="submit"
                 size="xs"

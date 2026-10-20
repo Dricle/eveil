@@ -149,6 +149,17 @@ it('edits a draft but never a published post', function () {
         ->and($published->fresh()->body)->toBe('Live');
 });
 
+it('accepts an edit up to the longest network limit', function () {
+    [$user, $project] = socialSetup();
+
+    $draft = SocialPost::factory()->create(['project_id' => $project->id]);
+
+    $this->actingAs($user)->putJson(route('social.posts.update', $draft), ['body' => str_repeat('a', 2500)])->assertSessionHasNoErrors();
+    $this->actingAs($user)->putJson(route('social.posts.update', $draft), ['body' => str_repeat('a', 3001)])->assertJsonValidationErrors('body');
+
+    expect(mb_strlen($draft->fresh()->body))->toBe(2500);
+});
+
 it('rejects with a reason and promotes only a published post', function () {
     [$user, $project] = socialSetup();
 

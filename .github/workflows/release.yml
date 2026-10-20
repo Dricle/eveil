@@ -1,6 +1,11 @@
 # Builds the self-hosted image and publishes it to GHCR, so that installing
 # Eveil is `docker compose pull` rather than cloning the repository and
 # compiling on the target machine.
+#
+# One-time step after the first run: GHCR creates a new package as private,
+# even from a public repository, and the install docs pull anonymously. Make
+# it public under the organisation's Packages > eveil > Package settings >
+# Change visibility, before pointing anyone at the install.
 name: release
 
 on:

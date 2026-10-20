@@ -6,7 +6,7 @@ import ChatPanel from '@/components/chat/ChatPanel.vue'
 import ChatToggleButton from '@/components/chat/ChatToggleButton.vue'
 import { chatOpen } from '@/composables/useChatPanel'
 import { PLATFORM_LABEL } from '@/lib/social'
-import { relativeUrl } from '@/lib/utils'
+import { host, relativeUrl } from '@/lib/utils'
 import { switchProjectUrl } from '@/lib/switchProjectUrl'
 import { dashboard, inbox, logout } from '@/routes'
 import adRoutes from '@/routes/ads'
@@ -21,6 +21,8 @@ import { create as createProject } from '@/routes/projects'
 import { create as createOrganization } from '@/routes/organizations'
 import mailboxes from '@/routes/settings/mailboxes'
 import organizationBilling from '@/routes/settings/organization/billing'
+import { dashboard as organizationDashboard } from '@/routes/organization'
+import organizationGeneral from '@/routes/settings/organization/general'
 import projectSettings from '@/routes/settings/project'
 import targets from '@/routes/targets'
 
@@ -61,11 +63,34 @@ const navCounts = computed(() => page.props.navCounts)
 // Every item below needs a project to link into, so there is nothing to show
 // until one is selected (the create-project and account/app-settings screens
 // render this layout too, with `currentProject` null).
+// The organization overview still sits under a project's URL (that is what
+// names the organization), but everything on screen is org-wide.
+const onOverview = computed(() => page.component === 'OrganizationDashboard')
+
 const items = computed<NavigationMenuItem[]>(() => {
     const project = page.props.currentProject
 
     if (project === null) {
         return []
+    }
+
+    // "All projects" is a scope, not a section of one project: Targets, Leads
+    // or Inbox would silently mean the project in the URL, so the sidebar
+    // only offers what belongs to the organization.
+    if (onOverview.value) {
+        return [
+            {
+                label: 'All projects',
+                icon: 'i-lucide-layout-grid',
+                to: relativeUrl(organizationDashboard.url({ project: project.slug })),
+                active: true
+            },
+            {
+                label: 'Organization settings',
+                icon: 'i-lucide-settings',
+                to: relativeUrl(organizationGeneral.edit.url({ project: project.slug }))
+            }
+        ]
     }
 
     return [
@@ -185,17 +210,6 @@ function firstProjectOf (organizationId: number) {
     return page.props.projects.find(project => project.organization_id === organizationId)
 }
 
-// Every project's domain, shortened to a host: `new URL` throws on whatever a
-// user typed before validation caught it, so a bad one just falls back to the
-// full string rather than blanking the row.
-function host (url: string): string {
-    try {
-        return new URL(url).host
-    } catch {
-        return url
-    }
-}
-
 // Picking another organization has no "just switch context" route of its
 // own: it lands on whichever of its projects sorts first, or on creating one
 // when it has none yet. Picking a project in the SAME organization only ever
@@ -228,8 +242,18 @@ const orgMenu = computed<DropdownMenuItem[][]>(() => [
 ])
 
 const projectMenu = computed<DropdownMenuItem[][]>(() => [
+    ...(currentOrgProjects.value.length > 1 && page.props.currentProject
+        ? [[{
+                label: 'All projects',
+                description: `${currentOrgProjects.value.length} projects side by side`,
+                icon: 'i-lucide-layout-grid',
+                current: onOverview.value,
+                class: onOverview.value ? 'bg-primary/10' : '',
+                to: relativeUrl(organizationDashboard.url({ project: page.props.currentProject.slug }))
+            }]]
+        : []),
     currentOrgProjects.value.map((project) => {
-        const isCurrent = project.id === page.props.currentProject?.id
+        const isCurrent = !onOverview.value && project.id === page.props.currentProject?.id
 
         return {
             label: project.name,
@@ -427,16 +451,28 @@ const userMenu = computed<DropdownMenuItem[][]>(() => [
                             :ui="{ trailingIcon: 'size-3 opacity-50', label: 'truncate' }"
                         >
                             <span class="grid size-[18px] shrink-0 place-items-center rounded-[5px] bg-primary text-[9.5px] font-semibold text-inverted">
-                                {{ page.props.currentProject?.name.charAt(0).toUpperCase() }}
+                                <UIcon
+                                    v-if="onOverview"
+                                    name="i-lucide-layout-grid"
+                                    class="size-3"
+                                />
+                                <template v-else>{{ page.props.currentProject?.name.charAt(0).toUpperCase() }}</template>
                             </span>
-                            <span class="truncate">{{ page.props.currentProject?.name ?? 'No project' }}</span>
+                            <span class="truncate">{{ onOverview ? 'All projects' : (page.props.currentProject?.name ?? 'No project') }}</span>
                         </UButton>
 
                         <template #item-leading="{ item }">
                             <span
                                 class="grid size-6 shrink-0 place-items-center rounded-md text-[11px] font-semibold"
                                 :class="item.current ? 'bg-primary text-inverted' : 'bg-elevated text-muted'"
-                            >{{ item.initial }}</span>
+                            >
+                                <UIcon
+                                    v-if="item.icon"
+                                    :name="item.icon"
+                                    class="size-3.5"
+                                />
+                                <template v-else>{{ item.initial }}</template>
+                            </span>
                         </template>
                         <template #item-trailing="{ item }">
                             <span

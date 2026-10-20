@@ -3,13 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Actions\InboxFolders;
+use App\Actions\SummarizeProjectStats;
 use App\Actions\SummarizeRunningDiscovery;
-use App\Cloud\Models\CreditTransaction;
 use App\Enums\ArticleStatus;
 use App\Enums\MessageDirection;
 use App\Enums\OutreachStatus;
 use App\Enums\RedditReplyStatus;
-use App\Enums\ReplyClassification;
 use App\Enums\SocialPostStatus;
 use App\Http\Resources\ArticleResource;
 use App\Http\Resources\CampaignResource;
@@ -19,11 +18,9 @@ use App\Http\Resources\RedditReplyResource;
 use App\Http\Resources\ReplyResource;
 use App\Http\Resources\SocialAccountResource;
 use App\Http\Resources\SocialPostResource;
-use App\Models\AgentRun;
 use App\Models\Article;
 use App\Models\Campaign;
 use App\Models\CampaignLead;
-use App\Models\Company;
 use App\Models\DiscoveryRun;
 use App\Models\Lead;
 use App\Models\Message;
@@ -37,12 +34,8 @@ use Inertia\Response;
 
 /**
  * What this project has actually produced, and what wants a person today.
- *
- * The headline number is the POSITIVE reply rate, not the raw one: a raw rate
- * counts "no thanks" and out-of-office alongside real interest, and a dashboard
- * that flatters is worse than none. Sends and replies are counted from
- * `messages` rather than from campaign state, because a mail that left is a fact
- * and a status is a summary.
+ * The headline numbers are `SummarizeProjectStats`, shared with the
+ * organization overview.
  */
 class DashboardController extends Controller
 {
@@ -50,25 +43,11 @@ class DashboardController extends Controller
         private CurrentProject $currentProject,
         private SummarizeRunningDiscovery $summarizeRunningDiscovery,
         private InboxFolders $inboxFolders,
+        private SummarizeProjectStats $summarizeProjectStats,
     ) {}
 
     public function index(Request $request): Response
     {
-        // `Message` carries no `project_id` of its own, same as `CampaignLead`
-        // below: `whereHas('lead')` is what confines it to the current
-        // project rather than every message on the instance.
-        $sent = Message::query()->whereHas('lead')->where('direction', MessageDirection::Outbound)->whereNotNull('sent_at')->count();
-        $replies = Message::query()->whereHas('lead')->where('direction', MessageDirection::Inbound)->count();
-        $positive = Message::query()
-            ->whereHas('lead')
-            ->where('direction', MessageDirection::Inbound)
-            ->where('classification', ReplyClassification::Interested)
-            ->count();
-        $awaitingHuman = CampaignLead::query()
-            ->whereHas('campaign')
-            ->where('pause_reason', 'awaiting_human')
-            ->count();
-
         return Inertia::render('Dashboard', [
             // Somebody who wandered off mid-setup needs the way back: until a
             // search has run there is nothing on this page but zeroes, and a
@@ -78,31 +57,7 @@ class DashboardController extends Controller
                 'name' => explode(' ', (string) $request->user()?->name)[0],
                 'days_running' => (int) $this->currentProject->get()?->created_at?->diffInDays(now()),
             ],
-            'stats' => [
-                'companies_found' => Company::query()->count(),
-                'companies_kept' => Company::query()->contactable()->count(),
-                'sent' => $sent,
-                'replies' => $replies,
-                'positive' => $positive,
-                'positive_rate' => $sent === 0 ? null : (int) round($positive / $sent * 100),
-                'awaiting_human' => $awaitingHuman,
-                // Tokens on self-hosted, credits spent on cloud - never both,
-                // and never a conversion between them: a self-hosted operator
-                // pays their own provider and wants token counts; a cloud
-                // customer is billed in credits and must never see a token
-                // count or a model name, whatever it would convert to.
-                ...(config('eveil.edition') === 'cloud'
-                    ? [
-                        'credits_spent' => abs((int) CreditTransaction::query()
-                            ->where('type', 'debit')
-                            ->whereHas('agentRun')
-                            ->sum('credits')),
-                    ]
-                    : [
-                        'tokens_in' => (int) AgentRun::query()->sum('tokens_in'),
-                        'tokens_out' => (int) AgentRun::query()->sum('tokens_out'),
-                    ]),
-            ],
+            'stats' => $this->summarizeProjectStats->handle(),
             // The funnel: how far the people in sequences have actually got.
             // Not drawn on the redesigned page - the running-discovery and
             // campaigns cards say more - but kept on the wire for whatever

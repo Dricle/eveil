@@ -76,6 +76,7 @@ use App\Http\Controllers\OnboardingAnalysisController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\OnboardingSearchController;
 use App\Http\Controllers\OrganizationController;
+use App\Http\Controllers\OrganizationDashboardController;
 use App\Http\Controllers\PlatformAppController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectKnowledgeBaseController;
@@ -151,6 +152,13 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
      */
     Route::prefix('{project:slug}')->middleware('project.set')->group(function (): void {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+
+        /*
+         * The organization's projects side by side. Under `{project:slug}`
+         * like everything else: the current project is what says which
+         * organization this is, and where "back" goes.
+         */
+        Route::get('organization', [OrganizationDashboardController::class, 'index'])->name('organization.dashboard');
 
         /*
          * Where one acquisition idea stands, said by the user or by Evie on

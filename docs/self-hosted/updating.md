@@ -5,7 +5,7 @@ docker compose -f compose.deploy.yaml pull
 docker compose -f compose.deploy.yaml up -d
 ```
 
-If `EVEIL_VERSION` is pinned in `.env`, change it to the release you want first — otherwise pulling finds exactly the image already running. Releases are listed on [the repository's releases page](https://github.com/Dricle/eveil/releases).
+If you pinned a release in the `app` service's `image:` line, change it to the release you want first — otherwise pulling finds exactly the image already running. Releases are listed on [the repository's releases page](https://github.com/Dricle/eveil/releases).
 
 `./update.sh` wraps the two commands if you'd rather run one. It is not in the install download; fetch it with `curl -fsSLO https://raw.githubusercontent.com/Dricle/eveil/main/update.sh && chmod +x update.sh`.
 
@@ -22,7 +22,7 @@ There's no changelog yet. Until there is, the [releases page](https://github.com
 
 ## Rolling back
 
-Set `EVEIL_VERSION` in `.env` to the previous release, then:
+Set the `app` service's `image:` line in `compose.deploy.yaml` to the previous release, e.g. `ghcr.io/dricle/eveil:1.2.0`, then:
 
 ```bash
 docker compose -f compose.deploy.yaml up -d

@@ -22,10 +22,10 @@ services:
     # Plain HTTP: TLS belongs to whatever sits in front, which on a self-hosted
     # box is usually a reverse proxy that already has the certificates.
     app:
-        # Pin a release in `.env` with EVEIL_VERSION, so that an update is a
-        # decision you make rather than whatever `latest` resolved to the last
-        # time the image was pulled.
-        image: 'ghcr.io/dricle/eveil:${EVEIL_VERSION:-latest}'
+        # Swap `latest` for a release, e.g. `1.2.0`, to pin it, so that an
+        # update is a decision you make rather than whatever `latest` resolved
+        # to the last time the image was pulled.
+        image: 'ghcr.io/dricle/eveil:latest'
         restart: unless-stopped
         ports:
             - '${APP_PORT:-80}:80'

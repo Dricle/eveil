@@ -165,7 +165,6 @@ Three values to fill in, three more you can leave alone:
 | `SEARXNG_SECRET` | Any long random string. Only signs the bundled search engine's own requests. |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Optional. Set them and the first account is created on boot; leave them empty and the setup screen asks instead. |
 | `APP_PORT` | Optional, **defaults to `80`**. The host port the app is published on. Change it if something already holds 80. |
-| `EVEIL_VERSION` | Optional, **defaults to `latest`**. The release to run, e.g. `1.2.0`. Pin it if you would rather decide when you move. |
 
 Leave `APP_KEY` and `CREDENTIALS_KEY` empty: they are generated on first boot.
 Fill them in only if you would rather manage them yourself; anything set there

@@ -15,10 +15,10 @@ if [ ! -f .env ]; then
   exit 1
 fi
 
-# `EVEIL_VERSION` pinned to a release means pulling finds exactly what is
+# A release pinned in the compose file means pulling finds exactly what is
 # already running: say so rather than let the script look like it did nothing.
-if grep -qE '^EVEIL_VERSION=.+' .env; then
-  echo "Note: EVEIL_VERSION is pinned in .env. Change it to the release you want, then run this again."
+if ! grep -q 'ghcr.io/dricle/eveil:latest' compose.deploy.yaml; then
+  echo "Note: compose.deploy.yaml pins a release. Change it to the one you want, then run this again."
 fi
 
 echo "Pulling the latest images..."

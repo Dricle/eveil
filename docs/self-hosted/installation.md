@@ -34,7 +34,7 @@ curl -fsSL -o docker/searxng/settings.yml $base/docker/searxng/settings.yml
 ```
 
 ::: tip Pinning a release
-`main` tracks the newest release, and `.env` leaves `EVEIL_VERSION` empty, which means the `latest` image. To pin instead, swap `main` for a release tag in the three URLs above and set the matching `EVEIL_VERSION` in `.env` — the tag `v1.2.0` publishes the image `1.2.0`, without the `v`. Releases are listed on [the repository's releases page](https://github.com/Dricle/eveil/releases).
+`main` tracks the newest release, and `compose.deploy.yaml` runs the `latest` image. To pin instead, swap `main` for a release tag in the three URLs above and replace `latest` with the matching version in the `app` service's `image:` line — the tag `v1.2.0` publishes the image `ghcr.io/dricle/eveil:1.2.0`, without the `v`. Releases are listed on [the repository's releases page](https://github.com/Dricle/eveil/releases).
 :::
 
 Edit `.env` and fill in:
@@ -46,7 +46,6 @@ Edit `.env` and fill in:
 | `SEARXNG_SECRET` | Any long random string. Only signs the bundled search engine's own requests. |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Optional. Set them and the first account is created on boot; leave them empty and the setup screen asks instead. |
 | `APP_PORT` | Optional, **defaults to `80`**. The host port the app is published on — change it if something already holds 80. |
-| `EVEIL_VERSION` | Optional, **defaults to `latest`**. The published image to run, e.g. `1.2.0`. See the tip above. |
 
 Leave `APP_KEY` and `CREDENTIALS_KEY` empty: they're generated on first boot into the storage volume, and every later boot reuses them (see [Keys](/self-hosted/configuration#keys) in Configuration). Fill them in only if you'd rather manage them yourself — anything set there wins.
 

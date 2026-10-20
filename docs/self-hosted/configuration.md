@@ -4,7 +4,6 @@
 
 Deployment-only settings — the things an env file sets and no in-app screen should — live in `.env`, sourced from `deploy/.env.example`. Notably:
 
-- `EVEIL_VERSION` — which published image to run, e.g. `1.2.0`. Leave it empty and you get `latest`, resolved at the moment you last pulled. See [Updating](/self-hosted/updating).
 - `APP_KEY` — standard Laravel encryption key.
 - `CREDENTIALS_KEY` — a **separate** key that encrypts stored SMTP/IMAP credentials. See [`eveil:credentials-key`](/self-hosted/commands#eveil-credentials-key) to generate one.
 - `APP_EDITION` — `self` for self-hosted. Disables the marketing site (`/` redirects straight to `/app`) and the billing code.

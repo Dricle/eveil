@@ -16,3 +16,14 @@ export function cn (...inputs: ClassValue[]) {
 export function relativeUrl (url: string): string {
     return url.replace(/^https?:\/\/[^/]+/, '')
 }
+
+// A project's domain, shortened to a host: `new URL` throws on whatever a
+// user typed before validation caught it, so a bad one just falls back to the
+// full string rather than blanking the row.
+export function host (url: string): string {
+    try {
+        return new URL(url).host
+    } catch {
+        return url
+    }
+}

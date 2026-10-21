@@ -40,4 +40,9 @@ class SocialPostFactory extends Factory
     {
         return $this->state(['platform' => SocialPlatform::X]);
     }
+
+    public function instagram(): static
+    {
+        return $this->state(['platform' => SocialPlatform::Instagram]);
+    }
 }

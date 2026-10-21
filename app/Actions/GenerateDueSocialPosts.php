@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\Builder;
  * each due project and network becomes one queued job, so a slow model call
  * costs one post and never the batch.
  *
- * LinkedIn and Bluesky need a working account granted to the project. X needs
+ * LinkedIn, Bluesky and Instagram need a working account granted to the project. X needs
  * nothing: the user posts it by hand.
  */
 class GenerateDueSocialPosts

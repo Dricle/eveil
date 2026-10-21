@@ -79,6 +79,16 @@ abstract class EveilAgent implements Agent
     }
 
     /**
+     * Whether this agent draws images rather than writing text. Only an
+     * image provider can serve it, so moving every agent to one provider
+     * (`SwitchAgentProvider`) leaves it where it is.
+     */
+    public static function generatesImages(): bool
+    {
+        return false;
+    }
+
+    /**
      * The project's own instructions for the EMAILS written in its name: tone,
      * language, words to avoid. The "How the AI writes" box on Settings ->
      * Project. Appended by the agents that write an email a lead actually

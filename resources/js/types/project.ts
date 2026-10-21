@@ -128,6 +128,8 @@ export type TargetProfile = {
 export type ProjectDetail = Project & {
     edited_by_user: boolean
     has_github_token: boolean
+    /** The visual identity library generated images draw from, served by the app. */
+    brand_assets: { id: number, kind: 'logo' | 'illustration' | 'example', description: string | null, url: string }[]
     /** How much of the run happens without being asked. */
     /** Pauses continuous discovery for the rest of the day once reached. Null is uncapped. */
     daily_lead_limit: number | null

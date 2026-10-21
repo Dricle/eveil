@@ -6,8 +6,10 @@
         ['icon' => 'linkedin', 'name' => 'LinkedIn'],
         ['icon' => 'x', 'name' => 'X'],
         ['icon' => 'bluesky', 'name' => 'Bluesky'],
+        ['icon' => 'instagram', 'name' => 'Instagram'],
         ['icon' => 'arrow-big-up', 'name' => 'Reddit'],
         ['icon' => 'file-text', 'name' => 'SEO articles'],
+        ['icon' => 'megaphone', 'name' => 'Ads'],
     ];
 
     $steps = [
@@ -26,9 +28,9 @@
     $contentChannels = [
         [
             'key' => 'social',
-            'label' => 'LinkedIn, X & Bluesky',
+            'label' => 'LinkedIn, X, Bluesky & Instagram',
             'title' => 'Posts that sound like you',
-            'text' => 'A fact about your product, a client you just won, your latest article or relevant industry news, drafted for each network and queued for approval. LinkedIn and Bluesky publish through their official APIs; X you copy and post yourself.',
+            'text' => 'A fact about your product, a client you just won, your latest article or relevant industry news, drafted for each network and queued for approval. Instagram posts come with an image Eveil generates. LinkedIn, Bluesky and Instagram publish for you; X you copy and post yourself.',
         ],
         [
             'key' => 'seo',
@@ -41,6 +43,12 @@
             'label' => 'Reddit',
             'title' => 'Replies in the right threads',
             'text' => 'Finds live subreddit threads and the "best X" discussions already ranking on Google, then drafts a genuinely useful reply in the thread\'s own tone for you to post.',
+        ],
+        [
+            'key' => 'ads',
+            'label' => 'Ads',
+            'title' => 'Ads that pay for themselves',
+            'text' => 'The same knowledge base and target profiles, driving the campaigns on your ad accounts inside a monthly budget you set. Every day Eveil reviews the numbers, launches new tests, keeps what brings you users and cuts what does not. It never spends past the budget.',
         ],
     ];
 
@@ -60,7 +68,7 @@
     ];
 
     $faqs = [
-        ['q' => 'Is Eveil only for cold email?', 'a' => 'No. Cold email is where it started and still the deepest channel, but the same agents now post on LinkedIn, X and Bluesky, write SEO articles for your blog and find Reddit threads worth answering. Paid ads are next.'],
+        ['q' => 'Is Eveil only for cold email?', 'a' => 'No. Cold email is where it started and still the deepest channel, but the same agents now post on LinkedIn, X, Bluesky and Instagram, write SEO articles for your blog, find Reddit threads worth answering, and run your paid ads inside a monthly budget you set.'],
         ['q' => 'Whose mailbox does it send from?', 'a' => 'Yours. Plain SMTP, no relay and no shared sending domain, so replies land where you already read mail. Presets cover Infomaniak, OVH, Gandi, Zoho, Gmail and Microsoft 365.'],
         ['q' => 'Where do the leads come from?', 'a' => 'A bundled search engine and the companies\' own pages, read live at qualification time. No purchased database, and no paid data API needed to start.'],
         ['q' => 'Can I see and change what the AI decided?', 'a' => 'At every step. The product portrait comes back for correction before anything is written, target profiles are editable, every draft can be rewritten, and your edits are never overwritten.'],
@@ -72,7 +80,7 @@
 @endphp
 <x-marketing-layout
     :title="config('app.name') . ' - your AI marketing team, from one URL'"
-    description="Paste your product URL. Eveil finds clients by cold email, posts on LinkedIn, X and Bluesky, writes SEO articles and joins the right Reddit threads. Open source, self-hostable."
+    description="Paste your product URL. Eveil finds clients by cold email, posts on LinkedIn, X, Bluesky and Instagram, writes SEO articles, joins the right Reddit threads and runs your ads. Open source, self-hostable."
 >
     <div class="border-b border-[rgba(232,236,242,.08)] px-4 py-2.5 flex flex-wrap justify-center items-center gap-3 text-[13px] text-[rgba(232,236,242,.72)] text-center">
         <span class="font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[#6fd3ec] border border-[rgba(111,211,236,.35)] rounded-full px-[9px] py-[2px]">Free trial</span>
@@ -124,12 +132,6 @@
                             </span>
                         </li>
                     @endforeach
-                    <li class="reveal" style="--delay: .7s">
-                        <span class="inline-flex items-center gap-2 border border-dashed border-[rgba(232,236,242,.16)] rounded-full px-4 py-[7px] text-[14px] text-[rgba(232,236,242,.42)]">
-                            <x-marketing.icon name="megaphone" class="w-4 h-4" />
-                            Ads <span class="font-[Geist_Mono,monospace] text-[10px] tracking-[.08em] uppercase">soon</span>
-                        </span>
-                    </li>
                 </ul>
             </div>
 
@@ -311,7 +313,7 @@
                                         <x-marketing.icon name="trending-up" class="w-[14px] h-[14px]" /> Ranking
                                     </div>
                                 </div>
-                            @else
+                            @elseif ($channel['key'] === 'reddit')
                                 <div class="w-full max-w-[220px] border border-[rgba(232,236,242,.12)] bg-[#0b0e14] rounded-lg p-3">
                                     <div class="flex gap-2">
                                         <div class="flex flex-col items-center text-[#ff7a45]">
@@ -328,6 +330,19 @@
                                         </div>
                                     </div>
                                 </div>
+                            @else
+                                <div class="w-full max-w-[220px] border border-[rgba(232,236,242,.12)] bg-[#0b0e14] rounded-lg p-3">
+                                    <div class="flex items-center gap-2 mb-3 text-[rgba(232,236,242,.5)]">
+                                        <x-marketing.icon name="megaphone" class="w-3 h-3" />
+                                        <span class="font-[Geist_Mono,monospace] text-[9.5px] tracking-[.06em] uppercase">This month</span>
+                                        <span class="ml-auto font-[Geist_Mono,monospace] text-[9.5px] text-[rgba(232,236,242,.7)]">$340 / $500</span>
+                                    </div>
+                                    <span class="block h-[5px] rounded-full bg-[rgba(232,236,242,.08)] mb-3 overflow-hidden"><span class="block h-full w-[68%] rounded-full bg-[#6fd3ec]"></span></span>
+                                    <div class="flex items-center justify-between">
+                                        <span class="font-[Geist_Mono,monospace] text-[9.5px] tracking-[.06em] uppercase text-[rgba(232,236,242,.4)]">Test B kept</span>
+                                        <span class="flex items-center gap-1 text-[#5ee0a0] text-[11px] font-semibold"><x-marketing.icon name="trending-up" class="w-[14px] h-[14px]" /> +18%</span>
+                                    </div>
+                                </div>
                             @endif
                         </div>
                         <div class="px-6 pt-[22px] pb-7">
@@ -337,30 +352,6 @@
                         </div>
                     </div>
                 @endforeach
-                <div id="roadmap" class="reveal border border-dashed border-[rgba(232,236,242,.16)] rounded-xl overflow-hidden" style="--delay: .3s">
-                    <div class="h-[150px] border-b border-dashed border-[rgba(232,236,242,.1)] flex items-center justify-center px-5" aria-hidden="true">
-                        <div class="w-full max-w-[220px] border border-dashed border-[rgba(232,236,242,.14)] rounded-lg p-3">
-                            <div class="flex items-center gap-2 mb-3">
-                                <span class="w-7 h-7 rounded-md bg-[rgba(232,236,242,.06)] text-[rgba(232,236,242,.5)] flex items-center justify-center">
-                                    <x-marketing.icon name="megaphone" class="w-4 h-4" />
-                                </span>
-                                <span class="mock-line anim-shimmer flex-1"></span>
-                            </div>
-                            <span class="mock-line anim-shimmer mb-[6px]"></span>
-                            <span class="mock-line anim-shimmer w-2/3"></span>
-                        </div>
-                    </div>
-                    <div class="px-6 pt-[22px] pb-7">
-                        <div class="flex items-center gap-2 font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[rgba(232,236,242,.45)] mb-3">
-                            <span class="anim-pulse w-[6px] h-[6px] rounded-full bg-[rgba(111,211,236,.6)] block"></span>
-                            In the works
-                        </div>
-                        <h3 class="font-[Sora,sans-serif] font-semibold text-[20px] tracking-[-.02em] mb-[10px] text-[rgba(232,236,242,.82)]">Ad management</h3>
-                        <p class="text-[14.5px] text-[rgba(232,236,242,.5)]">The same knowledge base and target
-                            profiles, driving your paid campaigns. Audiences and ad copy derived from what Eveil already
-                            knows about your buyers.</p>
-                    </div>
-                </div>
             </div>
         </div>
     </section>

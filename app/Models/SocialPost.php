@@ -7,6 +7,7 @@ use App\Enums\SocialPostSourceType;
 use App\Enums\SocialPostStatus;
 use App\Enums\SocialPostVariant;
 use App\Models\Concerns\BelongsToProject;
+use App\Support\Media\StoresMediaInterface;
 use Database\Factories\SocialPostFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -14,15 +15,24 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 /**
- * One drafted or published LinkedIn, X or Bluesky post. Project-scoped,
+ * One drafted or published LinkedIn, X, Bluesky or Instagram post. Project-scoped,
  * unlike the account it posts through: the content belongs to one product's
  * voice, not to the organization.
  *
  * `evidence` is what grounded the draft, shown beside the body in the queue.
  * A `client_won` draft is written as a NAMED and an ANONYMIZED sibling in one
  * call, sharing `source_type`/`source_ref`: approving one rejects the other.
+ *
+ * On a network that needs a picture, the `images` media collection holds
+ * every one drawn for this draft (each with the brief it was drawn from in
+ * its custom properties) and `image_media_id` the one picked to go out;
+ * `image_brief` is what the writer said the picture should show, the
+ * starting point of every new one. Empty on the networks that post text only.
  *
  * @property int $id
  * @property int $project_id
@@ -34,6 +44,9 @@ use Illuminate\Support\Carbon;
  * @property SocialPostVariant|null $variant
  * @property string $evidence
  * @property string $body
+ * @property string|null $image_brief
+ * @property array<int, int>|null $image_reference_ids
+ * @property int|null $image_media_id
  * @property SocialPostStatus $status
  * @property string|null $rejection_reason
  * @property string|null $external_id
@@ -48,14 +61,14 @@ use Illuminate\Support\Carbon;
  */
 #[Fillable([
     'project_id', 'platform', 'social_account_id', 'agent_run_id',
-    'source_type', 'source_ref', 'variant', 'evidence', 'body',
+    'source_type', 'source_ref', 'variant', 'evidence', 'body', 'image_brief', 'image_reference_ids', 'image_media_id',
     'status', 'rejection_reason', 'external_id', 'url', 'published_at', 'last_error',
     'promoted_at', 'likes_count', 'stats_checked_at',
 ])]
-class SocialPost extends Model
+class SocialPost extends Model implements HasMedia, StoresMediaInterface
 {
     /** @use HasFactory<SocialPostFactory> */
-    use BelongsToProject, HasFactory;
+    use BelongsToProject, HasFactory, InteractsWithMedia;
 
     /**
      * @return BelongsTo<SocialAccount, $this>
@@ -63,6 +76,31 @@ class SocialPost extends Model
     public function socialAccount(): BelongsTo
     {
         return $this->belongsTo(SocialAccount::class);
+    }
+
+    public function mediaOrganizationId(): int
+    {
+        return $this->project->organization_id;
+    }
+
+    public function mediaFeature(): string
+    {
+        return 'social-posts';
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('images');
+    }
+
+    /**
+     * The image picked to be published with it, one of its `images`.
+     *
+     * @return BelongsTo<Media, $this>
+     */
+    public function image(): BelongsTo
+    {
+        return $this->belongsTo(Media::class, 'image_media_id');
     }
 
     /**
@@ -100,6 +138,7 @@ class SocialPost extends Model
             'source_type' => SocialPostSourceType::class,
             'variant' => SocialPostVariant::class,
             'status' => SocialPostStatus::class,
+            'image_reference_ids' => 'array',
             'published_at' => 'datetime',
             'promoted_at' => 'datetime',
             'stats_checked_at' => 'datetime',

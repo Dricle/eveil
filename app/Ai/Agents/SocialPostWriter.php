@@ -14,7 +14,7 @@ use Laravel\Ai\Responses\StructuredAgentResponse;
 use Stringable;
 
 /**
- * Drafts one post per call for LinkedIn, X or Bluesky, picking its own topic
+ * Drafts one post per call for LinkedIn, X, Bluesky or Instagram, picking its own topic
  * from every signal the caller gathered: same editorial-judgment shape as
  * `ArticleWriter`. One writer for every network, told which one it writes
  * for: they differ in length and form (`style()`), and each has its own tone
@@ -23,6 +23,9 @@ use Stringable;
  * A client win is always written twice, naming the client and not: the user
  * picks which goes out, and autonomous publishing only ever sends the
  * anonymized one (`GenerateSocialPost::publishIfAutonomous()`).
+ *
+ * On a network that needs a picture (`SocialPlatform::requiresImage()`) it
+ * also writes `image_brief`, which `ImageGenerator` draws from.
  */
 class SocialPostWriter extends EveilAgent implements HasStructuredOutput
 {
@@ -34,6 +37,7 @@ class SocialPostWriter extends EveilAgent implements HasStructuredOutput
      * @param  Collection<int, string>  $ownWinners  bodies of this project's own proven posts
      * @param  string  $sharedPoolDigest  `SocialPostExample::promptDigest()` for this network
      * @param  string|null  $brief  what the user asked Evie for; when set, it IS the topic
+     * @param  array<int, string>  $illustrations  the project's official illustrations, media id => what each shows, for a network that needs an image
      */
     public function __construct(
         Project $project,
@@ -46,6 +50,7 @@ class SocialPostWriter extends EveilAgent implements HasStructuredOutput
         private Collection $ownWinners,
         private string $sharedPoolDigest,
         private ?string $brief = null,
+        private array $illustrations = [],
     ) {
         parent::__construct($project);
     }
@@ -82,8 +87,9 @@ class SocialPostWriter extends EveilAgent implements HasStructuredOutput
         "5 tips for founders" at any point. Do not repeat the angle of any post
         shown to you as already published.
 
-        Include the product's URL, or the article's URL for an article post: a
-        reader who is interested must be one click from the product.
+        Include the product's URL, or the article's URL for an article post,
+        unless the network's style below says otherwise: a reader who is
+        interested must be one click from the product.
 
         Weave in a seasonal or calendar angle from today's date ONLY when it is
         genuinely apt for this business, never forced ("Happy Monday!").
@@ -117,6 +123,12 @@ class SocialPostWriter extends EveilAgent implements HasStructuredOutput
 
             'body_anonymized' => $schema->string()
                 ->description('The post text without naming the client, for client_won only. Leave empty otherwise.'),
+
+            'illustration_ids' => $schema->array()->items($schema->integer())
+                ->description('Instagram only: the ids of the project\'s official illustrations, from the list you were given, that fit this post\'s image, at most three. The image reuses them instead of inventing. Leave empty when none fits.'),
+
+            'image_brief' => $schema->string()
+                ->description('Instagram only: the visual, as a short brief to a designer, in two to four concrete sentences. First its kind, as the user\'s instructions ask for it, otherwise whatever serves this post best: a designed graphic (an ad layout, a poster with a headline, a magazine page, a collage), a photograph with designed elements set into it (a hanging sign or a chalkboard carrying the headline, a brush-stroke banner, an info panel with an icon), an illustration, or a plain photograph. Then its composition and colours, and the exact words of any text on it, each part named (headline, dates, a short line). Text only when the user\'s instructions ask for it or the kind needs it (a headline on an ad layout, the dates of an announcement). Leave empty for other networks.'),
         ];
     }
 
@@ -137,6 +149,7 @@ class SocialPostWriter extends EveilAgent implements HasStructuredOutput
             SocialPlatform::Linkedin => 'LinkedIn style: short paragraphs, plain text, no markdown, at most two or three hashtags and only if they add something. Up to 3000 characters, but most good posts are far shorter.',
             SocialPlatform::X => 'Hard limit: 280 characters, and any URL counts as 23 of them. Aim well under it. Plain text, at most one or two hashtags and only when they add something.',
             SocialPlatform::Bluesky => 'Hard limit: 300 characters, URL included. Aim well under it. Plain text, at most one or two hashtags and only when they add something.',
+            SocialPlatform::Instagram => 'Instagram style: this is the caption under an image. A strong first line, since only it shows before "more", then a few short lines. Links are not clickable in a caption, so name the product instead of pasting its URL. Three to five relevant hashtags at the very end. Up to 2200 characters, but most good captions are far shorter. Also write image_brief: the visual is what stops the scroll, so make it concrete and tied to this post\'s idea, never a generic stock scene, and in the visual style the user\'s instructions ask for.',
         };
     }
 
@@ -182,6 +195,12 @@ class SocialPostWriter extends EveilAgent implements HasStructuredOutput
 
         if ($this->sharedPoolDigest !== '') {
             $sections[] = $this->sharedPoolDigest;
+        }
+
+        if ($this->illustrations !== []) {
+            $sections[] = "## The project's official illustrations, for the image\n\n".collect($this->illustrations)
+                ->map(fn (string $description, int $id): string => "- {$id}: {$description}")
+                ->implode("\n");
         }
 
         $sections[] = "## Today's date\n\n".now()->toDateString();

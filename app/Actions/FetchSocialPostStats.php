@@ -16,7 +16,8 @@ use App\Support\Settings;
  * bank, deliberately: a real, externally-measured number is trusted the way
  * a user's self-reported "mark as successful" click is not.
  *
- * Bluesky's counts are free and public. LinkedIn's need the account's
+ * Bluesky's counts are free and public, Instagram's are read through the
+ * account's own connection. LinkedIn's need the account's
  * separate performance-polling connection, and its driver skips a post
  * without one. X is skipped outright: its API is paid, so it has no
  * threshold (`SocialPlatform::minLikesSetting()`).

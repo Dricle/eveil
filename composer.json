@@ -22,7 +22,9 @@
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",
         "laravel/wayfinder": "^0.1.14",
+        "league/flysystem-aws-s3-v3": "^3.0",
         "maatwebsite/excel": "^4.0",
+        "spatie/laravel-medialibrary": "^11.23",
         "symfony/http-client": "^8.1",
         "zbateson/mail-mime-parser": "^4.0"
     },

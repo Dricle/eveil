@@ -4,6 +4,7 @@ namespace App\Enums;
 
 use App\Models\Project;
 use App\Services\Bluesky\BlueskyClient;
+use App\Services\Instagram\InstagramClient;
 use App\Services\Linkedin\LinkedinClient;
 use App\Services\Social\SocialClientInterface;
 use App\Services\Social\XClient;
@@ -18,6 +19,7 @@ enum SocialPlatform: string
     case Linkedin = 'linkedin';
     case X = 'x';
     case Bluesky = 'bluesky';
+    case Instagram = 'instagram';
 
     public function label(): string
     {
@@ -25,12 +27,14 @@ enum SocialPlatform: string
             self::Linkedin => 'LinkedIn',
             self::X => 'X',
             self::Bluesky => 'Bluesky',
+            self::Instagram => 'Instagram',
         };
     }
 
     /**
      * The network's own limit on one post. X counts characters, with any URL
-     * counted as 23; Bluesky counts graphemes.
+     * counted as 23; Bluesky counts graphemes. On Instagram this is the
+     * caption.
      */
     public function maxLength(): int
     {
@@ -38,6 +42,7 @@ enum SocialPlatform: string
             self::Linkedin => 3000,
             self::X => 280,
             self::Bluesky => 300,
+            self::Instagram => 2200,
         };
     }
 
@@ -51,6 +56,25 @@ enum SocialPlatform: string
     }
 
     /**
+     * Whether a post here cannot go out as text alone. Instagram has no text
+     * post at all, so `GenerateSocialPost` draws an image for every one.
+     */
+    public function requiresImage(): bool
+    {
+        return $this === self::Instagram;
+    }
+
+    /**
+     * The shape this network's images are drawn in. Square goes everywhere
+     * on Instagram's feed; 4:5 takes more of the screen and is the obvious
+     * next step if it proves worth it.
+     */
+    public function imageFormat(): ImageFormat
+    {
+        return ImageFormat::Square;
+    }
+
+    /**
      * This network's driver.
      */
     public function client(): SocialClientInterface
@@ -59,6 +83,7 @@ enum SocialPlatform: string
             self::Linkedin => LinkedinClient::class,
             self::X => XClient::class,
             self::Bluesky => BlueskyClient::class,
+            self::Instagram => InstagramClient::class,
         });
     }
 

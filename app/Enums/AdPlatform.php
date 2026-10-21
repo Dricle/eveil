@@ -23,6 +23,16 @@ enum AdPlatform: string
         };
     }
 
+    /**
+     * Which `platform_apps` row this network connects through.
+     */
+    public function appKind(): PlatformAppKind
+    {
+        return match ($this) {
+            self::GoogleAds => PlatformAppKind::GoogleAds,
+        };
+    }
+
     public function client(): AdClientInterface
     {
         return app(match ($this) {

@@ -45,7 +45,7 @@ class AdController extends Controller
             'platforms' => array_map(fn (AdPlatform $platform): array => [
                 'value' => $platform->value,
                 'label' => $platform->label(),
-                'configured' => PlatformApp::resolve($organization, $platform) !== null,
+                'configured' => PlatformApp::resolve($organization, $platform->appKind()) !== null,
             ], AdPlatform::cases()),
             'autonomyLevel' => $project->ads_autonomy_level->value,
             'reviewing' => AgentRun::query()

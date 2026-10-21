@@ -10,6 +10,7 @@ use App\Support\LinkedinCredentials;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Throwable;
 
 /**
@@ -32,9 +33,9 @@ class LinkedinClient implements SocialClientInterface
      *
      * @return array{uri: string, url: string}
      */
-    public function publish(SocialAccount $account, string $text, ?string $language = null): ?array
+    public function publish(SocialAccount $account, string $text, ?string $language = null, ?Media $image = null): ?array
     {
-        $response = Http::withToken($account->secret)
+        $response = Http::withToken($account->credential())
             ->withHeaders($this->headers())
             ->post('https://api.linkedin.com/rest/posts', [
                 'author' => $account->external_id,

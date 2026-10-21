@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use App\Models\Project;
 use Illuminate\Http\Request;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 /**
  * The project page, which is the knowledge base: the index deliberately never
@@ -35,6 +36,14 @@ class ProjectDetailResource extends ProjectResource
             'lead_limit' => $this->lead_limit,
             'edited_by_user' => $this->knowledge_base_edited_by_user,
             'has_github_token' => $this->hasGithubToken(),
+            // The visual identity library, served by the app: the disk may be
+            // private.
+            'brand_assets' => $this->getMedia('brand_assets')->map(fn (Media $asset): array => [
+                'id' => $asset->id,
+                'kind' => $asset->getCustomProperty('kind'),
+                'description' => $asset->getCustomProperty('description'),
+                'url' => route('settings.brand-assets.show', ['project' => $this->slug, 'asset' => $asset->id]),
+            ])->values()->all(),
             'last_analysis' => $this->latestAnalysis === null
                 ? null
                 : ProjectAnalysisResource::make($this->latestAnalysis),

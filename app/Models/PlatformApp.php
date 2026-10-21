@@ -3,19 +3,21 @@
 namespace App\Models;
 
 use App\Casts\EncryptedCredential;
-use App\Enums\AdPlatform;
+use App\Enums\PlatformAppKind;
 use Database\Factories\PlatformAppFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
- * The OAuth app an ad account connects through: a client id and secret per
- * network. Networks grant access tiers, quotas and restrictions to the APP,
- * not to the account, so where the pair comes from is a setting and never a
+ * The OAuth app an ad account (or an Instagram account, without Composio)
+ * connects through: a client id and secret per network (`PlatformAppKind`).
+ * Networks grant access tiers, quotas and restrictions to the APP, not to
+ * the account, so where the pair comes from is a setting and never a
  * code path (#56):
  * - instance row (`organization_id` null): the self-hosted operator's own
  *   app, or Eveil's reviewed app in the hosted edition;
@@ -23,7 +25,7 @@ use Illuminate\Support\Carbon;
  *
  * @property int $id
  * @property int|null $organization_id
- * @property AdPlatform $platform
+ * @property PlatformAppKind $platform
  * @property string $client_id
  * @property string $client_secret
  * @property Carbon|null $created_at
@@ -40,7 +42,7 @@ class PlatformApp extends Model
      * The app this organization connects through on this network: its own,
      * else the instance's, else none.
      */
-    public static function resolve(Organization $organization, AdPlatform $platform): ?self
+    public static function resolve(Organization $organization, PlatformAppKind $platform): ?self
     {
         return self::query()
             ->where('platform', $platform)
@@ -48,6 +50,16 @@ class PlatformApp extends Model
             // Postgres sorts nulls last ascending: the organization's own first.
             ->orderBy('organization_id')
             ->first();
+    }
+
+    /**
+     * The Instagram accounts publishing through this app.
+     *
+     * @return HasMany<SocialAccount, $this>
+     */
+    public function socialAccounts(): HasMany
+    {
+        return $this->hasMany(SocialAccount::class);
     }
 
     /**
@@ -64,7 +76,7 @@ class PlatformApp extends Model
     protected function casts(): array
     {
         return [
-            'platform' => AdPlatform::class,
+            'platform' => PlatformAppKind::class,
             'client_secret' => EncryptedCredential::class,
         ];
     }

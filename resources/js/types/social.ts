@@ -1,19 +1,26 @@
-export type SocialPlatform = 'linkedin' | 'x' | 'bluesky'
+export type SocialPlatform = 'linkedin' | 'x' | 'bluesky' | 'instagram'
 
 /**
- * A connected LinkedIn or Bluesky account, as the settings screens see it.
+ * A connected LinkedIn, Bluesky or Instagram account, as the settings screens see it.
  * No credentials: they are write-only from the UI's point of view.
  */
 export type SocialAccount = {
     id: number
     platform: SocialPlatform
-    /** Bluesky only: LinkedIn has no handle. */
+    /** Bluesky and Instagram: LinkedIn has no handle. */
     handle: string | null
     display_name: string
     status: 'active' | 'expired' | 'error'
     last_error: string | null
     /** LinkedIn only: whether the SEPARATE performance-polling app is connected. */
     has_stats_access: boolean
+    /** Instagram only: connected through the organization's own Meta app. */
+    via_meta_app?: boolean
+    /** Instagram only: connected through Composio. */
+    via_composio?: boolean
+    /** Instagram only: which way in publishes right now; the Meta app wins while its token lives. */
+    publishes_through?: 'meta' | 'composio' | null
+    meta_token_expires_at?: string | null
     /** The projects granted this account, as ids, because it is a checkbox list. */
     projects?: number[]
 }
@@ -30,6 +37,12 @@ export type SocialPost = {
     /** What grounds this draft, shown beside the body. */
     evidence: string
     body: string
+    /** Instagram only: the picked image, the one that gets published. */
+    image_url: string | null
+    /** Instagram only: every image drawn for this post, to compare and pick from. */
+    images?: { id: number, url: string, selected: boolean }[]
+    /** Instagram only: an image queued or being drawn for this post right now. */
+    drawing_image: boolean
     status: 'draft' | 'published' | 'rejected'
     rejection_reason: string | null
     /** The account it went out on. Always null on X. */

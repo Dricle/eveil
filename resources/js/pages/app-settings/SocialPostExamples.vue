@@ -18,7 +18,8 @@ const props = defineProps<{
 const PLATFORMS = [
     { label: 'LinkedIn', value: 'linkedin' },
     { label: 'X', value: 'x' },
-    { label: 'Bluesky', value: 'bluesky' }
+    { label: 'Bluesky', value: 'bluesky' },
+    { label: 'Instagram', value: 'instagram' }
 ]
 
 // One bank per network: the add form writes to, and the list shows, the

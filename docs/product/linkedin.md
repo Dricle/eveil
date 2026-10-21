@@ -18,7 +18,7 @@ Every draft has to trace to something real — never a generic "5 tips" post. On
 - **Relevant industry news** — a recent headline connected to your sector or a named competitor, when there's a genuine angle worth commenting on. Skipped entirely when nothing relevant turns up that cycle.
 - **Whatever you tell Evie about** — "we just shipped X, write a LinkedIn post about it" has the same writer draft it from that brief, into the same queue. A post asked for this way always waits for you, whatever the autonomy setting.
 
-The same writer drafts for [X and Bluesky](/product/social), each with its own queue, cadence and tone box.
+The same writer drafts for [X, Bluesky and Instagram](/product/social), each with its own queue, cadence and tone box.
 
 ## Approving a draft
 

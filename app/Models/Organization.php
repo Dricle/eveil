@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Casts\EncryptedCredential;
 use App\Cloud\Models\CreditTransaction;
 use App\Enums\OrganizationRole;
 use App\Models\Concerns\HasSlug;
 use Database\Factories\OrganizationFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -28,6 +30,10 @@ use Laravel\Sanctum\HasApiTokens;
  * CODE PATHS and withheld features, not about which file a required trait
  * use-statement sits in.
  *
+ * `composio_api_key` is the organization's own Composio PROJECT key, the one
+ * every service it connects through Composio goes through (`ComposioConnection`).
+ * Encrypted with CREDENTIALS_KEY and hidden: write-only from the UI.
+ *
  * @property int $id
  * @property string $name
  * @property string $slug
@@ -43,10 +49,13 @@ use Laravel\Sanctum\HasApiTokens;
  * @property int|null $auto_topup_monthly_cap_cents
  * @property int $auto_topup_spent_cents
  * @property string|null $auto_topup_spent_month
+ * @property string|null $composio_api_key
+ * @property array<string, string>|null $composio_auth_configs
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'slug', 'auto_topup_threshold', 'auto_topup_amount_cents', 'auto_topup_monthly_cap_cents'])]
+#[Fillable(['name', 'slug', 'auto_topup_threshold', 'auto_topup_amount_cents', 'auto_topup_monthly_cap_cents', 'composio_api_key', 'composio_auth_configs'])]
+#[Hidden(['composio_api_key'])]
 class Organization extends Model
 {
     /** @use HasFactory<OrganizationFactory> */
@@ -87,6 +96,16 @@ class Organization extends Model
     public function platformApps(): HasMany
     {
         return $this->hasMany(PlatformApp::class);
+    }
+
+    /**
+     * The services it connected through Composio.
+     *
+     * @return HasMany<ComposioConnection, $this>
+     */
+    public function composioConnections(): HasMany
+    {
+        return $this->hasMany(ComposioConnection::class);
     }
 
     /**
@@ -249,5 +268,16 @@ class Organization extends Model
         }
 
         return $this->auto_topup_spent_cents;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'composio_api_key' => EncryptedCredential::class,
+            'composio_auth_configs' => 'array',
+        ];
     }
 }

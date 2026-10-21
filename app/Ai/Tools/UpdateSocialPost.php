@@ -26,7 +26,7 @@ class UpdateSocialPost implements Tool
     public function description(): Stringable|string
     {
         return <<<'TEXT'
-        Rewrites the text of an existing LinkedIn, X or Bluesky draft, in place - call
+        Rewrites the text of an existing LinkedIn, X, Bluesky or Instagram draft, in place - call
         ListSocialPosts first to find its id. Only works on a draft; once
         published or rejected it refuses.
         TEXT;

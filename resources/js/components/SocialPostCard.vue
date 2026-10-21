@@ -7,8 +7,8 @@ import type { SocialAccount, SocialPost } from '@/types'
 
 // One post with every action on it. Shared by `social/Posts.vue` and the
 // dashboard's to-review modal, so both review a draft the same way. A
-// LinkedIn or Bluesky draft is approved and published through the network's
-// API; an X draft is copied, posted by hand, and its URL pasted back.
+// LinkedIn, Bluesky or Instagram draft is approved and published through the
+// network's API; an X draft is copied, posted by hand, and its URL pasted back.
 const props = defineProps<{
     post: SocialPost
     /** The project's granted accounts on this post's network. */
@@ -46,6 +46,10 @@ const selectedAccountId = ref<number | undefined>(undefined)
 const publishOpen = ref(false)
 const publishedUrl = ref('')
 const publishing = ref(false)
+const imageOpen = ref(false)
+const imageNote = ref('')
+const requestingImage = ref(false)
+const selectingImage = ref<number | null>(null)
 
 const limit = computed(() => PLATFORM_LIMIT[props.post.platform])
 const length = computed(() => postLength(props.post.platform, editing.value ? editBody.value : props.post.body))
@@ -95,6 +99,7 @@ function submitApprove (socialAccountId: number | undefined) {
             pickingAccount.value = false
             toast.add({ title: `Publishing to ${label.value}…`, color: 'success' })
         },
+        onError: errors => toast.add({ title: errors.social_post ?? 'Could not publish', color: 'error' }),
         onFinish: () => approving.value = false
     })
 }
@@ -130,6 +135,29 @@ function destroy () {
         preserveScroll: true,
         onSuccess: () => toast.add({ title: 'Draft deleted', color: 'neutral' }),
         onFinish: () => deleting.value = false
+    })
+}
+
+// The new image is drawn on the queue: the page rereads on its own and it
+// shows up beside the others. The picked one stays picked.
+function requestImage () {
+    requestingImage.value = true
+    router.post(socialPostRoutes.images.store.url({ project: slug.value, social_post: props.post.id }), { note: imageNote.value }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            imageOpen.value = false
+            imageNote.value = ''
+            toast.add({ title: 'Drawing a new image', description: 'It appears here in a moment, next to the others.', color: 'success' })
+        },
+        onFinish: () => requestingImage.value = false
+    })
+}
+
+function selectImage (imageId: number) {
+    selectingImage.value = imageId
+    router.put(socialPostRoutes.images.update.url({ project: slug.value, social_post: props.post.id, image: imageId }), {}, {
+        preserveScroll: true,
+        onFinish: () => selectingImage.value = null
     })
 }
 
@@ -213,7 +241,7 @@ function promote () {
                     size="xs"
                     label="Approve & publish"
                     :loading="approving"
-                    :disabled="!activeAccounts.length"
+                    :disabled="!activeAccounts.length || post.drawing_image"
                     @click="approve"
                 />
                 <UButton
@@ -255,6 +283,66 @@ function promote () {
         <p class="text-sm text-dimmed">
             {{ post.evidence }}
         </p>
+
+        <div
+            v-if="post.image_url || post.platform === 'instagram'"
+            class="space-y-2"
+        >
+            <img
+                v-if="post.image_url"
+                :src="post.image_url"
+                alt="The image published with this post"
+                class="aspect-square w-full max-w-xs rounded-md object-cover"
+            >
+
+            <!-- Its first image, still being drawn. -->
+            <div
+                v-else-if="post.drawing_image"
+                class="flex aspect-square w-full max-w-xs animate-pulse items-center justify-center gap-2 rounded-md bg-elevated text-sm text-muted"
+            >
+                <UIcon
+                    name="i-lucide-loader-circle"
+                    class="size-4 animate-spin"
+                />
+                Drawing the image…
+            </div>
+
+            <!-- Every image drawn so far, to compare and pick from before publishing. -->
+            <div
+                v-if="post.status === 'draft' && (post.images?.length ?? 0) > 1"
+                class="flex flex-wrap gap-2"
+            >
+                <button
+                    v-for="image in post.images"
+                    :key="image.id"
+                    type="button"
+                    class="overflow-hidden rounded-md ring-2 transition"
+                    :class="image.selected ? 'ring-primary' : 'ring-transparent opacity-70 hover:opacity-100'"
+                    :aria-label="image.selected ? 'The image this post will be published with' : 'Use this image'"
+                    :aria-pressed="image.selected"
+                    :disabled="selectingImage !== null"
+                    @click="image.selected || selectImage(image.id)"
+                >
+                    <img
+                        :src="image.url"
+                        alt=""
+                        class="size-16 object-cover"
+                    >
+                </button>
+            </div>
+
+            <UButton
+                v-if="post.status === 'draft' && post.platform === 'instagram'"
+                icon="i-lucide-image-plus"
+                color="neutral"
+                variant="subtle"
+                size="xs"
+                :label="post.drawing_image ? 'Drawing a new image…' : 'New image'"
+                :loading="post.drawing_image"
+                :disabled="post.drawing_image"
+                @click="imageOpen = true"
+            />
+        </div>
 
         <Form
             v-if="editing"
@@ -318,6 +406,36 @@ function promote () {
         >
             Rejected: {{ post.rejection_reason }}
         </p>
+
+        <UModal
+            v-model:open="imageOpen"
+            title="Draw a new image"
+            description="The current images stay: you pick which one is published."
+        >
+            <template #body>
+                <div class="space-y-4">
+                    <UFormField
+                        label="What should change? (optional)"
+                        description="Leave it empty for another take on the same idea."
+                    >
+                        <UTextarea
+                            v-model="imageNote"
+                            :rows="3"
+                            :maxlength="500"
+                            placeholder="E.g. brighter, a close-up, an outdoor setting."
+                            class="w-full"
+                        />
+                    </UFormField>
+
+                    <UButton
+                        icon="i-lucide-image-plus"
+                        label="Draw it"
+                        :loading="requestingImage"
+                        @click="requestImage"
+                    />
+                </div>
+            </template>
+        </UModal>
 
         <UModal
             v-model:open="publishOpen"

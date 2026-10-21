@@ -20,16 +20,18 @@ markets it for you across every channel a small team can't staff by hand:
 
 - **Cold email**, the core: finds the companies and the people at them, writes
   the sequence, sends it from your own mailbox and reads the replies.
-- **Social posts** on LinkedIn, X and Bluesky, drafted from what Eveil knows
+- **Social posts** on LinkedIn, X, Bluesky and Instagram, drafted from what Eveil knows
   about your product and queued for your approval.
 - **SEO articles** for your own blog, on what your buyers search for and your
   site doesn't answer yet.
 - **Reddit replies** in the threads where your buyers already ask for help.
+- **Paid ads** on your ad accounts, run inside a monthly budget you set: new
+  tests launched, what works kept, what doesn't cut.
 
 All of it reads the same knowledge base, so no channel contradicts another.
 Lead discovery and outreach are B2B; the content channels work for anyone
-building an online presence, B2C solo founders included. Next on the roadmap:
-ad management, driven by the same knowledge base and target profiles.
+building an online presence, B2C solo founders included. Paid ads run on the
+same knowledge base and target profiles, inside a monthly budget you set.
 
 That's automation of the same work a human researcher would do by hand:
 searching the web for the right companies and people, then writing to them one
@@ -44,8 +46,9 @@ unlimited mailboxes, unlimited leads, your data on your own machine.
 > **Status: v1** The whole outbound loop works end to end:
 > site analysis, lead discovery, sequences, sending, replies, plus
 > organizations, roles, and pay-as-you-go billing for the cloud edition.
-> LinkedIn posting (personal profile, official API) is in too, X and Bluesky
-> posting (Bluesky published for you, X copied and posted by you), and so is
+> LinkedIn posting (personal profile, official API) is in too, X, Bluesky and
+> Instagram posting (Bluesky and Instagram published for you, Instagram with a
+> generated image, X copied and posted by you), and so is
 > Reddit reply drafting - manual-publish only for now, since Reddit is
 > currently blocking new API app registration - and SEO articles for your own
 > blog, plus a public API, an MCP server and CRM webhooks for the rest of your stack. Not built yet: ad
@@ -85,6 +88,9 @@ unlimited mailboxes, unlimited leads, your data on your own machine.
   own freshly published articles, one queue for both. Bluesky publishes
   through its free API with an app password; X you copy and post yourself,
   since its API is paid per post.
+- **Posts to Instagram, image included.** Every caption comes with an image
+  Eveil generates for it, published to a Business or Creator account through
+  your own free Composio account, so nobody has to create a Meta app.
 - **Finds Reddit threads worth replying to.** Live subreddits and evergreen
   "best X" threads already ranking on Google, drafted in the thread's own
   tone. Copy, post it yourself, mark it posted - no OAuth, since Reddit is

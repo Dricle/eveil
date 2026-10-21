@@ -22,7 +22,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # `pdo`, `mbstring` and `opcache` are already built into this image. Asking for
 # them here fails the build with "cannot stat 'modules/*'", because a static
 # extension produces no module to copy.
-RUN docker-php-ext-install pdo_pgsql pgsql bcmath pcntl gd zip intl
+# `exif` is required by spatie/laravel-medialibrary (generated images).
+RUN docker-php-ext-install pdo_pgsql pgsql bcmath pcntl gd zip intl exif
 
 # Redis for the queue, the cache, the crawl rate limiter and the per-mailbox
 # locks: all four, so this one is not optional.

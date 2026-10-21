@@ -12,6 +12,7 @@ use GuzzleHttp\Psr7\UriResolver;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Throwable;
 
 /**
@@ -65,9 +66,9 @@ class BlueskyClient implements SocialClientInterface
      *
      * @return array{uri: string, url: string}
      */
-    public function publish(SocialAccount $account, string $text, ?string $language = null): ?array
+    public function publish(SocialAccount $account, string $text, ?string $language = null, ?Media $image = null): ?array
     {
-        $session = $this->session($account->external_id, $account->secret);
+        $session = $this->session($account->external_id, $account->credential());
 
         $record = [
             '$type' => 'app.bsky.feed.post',

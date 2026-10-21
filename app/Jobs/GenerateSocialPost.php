@@ -2,11 +2,13 @@
 
 namespace App\Jobs;
 
+use App\Actions\AddSocialPostImage;
 use App\Actions\PublishSocialPost;
 use App\Ai\Agents\SocialPostWriter;
 use App\Enums\AgentRunStatus;
 use App\Enums\ArticleStatus;
 use App\Enums\AutonomyLevel;
+use App\Enums\BrandAssetKind;
 use App\Enums\OutreachStatus;
 use App\Enums\SocialAccountStatus;
 use App\Enums\SocialPlatform;
@@ -22,14 +24,18 @@ use App\Models\SocialPostExample;
 use App\Notifications\SocialPostDrafted;
 use App\Services\Linkedin\NewsSearch;
 use App\Support\CurrentProject;
+use App\Support\SocialPostProgress;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
+use Throwable;
 
 /**
- * One LinkedIn, X or Bluesky post: gather every signal, ask
+ * One LinkedIn, X, Bluesky or Instagram post: gather every signal, ask
  * `SocialPostWriter` once, keep what it wrote. One network per job, since
  * each has its own cadence.
  *
@@ -47,7 +53,18 @@ class GenerateSocialPost implements ShouldQueue
         $this->onQueue('ai');
     }
 
-    public function handle(NewsSearch $newsSearch, CurrentProject $currentProject, PublishSocialPost $publish): void
+    public function handle(NewsSearch $newsSearch, CurrentProject $currentProject, PublishSocialPost $publish, SocialPostProgress $progress): void
+    {
+        $progress->startWriting($this->project, $this->platform);
+
+        try {
+            $this->write($newsSearch, $currentProject, $publish);
+        } finally {
+            $progress->finishWriting($this->project, $this->platform);
+        }
+    }
+
+    private function write(NewsSearch $newsSearch, CurrentProject $currentProject, PublishSocialPost $publish): void
     {
         $currentProject->run($this->project, function () use ($newsSearch, $publish): void {
             $clientWon = $this->brief === null ? $this->pendingClientWin() : null;
@@ -70,9 +87,12 @@ class GenerateSocialPost implements ShouldQueue
                 $this->posts()->whereNotNull('promoted_at')->latest('promoted_at')->limit(5)->pluck('body'),
                 SocialPostExample::promptDigest($this->platform),
                 $this->brief,
+                $this->illustrations(),
             ))->recordInto($run)->draft()->structured;
 
             $posts = $this->persist($structured, $run->id, $clientWon, $article);
+
+            $this->attachImage($posts, $structured);
 
             // Asked for from chat: always a draft, since no Evie tool ever
             // publishes, and no email about something the user is waiting for.
@@ -137,6 +157,77 @@ class GenerateSocialPost implements ShouldQueue
     }
 
     /**
+     * The picture a network like Instagram cannot post without, drawn once
+     * and shared by a client win's two siblings: they tell the same story.
+     * A failed drawing keeps the drafts, with the reason on them, and
+     * approving one draws again (`PublishSocialPost`). The brief is kept on
+     * each draft either way: every image asked for later starts from it.
+     *
+     * @param  Collection<int, SocialPost>  $posts
+     * @param  array<string, mixed>  $structured
+     */
+    private function attachImage(Collection $posts, array $structured): void
+    {
+        if (! $this->platform->requiresImage() || $posts->isEmpty()) {
+            return;
+        }
+
+        $brief = trim((string) ($structured['image_brief'] ?? '')) ?: $posts->first()->body;
+
+        // Never trust the model with which rows exist: only this project's
+        // own illustrations, the ones it was shown.
+        $referenceIds = array_values(array_intersect(
+            array_map('intval', (array) ($structured['illustration_ids'] ?? [])),
+            array_keys($this->illustrations()),
+        ));
+
+        $posts->each->update(['image_brief' => $brief, 'image_reference_ids' => $referenceIds]);
+
+        // The drafts are already on the page: say their image is coming.
+        $progress = app(SocialPostProgress::class);
+        $posts->each(fn (SocialPost $post) => $progress->startDrawing($post));
+
+        try {
+            $jpeg = app(AddSocialPostImage::class)->draw($this->project, $this->platform, $brief, illustrationIds: $referenceIds);
+        } catch (Throwable $e) {
+            $posts->each->update(['last_error' => "The image could not be generated: {$e->getMessage()}"]);
+
+            return;
+        } finally {
+            $posts->each(fn (SocialPost $post) => $progress->finishDrawing($post));
+        }
+
+        // A file of its own per sibling, so deleting one never takes the
+        // other's image with it. Only the ones still drafts: one may have
+        // been rejected or deleted while the image was being drawn.
+        foreach ($posts->map->fresh()->filter(fn (?SocialPost $post): bool => $post?->status === SocialPostStatus::Draft) as $post) {
+            $image = $post->addMediaFromString($jpeg)
+                ->usingFileName(Str::uuid().'.jpg')
+                ->withCustomProperties(['brief' => $brief])
+                ->toMediaCollection('images');
+
+            $post->update(['image_media_id' => $image->id]);
+        }
+    }
+
+    /**
+     * The project's official illustrations the writer may pick for the
+     * image, media id => what each shows. None for a network posting text.
+     *
+     * @return array<int, string>
+     */
+    private function illustrations(): array
+    {
+        if (! $this->platform->requiresImage()) {
+            return [];
+        }
+
+        return $this->project->brandAssets(BrandAssetKind::Illustration)
+            ->mapWithKeys(fn (Media $media): array => [$media->id => (string) ($media->getCustomProperty('description') ?: $media->name)])
+            ->all();
+    }
+
+    /**
      * The network's autonomous setting: publish straight away. Two cases still
      * stop for a person. Several accounts on the project: which one to post as
      * is a choice nobody has made. A client win: only the anonymized variant
@@ -157,9 +248,12 @@ class GenerateSocialPost implements ShouldQueue
             ->where('status', SocialAccountStatus::Active)
             ->get();
 
-        $post = $posts->first(fn (SocialPost $post): bool => $post->variant !== SocialPostVariant::Named);
+        // Read again: the drafts were on the page while their image was drawn,
+        // and the user may have rejected or edited one in the meantime.
+        $post = $posts->first(fn (SocialPost $post): bool => $post->variant !== SocialPostVariant::Named)?->fresh();
 
-        if ($accounts->count() !== 1 || $post === null) {
+        // No image, no Instagram post: it stays a draft showing why.
+        if ($accounts->count() !== 1 || $post === null || $post->status !== SocialPostStatus::Draft || ($this->platform->requiresImage() && $post->image_media_id === null)) {
             return;
         }
 

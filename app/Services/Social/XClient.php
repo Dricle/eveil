@@ -4,6 +4,7 @@ namespace App\Services\Social;
 
 use App\Models\SocialAccount;
 use Illuminate\Support\Collection;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 /**
  * X's driver, deliberately inert: X's API is paid per call, so Eveil neither
@@ -13,7 +14,7 @@ use Illuminate\Support\Collection;
  */
 class XClient implements SocialClientInterface
 {
-    public function publish(SocialAccount $account, string $text, ?string $language = null): ?array
+    public function publish(SocialAccount $account, string $text, ?string $language = null, ?Media $image = null): ?array
     {
         return null;
     }

@@ -638,3 +638,21 @@ it('says a new image is being drawn for a draft until it is done', function () {
 
     $this->get(route('social.posts.index', 'instagram'))->assertInertia(fn ($page) => $page->where('posts.0.drawing_image', false));
 });
+
+it('stores a post\'s images under its organization, feature, date and media id, and keeps that folder', function () {
+    [, $project] = instagramSetup();
+    Storage::fake();
+    $this->travelTo('2026-10-21 09:00:00');
+    $post = SocialPost::factory()->instagram()->create(['project_id' => $project->id]);
+
+    $image = instagramImage($post, fileName: 'a.jpg');
+    $expected = "{$project->organization_id}/social-posts/2026-10-21/{$image->id}/a.jpg";
+
+    expect($image->getPathRelativeToRoot())->toBe($expected);
+    Storage::assertExists($expected);
+
+    // Read back a day later, the folder it was stored in still holds.
+    $this->travelTo('2026-10-22 09:00:00');
+
+    expect(Media::find($image->id)->getPathRelativeToRoot())->toBe($expected);
+});

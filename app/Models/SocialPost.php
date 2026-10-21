@@ -7,6 +7,7 @@ use App\Enums\SocialPostSourceType;
 use App\Enums\SocialPostStatus;
 use App\Enums\SocialPostVariant;
 use App\Models\Concerns\BelongsToProject;
+use App\Support\Media\StoresMediaInterface;
 use Database\Factories\SocialPostFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -63,7 +64,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
     'status', 'rejection_reason', 'external_id', 'url', 'published_at', 'last_error',
     'promoted_at', 'likes_count', 'stats_checked_at',
 ])]
-class SocialPost extends Model implements HasMedia
+class SocialPost extends Model implements HasMedia, StoresMediaInterface
 {
     /** @use HasFactory<SocialPostFactory> */
     use BelongsToProject, HasFactory, InteractsWithMedia;
@@ -74,6 +75,16 @@ class SocialPost extends Model implements HasMedia
     public function socialAccount(): BelongsTo
     {
         return $this->belongsTo(SocialAccount::class);
+    }
+
+    public function mediaOrganizationId(): int
+    {
+        return $this->project->organization_id;
+    }
+
+    public function mediaFeature(): string
+    {
+        return 'social-posts';
     }
 
     public function registerMediaCollections(): void

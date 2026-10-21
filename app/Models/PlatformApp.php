@@ -15,7 +15,8 @@ use Illuminate\Support\Carbon;
 
 /**
  * The OAuth app an ad account (or an Instagram account, without Composio)
- * connects through: a client id and secret per network (`PlatformAppKind`).
+ * connects through: a client id and secret per network (`PlatformAppKind`),
+ * plus the developer token a network may also want (Microsoft).
  * Networks grant access tiers, quotas and restrictions to the APP, not to
  * the account, so where the pair comes from is a setting and never a
  * code path (#56):
@@ -28,11 +29,12 @@ use Illuminate\Support\Carbon;
  * @property PlatformAppKind $platform
  * @property string $client_id
  * @property string $client_secret
+ * @property string|null $developer_token
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['organization_id', 'platform', 'client_id', 'client_secret'])]
-#[Hidden(['client_secret'])]
+#[Fillable(['organization_id', 'platform', 'client_id', 'client_secret', 'developer_token'])]
+#[Hidden(['client_secret', 'developer_token'])]
 class PlatformApp extends Model
 {
     /** @use HasFactory<PlatformAppFactory> */
@@ -78,6 +80,7 @@ class PlatformApp extends Model
         return [
             'platform' => PlatformAppKind::class,
             'client_secret' => EncryptedCredential::class,
+            'developer_token' => EncryptedCredential::class,
         ];
     }
 }

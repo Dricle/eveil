@@ -26,7 +26,7 @@ class ConnectAdAccounts
      */
     public function handle(Project $project, AdPlatform $platform, PlatformApp $app, AdTokens $tokens): int
     {
-        $accounts = $platform->client()->accounts($tokens);
+        $accounts = $platform->client()->accounts($app, $tokens);
 
         $accounts->each(fn (AdAccountData $data): AdAccount => AdAccount::query()->updateOrCreate(
             ['project_id' => $project->id, 'platform' => $platform, 'external_id' => $data->externalId],
@@ -35,6 +35,7 @@ class ConnectAdAccounts
                 'name' => $data->name,
                 'currency' => $data->currency,
                 'time_zone' => $data->timeZone,
+                'external_ref' => $data->ref === [] ? null : $data->ref,
                 'access_token' => $tokens->accessToken,
                 'refresh_token' => $tokens->refreshToken,
                 'token_expires_at' => $tokens->expiresAt,

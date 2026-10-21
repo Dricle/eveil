@@ -14,6 +14,7 @@ type AdPlatformApp = {
     has_own_app: boolean
     has_instance_app: boolean
     redirect_uri: string
+    needs_developer_token: boolean
 }
 
 // Inline rather than a type alias imported through the barrel: an alias there
@@ -29,6 +30,7 @@ const slug = computed(() => page.props.currentProject!.slug)
 // A local draft synced from the prop, not `default-value`: see `.ai/rules/js.md`.
 const clientIds = ref<Record<string, string>>({})
 const secrets = ref<Record<string, string>>({})
+const developerTokens = ref<Record<string, string>>({})
 watch(() => props.platforms, (platforms) => {
     clientIds.value = Object.fromEntries(platforms.map(platform => [platform.value, platform.client_id ?? '']))
 }, { immediate: true, deep: true })
@@ -87,7 +89,7 @@ function remove (platform: AdPlatformApp) {
                 v-bind="platformAppRoutes.update.form({ project: slug, platform: platform.value })"
                 class="space-y-4"
                 :options="{ preserveScroll: true }"
-                @success="secrets[platform.value] = ''; toast.add({ title: `${platform.label} app saved`, color: 'success' })"
+                @success="secrets[platform.value] = ''; developerTokens[platform.value] = ''; toast.add({ title: `${platform.label} app saved`, color: 'success' })"
             >
                 <UFormField label="Redirect URI">
                     <UInput
@@ -116,6 +118,20 @@ function remove (platform: AdPlatformApp) {
                     <UInput
                         v-model="secrets[platform.value]"
                         name="client_secret"
+                        type="password"
+                        class="w-full"
+                    />
+                </UFormField>
+
+                <UFormField
+                    v-if="platform.needs_developer_token"
+                    label="Developer token"
+                    :error="errors.developer_token"
+                    :hint="platform.has_own_app ? 'Leave blank to keep the current one' : undefined"
+                >
+                    <UInput
+                        v-model="developerTokens[platform.value]"
+                        name="developer_token"
                         type="password"
                         class="w-full"
                     />

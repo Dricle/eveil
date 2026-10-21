@@ -4,6 +4,7 @@ namespace App\Enums;
 
 use App\Services\Ads\AdClientInterface;
 use App\Services\Ads\GoogleAdsClient;
+use App\Services\Ads\MicrosoftAdsClient;
 
 /**
  * The ad networks Eveil runs campaigns on. Adding one is a case here and a
@@ -15,11 +16,13 @@ use App\Services\Ads\GoogleAdsClient;
 enum AdPlatform: string
 {
     case GoogleAds = 'google_ads';
+    case MicrosoftAds = 'microsoft_ads';
 
     public function label(): string
     {
         return match ($this) {
             self::GoogleAds => 'Google Ads',
+            self::MicrosoftAds => 'Microsoft Advertising',
         };
     }
 
@@ -30,6 +33,7 @@ enum AdPlatform: string
     {
         return match ($this) {
             self::GoogleAds => PlatformAppKind::GoogleAds,
+            self::MicrosoftAds => PlatformAppKind::MicrosoftAds,
         };
     }
 
@@ -37,6 +41,7 @@ enum AdPlatform: string
     {
         return app(match ($this) {
             self::GoogleAds => GoogleAdsClient::class,
+            self::MicrosoftAds => MicrosoftAdsClient::class,
         });
     }
 }

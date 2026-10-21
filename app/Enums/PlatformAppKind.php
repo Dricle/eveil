@@ -11,12 +11,14 @@ namespace App\Enums;
 enum PlatformAppKind: string
 {
     case GoogleAds = 'google_ads';
+    case MicrosoftAds = 'microsoft_ads';
     case Instagram = 'instagram';
 
     public function label(): string
     {
         return match ($this) {
             self::GoogleAds => 'Google Ads',
+            self::MicrosoftAds => 'Microsoft Advertising',
             self::Instagram => 'Meta (Instagram)',
         };
     }
@@ -28,7 +30,18 @@ enum PlatformAppKind: string
     {
         return match ($this) {
             self::GoogleAds => route('oauth.ads.callback', AdPlatform::GoogleAds),
+            self::MicrosoftAds => route('oauth.ads.callback', AdPlatform::MicrosoftAds),
             self::Instagram => route('oauth.instagram.callback'),
         };
+    }
+
+    /**
+     * Whether the network also wants a developer token beside the OAuth app
+     * on every call. Google retired theirs; Microsoft still issues one per
+     * developer account.
+     */
+    public function needsDeveloperToken(): bool
+    {
+        return $this === self::MicrosoftAds;
     }
 }

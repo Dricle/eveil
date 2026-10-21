@@ -37,6 +37,7 @@ class PlatformAppController extends Controller
                 'has_own_app' => $own->has($platform->value),
                 'has_instance_app' => $instance->contains($platform->value),
                 'redirect_uri' => $platform->appKind()->redirectUri(),
+                'needs_developer_token' => $platform->appKind()->needsDeveloperToken(),
             ], AdPlatform::cases()),
         ]);
     }

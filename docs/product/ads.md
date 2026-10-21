@@ -2,7 +2,7 @@
 
 Eveil can run your paid ads for you, inside a monthly budget you set on each ad account. Once a day it reviews every campaign's numbers, launches new tests, keeps what brings you users, cuts what does not, and tries what works on other networks. You decide how much it does on its own with the [Ads autonomy setting](/product/autonomy#ads). It never spends past the monthly budget, whatever that setting says.
 
-Google Ads is supported today. Other networks will follow.
+Two networks are supported: **Google Ads** and **Microsoft Advertising** (Bing, and Microsoft's other search results). Both run the same kind of campaign, search ads with responsive text ads, so a creative that works on one can be tried on the other.
 
 ## How it works
 
@@ -12,13 +12,13 @@ Google Ads is supported today. Other networks will follow.
 
 Eveil only ever touches the campaigns it created. Whatever you already run by hand in the same account stays yours.
 
-**Conversion tracking.** If your site carries the network's tag (the Google tag for Google Ads), Eveil aims at signups. Without it, it can only aim at clicks, which is a weaker signal: the Ads page tells you when an account has no tracking.
+**Conversion tracking.** If your site carries the network's tag (the Google tag for Google Ads, a UET tag with a conversion goal for Microsoft Advertising), Eveil aims at signups. Without it, it can only aim at clicks, which is a weaker signal: the Ads page tells you when an account has no tracking.
 
 ## Why you need your own app
 
 Ad networks only let an approved developer app manage ads, and their quotas and restrictions apply to the app, not to your account. With your own app, nobody else's ads can get it restricted. On the hosted edition this step may already be done for you: if **Settings → Ad platforms** says **Using this instance's app**, skip straight to connecting.
 
-The setup is once per organization. You end up with two values, a **client ID** and a **client secret**, which you paste in **Settings → Ad platforms**.
+The setup is once per organization and per network. You end up with a **client ID** and a **client secret** (plus a **developer token** for Microsoft Advertising), which you paste in **Settings → Ad platforms**.
 
 ## Google Ads: getting a client ID and secret
 
@@ -80,3 +80,49 @@ The client secret is stored encrypted and never shown again. To change it, paste
 - **Connected, but no account is listed.** The Google account you signed in with has no direct access to an ad account. Accounts reached only through a manager (MCC) account are not supported yet: give your Google user direct access to the ad account in Google Ads, under **Admin → Access and security**.
 - **An error mentioning `CLOUD_PROJECT_NOT_APPROVED_FOR_PRODUCTION`.** The project still has Test access only: apply for Explorer access (step 5), and check that the client ID comes from the same project.
 - **"Reconnect needed" on an account a week later.** The consent screen is still in Testing: publish it (step 3), then connect again.
+
+## Microsoft Advertising: getting a client ID, secret and developer token
+
+You need a Microsoft Advertising account and about ten minutes. Microsoft asks for two things: an app registered in Microsoft Entra ID (the client ID and secret, for signing in) and a developer token (for using the API at all).
+
+### 1. Register the app in Microsoft Entra ID
+
+1. Open [App registrations](https://go.microsoft.com/fwlink/?linkid=2083908) in the Azure portal. Microsoft requires a work or school account here: a personal Microsoft account can no longer register apps.
+2. Click **New registration** and name it "Eveil".
+3. Under **Supported account types**, choose **Any Entra ID Tenant + Personal Microsoft accounts**, so whichever account signs in to Microsoft Advertising can connect.
+4. Under **Redirect URI**, choose **Web** and paste the **Redirect URI** shown for Microsoft Advertising in Eveil's **Settings → Ad platforms**, copied exactly. It looks like `https://your-eveil-domain/app/oauth/ads/microsoft_ads/callback`.
+5. Click **Register**. On the app's **Overview** page, copy the **Application (client) ID**: that is the client ID.
+
+### 2. Create the client secret
+
+1. In the app, open **Certificates & secrets**, then **New client secret**.
+2. Give it a description and pick an expiry, then **Add**.
+3. Copy the secret's **Value** right away (not its ID): Microsoft never shows it again.
+
+A secret expires on the date you picked. When it does, Eveil can no longer refresh its access: create a new secret and paste it in Eveil before that date.
+
+### 3. Get a developer token
+
+1. Sign in to [Microsoft Advertising](https://ads.microsoft.com/) and open **Settings → Developer settings** (or go straight to [ads.microsoft.com/cc/Settings/DevSettings](https://ads.microsoft.com/cc/Settings/DevSettings)).
+2. Pick the user the token belongs to and click **Request token**.
+3. Copy the token. One universal token covers every account you manage.
+
+### 4. Paste them into Eveil and connect
+
+1. In Eveil, open **Settings → Ad platforms**, paste the **Client ID**, **Client secret** and **Developer token** under Microsoft Advertising, and save.
+2. Open the **Ads** page and click **Connect Microsoft Advertising**. Sign in with the Microsoft account that has access to your ad account and accept.
+3. Back on the Ads page, set a monthly budget on the account Eveil should run.
+
+The secret and the token are stored encrypted and never shown again. To change one, paste a new value; leaving a field blank keeps the current one.
+
+### Good to know
+
+- **Numbers arrive with a short delay.** Microsoft builds performance reports on request, so each sync waits a few seconds for its report. If Microsoft takes longer than two minutes, that sync stops and the next one reads the same days again.
+- **The account's day is the app's.** Microsoft names its time zones its own way, so for now Eveil counts days and the monthly budget in the instance's time zone rather than the account's.
+
+### If something goes wrong
+
+- **An error about the redirect URI when connecting.** The redirect URI registered on the app does not match Eveil's exactly. Copy it again from **Settings → Ad platforms**, including `https://` and with no trailing slash, and check it is registered as a **Web** redirect URI.
+- **"AADSTS50194" or a message about a single tenant.** The app was registered for your organization's accounts only: change **Supported account types** to include personal accounts and other tenants (step 1).
+- **An error mentioning invalid credentials or the developer token.** Check the token was copied whole, and that it is a production token, not the sandbox one.
+- **"Reconnect needed" on an account.** The client secret expired or was deleted: create a new one (step 2), paste it in Eveil, then connect again.

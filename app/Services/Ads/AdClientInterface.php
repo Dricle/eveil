@@ -38,7 +38,7 @@ interface AdClientInterface
      *
      * @return Collection<int, AdAccountData>
      */
-    public function accounts(AdTokens $tokens): Collection;
+    public function accounts(PlatformApp $app, AdTokens $tokens): Collection;
 
     /**
      * Whether the network counts conversions for this account, i.e. the

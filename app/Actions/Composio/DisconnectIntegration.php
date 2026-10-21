@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Actions;
+namespace App\Actions\Composio;
 
 use App\Models\Integration;
 use App\Services\Composio\ComposioClient;

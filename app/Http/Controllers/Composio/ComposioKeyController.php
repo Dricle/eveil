@@ -1,9 +1,10 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Composio;
 
-use App\Actions\ChangeComposioKey;
-use App\Http\Requests\ComposioKeyRequest;
+use App\Actions\Composio\ChangeComposioKey;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Composio\ComposioKeyRequest;
 use App\Support\CurrentProject;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;

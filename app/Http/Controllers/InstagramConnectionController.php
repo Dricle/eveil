@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Actions\DisconnectIntegration;
+use App\Actions\Composio\DisconnectIntegration;
 use App\Actions\DropInstagramMetaConnection;
 use App\Enums\SocialPlatform;
 use App\Models\SocialAccount;

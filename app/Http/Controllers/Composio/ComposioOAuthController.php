@@ -1,10 +1,11 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Composio;
 
-use App\Actions\DisconnectIntegration;
+use App\Actions\Composio\DisconnectIntegration;
 use App\Enums\ComposioToolkit;
 use App\Enums\IntegrationStatus;
+use App\Http\Controllers\Controller;
 use App\Models\Integration;
 use App\Models\Project;
 use App\Services\Composio\ComposioClient;

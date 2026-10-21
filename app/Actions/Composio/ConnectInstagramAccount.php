@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Actions;
+namespace App\Actions\Composio;
 
 use App\Enums\SocialAccountStatus;
 use App\Enums\SocialPlatform;

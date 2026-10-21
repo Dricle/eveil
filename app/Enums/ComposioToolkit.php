@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-use App\Actions\ConnectInstagramAccount;
+use App\Actions\Composio\ConnectInstagramAccount;
 use App\Models\Integration;
 use App\Models\Project;
 

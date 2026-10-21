@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Actions\DisconnectIntegration;
+use App\Actions\Composio\DisconnectIntegration;
 use App\Enums\PlatformAppKind;
 use App\Enums\SocialAccountStatus;
 use App\Enums\SocialPlatform;

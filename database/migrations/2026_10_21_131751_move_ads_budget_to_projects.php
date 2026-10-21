@@ -51,11 +51,28 @@ return new class extends Migration
         });
     }
 
+    /**
+     * Each project's budget goes back onto its first account switched on in
+     * the budget's currency, which is exact for the usual single account.
+     */
     public function down(): void
     {
         Schema::table('ad_accounts', function (Blueprint $table) {
             $table->unsignedBigInteger('monthly_budget_micros')->default(0);
         });
+
+        foreach (DB::table('projects')->where('ads_monthly_budget_micros', '>', 0)->get() as $project) {
+            $accountId = DB::table('ad_accounts')
+                ->where('project_id', $project->id)
+                ->where('enabled', true)
+                ->where('currency', $project->ads_currency)
+                ->orderBy('id')
+                ->value('id');
+
+            if ($accountId !== null) {
+                DB::table('ad_accounts')->where('id', $accountId)->update(['monthly_budget_micros' => $project->ads_monthly_budget_micros]);
+            }
+        }
 
         Schema::table('ad_accounts', function (Blueprint $table) {
             $table->dropColumn('enabled');

@@ -330,26 +330,40 @@ class Project extends Model implements HasMedia, StoresMediaInterface
     }
 
     /**
-     * Spent on ads since the first of the month, every account together, in
-     * micros. The month is the instance's: accounts can sit in different time
-     * zones, the budget has one.
+     * Spent on ads since the first of the month, every account billed in the
+     * budget's currency together, switched on or not, in micros. Another
+     * currency's spend is not this budget's: its campaigns are paused
+     * (`EnforceAdBudget`), and its amounts would be read in the wrong unit.
+     * The month is the instance's: accounts can sit in different time zones,
+     * the budget has one.
      */
     public function adsSpentThisMonthMicros(): int
     {
         return (int) AdMetric::query()
-            ->whereIn('ad_id', Ad::query()->whereIn('ad_campaign_id', AdCampaign::query()->whereIn('ad_account_id', $this->adAccounts()->select('id'))->select('id'))->select('id'))
+            ->whereIn('ad_id', Ad::query()->whereIn('ad_campaign_id', AdCampaign::query()->whereIn('ad_account_id', $this->budgetAdAccountIds())->select('id'))->select('id'))
             ->where('date', '>=', now()->startOfMonth()->toDateString())
             ->sum('cost_micros');
     }
 
     /**
-     * What every campaign running now would spend in a day, all accounts
-     * together.
+     * The accounts whose spend counts against the budget: those billed in
+     * its currency.
+     *
+     * @return HasMany<AdAccount, $this>
+     */
+    private function budgetAdAccountIds(): HasMany
+    {
+        return $this->adAccounts()->where('currency', $this->ads_currency)->select('id');
+    }
+
+    /**
+     * What every campaign running now would spend in a day, every account
+     * billed in the budget's currency together.
      */
     public function adsActiveDailyBudgetMicros(): int
     {
         return (int) AdCampaign::query()
-            ->whereIn('ad_account_id', $this->adAccounts()->select('id'))
+            ->whereIn('ad_account_id', $this->budgetAdAccountIds())
             ->where('status', AdStatus::Active)
             ->sum('daily_budget_micros');
     }

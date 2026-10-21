@@ -30,6 +30,7 @@ use Illuminate\Support\Carbon;
  * @property AdPlatform $platform
  * @property int|null $platform_app_id
  * @property string $external_id
+ * @property array<string, string>|null $external_ref
  * @property string $name
  * @property string $currency
  * @property string|null $time_zone
@@ -45,7 +46,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  */
 #[Fillable([
-    'project_id', 'platform', 'platform_app_id', 'external_id', 'name', 'currency', 'time_zone',
+    'project_id', 'platform', 'platform_app_id', 'external_id', 'external_ref', 'name', 'currency', 'time_zone',
     'access_token', 'refresh_token', 'token_expires_at',
     'monthly_budget_micros', 'has_conversion_tracking', 'status', 'last_error', 'metrics_synced_at',
 ])]
@@ -117,6 +118,7 @@ class AdAccount extends Model
     {
         return [
             'platform' => AdPlatform::class,
+            'external_ref' => 'array',
             'access_token' => EncryptedCredential::class,
             'refresh_token' => EncryptedCredential::class,
             'token_expires_at' => 'datetime',

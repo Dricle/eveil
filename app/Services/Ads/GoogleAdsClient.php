@@ -78,7 +78,7 @@ class GoogleAdsClient implements AdClientInterface
         ]);
     }
 
-    public function accounts(AdTokens $tokens): Collection
+    public function accounts(PlatformApp $app, AdTokens $tokens): Collection
     {
         $response = Http::withToken($tokens->accessToken)->get(self::API.'/customers:listAccessibleCustomers');
         $this->throwUnless($response);

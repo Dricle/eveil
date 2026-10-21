@@ -23,7 +23,7 @@ return new class extends Migration
         Schema::create('integrations', function (Blueprint $table) {
             $table->id();
             $table->foreignId('organization_id')->constrained()->cascadeOnDelete();
-            // The Composio toolkit slug, a `Toolkit` case: instagram, ...
+            // The Composio toolkit slug, a `ComposioToolkit` case: instagram, ...
             $table->string('toolkit');
             // Composio's connected account id: a reference, not the token,
             // and useless without the instance's Composio key.
@@ -40,7 +40,7 @@ return new class extends Migration
         Schema::table('organizations', function (Blueprint $table) {
             // A Composio PROJECT key, encrypted with CREDENTIALS_KEY.
             $table->text('composio_api_key')->nullable();
-            // Toolkit slug => Composio auth config id, created on first use
+            // ComposioToolkit slug => Composio auth config id, created on first use
             // and belonging to that key's project: a new key forgets them.
             $table->jsonb('composio_auth_configs')->nullable();
         });

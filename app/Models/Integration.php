@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\ComposioToolkit;
 use App\Enums\IntegrationStatus;
-use App\Enums\Toolkit;
 use Database\Factories\IntegrationFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -24,7 +24,7 @@ use Illuminate\Support\Carbon;
  *
  * @property int $id
  * @property int $organization_id
- * @property Toolkit $toolkit
+ * @property ComposioToolkit $toolkit
  * @property string $connected_account_id
  * @property IntegrationStatus $status
  * @property string|null $last_error
@@ -59,7 +59,7 @@ class Integration extends Model
     protected function casts(): array
     {
         return [
-            'toolkit' => Toolkit::class,
+            'toolkit' => ComposioToolkit::class,
             'status' => IntegrationStatus::class,
         ];
     }

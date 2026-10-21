@@ -2,7 +2,7 @@
 
 namespace App\Services\Composio;
 
-use App\Enums\Toolkit;
+use App\Enums\ComposioToolkit;
 use App\Models\Integration;
 use App\Models\Organization;
 use Illuminate\Http\Client\PendingRequest;
@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
 /**
- * Composio's REST API, for every `Toolkit`: open a connection link, check
+ * Composio's REST API, for every `ComposioToolkit`: open a connection link, check
  * what came back, run a tool as a connected account, stage a file a tool
  * takes as input, revoke a connection. Plain HTTP, no SDK: Composio ships
  * none for PHP, and five endpoints do not earn a dependency.
@@ -33,7 +33,7 @@ class ComposioClient
      *
      * @return array{redirect_url: string, connected_account_id: string}
      */
-    public function connectionLink(Toolkit $toolkit, Organization $organization, string $callbackUrl): array
+    public function connectionLink(ComposioToolkit $toolkit, Organization $organization, string $callbackUrl): array
     {
         $response = $this->request($organization)->post(self::API.'/connected_accounts/link', [
             'auth_config_id' => $this->authConfigId($toolkit, $organization),
@@ -130,7 +130,7 @@ class ComposioClient
      * The toolkit's auth config on Composio's managed app, created the first
      * time anyone connects it and remembered after that.
      */
-    private function authConfigId(Toolkit $toolkit, Organization $organization): string
+    private function authConfigId(ComposioToolkit $toolkit, Organization $organization): string
     {
         $id = $organization->composio_auth_configs[$toolkit->value] ?? null;
 

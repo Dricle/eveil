@@ -10,9 +10,9 @@ use App\Models\Project;
  * The services an organization can connect through Composio. Adding one is a
  * case here: its Composio toolkit slug, what Eveil does once it is connected,
  * and the screen the user returns to. The connection flow itself
- * (`IntegrationController`) and the API (`ComposioClient`) are shared.
+ * (`ComposioOAuthController`) and the API (`ComposioClient`) are shared.
  */
-enum Toolkit: string
+enum ComposioToolkit: string
 {
     case Instagram = 'instagram';
 

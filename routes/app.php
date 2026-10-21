@@ -336,7 +336,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             Route::delete('composio', [ComposioKeyController::class, 'destroy'])->name('composio.destroy');
 
             /*
-             * Any `Toolkit` connects on Composio's hosted page, then comes
+             * Any `ComposioToolkit` connects on Composio's hosted page, then comes
              * back to the one shared `oauth.composio.callback`.
              */
             Route::get('integrations/{toolkit}/connect', [ComposioOAuthController::class, 'redirect'])

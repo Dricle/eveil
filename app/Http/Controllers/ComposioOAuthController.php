@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Actions\DisconnectIntegration;
+use App\Enums\ComposioToolkit;
 use App\Enums\IntegrationStatus;
-use App\Enums\Toolkit;
 use App\Models\Integration;
 use App\Models\Project;
 use App\Services\Composio\ComposioClient;
@@ -15,7 +15,7 @@ use RuntimeException;
 use Throwable;
 
 /**
- * Connects any `Toolkit` through Composio's hosted authorization page. Same
+ * Connects any `ComposioToolkit` through Composio's hosted authorization page. Same
  * shape as `LinkedinOAuthController`: the redirect is reached from inside a
  * project, the callback is the one fixed `oauth/` URL every toolkit shares,
  * and what ties the two together travels in the session.
@@ -23,11 +23,11 @@ use Throwable;
  * The connection is recorded as a pending `Integration` before the user
  * leaves, and the callback only ever checks THAT row, so a forged callback
  * has nothing to point at. What the toolkit becomes once connected is the
- * toolkit's business (`Toolkit::connected()`).
+ * toolkit's business (`ComposioToolkit::connected()`).
  */
 class ComposioOAuthController extends Controller
 {
-    public function redirect(Request $request, CurrentProject $currentProject, ComposioClient $composio, DisconnectIntegration $disconnect, Toolkit $toolkit): RedirectResponse
+    public function redirect(Request $request, CurrentProject $currentProject, ComposioClient $composio, DisconnectIntegration $disconnect, ComposioToolkit $toolkit): RedirectResponse
     {
         $organization = $currentProject->organization();
 

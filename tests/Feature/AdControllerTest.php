@@ -25,7 +25,7 @@ function adOwner(): array
     $user = User::factory()->create();
     $organization = Organization::factory()->create();
     $organization->users()->attach($user, ['role' => 'owner']);
-    $project = Project::factory()->for($organization)->create();
+    $project = Project::factory()->for($organization)->withAdsBudget()->create();
     $account = AdAccount::factory()->create(['project_id' => $project->id, 'external_id' => '1234567890']);
 
     return [$user, $project, $account];
@@ -46,23 +46,38 @@ it('shows the accounts, campaigns and the decisions waiting first', function () 
             ->where('platforms.0.configured', true));
 });
 
-it('saves a monthly budget in micros and syncs right away', function () {
+it('saves the project\'s monthly ads budget in micros, and pauses at once when it drops to zero', function () {
+    Queue::fake([ApplyAdDecision::class]);
+    [$user, $project, $account] = adOwner();
+    AdCampaign::factory()->active()->create(['ad_account_id' => $account->id]);
+
+    $this->actingAs($user)->putJson(route('ads.budget.update'), ['monthly_budget' => 450.5, 'currency' => 'eur'])->assertRedirect();
+
+    expect($project->fresh())->ads_monthly_budget_micros->toBe(450_500_000)->ads_currency->toBe('EUR');
+    Queue::assertNotPushed(ApplyAdDecision::class);
+
+    $this->actingAs($user)->putJson(route('ads.budget.update'), ['monthly_budget' => 0, 'currency' => 'EUR'])->assertRedirect();
+
+    Queue::assertPushed(ApplyAdDecision::class);
+});
+
+it('switches an account off and syncs right away', function () {
     Queue::fake([SyncAdAccount::class]);
     [$user, , $account] = adOwner();
 
-    $this->actingAs($user)->putJson(route('ads.accounts.update', $account->id), ['monthly_budget' => 450.5])->assertRedirect();
+    $this->actingAs($user)->putJson(route('ads.accounts.update', $account->id), ['enabled' => false])->assertRedirect();
 
-    expect($account->fresh()->monthly_budget_micros)->toBe(450_500_000);
+    expect($account->fresh()->enabled)->toBeFalse();
     Queue::assertPushed(SyncAdAccount::class);
 });
 
 it('does not reach another project\'s ad account', function () {
     [$user] = adOwner();
-    $foreign = AdAccount::factory()->create(['monthly_budget_micros' => 100_000_000]);
+    $foreign = AdAccount::factory()->create();
 
-    $this->actingAs($user)->putJson(route('ads.accounts.update', $foreign->id), ['monthly_budget' => 1])->assertNotFound();
+    $this->actingAs($user)->putJson(route('ads.accounts.update', $foreign->id), ['enabled' => false])->assertNotFound();
 
-    expect($foreign->fresh()->monthly_budget_micros)->toBe(100_000_000);
+    expect($foreign->fresh()->enabled)->toBeTrue();
 });
 
 it('refuses to disconnect an account that still runs campaigns', function () {
@@ -94,15 +109,15 @@ it('does not let anyone decide another project\'s decision', function () {
     expect($foreign->fresh()->status)->toBe(AdDecisionStatus::Proposed);
 });
 
-it('starts a review on demand only once an account has a budget', function () {
+it('starts a review on demand only once the project has an ads budget', function () {
     Queue::fake([ReviewAds::class]);
-    [$user, , $account] = adOwner();
-    $account->update(['monthly_budget_micros' => 0]);
+    [$user, $project] = adOwner();
+    $project->update(['ads_monthly_budget_micros' => 0]);
 
     $this->actingAs($user)->post(route('ads.reviews.store'))->assertSessionHasErrors('review');
     Queue::assertNotPushed(ReviewAds::class);
 
-    $account->update(['monthly_budget_micros' => 100_000_000]);
+    $project->update(['ads_monthly_budget_micros' => 100_000_000]);
     $this->actingAs($user)->post(route('ads.reviews.store'))->assertSessionHasNoErrors();
     Queue::assertPushed(ReviewAds::class);
 });
@@ -128,7 +143,8 @@ it('connects every ad account the grant reaches, skipping manager accounts', fun
     expect($connected)
         ->name->toBe('Acme')
         ->access_token->toBe('at')
-        ->monthly_budget_micros->toBe(0);
+        // The only account the grant reached: obviously the one meant.
+        ->enabled->toBeTrue();
     expect(AdAccount::query()->where('external_id', '222')->exists())->toBeFalse();
 });
 

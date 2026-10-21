@@ -26,4 +26,12 @@ class ProjectFactory extends Factory
             'email_autonomy_level' => AutonomyLevel::SemiAuto,
         ];
     }
+
+    /**
+     * A monthly ads budget, in the currency `AdAccountFactory` bills in.
+     */
+    public function withAdsBudget(int $micros = 300_000_000): static
+    {
+        return $this->state(fn (): array => ['ads_monthly_budget_micros' => $micros, 'ads_currency' => 'EUR']);
+    }
 }

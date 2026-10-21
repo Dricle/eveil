@@ -6,6 +6,7 @@ use App\Actions\EnforceAdBudget;
 use App\Enums\AdAccountStatus;
 use App\Enums\AdDecisionStatus;
 use App\Enums\AdDecisionType;
+use App\Enums\AdPlatform;
 use App\Enums\AdStatus;
 use App\Enums\AutonomyLevel;
 use App\Jobs\ApplyAdDecision;
@@ -32,8 +33,8 @@ function adSetup(AutonomyLevel $autonomy = AutonomyLevel::Supervised): array
     $user = User::factory()->create();
     $organization = Organization::factory()->create();
     $organization->users()->attach($user, ['role' => 'owner']);
-    $project = Project::factory()->for($organization)->create(['url' => 'https://acme.test', 'ads_autonomy_level' => $autonomy]);
-    $account = AdAccount::factory()->create(['project_id' => $project->id, 'external_id' => '1234567890', 'monthly_budget_micros' => 300_000_000]);
+    $project = Project::factory()->for($organization)->withAdsBudget()->create(['url' => 'https://acme.test', 'ads_autonomy_level' => $autonomy]);
+    $account = AdAccount::factory()->create(['project_id' => $project->id, 'external_id' => '1234567890']);
 
     app(CurrentProject::class)->set($project);
 
@@ -151,11 +152,32 @@ it('blocks a launch the rest of the month cannot afford, and discards its drafts
         ->and(AdCampaign::query()->sole()->status)->toBe(AdStatus::Removed);
 });
 
-it('blocks spending on an account without a monthly budget', function () {
+it('blocks spending without a monthly ads budget', function () {
     [$project, $account] = adSetup();
-    $account->update(['monthly_budget_micros' => 0]);
+    $project->update(['ads_monthly_budget_micros' => 0]);
 
-    expect(launch($project, $account))->toContain('no monthly budget set');
+    expect(launch($project, $account))->toContain('no monthly ads budget');
+});
+
+it('blocks spending on an account that is switched off or billed in another currency', function (array $change) {
+    [$project, $account] = adSetup();
+    $account->update($change);
+
+    expect(launch($project, $account))->toContain('switched off, disconnected, or billed in another currency');
+})->with([
+    'switched off' => [['enabled' => false]],
+    'another currency' => [['currency' => 'USD']],
+]);
+
+it('paces the one budget across every account', function () {
+    $this->travelTo(now()->startOfMonth()->addDays(9));
+    [$project, $account] = adSetup();
+    // 300 for the month, at least 19 days left, and another network already
+    // takes 9.50 a day: one more 10 a day campaign no longer fits.
+    $other = AdAccount::factory()->create(['project_id' => $project->id, 'platform' => AdPlatform::MicrosoftAds]);
+    AdCampaign::factory()->active()->create(['ad_account_id' => $other->id, 'daily_budget_micros' => 9_500_000]);
+
+    expect(launch($project, $account))->toContain('Over the monthly budget');
 });
 
 it('caps new campaigns per account per week', function () {
@@ -263,9 +285,61 @@ it('pauses everything once the month is spent', function () {
     $ad = Ad::factory()->active()->create(['ad_campaign_id' => AdCampaign::factory()->active()->create(['ad_account_id' => $account->id])->id]);
     AdMetric::factory()->create(['ad_id' => $ad->id, 'cost_micros' => 300_000_000]);
 
-    app(EnforceAdBudget::class)->handle($account);
+    app(EnforceAdBudget::class)->handle($account->project);
 
-    Queue::assertPushed(ApplyAdDecision::class, fn (ApplyAdDecision $job): bool => $job->decision->reasoning === 'The monthly budget is spent.');
+    Queue::assertPushed(ApplyAdDecision::class, fn (ApplyAdDecision $job): bool => $job->decision->reasoning === 'The monthly ads budget is spent.');
+});
+
+it('counts spend on every account against the month', function () {
+    Queue::fake([ApplyAdDecision::class]);
+    [$project, $account] = adSetup();
+    $running = AdCampaign::factory()->active()->create(['ad_account_id' => $account->id]);
+    $other = AdAccount::factory()->create(['project_id' => $project->id, 'platform' => AdPlatform::MicrosoftAds]);
+    AdMetric::factory()->create(['ad_id' => Ad::factory()->active()->create(['ad_campaign_id' => AdCampaign::factory()->create(['ad_account_id' => $other->id])->id])->id, 'cost_micros' => 300_000_000]);
+
+    app(EnforceAdBudget::class)->handle($project);
+
+    Queue::assertPushed(ApplyAdDecision::class, fn (ApplyAdDecision $job): bool => $job->decision->ad_campaign_id === $running->id);
+});
+
+it('pauses a campaign once, however many syncs run the budget stop', function () {
+    Queue::fake([ApplyAdDecision::class]);
+    [$project, $account] = adSetup();
+    $project->update(['ads_monthly_budget_micros' => 0]);
+    AdCampaign::factory()->active()->create(['ad_account_id' => $account->id]);
+
+    app(EnforceAdBudget::class)->handle($project);
+    app(EnforceAdBudget::class)->handle($project);
+
+    expect(AdDecision::query()->where('type', AdDecisionType::PauseCampaign)->count())->toBe(1);
+});
+
+it('leaves another currency\'s spend out of the budget', function () {
+    Queue::fake([ApplyAdDecision::class]);
+    [$project, $account] = adSetup();
+    AdCampaign::factory()->active()->create(['ad_account_id' => $account->id]);
+    $dollars = AdAccount::factory()->create(['project_id' => $project->id, 'platform' => AdPlatform::MicrosoftAds, 'currency' => 'USD']);
+    AdMetric::factory()->create(['ad_id' => Ad::factory()->active()->create(['ad_campaign_id' => AdCampaign::factory()->create(['ad_account_id' => $dollars->id])->id])->id, 'cost_micros' => 300_000_000]);
+
+    expect($project->adsSpentThisMonthMicros())->toBe(0);
+
+    app(EnforceAdBudget::class)->handle($project);
+
+    Queue::assertNotPushed(ApplyAdDecision::class);
+});
+
+it('pauses what runs on an account switched off, and nothing else', function () {
+    Queue::fake([ApplyAdDecision::class]);
+    [$project, $account] = adSetup();
+    $off = AdAccount::factory()->create(['project_id' => $project->id, 'platform' => AdPlatform::MicrosoftAds, 'enabled' => false]);
+    $stranded = AdCampaign::factory()->active()->create(['ad_account_id' => $off->id]);
+    AdCampaign::factory()->active()->create(['ad_account_id' => $account->id]);
+
+    app(EnforceAdBudget::class)->handle($project);
+
+    Queue::assertPushed(ApplyAdDecision::class, 1);
+    Queue::assertPushed(ApplyAdDecision::class, fn (ApplyAdDecision $job): bool => $job->decision->ad_campaign_id === $stranded->id
+        && $job->decision->reasoning === 'Eveil may no longer spend on this ad account.');
 });
 
 it('leaves campaigns running while the month still has money', function () {
@@ -273,7 +347,7 @@ it('leaves campaigns running while the month still has money', function () {
     [, $account] = adSetup();
     AdCampaign::factory()->active()->create(['ad_account_id' => $account->id]);
 
-    app(EnforceAdBudget::class)->handle($account);
+    app(EnforceAdBudget::class)->handle($account->project);
 
     Queue::assertNotPushed(ApplyAdDecision::class);
 });

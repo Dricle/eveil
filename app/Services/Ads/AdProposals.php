@@ -153,6 +153,18 @@ class AdProposals
             return "No running campaign {$campaignId} on this project.";
         }
 
+        // Every account's sync runs the budget stop for the whole project:
+        // one pause on its way is enough.
+        $pending = AdDecision::query()
+            ->where('ad_campaign_id', $campaign->id)
+            ->where('type', AdDecisionType::PauseCampaign)
+            ->whereIn('status', [AdDecisionStatus::Proposed, AdDecisionStatus::Approved])
+            ->first();
+
+        if ($pending !== null) {
+            return "Campaign {$campaignId} is already being paused (decision {$pending->id}).";
+        }
+
         return $this->propose($project, $agentRunId, AdDecisionType::PauseCampaign, $reasoning, $campaign->account, $campaign);
     }
 

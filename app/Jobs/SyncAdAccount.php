@@ -33,6 +33,6 @@ class SyncAdAccount implements ShouldBeUnique, ShouldQueue
     public function handle(SyncAdMetrics $sync, EnforceAdBudget $enforce): void
     {
         $sync->handle($this->account);
-        $enforce->handle($this->account->refresh());
+        $enforce->handle($this->account->project);
     }
 }

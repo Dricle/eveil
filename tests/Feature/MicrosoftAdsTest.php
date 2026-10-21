@@ -67,6 +67,7 @@ it('connects every account the Microsoft user can manage, remembering its custom
         'clientcenter.api.bingads.microsoft.com/CustomerManagement/v13/User/Query' => Http::response(['User' => ['Id' => '5']]),
         'clientcenter.api.bingads.microsoft.com/CustomerManagement/v13/Accounts/Search' => Http::response(['Accounts' => [
             ['Id' => '149', 'Name' => 'Acme', 'CurrencyCode' => 'EUR', 'ParentCustomerId' => '77', 'TimeZone' => 'BrusselsCopenhagenMadridParis'],
+            ['Id' => '150', 'Name' => 'A client of the agency', 'CurrencyCode' => 'USD', 'ParentCustomerId' => '78'],
         ]]),
     ]);
 
@@ -75,12 +76,15 @@ it('connects every account the Microsoft user can manage, remembering its custom
         ->get(route('oauth.ads.callback', ['platform' => 'microsoft_ads', 'code' => 'a-code', 'state' => 'the-state']))
         ->assertRedirect(route('ads.index', ['project' => $project]));
 
-    expect(AdAccount::query()->where('project_id', $project->id)->sole())
+    expect(AdAccount::query()->where('project_id', $project->id)->where('external_id', '149')->sole())
         ->platform->toBe(AdPlatform::MicrosoftAds)
         ->external_id->toBe('149')
         ->external_ref->toEqual(['customer_id' => '77', 'time_zone' => 'BrusselsCopenhagenMadridParis'])
         ->refresh_token->toBe('rt')
-        ->monthly_budget_micros->toBe(0);
+        // Two accounts reached: which one is this product's is the user's call.
+        ->enabled->toBeFalse();
+    // The budget's currency starts as the first account's.
+    expect($project->fresh()->ads_currency)->toBe('EUR');
     Http::assertSent(fn (Request $request): bool => str_ends_with($request->url(), 'Accounts/Search')
         && $request->header('DeveloperToken') === ['dev-token']
         && $request['Predicates'][0]['Value'] === '5');

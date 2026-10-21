@@ -22,7 +22,7 @@ class AdAccountFactory extends Factory
     public function definition(): array
     {
         return [
-            'project_id' => Project::factory(),
+            'project_id' => Project::factory()->withAdsBudget(),
             'platform' => AdPlatform::GoogleAds,
             // The instance has one app per network: share it.
             'platform_app_id' => fn (): int => PlatformApp::query()->whereNull('organization_id')->where('platform', AdPlatform::GoogleAds)->value('id')
@@ -34,7 +34,7 @@ class AdAccountFactory extends Factory
             'access_token' => fake()->sha256(),
             'refresh_token' => fake()->sha256(),
             'token_expires_at' => now()->addHour(),
-            'monthly_budget_micros' => 300_000_000,
+            'enabled' => true,
             'status' => AdAccountStatus::Active,
         ];
     }

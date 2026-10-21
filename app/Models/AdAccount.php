@@ -19,8 +19,10 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Support\Carbon;
 
 /**
- * One account on one ad network, owned by the project: the monthly budget is
- * this product's money, so unlike a mailbox it is never shared with another.
+ * One account on one ad network, owned by the project: unlike a mailbox it is
+ * never shared with another. The money is the project's monthly ads budget
+ * (`Project::$ads_monthly_budget_micros`), which the agent spreads over every
+ * account switched on (`$enabled`).
  *
  * Eveil only ever touches campaigns it created itself. Whatever the user
  * already runs in the account stays theirs.
@@ -37,7 +39,7 @@ use Illuminate\Support\Carbon;
  * @property string $access_token
  * @property string|null $refresh_token
  * @property Carbon|null $token_expires_at
- * @property int $monthly_budget_micros
+ * @property bool $enabled
  * @property bool $has_conversion_tracking
  * @property AdAccountStatus $status
  * @property string|null $last_error
@@ -48,7 +50,7 @@ use Illuminate\Support\Carbon;
 #[Fillable([
     'project_id', 'platform', 'platform_app_id', 'external_id', 'external_ref', 'name', 'currency', 'time_zone',
     'access_token', 'refresh_token', 'token_expires_at',
-    'monthly_budget_micros', 'has_conversion_tracking', 'status', 'last_error', 'metrics_synced_at',
+    'enabled', 'has_conversion_tracking', 'status', 'last_error', 'metrics_synced_at',
 ])]
 #[Hidden(['access_token', 'refresh_token'])]
 class AdAccount extends Model
@@ -81,15 +83,15 @@ class AdAccount extends Model
     }
 
     /**
-     * Spent since the first of the month, in micros. The month is the
-     * account's own, in its time zone, because that is the one its invoice
-     * uses.
+     * Spent here since the first of the month, in micros: this account's
+     * share of the project's budget. Same month as the budget, the
+     * instance's.
      */
     public function spentThisMonthMicros(): int
     {
         return (int) AdMetric::query()
             ->whereIn('ad_id', Ad::query()->whereIn('ad_campaign_id', $this->campaigns()->select('id'))->select('id'))
-            ->where('date', '>=', $this->today()->startOfMonth()->toDateString())
+            ->where('date', '>=', now()->startOfMonth()->toDateString())
             ->sum('cost_micros');
     }
 
@@ -106,9 +108,15 @@ class AdAccount extends Model
         return now($this->time_zone ?? config('app.timezone'));
     }
 
+    /**
+     * Whether the project's ads budget may be spent here: same test as
+     * `Project::usableAdAccounts()`.
+     */
     public function isUsable(): bool
     {
-        return $this->status === AdAccountStatus::Active && $this->monthly_budget_micros > 0;
+        return $this->status === AdAccountStatus::Active
+            && $this->enabled
+            && $this->currency === $this->project->ads_currency;
     }
 
     /**
@@ -122,7 +130,7 @@ class AdAccount extends Model
             'access_token' => EncryptedCredential::class,
             'refresh_token' => EncryptedCredential::class,
             'token_expires_at' => 'datetime',
-            'monthly_budget_micros' => 'integer',
+            'enabled' => 'boolean',
             'has_conversion_tracking' => 'boolean',
             'status' => AdAccountStatus::class,
             'metrics_synced_at' => 'datetime',

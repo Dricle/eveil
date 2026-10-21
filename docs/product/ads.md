@@ -1,16 +1,22 @@
 # Running ads
 
-Eveil can run your paid ads for you, inside a monthly budget you set on each ad account. Once a day it reviews every campaign's numbers, launches new tests, keeps what brings you users, cuts what does not, and tries what works on other networks. You decide how much it does on its own with the [Ads autonomy setting](/product/autonomy#ads). It never spends past the monthly budget, whatever that setting says.
+Eveil can run your paid ads for you, inside one monthly budget you set for the project. You do not split it between networks: Eveil does, and keeps moving it toward whatever brings you users for less. Once a day it reviews every campaign's numbers, launches new tests, keeps what brings you users, cuts what does not, and tries what works on other networks. You decide how much it does on its own with the [Ads autonomy setting](/product/autonomy#ads). It never spends past the monthly budget, whatever that setting says.
 
 Two networks are supported: **Google Ads** and **Microsoft Advertising** (Bing, and Microsoft's other search results). Both run the same kind of campaign, search ads with responsive text ads, so a creative that works on one can be tried on the other.
 
 ## How it works
 
-1. **Connect an ad account** from the **Ads** page. Every account your sign-in can manage is listed, each with a monthly budget of zero: Eveil spends nothing on an account until you give it a budget, so giving it a budget is how you choose which accounts to use.
-2. **Set a monthly budget** on the account you want Eveil to run.
+1. **Connect your ad accounts** from the **Ads** page, one network or several. Every account your sign-in can manage is listed. When it reaches a single account, that one is switched on (**Use for ads**). When it reaches several, for example an agency login that also sees clients' accounts, they all start switched off: switch on the ones that belong to this product.
+2. **Set the monthly budget** at the top of the Ads page: one amount for the whole project, every network together.
 3. **Eveil reviews it every morning**, or right away with **Review now**. Each move comes with its reasoning and the numbers behind it. In Supervised mode, anything that would spend more waits in **Waiting for you** at the top of the Ads page: approve it, or reject it with a reason, which Eveil reads at its next review. Pausing or lowering spend never waits.
 
 Eveil only ever touches the campaigns it created. Whatever you already run by hand in the same account stays yours.
+
+**How the budget is spent.** Eveil paces the month: every running campaign, on every account, must be able to spend its daily budget every day left in the month inside what remains. It starts each network with a fair test, then moves money toward the one that brings users cheaper. Once the month is spent, or if you set the budget to zero, every campaign pauses at once. Switching an account off pauses what runs there.
+
+**One currency.** The budget is set in the currency of one of your connected accounts, and only accounts billed in that currency are used: Eveil never converts between currencies. An account billed in another one shows **not used** on the Ads page.
+
+**The month is the instance's.** Accounts can sit in different time zones, the budget has one: days and the month are counted in the Eveil instance's time zone.
 
 **Conversion tracking.** If your site carries the network's tag (the Google tag for Google Ads, a UET tag with a conversion goal for Microsoft Advertising), Eveil aims at signups. Without it, it can only aim at clicks, which is a weaker signal: the Ads page tells you when an account has no tracking.
 
@@ -70,7 +76,7 @@ You need an Owner or Editor role on the project to apply.
 
 1. In Eveil, open **Settings → Ad platforms**, paste the **Client ID** and **Client secret** under Google Ads, and save.
 2. Open the **Ads** page and click **Connect Google Ads**. Sign in with the Google account that has access to your ad account and accept.
-3. Back on the Ads page, set a monthly budget on the account Eveil should run.
+3. Back on the Ads page, check the account is switched on (**Use for ads**) and set the monthly budget if it is not set yet.
 
 The client secret is stored encrypted and never shown again. To change it, paste a new one; leaving the field blank keeps the current one.
 
@@ -111,14 +117,13 @@ A secret expires on the date you picked. When it does, Eveil can no longer refre
 
 1. In Eveil, open **Settings → Ad platforms**, paste the **Client ID**, **Client secret** and **Developer token** under Microsoft Advertising, and save.
 2. Open the **Ads** page and click **Connect Microsoft Advertising**. Sign in with the Microsoft account that has access to your ad account and accept.
-3. Back on the Ads page, set a monthly budget on the account Eveil should run.
+3. Back on the Ads page, check the account is switched on (**Use for ads**) and set the monthly budget if it is not set yet.
 
 The secret and the token are stored encrypted and never shown again. To change one, paste a new value; leaving a field blank keeps the current one.
 
 ### Good to know
 
 - **Numbers arrive with a short delay.** Microsoft builds performance reports on request, so each sync waits a few seconds for its report. If Microsoft takes longer than two minutes, that sync stops and the next one reads the same days again.
-- **The account's day is the app's.** Microsoft names its time zones its own way, so for now Eveil counts days and the monthly budget in the instance's time zone rather than the account's.
 
 ### If something goes wrong
 

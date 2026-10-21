@@ -16,7 +16,8 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * The ads screen: what each account spends against its month, the campaigns
+ * The ads screen: the project's monthly budget and what each account spends
+ * of it, the campaigns
  * Eveil runs with their ads and numbers, and the decision feed, with the
  * ones waiting for a person on top. A nav item, not a settings page: it
  * changes every day on its own.
@@ -28,8 +29,19 @@ class AdController extends Controller
         $project = $currentProject->getOrFail();
         $organization = $project->organization;
 
+        $accounts = $project->adAccounts()->orderBy('id')->get();
+
         return Inertia::render('ads/Index', [
-            'accounts' => AdAccountResource::collection($project->adAccounts()->orderBy('id')->get()),
+            'budget' => [
+                'monthly' => $project->ads_monthly_budget_micros / 1_000_000,
+                'currency' => $project->ads_currency,
+                'spent_this_month' => $project->adsSpentThisMonthMicros() / 1_000_000,
+                'active_daily_budget' => $project->adsActiveDailyBudgetMicros() / 1_000_000,
+                // The currencies the budget can be set in: the connected
+                // accounts' own, since budgets are never converted.
+                'currencies' => $accounts->pluck('currency')->unique()->values()->all(),
+            ],
+            'accounts' => AdAccountResource::collection($accounts),
             'campaigns' => AdCampaignResource::collection(
                 AdCampaign::query()
                     ->where('status', '!=', AdStatus::Removed)

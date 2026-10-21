@@ -65,7 +65,7 @@ it('calls a winner or a loser only when the interval clears the baseline', funct
 ]);
 
 it('hands the agent ratios, intervals and pacing, never a fake zero', function () {
-    $account = AdAccount::factory()->create(['monthly_budget_micros' => 300_000_000]);
+    $account = AdAccount::factory()->create();
     app(CurrentProject::class)->set($account->project);
     reportedAd($account, ['impressions' => 1000, 'clicks' => 40, 'cost_micros' => 20_000_000, 'conversions' => 0]);
 
@@ -81,7 +81,9 @@ it('hands the agent ratios, intervals and pacing, never a fake zero', function (
         'cost_per_conversion' => null,
     ])
         ->and($ad['ctr_95_interval'][0])->toBeLessThan(4.0)
-        ->and($report['accounts'][0]['budget']['spent_this_month'])->toBe(20.0)
+        ->and($report['budget']['spent_this_month'])->toBe(20.0)
+        ->and($report['budget']['remaining'])->toBe(280.0)
+        ->and($report['accounts'][0]['usable'])->toBeTrue()
         ->and($report['accounts'][0]['optimizing_for'])->toStartWith('clicks');
 });
 
@@ -95,9 +97,9 @@ it('hands the whole report to the agent', function () {
     AdStrategist::assertPrompted(fn (AgentPrompt $prompt): bool => str_contains($prompt->prompt, '"monthly": 300'));
 });
 
-it('costs no model call without an account that has a budget', function () {
+it('costs no model call without an ads budget', function () {
     $project = Project::factory()->create();
-    AdAccount::factory()->create(['project_id' => $project->id, 'monthly_budget_micros' => 0]);
+    AdAccount::factory()->create(['project_id' => $project->id]);
     AdStrategist::fake();
 
     app(ReviewAds::class)->handle($project);

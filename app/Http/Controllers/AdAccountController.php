@@ -6,11 +6,11 @@ use App\Enums\AdStatus;
 use App\Http\Requests\AdAccountRequest;
 use App\Jobs\SyncAdAccount;
 use App\Models\AdAccount;
-use App\Services\Ads\AdProposals;
 use Illuminate\Http\RedirectResponse;
 
 /**
- * A connected ad account's budget, and disconnecting it.
+ * Whether Eveil may spend the project's ads budget on a connected account,
+ * and disconnecting it.
  */
 class AdAccountController extends Controller
 {
@@ -18,13 +18,13 @@ class AdAccountController extends Controller
     {
         $account = AdAccount::query()->findOrFail($adAccount);
 
-        $account->update(['monthly_budget_micros' => AdProposals::micros((float) $request->validated('monthly_budget'))]);
+        $account->update(['enabled' => $request->boolean('enabled')]);
 
-        // A budget lowered under what was spent pauses at once, not at the
-        // next hourly sync.
+        // Switched off, its campaigns pause at once, not at the next hourly
+        // sync.
         SyncAdAccount::dispatch($account);
 
-        return back()->with('status', 'Monthly budget saved.');
+        return back()->with('status', $account->enabled ? 'Eveil may now spend on this account.' : 'Eveil no longer spends on this account.');
     }
 
     /**
@@ -36,7 +36,7 @@ class AdAccountController extends Controller
         $account = AdAccount::query()->findOrFail($adAccount);
 
         if ($account->campaigns()->where('status', AdStatus::Active)->exists()) {
-            return back()->withErrors(['account' => 'Campaigns still run on this account. Set its budget to zero first: that pauses them.']);
+            return back()->withErrors(['account' => 'Campaigns still run on this account. Switch it off first: that pauses them.']);
         }
 
         $account->delete();

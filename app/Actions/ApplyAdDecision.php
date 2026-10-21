@@ -11,6 +11,7 @@ use App\Models\AdCampaign;
 use App\Models\AdDecision;
 use App\Services\Ads\AdGuardrails;
 use App\Services\Ads\AdPlatformException;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Carries one decision out on its network. The only place a network is ever
@@ -19,12 +20,28 @@ use App\Services\Ads\AdPlatformException;
  * Safe to run twice: a decision already settled is skipped, and a launch
  * that created its campaign but died before enabling it picks up from there
  * instead of creating a second one.
+ *
+ * A decision that spends more holds the project's lock from the last
+ * guardrail check until it is applied: every account draws from one budget,
+ * so two launches on two accounts must not both pass on the same allowance.
  */
 class ApplyAdDecision
 {
     public function __construct(private AdGuardrails $guardrails) {}
 
     public function handle(AdDecision $decision): void
+    {
+        if ($decision->cutsSpend()) {
+            $this->apply($decision);
+
+            return;
+        }
+
+        // Long enough for a launch, which takes several network calls.
+        Cache::lock("ads-budget:{$decision->project_id}", 300)->block(120, fn () => $this->apply($decision->refresh()));
+    }
+
+    private function apply(AdDecision $decision): void
     {
         $pending = $decision->status === AdDecisionStatus::Approved
             || ($decision->status === AdDecisionStatus::Proposed && ! $decision->needsApproval());

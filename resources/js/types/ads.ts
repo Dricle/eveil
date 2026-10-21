@@ -7,14 +7,25 @@ export type AdAccount = {
     name: string
     external_id: string
     currency: string
-    /** Currency units, not micros. Zero means Eveil spends nothing here. */
-    monthly_budget: number
+    /** Whether Eveil may spend the project's ads budget here. */
+    enabled: boolean
+    /** Enabled, connected, and billed in the budget's currency. */
+    usable: boolean
     spent_this_month: number
     active_daily_budget: number
     has_conversion_tracking: boolean
     status: 'active' | 'error'
     last_error: string | null
     metrics_synced_at: string | null
+}
+
+/** The project's monthly ads budget, in currency units, not micros. */
+export type AdBudget = {
+    monthly: number
+    currency: string | null
+    spent_this_month: number
+    active_daily_budget: number
+    currencies: string[]
 }
 
 export type Ad = {

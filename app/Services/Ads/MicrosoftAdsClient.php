@@ -164,7 +164,7 @@ class MicrosoftAdsClient implements AdClientInterface
     {
         $response = $this->request($account)->post(self::CAMPAIGN_API.'/ConversionGoals/QueryByIds', [
             'ConversionGoalIds' => null,
-            'ConversionGoalTypes' => 'Url,Duration,PagesViewedPerVisit,Event,AppInstall,OfflineConversion,InStoreTransaction',
+            'ConversionGoalTypes' => 'Url,Duration,PagesViewedPerVisit,Event,AppInstall,OfflineConversion',
         ]);
         $this->throwUnless($response);
 

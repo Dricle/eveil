@@ -6,13 +6,14 @@ import { relativeUrl } from '@/lib/utils'
 import adRoutes from '@/routes/ads'
 import adPlatformRoutes from '@/routes/settings/ad-platforms'
 import autonomyRoutes from '@/routes/settings/autonomy'
-import type { AdAccount, AdCampaign, AdDecision } from '@/types'
+import type { AdAccount, AdBudget, AdCampaign, AdDecision } from '@/types'
 
 defineOptions({ layout: AppLayout })
 
 // Inline rather than a type alias imported through the barrel: an alias there
 // silently declares no props at all.
 const props = defineProps<{
+    budget: AdBudget
     accounts: AdAccount[]
     campaigns: AdCampaign[]
     decisions: AdDecision[]
@@ -27,7 +28,7 @@ const slug = computed(() => page.props.currentProject!.slug)
 
 // Decisions get applied in the background and the review runs on a queue,
 // so this screen rereads.
-usePoll(15000, { only: ['accounts', 'campaigns', 'decisions', 'reviewing'] })
+usePoll(15000, { only: ['budget', 'accounts', 'campaigns', 'decisions', 'reviewing'] })
 
 const waiting = computed(() => props.decisions.filter(decision => decision.status === 'proposed'))
 const history = computed(() => props.decisions.filter(decision => decision.status !== 'proposed'))
@@ -35,10 +36,25 @@ const campaignById = computed(() => new Map(props.campaigns.map(campaign => [cam
 const live = computed(() => props.campaigns.filter(campaign => campaign.status !== 'draft'))
 
 // A local draft synced from the prop, not `default-value`: see `.ai/rules/js.md`.
-const budgets = ref<Record<number, number>>({})
-watch(() => props.accounts, (accounts) => {
-    budgets.value = Object.fromEntries(accounts.map(account => [account.id, account.monthly_budget]))
+const monthlyBudget = ref(0)
+const budgetCurrency = ref<string | undefined>(undefined)
+watch(() => props.budget, (budget) => {
+    monthlyBudget.value = budget.monthly
+    budgetCurrency.value = budget.currency ?? budget.currencies[0]
 }, { immediate: true, deep: true })
+
+const spentPercent = computed(() => props.budget.monthly > 0 ? Math.min(100, Math.round(props.budget.spent_this_month / props.budget.monthly * 100)) : 0)
+const canReview = computed(() => props.budget.monthly > 0 && props.accounts.some(account => account.usable))
+
+const toggling = ref<number | null>(null)
+
+function toggle (account: AdAccount, enabled: boolean) {
+    toggling.value = account.id
+    router.put(adRoutes.accounts.update.url({ project: slug.value, adAccount: account.id }), { enabled }, {
+        preserveScroll: true,
+        onFinish: () => toggling.value = null
+    })
+}
 
 const reasons = ref<Record<number, string>>({})
 const deciding = ref<number | null>(null)
@@ -77,10 +93,6 @@ function money (amount: number, currency: string) {
     return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(amount)
 }
 
-function spentPercent (account: AdAccount) {
-    return account.monthly_budget > 0 ? Math.min(100, Math.round(account.spent_this_month / account.monthly_budget * 100)) : 0
-}
-
 const AUTONOMY_LABEL = { supervised: 'Supervised', semi_auto: 'Semi-auto', autonomous: 'Autonomous' }
 
 const STATUS_COLOR = {
@@ -107,9 +119,10 @@ const STATUS_COLOR = {
                     Ads
                 </h2>
                 <p class="text-sm text-muted">
-                    Eveil runs your ads inside the monthly budget you set on each
-                    account: it launches tests, keeps what brings users, cuts what
-                    does not, and tries winners on other networks. Autonomy:
+                    Eveil runs your ads inside one monthly budget for this project:
+                    it spreads it over your ad accounts, launches tests, keeps what
+                    brings users, cuts what does not, and moves money to the networks
+                    that work. Autonomy:
                     <ULink
                         :to="relativeUrl(autonomyRoutes.edit.url({ project: slug }))"
                         class="text-primary"
@@ -147,7 +160,7 @@ const STATUS_COLOR = {
                     icon="i-lucide-sparkles"
                     label="Review now"
                     :loading="reviewStarting || reviewing"
-                    :disabled="!accounts.some(account => account.monthly_budget > 0)"
+                    :disabled="!canReview"
                     @click="review"
                 />
             </div>
@@ -169,6 +182,75 @@ const STATUS_COLOR = {
             icon="i-lucide-circle-alert"
             :description="String(error)"
         />
+
+        <section class="space-y-3 rounded-lg p-4 ring ring-default">
+            <h3 class="text-sm font-medium text-muted">
+                Monthly budget
+            </h3>
+
+            <div
+                v-if="budget.currency && budget.monthly > 0"
+                class="space-y-1"
+            >
+                <UProgress :model-value="spentPercent" />
+                <p class="text-sm text-muted">
+                    {{ money(budget.spent_this_month, budget.currency) }} spent of
+                    {{ money(budget.monthly, budget.currency) }} this month, across every account,
+                    {{ money(budget.active_daily_budget, budget.currency) }} a day running now.
+                </p>
+            </div>
+
+            <Form
+                v-if="budget.currencies.length"
+                v-slot="{ errors, processing }"
+                v-bind="adRoutes.budget.update.form({ project: slug })"
+                class="flex flex-wrap items-end gap-3"
+                :options="{ preserveScroll: true }"
+                @success="toast.add({ title: 'Budget saved', color: 'success' })"
+            >
+                <UFormField
+                    label="Per month"
+                    :error="errors.monthly_budget"
+                    :hint="budget.monthly === 0 ? 'Zero: Eveil spends nothing' : undefined"
+                >
+                    <UInput
+                        v-model="monthlyBudget"
+                        name="monthly_budget"
+                        type="number"
+                        min="0"
+                        step="1"
+                        class="w-44"
+                    />
+                </UFormField>
+                <UFormField
+                    label="Currency"
+                    :error="errors.currency"
+                >
+                    <USelect
+                        v-model="budgetCurrency"
+                        :items="budget.currencies"
+                        class="w-28"
+                    />
+                    <input
+                        type="hidden"
+                        name="currency"
+                        :value="budgetCurrency"
+                    >
+                </UFormField>
+                <UButton
+                    type="submit"
+                    label="Save"
+                    :loading="processing"
+                />
+            </Form>
+
+            <p
+                v-else
+                class="text-sm text-muted"
+            >
+                Connect an ad account first: the budget is set in its currency.
+            </p>
+        </section>
 
         <section
             v-if="waiting.length"
@@ -287,6 +369,12 @@ const STATUS_COLOR = {
                     </div>
 
                     <UBadge
+                        v-if="budget.currency && account.currency !== budget.currency"
+                        color="neutral"
+                        variant="subtle"
+                        :label="`Billed in ${account.currency}, not used`"
+                    />
+                    <UBadge
                         v-if="!account.has_conversion_tracking"
                         color="warning"
                         variant="subtle"
@@ -296,6 +384,12 @@ const STATUS_COLOR = {
                         :color="account.status === 'active' ? 'success' : 'error'"
                         variant="subtle"
                         :label="account.status === 'active' ? 'Connected' : 'Reconnect needed'"
+                    />
+                    <USwitch
+                        :model-value="account.enabled"
+                        :loading="toggling === account.id"
+                        label="Use for ads"
+                        @update:model-value="toggle(account, $event)"
                     />
                     <UButton
                         icon="i-lucide-trash-2"
@@ -321,49 +415,20 @@ const STATUS_COLOR = {
                     rather than signups. Install it to let it aim at real users.
                 </p>
 
-                <div class="space-y-1">
-                    <UProgress :model-value="spentPercent(account)" />
-                    <p class="text-sm text-muted">
-                        {{ money(account.spent_this_month, account.currency) }} spent of
-                        {{ money(account.monthly_budget, account.currency) }} this month,
-                        {{ money(account.active_daily_budget, account.currency) }} a day running now.
-                    </p>
-                </div>
-
-                <Form
-                    v-slot="{ errors, processing }"
-                    v-bind="adRoutes.accounts.update.form({ project: slug, adAccount: account.id })"
-                    class="flex flex-wrap items-end gap-3"
-                    :options="{ preserveScroll: true }"
-                    @success="toast.add({ title: 'Budget saved', color: 'success' })"
+                <p
+                    v-if="account.enabled"
+                    class="text-sm text-muted"
                 >
-                    <UFormField
-                        :label="`Monthly budget (${account.currency})`"
-                        :error="errors.monthly_budget"
-                        :hint="account.monthly_budget === 0 ? 'Zero: Eveil spends nothing here' : undefined"
-                    >
-                        <UInput
-                            v-model="budgets[account.id]"
-                            name="monthly_budget"
-                            type="number"
-                            min="0"
-                            step="1"
-                            class="w-44"
-                        />
-                    </UFormField>
-                    <UButton
-                        type="submit"
-                        label="Save"
-                        :loading="processing"
-                    />
-                </Form>
+                    {{ money(account.spent_this_month, account.currency) }} spent here this month,
+                    {{ money(account.active_daily_budget, account.currency) }} a day running now.
+                </p>
             </div>
 
             <p
                 v-if="!accounts.length"
                 class="rounded-lg p-6 text-sm text-muted ring ring-default"
             >
-                No ad account connected yet. Connect one above, then give it a
+                No ad account connected yet. Connect one above, then set the
                 monthly budget: Eveil spends nothing until you do.
             </p>
         </section>

@@ -3,14 +3,16 @@
 namespace App\Actions;
 
 use App\Enums\AdStatus;
-use App\Models\AdAccount;
+use App\Models\AdCampaign;
+use App\Models\Project;
 use App\Services\Ads\AdProposals;
 
 /**
- * The hard stop. Once an account has spent its month, or its budget was set
- * to zero, every campaign Eveil runs there is paused, whatever any agent or
- * person decided before. Pure code, run after every metrics sync, never left
- * to a prompt.
+ * The hard stop. Once the project has spent its month, or its budget was set
+ * to zero, every campaign Eveil runs is paused, on every account, whatever
+ * any agent or person decided before. So is every campaign on an account the
+ * budget may no longer reach: switched off, or billed in another currency.
+ * Pure code, run after every metrics sync, never left to a prompt.
  *
  * It goes through `AdProposals` like any decision, so the journal says why
  * the campaigns stopped. A pause never waits for approval.
@@ -19,20 +21,28 @@ class EnforceAdBudget
 {
     public function __construct(private AdProposals $proposals) {}
 
-    public function handle(AdAccount $account): void
+    public function handle(Project $project): void
     {
-        $spent = $account->spentThisMonthMicros();
+        $budget = $project->ads_monthly_budget_micros;
+        $exhausted = $budget === 0 || $project->adsSpentThisMonthMicros() >= $budget;
 
-        if ($account->monthly_budget_micros > 0 && $spent < $account->monthly_budget_micros) {
-            return;
-        }
+        $running = AdCampaign::query()
+            ->whereIn('ad_account_id', $project->adAccounts()->select('id'))
+            ->where('status', AdStatus::Active)
+            ->with('account.project')
+            ->get();
 
-        $reason = $account->monthly_budget_micros === 0
-            ? 'The monthly budget is set to zero.'
-            : 'The monthly budget is spent.';
+        foreach ($running as $campaign) {
+            $reason = match (true) {
+                $budget === 0 => 'The monthly ads budget is set to zero.',
+                $exhausted => 'The monthly ads budget is spent.',
+                ! $campaign->account->isUsable() => 'Eveil may no longer spend on this ad account.',
+                default => null,
+            };
 
-        foreach ($account->campaigns()->where('status', AdStatus::Active)->pluck('id') as $campaignId) {
-            $this->proposals->pauseCampaign($account->project, null, $campaignId, $reason);
+            if ($reason !== null) {
+                $this->proposals->pauseCampaign($project, null, $campaign->id, $reason);
+            }
         }
     }
 }

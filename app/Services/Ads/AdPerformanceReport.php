@@ -16,17 +16,18 @@ use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 
 /**
- * Everything the ad agent sees at a review, as plain data: budgets and pacing
- * per account, every campaign and ad with lifetime and last-7-days totals, a
- * daily series, confidence intervals and a verdict, each creative's record
+ * Everything the ad agent sees at a review, as plain data: the project's
+ * budget and pacing, what each account spends of it, every campaign and ad
+ * with lifetime and last-7-days totals, a daily series, confidence intervals and a verdict, each creative's record
  * across networks, and the last decisions with what happened after them.
  *
  * Generous on purpose: a capable model decides better with precise numbers
  * than with a summary. All arithmetic happens here, the agent only judges.
  * Adding a metric is one line in `totals()` and the agent sees it.
  *
- * Money is in the account's currency units, never micros: that is how a
- * person and a model both read it.
+ * Money is in the budget's currency units, never micros: that is how a
+ * person and a model both read it. Only accounts billed in that currency are
+ * usable, so every amount here is in it.
  */
 class AdPerformanceReport
 {
@@ -59,6 +60,7 @@ class AdPerformanceReport
         return [
             'today' => now()->toDateString(),
             'autonomy_level' => $project->ads_autonomy_level->value,
+            'budget' => $this->budget($project),
             'policy' => [
                 'exploration_share_of_budget_percent' => $this->settings->int('ads.policy.exploration_percent'),
                 'max_daily_budget_increase_percent' => $this->settings->int('ads.policy.max_budget_increase_percent'),
@@ -76,6 +78,31 @@ class AdPerformanceReport
     }
 
     /**
+     * The one budget every account draws from, and how the month is pacing.
+     *
+     * @return array<string, mixed>
+     */
+    private function budget(Project $project): array
+    {
+        $today = now();
+        $daysLeft = $today->daysInMonth - $today->day + 1;
+        $monthly = $project->ads_monthly_budget_micros;
+        $spent = $project->adsSpentThisMonthMicros();
+        $activeDaily = $project->adsActiveDailyBudgetMicros();
+        $money = fn (int $micros): float => round($micros / 1_000_000, 2);
+
+        return [
+            'currency' => $project->ads_currency,
+            'monthly' => $money($monthly),
+            'spent_this_month' => $money($spent),
+            'remaining' => $money(max(0, $monthly - $spent)),
+            'days_left_in_month' => $daysLeft,
+            'active_daily_budgets' => $money($activeDaily),
+            'projected_month_spend' => $money($spent + $activeDaily * $daysLeft),
+        ];
+    }
+
+    /**
      * @param  Collection<int, AdCampaign>  $campaigns
      * @param  Collection<int, array<string, float|int>>  $lifetime
      * @param  Collection<array-key, EloquentCollection<int, AdMetric>>  $recent
@@ -83,10 +110,6 @@ class AdPerformanceReport
      */
     private function account(AdAccount $account, Collection $campaigns, Collection $lifetime, Collection $recent): array
     {
-        $today = $account->today();
-        $daysLeft = $today->daysInMonth - $today->day + 1;
-        $spent = $account->spentThisMonthMicros();
-        $activeDaily = $account->activeDailyBudgetMicros();
         $money = fn (int $micros): float => round($micros / 1_000_000, 2);
 
         $accountTotals = $this->sum($campaigns->flatMap->ads->map(fn (Ad $ad): array => $lifetime->get($ad->id, $this->emptyTotals())));
@@ -98,18 +121,13 @@ class AdPerformanceReport
             'platform' => $account->platform->value,
             'name' => $account->name,
             'status' => $account->status->value,
+            'usable' => $account->isUsable(),
             'currency' => $account->currency,
             'conversion_tracking' => $tracksConversions,
             'optimizing_for' => $tracksConversions ? 'conversions' : 'clicks (no conversion tracking on this account yet)',
             'copy_limits' => $account->platform->client()->capabilities()->toArray(),
-            'budget' => [
-                'monthly' => $money($account->monthly_budget_micros),
-                'spent_this_month' => $money($spent),
-                'remaining' => $money(max(0, $account->monthly_budget_micros - $spent)),
-                'days_left_in_month' => $daysLeft,
-                'active_daily_budgets' => $money($activeDaily),
-                'projected_month_spend' => $money($spent + $activeDaily * $daysLeft),
-            ],
+            'spent_this_month' => $money($account->spentThisMonthMicros()),
+            'active_daily_budgets' => $money($account->activeDailyBudgetMicros()),
             'lifetime' => $this->present($accountTotals),
             'campaigns' => $campaigns->map(fn (AdCampaign $campaign): array => [
                 'id' => $campaign->id,

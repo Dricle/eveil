@@ -9,6 +9,7 @@ use App\Http\Controllers\Account\AccountDeletionController;
 use App\Http\Controllers\Account\ConnectedAssistantController;
 use App\Http\Controllers\Account\TwoFactorController;
 use App\Http\Controllers\AdAccountController;
+use App\Http\Controllers\AdBudgetController;
 use App\Http\Controllers\AdController;
 use App\Http\Controllers\AdDecisionController;
 use App\Http\Controllers\AdOAuthController;
@@ -454,8 +455,9 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::get('linkedin/posts', fn () => to_route('social.posts.index', 'linkedin'));
 
         /*
-         * Ads: Eveil runs them inside a monthly budget per account, the
-         * agent proposing and code applying (`AdProposals`). A nav item: the
+         * Ads: Eveil runs them inside one monthly budget per project, spread
+         * over the accounts switched on, the agent proposing and code
+         * applying (`AdProposals`). A nav item: the
          * decision feed changes every day on its own. {platform} is an
          * `AdPlatform` value; accounts and decisions are numbers looked up
          * after `project.set`, never route-model-bound.
@@ -464,6 +466,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             Route::get('/', [AdController::class, 'index'])->name('index');
             Route::get('connect/{platform}', [AdOAuthController::class, 'redirect'])->name('connect');
             Route::post('reviews', [AdReviewController::class, 'store'])->name('reviews.store');
+            Route::put('budget', [AdBudgetController::class, 'update'])->name('budget.update');
 
             Route::whereNumber(['adAccount', 'adDecision'])->group(function (): void {
                 Route::put('accounts/{adAccount}', [AdAccountController::class, 'update'])->name('accounts.update');

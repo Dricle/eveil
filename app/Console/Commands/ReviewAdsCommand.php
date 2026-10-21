@@ -3,7 +3,6 @@
 namespace App\Console\Commands;
 
 use App\Ai\Agents\AdStrategist;
-use App\Enums\AdAccountStatus;
 use App\Enums\AgentRunStatus;
 use App\Jobs\ReviewAds;
 use App\Models\AgentRun;
@@ -11,8 +10,8 @@ use App\Models\Project;
 use Illuminate\Console\Command;
 
 /**
- * Queues a review for every project with an ad account that has money to
- * spend. A project with none costs no model call.
+ * Queues a review for every project with an ads budget and an account to
+ * spend it on. A project with neither costs no model call.
  */
 class ReviewAdsCommand extends Command
 {
@@ -24,8 +23,9 @@ class ReviewAdsCommand extends Command
     {
         $projects = Project::query()
             ->when($this->option('project'), fn ($query, $id) => $query->whereKey($id))
-            ->whereHas('adAccounts', fn ($query) => $query->where('status', AdAccountStatus::Active)->where('monthly_budget_micros', '>', 0))
-            ->get();
+            ->where('ads_monthly_budget_micros', '>', 0)
+            ->get()
+            ->filter(fn (Project $project): bool => $project->runsAds());
 
         foreach ($projects as $project) {
             ReviewAds::dispatch($project, AgentRun::create([

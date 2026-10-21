@@ -4,7 +4,6 @@ namespace App\Actions;
 
 use App\Ai\Agents\AdStrategist;
 use App\Enums\AgentRunStatus;
-use App\Models\AdAccount;
 use App\Models\AgentRun;
 use App\Models\Project;
 use App\Services\Ads\AdPerformanceReport;
@@ -12,7 +11,7 @@ use App\Services\Ads\AdPerformanceReport;
 /**
  * One daily review of a project's ads: gather the report, hand it to the
  * agent, let it act through its tools. Nothing to review, no model call: a
- * project needs at least one account with a budget.
+ * project needs a monthly ads budget and an account to spend it on.
  */
 class ReviewAds
 {
@@ -20,10 +19,10 @@ class ReviewAds
 
     public function handle(Project $project, ?AgentRun $run = null): void
     {
-        if (! $project->adAccounts()->get()->contains(fn (AdAccount $account): bool => $account->isUsable())) {
+        if (! $project->runsAds()) {
             // The budget was removed between queueing and now: close the row
             // the caller opened rather than leave it pending.
-            $run?->update(['status' => AgentRunStatus::Aborted, 'error' => 'No ad account with a monthly budget.']);
+            $run?->update(['status' => AgentRunStatus::Aborted, 'error' => 'No monthly ads budget, or no ad account to spend it on.']);
 
             return;
         }

@@ -5,9 +5,9 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * The monthly budget, in the account's currency units. Zero is legitimate: it
- * is how a person stops Eveil spending there, and the next sync pauses
- * whatever still runs.
+ * Whether Eveil may spend the project's ads budget on this account. Off is
+ * how a person keeps Eveil away from an account the sign-in happened to
+ * reach, and the next sync pauses whatever still runs there.
  */
 class AdAccountRequest extends FormRequest
 {
@@ -17,7 +17,7 @@ class AdAccountRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'monthly_budget' => ['required', 'numeric', 'min:0', 'max:10000000'],
+            'enabled' => ['required', 'boolean'],
         ];
     }
 }

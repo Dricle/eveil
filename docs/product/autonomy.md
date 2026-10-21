@@ -54,7 +54,7 @@ Same two exceptions as LinkedIn and Bluesky. A post whose image could not be gen
 | **New ad in a running campaign, raising a budget** | You approve | Eveil does it | Eveil does it |
 | **Launching a new campaign** | You approve | You approve | Eveil does it |
 
-Whatever the level, Eveil never spends past the monthly budget you set on each ad account: a decision that would is refused, and once the month is spent every campaign is paused. A budget of zero means Eveil spends nothing on that account. New projects start on Supervised.
+Whatever the level, Eveil never spends past the project's monthly ads budget, all networks together: a decision that would is refused, and once the month is spent every campaign is paused. A budget of zero means Eveil spends nothing. New projects start on Supervised.
 
 ## X
 

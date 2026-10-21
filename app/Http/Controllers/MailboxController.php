@@ -53,7 +53,12 @@ class MailboxController extends Controller
     {
         $organization = $this->currentProject->organization();
 
-        $mailbox = $organization->emailAccounts()->create($request->safe()->except('projects'));
+        // Ramped from the day it is connected: even an old, trusted address
+        // jumping from no cold mail to its full limit is the spike filters flag.
+        $mailbox = $organization->emailAccounts()->create([
+            ...$request->safe()->except('projects'),
+            'ramp_up_started_at' => now(),
+        ]);
 
         $mailbox->projects()->sync($request->validated('projects', []));
 

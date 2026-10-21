@@ -487,6 +487,7 @@ it('saves a mailbox, grants it to chosen projects only, and never returns the pa
     $mailbox = EmailAccount::query()->where('from_email', 'clement@abcreche.test')->sole();
 
     expect($mailbox->projects->pluck('id')->sort()->values()->all())->toBe([$project->id, $mine->id])
+        ->and($mailbox->allowanceForToday())->toBe(5)
         ->and($mailbox->smtp_password)->toBe('app-password')
         // Encrypted at rest with CREDENTIALS_KEY, never readable as stored.
         ->and($mailbox->getRawOriginal('smtp_password'))->not->toBe('app-password');

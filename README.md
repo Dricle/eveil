@@ -25,11 +25,13 @@ markets it for you across every channel a small team can't staff by hand:
 - **SEO articles** for your own blog, on what your buyers search for and your
   site doesn't answer yet.
 - **Reddit replies** in the threads where your buyers already ask for help.
+- **Paid ads** on your ad accounts, run inside a monthly budget you set: new
+  tests launched, what works kept, what doesn't cut.
 
 All of it reads the same knowledge base, so no channel contradicts another.
 Lead discovery and outreach are B2B; the content channels work for anyone
-building an online presence, B2C solo founders included. Next on the roadmap:
-ad management, driven by the same knowledge base and target profiles.
+building an online presence, B2C solo founders included. Paid ads run on the
+same knowledge base and target profiles, inside a monthly budget you set.
 
 That's automation of the same work a human researcher would do by hand:
 searching the web for the right companies and people, then writing to them one

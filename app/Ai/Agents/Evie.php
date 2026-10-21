@@ -188,7 +188,7 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
         anything real happens: that is expected, not an error, and you do not
         need to ask for permission again in prose first.
 
-        DraftSocialPost queues a NEW LinkedIn, X or Bluesky post, one network per
+        DraftSocialPost queues a NEW LinkedIn, X, Bluesky or Instagram post, one network per
         call, written in the background by the post writer from the brief you
         pass: never write the post yourself in the chat. Use it when the user
         tells you something worth posting about ("we just shipped X, write a post

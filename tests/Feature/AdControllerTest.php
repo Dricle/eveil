@@ -144,8 +144,8 @@ it('refuses a callback whose state does not match', function () {
 it('keeps an organization\'s own app secret when the edit leaves it blank', function () {
     [$user, $project] = adOwner();
 
-    $this->actingAs($user)->putJson(route('settings.ad-platforms.update', 'google_ads'), ['client_id' => 'own-id', 'client_secret' => 'own-secret'])->assertRedirect();
-    $this->actingAs($user)->putJson(route('settings.ad-platforms.update', 'google_ads'), ['client_id' => 'renamed-id', 'client_secret' => ''])->assertRedirect();
+    $this->actingAs($user)->putJson(route('settings.platform-apps.update', 'google_ads'), ['client_id' => 'own-id', 'client_secret' => 'own-secret'])->assertRedirect();
+    $this->actingAs($user)->putJson(route('settings.platform-apps.update', 'google_ads'), ['client_id' => 'renamed-id', 'client_secret' => ''])->assertRedirect();
 
     $own = PlatformApp::query()->where('organization_id', $project->organization_id)->sole();
     expect($own)->client_id->toBe('renamed-id')->client_secret->toBe('own-secret');
@@ -156,7 +156,7 @@ it('keeps an organization\'s own app secret when the edit leaves it blank', func
 it('requires the secret the first time an organization adds its own app', function () {
     [$user] = adOwner();
 
-    $this->actingAs($user)->putJson(route('settings.ad-platforms.update', 'google_ads'), ['client_id' => 'own-id'])
+    $this->actingAs($user)->putJson(route('settings.platform-apps.update', 'google_ads'), ['client_id' => 'own-id'])
         ->assertJsonValidationErrors(['client_secret' => 'The client secret field is required.']);
 });
 
@@ -167,6 +167,7 @@ it('saves the ads autonomy level', function () {
         'email_autonomy_level' => 'supervised',
         'linkedin_autonomy_level' => 'supervised',
         'bluesky_autonomy_level' => 'supervised',
+        'instagram_autonomy_level' => 'supervised',
         'ads_autonomy_level' => 'semi_auto',
     ])->assertRedirect();
 

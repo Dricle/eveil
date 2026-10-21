@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Enums\SocialAccountStatus;
 use App\Enums\SocialPlatform;
+use App\Models\Integration;
 use App\Models\Organization;
 use App\Models\SocialAccount;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -44,6 +45,22 @@ class SocialAccountFactory extends Factory
             'refresh_secret' => fake()->sha256(),
             'secret_expires_at' => now()->addDays(60),
             'refresh_secret_expires_at' => now()->addYear(),
+        ]);
+    }
+
+    /**
+     * An Instagram Business account reached through a Composio connection of
+     * the same organization: no secret of its own.
+     */
+    public function instagram(): static
+    {
+        return $this->state(fn (): array => [
+            'platform' => SocialPlatform::Instagram,
+            'handle' => fake()->unique()->userName(),
+            'external_id' => (string) fake()->unique()->numerify('1784##########'),
+            'secret' => null,
+            // A closure, so it sees the organization already resolved.
+            'integration_id' => fn (array $attributes): int => Integration::factory()->create(['organization_id' => $attributes['organization_id']])->id,
         ]);
     }
 }

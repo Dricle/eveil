@@ -49,6 +49,8 @@ use App\Http\Controllers\CompanyBulkStatusController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\CompanyNoteController;
 use App\Http\Controllers\CompanyStatusController;
+use App\Http\Controllers\ComposioKeyController;
+use App\Http\Controllers\ComposioOAuthController;
 use App\Http\Controllers\ContactBulkDeleteController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ContactSearchController;
@@ -64,6 +66,8 @@ use App\Http\Controllers\EmailInstructionsController;
 use App\Http\Controllers\EvieChatController;
 use App\Http\Controllers\IdeaController;
 use App\Http\Controllers\InboxController;
+use App\Http\Controllers\InstagramConnectionController;
+use App\Http\Controllers\InstagramOAuthController;
 use App\Http\Controllers\KnownClientController;
 use App\Http\Controllers\LeadImportController;
 use App\Http\Controllers\LeadNoteController;
@@ -91,6 +95,7 @@ use App\Http\Controllers\SocialAccountController;
 use App\Http\Controllers\SocialCadenceController;
 use App\Http\Controllers\SocialInstructionsController;
 use App\Http\Controllers\SocialPostController;
+use App\Http\Controllers\SocialPostImageController;
 use App\Http\Controllers\StepVariantController;
 use App\Http\Controllers\StepVariantGenerationController;
 use App\Http\Controllers\TargetProfileActivationController;
@@ -281,7 +286,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
                 ->name('mailboxes.reactivate');
 
             /*
-             * LinkedIn and Bluesky accounts belong to the ORGANIZATION, same
+             * LinkedIn, Bluesky and Instagram accounts belong to the ORGANIZATION, same
              * reasoning as mailboxes above: one identity is often posted
              * through by several products and never a third. Each network
              * connects its own way (OAuth for LinkedIn, an app password for
@@ -306,10 +311,35 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
              */
             Route::get('bluesky', [SocialAccountController::class, 'index'])->defaults('platform', 'bluesky')->name('bluesky.index');
             Route::post('bluesky', [SocialAccountController::class, 'store'])->name('bluesky.store');
-            // An organization's own OAuth app per ad network.
+
+            Route::get('instagram', [SocialAccountController::class, 'index'])->defaults('platform', 'instagram')->name('instagram.index');
+            /*
+             * Instagram's second way in: the organization's own Meta app,
+             * which takes priority over Composio for an account connected
+             * both ways. Each way can be dropped on its own.
+             */
+            Route::get('instagram/meta/connect', [InstagramOAuthController::class, 'redirect'])
+                ->name('instagram.meta.connect');
+            Route::delete('instagram/{socialAccount}/connections/{connection}', [InstagramConnectionController::class, 'destroy'])
+                ->whereIn('connection', ['meta', 'composio'])
+                ->name('instagram.connections.destroy');
+
+            // The organization's own Composio key, every integration's way in.
+            Route::get('composio', [ComposioKeyController::class, 'edit'])->name('composio.edit');
+            Route::put('composio', [ComposioKeyController::class, 'update'])->name('composio.update');
+            Route::delete('composio', [ComposioKeyController::class, 'destroy'])->name('composio.destroy');
+
+            /*
+             * Any `Toolkit` connects on Composio's hosted page, then comes
+             * back to the one shared `oauth.composio.callback`.
+             */
+            Route::get('integrations/{toolkit}/connect', [ComposioOAuthController::class, 'redirect'])
+                ->name('integrations.connect');
+            // An organization's own OAuth apps: the ad networks' are listed
+            // on their page, the Meta app for Instagram on Instagram's.
             Route::get('ad-platforms', [PlatformAppController::class, 'index'])->name('ad-platforms.index');
-            Route::put('ad-platforms/{platform}', [PlatformAppController::class, 'update'])->name('ad-platforms.update');
-            Route::delete('ad-platforms/{platform}', [PlatformAppController::class, 'destroy'])->name('ad-platforms.destroy');
+            Route::put('platform-apps/{platform}', [PlatformAppController::class, 'update'])->name('platform-apps.update');
+            Route::delete('platform-apps/{platform}', [PlatformAppController::class, 'destroy'])->name('platform-apps.destroy');
 
             Route::put('social-accounts/{socialAccount}', [SocialAccountController::class, 'update'])
                 ->name('social-accounts.update');
@@ -404,6 +434,13 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
                 Route::post('{social_post}/reject', [SocialPostController::class, 'reject'])->name('reject');
                 Route::delete('{social_post}', [SocialPostController::class, 'destroy'])->name('destroy');
                 Route::post('{social_post}/promote', [SocialPostController::class, 'promote'])->name('promote');
+                /*
+                 * A draft keeps every image drawn for it: ask for another,
+                 * pick one, and the picked one is what gets published.
+                 */
+                Route::post('{social_post}/images', [SocialPostImageController::class, 'store'])->name('images.store');
+                Route::get('{social_post}/images/{image}', [SocialPostImageController::class, 'show'])->whereNumber('image')->name('images.show');
+                Route::put('{social_post}/images/{image}', [SocialPostImageController::class, 'update'])->whereNumber('image')->name('images.update');
             });
         });
 
@@ -706,6 +743,10 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             ->name('linkedin.stats.callback');
         Route::get('ads/{platform}/callback', [AdOAuthController::class, 'callback'])
             ->name('ads.callback');
+        Route::get('composio/callback', [ComposioOAuthController::class, 'callback'])
+            ->name('composio.callback');
+        Route::get('instagram/callback', [InstagramOAuthController::class, 'callback'])
+            ->name('instagram.callback');
     });
 
     /*

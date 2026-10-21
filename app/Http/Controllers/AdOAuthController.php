@@ -23,7 +23,7 @@ class AdOAuthController extends Controller
     public function redirect(Request $request, AdPlatform $platform, CurrentProject $currentProject): RedirectResponse
     {
         $project = $currentProject->getOrFail();
-        $app = PlatformApp::resolve($project->organization, $platform);
+        $app = PlatformApp::resolve($project->organization, $platform->appKind());
 
         if ($app === null) {
             return to_route('settings.ad-platforms.index')->withErrors(['platform' => "Add a {$platform->label()} app first."]);
@@ -44,7 +44,7 @@ class AdOAuthController extends Controller
             return to_route('app.home')->with('status', 'Connection failed: the request could not be verified.');
         }
 
-        $app = PlatformApp::query()->where('platform', $platform)->find((int) ($session['platform_app_id'] ?? 0));
+        $app = PlatformApp::query()->where('platform', $platform->appKind())->find((int) ($session['platform_app_id'] ?? 0));
 
         if ($app === null || ! hash_equals((string) ($session['state'] ?? ''), (string) $request->query('state')) || ! $request->filled('code')) {
             return to_route('ads.index', ['project' => $project])->with('status', "{$platform->label()} connection failed: the request could not be verified.");

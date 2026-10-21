@@ -194,6 +194,7 @@ class HandleInertiaRequests extends Middleware
             'linkedin' => $drafts(SocialPlatform::Linkedin),
             'x' => $drafts(SocialPlatform::X),
             'bluesky' => $drafts(SocialPlatform::Bluesky),
+            'instagram' => $drafts(SocialPlatform::Instagram),
             // Decisions waiting for a person, same reasoning as the drafts.
             'ads' => AdDecision::query()->where('status', AdDecisionStatus::Proposed)->count(),
         ]);

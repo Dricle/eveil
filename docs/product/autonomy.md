@@ -36,7 +36,15 @@ Two things still wait for you in Autonomous: a post that names a client (only th
 |---|---|---|
 | **Publishing a post** | You approve each one | Eveil publishes it as soon as it's written |
 
-Same two exceptions as LinkedIn still wait for you in Autonomous: a post that names a client (only the anonymous version goes out on its own), and any post on a project with more than one Bluesky account. New projects start on Supervised. See [Posting to X and Bluesky](/product/social).
+Same two exceptions as LinkedIn still wait for you in Autonomous: a post that names a client (only the anonymous version goes out on its own), and any post on a project with more than one Bluesky account. New projects start on Supervised. See [Posting to X, Bluesky and Instagram](/product/social).
+
+## Instagram
+
+| | 🟢 Supervised | 🔴 Autonomous |
+|---|---|---|
+| **Publishing a post and its image** | You approve each one | Eveil publishes it as soon as it's written |
+
+Same two exceptions as LinkedIn and Bluesky. A post whose image could not be generated also waits for you, with the reason shown on it. New projects start on Supervised. See [Posting to X, Bluesky and Instagram](/product/social).
 
 ## Ads
 
@@ -50,7 +58,7 @@ Whatever the level, Eveil never spends past the monthly budget you set on each a
 
 ## X
 
-Always supervised. Eveil drafts posts and you post them yourself: posting through X's API is paid per post. See [Posting to X and Bluesky](/product/social).
+Always supervised. Eveil drafts posts and you post them yourself: posting through X's API is paid per post. See [Posting to X, Bluesky and Instagram](/product/social).
 
 ## Reddit
 

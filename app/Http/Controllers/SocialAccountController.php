@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\DisconnectIntegration;
+use App\Enums\PlatformAppKind;
 use App\Enums\SocialAccountStatus;
 use App\Enums\SocialPlatform;
 use App\Http\Requests\SocialAccountProjectsRequest;
 use App\Http\Requests\SocialAccountRequest;
 use App\Http\Resources\ProjectResource;
 use App\Http\Resources\SocialAccountResource;
+use App\Models\PlatformApp;
 use App\Models\SocialAccount;
 use App\Services\Bluesky\BlueskyClient;
 use App\Services\Bluesky\SignInRefused;
@@ -20,11 +23,13 @@ use Inertia\Response;
 
 /**
  * The accounts an organization has connected, one settings page per network
- * (`settings/Linkedin`, `settings/Bluesky`). Listing, granting to projects
- * and disconnecting work the same whatever the network; only connecting
- * differs: LinkedIn goes through OAuth (`LinkedinOAuthController`), Bluesky
- * through an app password (`store()`), where connecting the same account
- * again replaces its password, which is also how a revoked one is fixed.
+ * (`settings/Linkedin`, `settings/Bluesky`, `settings/Instagram`). Listing,
+ * granting to projects and disconnecting work the same whatever the network;
+ * only connecting differs: LinkedIn goes through OAuth
+ * (`LinkedinOAuthController`), Instagram through Composio's hosted page
+ * (`ComposioOAuthController`), Bluesky through an app password (`store()`),
+ * where connecting the same account again replaces its password, which is
+ * also how a revoked one is fixed.
  */
 class SocialAccountController extends Controller
 {
@@ -45,6 +50,17 @@ class SocialAccountController extends Controller
             // all once the superadmin has configured its second app - a
             // feature that is invisible, not just inert, without it.
             ...($platform === SocialPlatform::Linkedin ? ['statsConfigured' => $credentials->isStatsConfigured()] : []),
+            // Instagram's two ways in: the organization's Composio key, and
+            // its own Meta app (its own row, or the instance's). Each connect
+            // button only exists once its way in does.
+            ...($platform === SocialPlatform::Instagram ? [
+                'configured' => $organization->composio_api_key !== null,
+                'metaApp' => [
+                    'client_id' => $organization->platformApps()->where('platform', PlatformAppKind::Instagram)->value('client_id'),
+                    'available' => PlatformApp::resolve($organization, PlatformAppKind::Instagram) !== null,
+                    'redirect_uri' => PlatformAppKind::Instagram->redirectUri(),
+                ],
+            ] : []),
         ]);
     }
 
@@ -85,9 +101,18 @@ class SocialAccountController extends Controller
         return back();
     }
 
-    public function destroy(Request $request, int $socialAccount): RedirectResponse
+    public function destroy(Request $request, DisconnectIntegration $disconnect, int $socialAccount): RedirectResponse
     {
-        SocialAccount::query()->ownedBy($request->user())->findOrFail($socialAccount)->delete();
+        $account = SocialAccount::query()->ownedBy($request->user())->findOrFail($socialAccount);
+
+        // An account going through a Composio connection: revoke it there
+        // too, not just forget our reference to it. Then the account itself,
+        // whatever other way in it had.
+        if ($account->integration !== null) {
+            $disconnect->handle($account->integration);
+        }
+
+        $account->delete();
 
         return back();
     }

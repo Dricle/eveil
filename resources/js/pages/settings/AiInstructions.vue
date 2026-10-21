@@ -17,12 +17,13 @@ const props = defineProps<{
 
 const page = usePage()
 
-const PLATFORMS: SocialPlatform[] = ['linkedin', 'x', 'bluesky']
+const PLATFORMS: SocialPlatform[] = ['linkedin', 'x', 'bluesky', 'instagram']
 
 const EXAMPLES: Record<SocialPlatform, string> = {
     linkedin: 'E.g. more casual, first person, short punchy lines.',
     x: 'E.g. playful, no hashtags, always end with a question.',
-    bluesky: 'E.g. conversational, no hashtags, one emoji at most.'
+    bluesky: 'E.g. conversational, no hashtags, one emoji at most.',
+    instagram: 'E.g. warm and visual, a question to end on, bright photos rather than illustrations.'
 }
 
 // Local drafts synced from the props, not `default-value`: Nuxt UI's textarea
@@ -31,9 +32,9 @@ const EXAMPLES: Record<SocialPlatform, string> = {
 const emailInstructions = ref(props.promptInstructions ?? '')
 watch(() => props.promptInstructions, value => emailInstructions.value = value ?? '', { immediate: true })
 
-const postDrafts = ref<Record<SocialPlatform, string>>({ linkedin: '', x: '', bluesky: '' })
+const postDrafts = ref<Record<SocialPlatform, string>>({ linkedin: '', x: '', bluesky: '', instagram: '' })
 watch(() => props.postInstructions, (value) => {
-    postDrafts.value = { linkedin: value.linkedin ?? '', x: value.x ?? '', bluesky: value.bluesky ?? '' }
+    postDrafts.value = { linkedin: value.linkedin ?? '', x: value.x ?? '', bluesky: value.bluesky ?? '', instagram: value.instagram ?? '' }
 }, { immediate: true, deep: true })
 </script>
 

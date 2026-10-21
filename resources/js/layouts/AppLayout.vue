@@ -142,10 +142,10 @@ const items = computed<NavigationMenuItem[]>(() => {
         },
 
         // One entry per network, so a first-time user sees at a glance where
-        // Eveil posts. All three open the same queue page.
-        ...(['linkedin', 'x', 'bluesky'] as const).map(platform => ({
+        // Eveil posts. All of them open the same queue page.
+        ...(['linkedin', 'x', 'bluesky', 'instagram'] as const).map(platform => ({
             label: PLATFORM_LABEL[platform],
-            icon: { linkedin: 'line-md:linkedin', x: 'line-md:twitter-x', bluesky: 'line-md:bluesky' }[platform],
+            icon: { linkedin: 'line-md:linkedin', x: 'line-md:twitter-x', bluesky: 'line-md:bluesky', instagram: 'line-md:instagram' }[platform],
             to: relativeUrl(socialPosts.index.url({ project: project.slug, platform })),
             active: page.url.startsWith(`/app/${project.slug}/posts/${platform}`),
             badge: navCounts.value?.[platform]

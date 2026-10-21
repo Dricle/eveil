@@ -16,14 +16,15 @@ use App\Jobs\GenerateSocialPost;
 use App\Models\SocialAccount;
 use App\Models\SocialPost;
 use App\Support\CurrentProject;
+use App\Support\SocialPostProgress;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
 /**
  * One queue per network, each its own nav entry, all on the same rows. A
- * LinkedIn or Bluesky draft is approved and published through the network's
- * API (`approve()`); an X draft is copied, posted by hand, and its URL
+ * LinkedIn, Bluesky or Instagram draft is approved and published through the
+ * network's API (`approve()`); an X draft is copied, posted by hand, and its URL
  * pasted back (`publish()`).
  *
  * `SocialPost` is project-scoped, so per `.ai/rules/controllers.md` it is
@@ -32,24 +33,31 @@ use Inertia\Response;
  */
 class SocialPostController extends Controller
 {
-    public function index(CurrentProject $currentProject, SocialPlatform $platform): Response
+    public function index(CurrentProject $currentProject, SocialPostProgress $progress, SocialPlatform $platform): Response
     {
         $project = $currentProject->getOrFail();
 
         return Inertia::render('social/Posts', [
             'platform' => $platform->value,
             'posts' => SocialPostResource::collection(
-                SocialPost::query()->where('platform', $platform)->with('socialAccount')->latest()->get()
+                SocialPost::query()->where('platform', $platform)->with(['socialAccount', 'media', 'project'])->latest()->get()
             ),
             'accounts' => SocialAccountResource::collection(
                 $project->socialAccounts()->where('platform', $platform)->get()
             ),
             'frequency' => $project->getAttribute($platform->frequencyColumn())->value,
+            // A post being written for this network, queued or running, so
+            // the page can say so; it rereads this with the posts.
+            'writing' => $progress->isWriting($project, $platform),
         ]);
     }
 
-    public function generate(CurrentProject $currentProject, SocialPlatform $platform): RedirectResponse
+    public function generate(CurrentProject $currentProject, SocialPostProgress $progress, SocialPlatform $platform): RedirectResponse
     {
+        // Raised now, not when a worker picks it up: the wait in the queue is
+        // part of what the page has to account for.
+        $progress->startWriting($currentProject->getOrFail(), $platform);
+
         GenerateSocialPost::dispatch($currentProject->getOrFail(), $platform);
 
         return to_route('social.posts.index', $platform)->with('status', "Writing a {$platform->label()} post. It will appear here shortly.");
@@ -63,7 +71,7 @@ class SocialPostController extends Controller
     }
 
     /**
-     * LinkedIn and Bluesky: approving and publishing are the same action,
+     * LinkedIn, Bluesky and Instagram: approving and publishing are the same action,
      * there is no `approved` status to sit in first. A failure leaves the
      * draft with `last_error`, so the same button retries. Only one of a
      * named/anonymized pair can ever go out: the user just chose which.

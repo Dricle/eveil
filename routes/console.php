@@ -55,6 +55,10 @@ Schedule::command('eveil:social-generate-due')->daily();
 // its API being paid per call.
 Schedule::command('eveil:social-fetch-stats')->daily();
 
+// An Instagram token from an organization's own Meta app lasts 60 days and is
+// lost for good once it lapses: daily leaves weeks of retries.
+Schedule::command('eveil:instagram-refresh-tokens')->daily();
+
 // Same cadence granularity as the posts' own generate-due check above.
 // Nothing to do for a project whose next scan is not due yet, and the
 // shortest Reddit scan cadence is also daily.

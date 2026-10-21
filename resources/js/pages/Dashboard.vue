@@ -32,6 +32,7 @@ const props = defineProps<{
         email: 'supervised' | 'semi_auto' | 'autonomous'
         linkedin: 'supervised' | 'autonomous'
         bluesky: 'supervised' | 'autonomous'
+        instagram: 'supervised' | 'autonomous'
     }
     newLeadsCount: number
     openRecommendations: Recommendation[]
@@ -155,6 +156,7 @@ const autonomyRows = computed(() => [
     { channel: 'Email', level: props.autonomy.email, notches: 3, index: ['supervised', 'semi_auto', 'autonomous'].indexOf(props.autonomy.email) },
     { channel: 'LinkedIn', level: props.autonomy.linkedin, notches: 2, index: ['supervised', 'autonomous'].indexOf(props.autonomy.linkedin) },
     { channel: 'Bluesky', level: props.autonomy.bluesky, notches: 2, index: ['supervised', 'autonomous'].indexOf(props.autonomy.bluesky) },
+    { channel: 'Instagram', level: props.autonomy.instagram, notches: 2, index: ['supervised', 'autonomous'].indexOf(props.autonomy.instagram) },
     { channel: 'X', level: 'supervised' as const, notches: 1, index: 0 },
     { channel: 'Reddit', level: 'supervised' as const, notches: 1, index: 0 }
 ])

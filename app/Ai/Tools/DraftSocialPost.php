@@ -11,7 +11,7 @@ use Laravel\Ai\Tools\Request;
 use Stringable;
 
 /**
- * Queues a new LinkedIn, X or Bluesky post about what the user just told Evie ("we
+ * Queues a new LinkedIn, X, Bluesky or Instagram post about what the user just told Evie ("we
  * just shipped X"). Evie writes the brief, not the post: `SocialPostWriter`
  * writes every one, so a post from chat follows the same tone box, examples
  * bank and length limit as one from the cadence. Same shape as
@@ -24,7 +24,7 @@ class DraftSocialPost implements Tool
     public function description(): Stringable|string
     {
         return <<<'TEXT'
-        Queues a new LinkedIn, X or Bluesky post about what the user just told you - a
+        Queues a new LinkedIn, X, Bluesky or Instagram post about what the user just told you - a
         feature that shipped, news worth sharing. Pass the network and a brief:
         what the post is about and every concrete detail the user gave. It is
         written in the background and lands in that network's queue as a draft

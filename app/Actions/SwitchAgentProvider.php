@@ -31,7 +31,11 @@ class SwitchAgentProvider
 
         $moved = 0;
 
-        foreach ($this->agents->known() as $agent) {
+        foreach ($this->agents->classes() as $agent => $class) {
+            if ($class::generatesImages()) {
+                continue;
+            }
+
             $this->agents->switchProvider($agent, $provider, $this->modelFor($agent, $default, $cheapest, $smartest));
             $moved++;
         }

@@ -20,7 +20,7 @@ class ListSocialPosts implements Tool
 
     public function description(): Stringable|string
     {
-        return 'Lists this project\'s LinkedIn, X and Bluesky posts (drafts and published), with their id, network, status, source and body, most recent first.';
+        return 'Lists this project\'s LinkedIn, X, Bluesky and Instagram posts (drafts and published), with their id, network, status, source and body, most recent first.';
     }
 
     public function handle(Request $request): Stringable|string

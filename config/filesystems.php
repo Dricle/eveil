@@ -60,6 +60,18 @@ return [
             'report' => false,
         ],
 
+        'r2' => [
+            'driver' => 's3',
+            'key' => env('R2_ACCESS_KEY_ID'),
+            'secret' => env('R2_SECRET_ACCESS_KEY'),
+            'region' => 'us-east-1',
+            'bucket' => env('R2_BUCKET'),
+            'url' => env('R2_URL'),
+            'endpoint' => env('R2_ENDPOINT'),
+            'request_checksum_calculation' => 'when_required',
+            'response_checksum_validation' => 'when_required',
+        ],
+
     ],
 
     /*

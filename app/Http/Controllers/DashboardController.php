@@ -71,6 +71,7 @@ class DashboardController extends Controller
                 'email' => $this->currentProject->getOrFail()->email_autonomy_level,
                 'linkedin' => $this->currentProject->getOrFail()->linkedin_autonomy_level,
                 'bluesky' => $this->currentProject->getOrFail()->bluesky_autonomy_level,
+                'instagram' => $this->currentProject->getOrFail()->instagram_autonomy_level,
             ],
             // What is actually stuck on a yes from this person: a new lead
             // whose company nobody has approved yet. A company-less lead (an
@@ -116,7 +117,7 @@ class DashboardController extends Controller
                     RedditReply::query()->where('status', RedditReplyStatus::Draft)->latest()->get()
                 ),
                 'socialPosts' => SocialPostResource::collection(
-                    SocialPost::query()->where('status', SocialPostStatus::Draft)->with('socialAccount')->latest()->get()
+                    SocialPost::query()->where('status', SocialPostStatus::Draft)->with(['socialAccount', 'media', 'project'])->latest()->get()
                 ),
                 // Every network's granted accounts: each card picks its own.
                 'socialAccounts' => SocialAccountResource::collection(

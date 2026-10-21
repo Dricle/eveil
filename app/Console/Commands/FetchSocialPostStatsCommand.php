@@ -9,7 +9,7 @@ class FetchSocialPostStatsCommand extends Command
 {
     protected $signature = 'eveil:social-fetch-stats';
 
-    protected $description = 'Reads like counts on recently published Bluesky posts and marks what crosses the threshold as a proven example';
+    protected $description = 'Reads like counts on recently published social posts and marks what crosses the threshold as a proven example';
 
     public function handle(FetchSocialPostStats $fetch): int
     {
@@ -17,7 +17,7 @@ class FetchSocialPostStatsCommand extends Command
 
         $this->info($promoted === 0
             ? 'Nothing new proved itself.'
-            : "Marked {$promoted} Bluesky post(s) as proven examples.");
+            : "Marked {$promoted} social post(s) as proven examples.");
 
         return self::SUCCESS;
     }

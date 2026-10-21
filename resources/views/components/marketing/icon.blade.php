@@ -32,6 +32,7 @@
         'pen-line' => '<path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 21h8m.174-14.188a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/>',
         'plus' => '<path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14m-7-7v14"/>',
         'x' => '<path fill="currentColor" d="M17.75 3h3.07l-6.7 7.66L22 21h-6.17l-4.83-6.32L5.47 21H2.4l7.17-8.2L2 3h6.33l4.37 5.78zm-1.08 16.18h1.7L7.4 4.73H5.58z"/>',
+        'instagram' => '<g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8A4 4 0 0 1 16 11.37m1.5-4.87h.01"/></g>',
         'bluesky' => '<path fill="currentColor" d="M6.33 4.06C8.6 5.77 11.05 9.24 12 11.17c.95-1.93 3.4-5.4 5.67-7.11 1.64-1.23 4.29-2.18 4.29.85 0 .6-.35 5.07-.55 5.8-.7 2.52-3.27 3.16-5.55 2.77 3.99.68 5 2.92 2.81 5.17-4.17 4.27-5.99-1.07-6.45-2.44l-.22-.62-.22.62c-.46 1.37-2.28 6.71-6.45 2.44-2.19-2.25-1.18-4.49 2.81-5.17-2.28.39-4.85-.25-5.55-2.77-.2-.73-.55-5.2-.55-5.8 0-3.03 2.65-2.08 4.29-.85"/>',
     ];
 @endphp

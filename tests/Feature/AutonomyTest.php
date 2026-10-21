@@ -35,6 +35,7 @@ it('saves email and LinkedIn autonomy independently', function () {
             'email_autonomy_level' => 'supervised',
             'linkedin_autonomy_level' => 'autonomous',
             'bluesky_autonomy_level' => 'supervised',
+            'instagram_autonomy_level' => 'supervised',
             'ads_autonomy_level' => 'supervised',
         ])
         ->assertSessionHasNoErrors();
@@ -44,7 +45,7 @@ it('saves email and LinkedIn autonomy independently', function () {
         ->and($project->fresh()->bluesky_autonomy_level)->toBe(AutonomyLevel::Supervised);
 });
 
-it('refuses semi-auto for LinkedIn and Bluesky, which have no step for it to hand over', function () {
+it('refuses semi-auto for LinkedIn, Bluesky and Instagram, which have no step for it to hand over', function () {
     [$user, $project] = autonomySetup();
 
     $this->actingAs($user)
@@ -52,9 +53,10 @@ it('refuses semi-auto for LinkedIn and Bluesky, which have no step for it to han
             'email_autonomy_level' => 'autonomous',
             'linkedin_autonomy_level' => 'semi_auto',
             'bluesky_autonomy_level' => 'semi_auto',
+            'instagram_autonomy_level' => 'semi_auto',
             'ads_autonomy_level' => 'supervised',
         ])
-        ->assertJsonValidationErrors(['linkedin_autonomy_level', 'bluesky_autonomy_level']);
+        ->assertJsonValidationErrors(['linkedin_autonomy_level', 'bluesky_autonomy_level', 'instagram_autonomy_level']);
 
     expect($project->fresh()->email_autonomy_level)->toBe(AutonomyLevel::SemiAuto);
 });
@@ -67,6 +69,7 @@ it('refuses a level that does not exist', function () {
             'email_autonomy_level' => 'whatever',
             'linkedin_autonomy_level' => 'supervised',
             'bluesky_autonomy_level' => 'supervised',
+            'instagram_autonomy_level' => 'supervised',
             'ads_autonomy_level' => 'supervised',
         ])
         ->assertJsonValidationErrors('email_autonomy_level');

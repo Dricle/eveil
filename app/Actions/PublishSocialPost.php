@@ -15,15 +15,25 @@ use Throwable;
  * `last_error` set, never a status of its own, so the same Approve button is
  * the retry. A driver that does not publish (X, posted by hand, see
  * `MarkSocialPostPublished`) leaves the draft untouched.
+ *
+ * A network that needs a picture and has none yet (its drawing failed when
+ * the draft was written) gets one drawn here first, from the post itself:
+ * approving again is the retry for that too.
  */
 class PublishSocialPost
 {
+    public function __construct(private AddSocialPostImage $addImage) {}
+
     public function handle(SocialPost $post, SocialAccount $account): void
     {
         $post->update(['social_account_id' => $account->id]);
 
         try {
-            $published = $post->platform->client()->publish($account, $post->body, $post->project->default_language);
+            if ($post->platform->requiresImage() && $post->image_media_id === null) {
+                $this->addImage->handle($post);
+            }
+
+            $published = $post->platform->client()->publish($account, $post->body, $post->project->default_language, $post->image);
         } catch (Throwable $e) {
             $post->update(['last_error' => $e->getMessage()]);
 

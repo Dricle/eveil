@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use RuntimeException;
 
 /**
  * An account Eveil publishes through: a LinkedIn member profile connected by
@@ -25,7 +26,11 @@ use Illuminate\Support\Carbon;
  * may use it is a grant on the pivot.
  *
  * `secret` is the credential itself: the access token on LinkedIn, the app
- * password on Bluesky. The `refresh_*` and `stats_*` columns only exist for
+ * password on Bluesky. Instagram goes through Composio (`integration`,
+ * Composio holds the token), through the organization's own Meta app
+ * (`platformApp`, the token is `secret`), or both: the Meta app wins
+ * whenever its token is alive (`publishesThroughOwnApp()`), Composio is the
+ * fallback. Losing one keeps the account on the other. The `refresh_*` and `stats_*` columns only exist for
  * LinkedIn, whose performance polling lives on a second developer app with
  * its own token. All encrypted with CREDENTIALS_KEY and hidden: write-only
  * from the UI's point of view.
@@ -34,11 +39,13 @@ use Illuminate\Support\Carbon;
  *
  * @property int $id
  * @property int $organization_id
+ * @property int|null $integration_id
+ * @property int|null $platform_app_id
  * @property SocialPlatform $platform
  * @property string|null $handle
  * @property string $external_id
  * @property string $display_name
- * @property string $secret
+ * @property string|null $secret
  * @property string|null $refresh_secret
  * @property Carbon|null $secret_expires_at
  * @property Carbon|null $refresh_secret_expires_at
@@ -52,7 +59,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  */
 #[Fillable([
-    'organization_id', 'platform', 'handle', 'external_id', 'display_name',
+    'organization_id', 'integration_id', 'platform_app_id', 'platform', 'handle', 'external_id', 'display_name',
     'secret', 'refresh_secret', 'secret_expires_at', 'refresh_secret_expires_at',
     'stats_secret', 'stats_refresh_secret', 'stats_secret_expires_at', 'stats_refresh_secret_expires_at',
     'status', 'last_error',
@@ -69,6 +76,49 @@ class SocialAccount extends Model
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
+    }
+
+    /**
+     * The Composio connection an Instagram account goes through.
+     *
+     * @return BelongsTo<Integration, $this>
+     */
+    public function integration(): BelongsTo
+    {
+        return $this->belongsTo(Integration::class);
+    }
+
+    /**
+     * The organization's own Meta app an Instagram account's `secret` was
+     * issued by.
+     *
+     * @return BelongsTo<PlatformApp, $this>
+     */
+    public function platformApp(): BelongsTo
+    {
+        return $this->belongsTo(PlatformApp::class);
+    }
+
+    /**
+     * Whether this Instagram account publishes through the organization's
+     * own Meta app rather than Composio: it has a token from that app, and
+     * the token is still alive. Takes priority over Composio whenever true.
+     */
+    public function publishesThroughOwnApp(): bool
+    {
+        return $this->platform_app_id !== null
+            && $this->secret !== null
+            && ($this->secret_expires_at === null || $this->secret_expires_at->isFuture());
+    }
+
+    /**
+     * The credential a network with its own (LinkedIn, Bluesky) signs in
+     * with. Missing means the row is broken, not that it signs in some other
+     * way, so it says so rather than sending an empty token.
+     */
+    public function credential(): string
+    {
+        return $this->secret ?? throw new RuntimeException("No credential is stored for this {$this->platform->label()} account: connect it again.");
     }
 
     /**

@@ -3,7 +3,7 @@ import { Form, Head, router, usePage } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import SettingsLayout from '@/layouts/SettingsLayout.vue'
-import adPlatformRoutes from '@/routes/settings/ad-platforms'
+import platformAppRoutes from '@/routes/settings/platform-apps'
 
 defineOptions({ layout: [AppLayout, [SettingsLayout, { title: 'Ad platforms' }]] })
 
@@ -34,7 +34,7 @@ watch(() => props.platforms, (platforms) => {
 }, { immediate: true, deep: true })
 
 function remove (platform: AdPlatformApp) {
-    router.delete(adPlatformRoutes.destroy.url({ project: slug.value, platform: platform.value }), {
+    router.delete(platformAppRoutes.destroy.url({ project: slug.value, platform: platform.value }), {
         preserveScroll: true,
         onSuccess: () => toast.add({ title: `${platform.label} app removed`, color: 'neutral' })
     })
@@ -84,7 +84,7 @@ function remove (platform: AdPlatformApp) {
 
             <Form
                 v-slot="{ errors, processing }"
-                v-bind="adPlatformRoutes.update.form({ project: slug, platform: platform.value })"
+                v-bind="platformAppRoutes.update.form({ project: slug, platform: platform.value })"
                 class="space-y-4"
                 :options="{ preserveScroll: true }"
                 @success="secrets[platform.value] = ''; toast.add({ title: `${platform.label} app saved`, color: 'success' })"

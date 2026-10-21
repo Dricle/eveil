@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Enums\AdPlatform;
+use App\Enums\PlatformAppKind;
 use App\Models\PlatformApp;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -22,7 +22,7 @@ class PlatformAppFactory extends Factory
     {
         return [
             'organization_id' => null,
-            'platform' => AdPlatform::GoogleAds,
+            'platform' => PlatformAppKind::GoogleAds,
             'client_id' => fake()->uuid().'.apps.googleusercontent.com',
             'client_secret' => fake()->sha256(),
         ];

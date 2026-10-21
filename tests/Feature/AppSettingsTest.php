@@ -236,12 +236,12 @@ it('shows what each agent has already spent', function () {
 
     $this->actingAs(superAdmin())->get(route('app-settings.agents.index'))
         ->assertInertia(fn ($page) => $page
-            ->where('agents.20.slug', 'website-analyst')
-            ->where('agents.20.calls', 2)
-            ->where('agents.20.tokens_in', 200)
-            ->where('agents.20.tokens_out', 100)
-            ->where('agents.20.avg_tokens_in', 100)
-            ->where('agents.20.avg_tokens_out', 50));
+            ->where('agents.21.slug', 'website-analyst')
+            ->where('agents.21.calls', 2)
+            ->where('agents.21.tokens_in', 200)
+            ->where('agents.21.tokens_out', 100)
+            ->where('agents.21.avg_tokens_in', 100)
+            ->where('agents.21.avg_tokens_out', 50));
 });
 
 it('has no credit price for an agent nobody has priced', function () {
@@ -251,7 +251,7 @@ it('has no credit price for an agent nobody has priced', function () {
     CreditPrice::where('agent', 'website-analyst')->delete();
 
     $this->actingAs(superAdmin())->get(route('app-settings.agents.index'))
-        ->assertInertia(fn ($page) => $page->where('agents.20.credit_price', null));
+        ->assertInertia(fn ($page) => $page->where('agents.21.credit_price', null));
 });
 
 it('calibrates an agent\'s credit price by adding a new versioned row, never editing in place', function () {
@@ -278,8 +278,8 @@ it('marks the agents a weak model would break rather than merely blunt', functio
             // returns wrong ones that look like results.
             ->where('agents.2.slug', 'company-qualifier')
             ->where('agents.2.strict', true)
-            ->where('agents.20.slug', 'website-analyst')
-            ->where('agents.20.strict', false));
+            ->where('agents.21.slug', 'website-analyst')
+            ->where('agents.21.strict', false));
 });
 
 it('marks the agents that shipped calibrated to run on the cheap model', function () {
@@ -287,8 +287,8 @@ it('marks the agents that shipped calibrated to run on the cheap model', functio
         ->assertInertia(fn ($page) => $page
             ->where('agents.2.slug', 'company-qualifier')
             ->where('agents.2.smallModelOk', true)
-            ->where('agents.20.slug', 'website-analyst')
-            ->where('agents.20.smallModelOk', false));
+            ->where('agents.21.slug', 'website-analyst')
+            ->where('agents.21.smallModelOk', false));
 });
 
 it('suggests the models a provider names for itself, without fixing the choice', function () {
@@ -471,7 +471,7 @@ it('moves every agent onto one provider in a click, keeping each timeout and tie
     $agents = app(AgentSettings::class);
 
     foreach ($agents->known() as $agent) {
-        expect($agents->providerName($agent))->toBe('openai');
+        expect($agents->providerName($agent))->toBe($agent === 'image-generator' ? 'gemini' : 'openai');
     }
 
     // The timeout is not the provider's business: a thinking model on the 60s

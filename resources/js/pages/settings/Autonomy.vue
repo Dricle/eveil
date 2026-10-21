@@ -10,6 +10,7 @@ const props = defineProps<{
     emailAutonomyLevel: 'supervised' | 'semi_auto' | 'autonomous'
     linkedinAutonomyLevel: 'supervised' | 'autonomous'
     blueskyAutonomyLevel: 'supervised' | 'autonomous'
+    instagramAutonomyLevel: 'supervised' | 'autonomous'
     adsAutonomyLevel: 'supervised' | 'semi_auto' | 'autonomous'
 }>()
 
@@ -20,6 +21,7 @@ const form = useForm({
     email_autonomy_level: props.emailAutonomyLevel,
     linkedin_autonomy_level: props.linkedinAutonomyLevel,
     bluesky_autonomy_level: props.blueskyAutonomyLevel,
+    instagram_autonomy_level: props.instagramAutonomyLevel,
     ads_autonomy_level: props.adsAutonomyLevel
 })
 
@@ -66,6 +68,19 @@ const BLUESKY = [
         value: 'autonomous',
         label: 'Autonomous',
         description: 'Posts are published as soon as they are written. A post naming a client, or a project with several Bluesky accounts, still waits for you.'
+    }
+]
+
+const INSTAGRAM = [
+    {
+        value: 'supervised',
+        label: 'Supervised',
+        description: 'Every post and its image wait for you to approve them.'
+    },
+    {
+        value: 'autonomous',
+        label: 'Autonomous',
+        description: 'Posts are published with their image as soon as they are written. A post naming a client, or a project with several Instagram accounts, still waits for you.'
     }
 ]
 
@@ -144,6 +159,21 @@ function save () {
                 <URadioGroup
                     v-model="form.bluesky_autonomy_level"
                     :items="BLUESKY"
+                />
+            </UFormField>
+        </UCard>
+
+        <UCard>
+            <template #header>
+                <h2 class="font-medium">
+                    Instagram
+                </h2>
+            </template>
+
+            <UFormField :error="form.errors.instagram_autonomy_level">
+                <URadioGroup
+                    v-model="form.instagram_autonomy_level"
+                    :items="INSTAGRAM"
                 />
             </UFormField>
         </UCard>

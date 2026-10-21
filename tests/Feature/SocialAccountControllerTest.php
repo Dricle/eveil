@@ -71,18 +71,20 @@ it('cannot change or remove another organization\'s account', function () {
     expect($foreign->fresh())->not->toBeNull();
 });
 
-it('saves the Bluesky autonomy', function () {
+it('saves the Bluesky and Instagram autonomy', function () {
     [$user, $project] = socialAccountSetup();
 
     $this->actingAs($user)->put(route('settings.autonomy.update'), [
         'email_autonomy_level' => 'supervised',
         'linkedin_autonomy_level' => 'supervised',
         'bluesky_autonomy_level' => 'autonomous',
+        'instagram_autonomy_level' => 'autonomous',
         'ads_autonomy_level' => 'supervised',
     ])->assertRedirect(route('settings.autonomy.edit'));
 
     expect($project->fresh())
-        ->bluesky_autonomy_level->toBe(AutonomyLevel::Autonomous);
+        ->bluesky_autonomy_level->toBe(AutonomyLevel::Autonomous)
+        ->instagram_autonomy_level->toBe(AutonomyLevel::Autonomous);
 });
 
 it('lets Evie queue a post from a brief, for the network she names', function () {

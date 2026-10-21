@@ -6,6 +6,7 @@
         ['icon' => 'linkedin', 'name' => 'LinkedIn'],
         ['icon' => 'x', 'name' => 'X'],
         ['icon' => 'bluesky', 'name' => 'Bluesky'],
+        ['icon' => 'instagram', 'name' => 'Instagram'],
         ['icon' => 'arrow-big-up', 'name' => 'Reddit'],
         ['icon' => 'file-text', 'name' => 'SEO articles'],
     ];
@@ -26,9 +27,9 @@
     $contentChannels = [
         [
             'key' => 'social',
-            'label' => 'LinkedIn, X & Bluesky',
+            'label' => 'LinkedIn, X, Bluesky & Instagram',
             'title' => 'Posts that sound like you',
-            'text' => 'A fact about your product, a client you just won, your latest article or relevant industry news, drafted for each network and queued for approval. LinkedIn and Bluesky publish through their official APIs; X you copy and post yourself.',
+            'text' => 'A fact about your product, a client you just won, your latest article or relevant industry news, drafted for each network and queued for approval. Instagram posts come with an image Eveil generates. LinkedIn, Bluesky and Instagram publish for you; X you copy and post yourself.',
         ],
         [
             'key' => 'seo',
@@ -60,7 +61,7 @@
     ];
 
     $faqs = [
-        ['q' => 'Is Eveil only for cold email?', 'a' => 'No. Cold email is where it started and still the deepest channel, but the same agents now post on LinkedIn, X and Bluesky, write SEO articles for your blog and find Reddit threads worth answering. Paid ads are next.'],
+        ['q' => 'Is Eveil only for cold email?', 'a' => 'No. Cold email is where it started and still the deepest channel, but the same agents now post on LinkedIn, X, Bluesky and Instagram, write SEO articles for your blog and find Reddit threads worth answering. Paid ads are next.'],
         ['q' => 'Whose mailbox does it send from?', 'a' => 'Yours. Plain SMTP, no relay and no shared sending domain, so replies land where you already read mail. Presets cover Infomaniak, OVH, Gandi, Zoho, Gmail and Microsoft 365.'],
         ['q' => 'Where do the leads come from?', 'a' => 'A bundled search engine and the companies\' own pages, read live at qualification time. No purchased database, and no paid data API needed to start.'],
         ['q' => 'Can I see and change what the AI decided?', 'a' => 'At every step. The product portrait comes back for correction before anything is written, target profiles are editable, every draft can be rewritten, and your edits are never overwritten.'],
@@ -72,7 +73,7 @@
 @endphp
 <x-marketing-layout
     :title="config('app.name') . ' - your AI marketing team, from one URL'"
-    description="Paste your product URL. Eveil finds clients by cold email, posts on LinkedIn, X and Bluesky, writes SEO articles and joins the right Reddit threads. Open source, self-hostable."
+    description="Paste your product URL. Eveil finds clients by cold email, posts on LinkedIn, X, Bluesky and Instagram, writes SEO articles and joins the right Reddit threads. Open source, self-hostable."
 >
     <div class="border-b border-[rgba(232,236,242,.08)] px-4 py-2.5 flex flex-wrap justify-center items-center gap-3 text-[13px] text-[rgba(232,236,242,.72)] text-center">
         <span class="font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[#6fd3ec] border border-[rgba(111,211,236,.35)] rounded-full px-[9px] py-[2px]">Free trial</span>

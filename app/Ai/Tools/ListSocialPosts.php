@@ -29,6 +29,7 @@ class ListSocialPosts implements Tool
             ->where('project_id', $this->project->id)
             ->latest('id')
             ->limit(10)
+            ->with('media')
             ->get()
             ->map(fn (SocialPost $post): array => [
                 'id' => $post->id,
@@ -38,6 +39,12 @@ class ListSocialPosts implements Tool
                 'variant' => $post->variant?->value,
                 'evidence' => $post->evidence,
                 'body' => $post->body,
+                // Instagram only: its images, oldest first, and the one it
+                // will be published with.
+                ...($post->platform->requiresImage() ? [
+                    'image_ids' => $post->getMedia('images')->pluck('id')->all(),
+                    'selected_image_id' => $post->image_media_id,
+                ] : []),
             ]);
 
         if ($posts->isEmpty()) {

@@ -41,25 +41,35 @@ function open (account: SocialAccount) {
     editingOpen.value = true
 }
 
+// Which write is in flight, so its button shows it: these can wait on
+// Composio revoking a connection.
+const busy = ref<string | null>(null)
+
 function destroy (account: SocialAccount) {
+    busy.value = `account-${account.id}`
     router.delete(socialAccountRoutes.destroy.url({ project: slug.value, socialAccount: account.id }), {
         preserveScroll: true,
-        onSuccess: () => toast.add({ title: 'Account disconnected', color: 'neutral' })
+        onSuccess: () => toast.add({ title: 'Account disconnected', color: 'neutral' }),
+        onFinish: () => busy.value = null
     })
 }
 
 // Drops one way in and keeps the account on the other.
 function dropConnection (account: SocialAccount, connection: 'meta' | 'composio') {
+    busy.value = `${connection}-${account.id}`
     router.delete(instagramRoutes.connections.destroy.url({ project: slug.value, socialAccount: account.id, connection }), {
         preserveScroll: true,
-        onSuccess: () => toast.add({ title: connection === 'meta' ? 'No longer publishing through your Meta app' : 'Composio connection removed', color: 'neutral' })
+        onSuccess: () => toast.add({ title: connection === 'meta' ? 'No longer publishing through your Meta app' : 'Composio connection removed', color: 'neutral' }),
+        onFinish: () => busy.value = null
     })
 }
 
 function removeMetaApp () {
+    busy.value = 'meta-app'
     router.delete(platformAppRoutes.destroy.url({ project: slug.value, platform: 'instagram' }), {
         preserveScroll: true,
-        onSuccess: () => toast.add({ title: 'Meta app removed', color: 'neutral' })
+        onSuccess: () => toast.add({ title: 'Meta app removed', color: 'neutral' }),
+        onFinish: () => busy.value = null
     })
 }
 
@@ -148,6 +158,7 @@ const STATUS = {
                         variant="ghost"
                         size="xs"
                         aria-label="Disconnect this account entirely"
+                        :loading="busy === `account-${account.id}`"
                         @click="destroy(account)"
                     />
                 </div>
@@ -172,6 +183,7 @@ const STATUS = {
                             variant="link"
                             size="xs"
                             label="Stop using it"
+                            :loading="busy === `meta-${account.id}`"
                             @click="dropConnection(account, 'meta')"
                         />
                     </div>
@@ -190,6 +202,7 @@ const STATUS = {
                             variant="link"
                             size="xs"
                             label="Remove"
+                            :loading="busy === `composio-${account.id}`"
                             @click="dropConnection(account, 'composio')"
                         />
                     </div>
@@ -342,6 +355,7 @@ const STATUS = {
                             color="error"
                             variant="ghost"
                             label="Remove the app"
+                            :loading="busy === 'meta-app'"
                             @click="removeMetaApp"
                         />
                     </div>

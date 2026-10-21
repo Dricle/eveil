@@ -187,8 +187,9 @@ class GenerateSocialPost implements ShouldQueue
         }
 
         // A file of its own per sibling, so deleting one never takes the
-        // other's image with it.
-        foreach ($posts as $post) {
+        // other's image with it. Only the ones still drafts: one may have
+        // been rejected or deleted while the image was being drawn.
+        foreach ($posts->map->fresh()->filter(fn (?SocialPost $post): bool => $post?->status === SocialPostStatus::Draft) as $post) {
             $image = $post->addMediaFromString($jpeg)
                 ->usingFileName(Str::uuid().'.jpg')
                 ->withCustomProperties(['brief' => $brief])
@@ -219,10 +220,12 @@ class GenerateSocialPost implements ShouldQueue
             ->where('status', SocialAccountStatus::Active)
             ->get();
 
-        $post = $posts->first(fn (SocialPost $post): bool => $post->variant !== SocialPostVariant::Named);
+        // Read again: the drafts were on the page while their image was drawn,
+        // and the user may have rejected or edited one in the meantime.
+        $post = $posts->first(fn (SocialPost $post): bool => $post->variant !== SocialPostVariant::Named)?->fresh();
 
         // No image, no Instagram post: it stays a draft showing why.
-        if ($accounts->count() !== 1 || $post === null || ($this->platform->requiresImage() && $post->image_media_id === null)) {
+        if ($accounts->count() !== 1 || $post === null || $post->status !== SocialPostStatus::Draft || ($this->platform->requiresImage() && $post->image_media_id === null)) {
             return;
         }
 

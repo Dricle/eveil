@@ -2,6 +2,8 @@
 
 use App\Ai\Agents\ImageGenerator;
 use App\Ai\Agents\SocialPostWriter;
+use App\Ai\Tools\RequestSocialPostImage;
+use App\Ai\Tools\SelectSocialPostImage;
 use App\Enums\AgentRunStatus;
 use App\Enums\AutonomyLevel;
 use App\Enums\IntegrationStatus;
@@ -19,6 +21,7 @@ use App\Models\SocialAccount;
 use App\Models\SocialPost;
 use App\Models\User;
 use App\Support\CurrentProject;
+use App\Support\SocialPostProgress;
 use Carbon\CarbonInterface;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\DB;
@@ -27,11 +30,13 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Sleep;
+use Laravel\Ai\Contracts\Approvable;
 use Laravel\Ai\Image;
 use Laravel\Ai\Prompts\ImagePrompt;
 use Laravel\Ai\Responses\Data\Meta;
 use Laravel\Ai\Responses\Data\TextUsage;
 use Laravel\Ai\Responses\StructuredTextResponse;
+use Laravel\Ai\Tools\Request as ToolRequest;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 const COMPOSIO = 'backend.composio.dev/api/v3.1';
@@ -655,4 +660,84 @@ it('stores a post\'s images under its organization, feature, date and media id, 
     $this->travelTo('2026-10-22 09:00:00');
 
     expect(Media::find($image->id)->getPathRelativeToRoot())->toBe($expected);
+});
+
+it('refuses to approve a draft while its image is being drawn', function () {
+    [$user, $project] = instagramSetup();
+    $account = SocialAccount::factory()->instagram()->create(['organization_id' => $project->organization_id]);
+    $account->projects()->attach($project);
+    $post = SocialPost::factory()->instagram()->create(['project_id' => $project->id]);
+    app(SocialPostProgress::class)->startDrawing($post);
+    Http::preventStrayRequests();
+
+    $this->actingAs($user)->post(route('social.posts.approve', $post), ['social_account_id' => $account->id])
+        ->assertSessionHasErrors('social_post');
+
+    expect($post->fresh()->status)->toBe(SocialPostStatus::Draft);
+});
+
+it('never publishes on its own a draft rejected while its image was drawn', function () {
+    Notification::fake();
+    Storage::fake();
+    Http::preventStrayRequests();
+    $project = Project::factory()->create(['instagram_autonomy_level' => AutonomyLevel::Autonomous]);
+    SocialAccount::factory()->instagram()->create(['organization_id' => $project->organization_id])->projects()->attach($project);
+    fakeInstagramWriter(['source_type' => 'knowledge_base', 'evidence' => 'e', 'body' => 'A caption.', 'image_brief' => 'A brief.']);
+    // The user rejects the draft while the image is being drawn.
+    Image::fake(function () {
+        SocialPost::query()->withoutGlobalScopes()->update(['status' => SocialPostStatus::Rejected]);
+
+        return instagramPng();
+    });
+
+    GenerateSocialPost::dispatchSync($project, SocialPlatform::Instagram);
+
+    expect(SocialPost::sole()->status)->toBe(SocialPostStatus::Rejected);
+});
+
+it('lets Evie ask for another image, behind approval, and pick one', function () {
+    [, $project] = instagramSetup();
+    Queue::fake([GenerateSocialPostImage::class]);
+    Storage::fake();
+    $post = SocialPost::factory()->instagram()->create(['project_id' => $project->id]);
+    $first = instagramImage($post);
+    $second = instagramImage($post, 'b', 'b.jpg');
+    $post->update(['image_media_id' => $first->id]);
+
+    expect(new RequestSocialPostImage($project))->toBeInstanceOf(Approvable::class);
+
+    (new RequestSocialPostImage($project))->handle(new ToolRequest(['social_post_id' => $post->id, 'note' => 'Brighter.']));
+    Queue::assertPushed(GenerateSocialPostImage::class, fn (GenerateSocialPostImage $job): bool => $job->post->is($post) && $job->note === 'Brighter.');
+
+    (new SelectSocialPostImage($project))->handle(new ToolRequest(['social_post_id' => $post->id, 'image_id' => $second->id]));
+    expect($post->fresh()->image_media_id)->toBe($second->id);
+});
+
+it('keeps Evie away from another project\'s draft images', function () {
+    [, $project] = instagramSetup();
+    Storage::fake();
+    $foreign = SocialPost::factory()->instagram()->create();
+    $image = instagramImage($foreign);
+
+    $answer = (string) (new SelectSocialPostImage($project))->handle(new ToolRequest(['social_post_id' => $foreign->id, 'image_id' => $image->id]));
+
+    expect($answer)->toContain('No draft with that id')
+        ->and($foreign->fresh()->image_media_id)->toBeNull();
+});
+
+it('clears only stale Composio attempts when someone starts a connection', function () {
+    [$user, $project] = instagramSetup();
+    $teammates = Integration::factory()->create(['organization_id' => $project->organization_id, 'status' => IntegrationStatus::Pending]);
+    $stale = Integration::factory()->create(['organization_id' => $project->organization_id, 'status' => IntegrationStatus::Pending, 'connected_account_id' => 'ca_stale', 'created_at' => now()->subHours(2)]);
+    Http::preventStrayRequests();
+    Http::fake([
+        COMPOSIO.'/connected_accounts/ca_stale' => Http::response(),
+        COMPOSIO.'/auth_configs' => Http::response(['auth_config' => ['id' => 'ac_1']], 201),
+        COMPOSIO.'/connected_accounts/link' => Http::response(['redirect_url' => 'https://connect.composio.test/link/abc', 'connected_account_id' => 'ca_new'], 201),
+    ]);
+
+    $this->actingAs($user)->get(route('settings.integrations.connect', 'instagram'));
+
+    expect($teammates->fresh())->not->toBeNull()
+        ->and($stale->fresh())->toBeNull();
 });

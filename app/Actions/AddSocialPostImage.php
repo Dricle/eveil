@@ -21,14 +21,11 @@ class AddSocialPostImage
     public function handle(SocialPost $post, ?string $note = null): Media
     {
         $brief = trim($post->image_brief ?? '') ?: $post->body;
+        $note = $note !== null && trim($note) !== '' ? trim($note) : null;
 
-        if ($note !== null && trim($note) !== '') {
-            $brief .= "\n\nThe user saw an earlier image for this post and asked for this change: ".trim($note);
-        }
-
-        $image = $post->addMediaFromString((new ImageGenerator($post->project, "a {$post->platform->label()} post", $brief))->generate())
+        $image = $post->addMediaFromString((new ImageGenerator($post->project, "a {$post->platform->label()} post", $brief, $note))->generate())
             ->usingFileName(Str::uuid().'.jpg')
-            ->withCustomProperties(['brief' => $brief])
+            ->withCustomProperties(['brief' => $brief, 'note' => $note])
             ->toMediaCollection('images');
 
         if ($post->image_media_id === null) {

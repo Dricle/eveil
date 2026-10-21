@@ -32,9 +32,11 @@ class ComposioOAuthController extends Controller
         $organization = $currentProject->organization();
 
         // Attempts abandoned on Composio's page never come back to say so.
+        // Only the stale ones: a teammate may be authorizing right now.
         $organization->integrations()
             ->where('toolkit', $toolkit)
             ->where('status', IntegrationStatus::Pending)
+            ->where('created_at', '<', now()->subHour())
             ->each(fn (Integration $stale) => $disconnect->handle($stale));
 
         try {

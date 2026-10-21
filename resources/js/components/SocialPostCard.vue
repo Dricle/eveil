@@ -99,6 +99,7 @@ function submitApprove (socialAccountId: number | undefined) {
             pickingAccount.value = false
             toast.add({ title: `Publishing to ${label.value}…`, color: 'success' })
         },
+        onError: errors => toast.add({ title: errors.social_post ?? 'Could not publish', color: 'error' }),
         onFinish: () => approving.value = false
     })
 }
@@ -240,7 +241,7 @@ function promote () {
                     size="xs"
                     label="Approve & publish"
                     :loading="approving"
-                    :disabled="!activeAccounts.length"
+                    :disabled="!activeAccounts.length || post.drawing_image"
                     @click="approve"
                 />
                 <UButton

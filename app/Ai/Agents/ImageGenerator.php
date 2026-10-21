@@ -37,8 +37,9 @@ class ImageGenerator extends EveilAgent
     /**
      * @param  string  $purpose  what the image goes with, in a few words: "an Instagram post"
      * @param  string  $brief  what it should show
+     * @param  string|null  $note  what the user asked to change after seeing an earlier image
      */
-    public function __construct(Project $project, private string $purpose, private string $brief)
+    public function __construct(Project $project, private string $purpose, private string $brief, private ?string $note = null)
     {
         parent::__construct($project);
     }
@@ -144,7 +145,13 @@ class ImageGenerator extends EveilAgent
 
     private function buildPrompt(): string
     {
-        return $this->instructions()."\n\nIt goes with {$this->purpose}. What it should show:\n\n{$this->brief}";
+        $prompt = $this->instructions()."\n\nIt goes with {$this->purpose}. What it should show:\n\n{$this->brief}";
+
+        if ($this->note !== null && trim($this->note) !== '') {
+            $prompt .= "\n\nThe user saw an earlier image for it and asked for this change: ".trim($this->note);
+        }
+
+        return $prompt;
     }
 
     /**

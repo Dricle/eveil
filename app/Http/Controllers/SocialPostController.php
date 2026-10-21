@@ -76,12 +76,18 @@ class SocialPostController extends Controller
      * draft with `last_error`, so the same button retries. Only one of a
      * named/anonymized pair can ever go out: the user just chose which.
      */
-    public function approve(SocialPostApproveRequest $request, PublishSocialPost $publish, int $socialPost): RedirectResponse
+    public function approve(SocialPostApproveRequest $request, PublishSocialPost $publish, SocialPostProgress $progress, int $socialPost): RedirectResponse
     {
         $post = SocialPost::query()
             ->where('platform', '!=', SocialPlatform::X)
             ->where('status', SocialPostStatus::Draft)
             ->findOrFail($socialPost);
+
+        // Publishing now would draw a second image of its own, and the one
+        // being drawn would then land on a post already out.
+        if ($progress->isDrawing($post)) {
+            return back()->withErrors(['social_post' => 'Its image is still being drawn: approve it once it shows.']);
+        }
 
         $account = SocialAccount::query()->where('platform', $post->platform)->findOrFail((int) $request->validated('social_account_id'));
 

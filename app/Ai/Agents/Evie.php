@@ -206,6 +206,11 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
         draft still awaiting approval - once published or rejected it refuses,
         since the queue's own edit option is gone by then too.
 
+        An Instagram draft carries an image. RequestSocialPostImage draws one
+        more for it (it pauses for approval: images cost credits), keeping the
+        others; SelectSocialPostImage picks which one it is published with.
+        You cannot see the images, so pick only the one the user pointed at.
+
         DraftArticle queues a NEW SEO article for the project's blog, written in
         the background by the article writer from the brief you pass: never
         write the article yourself in the chat. When the user announces

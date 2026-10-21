@@ -176,7 +176,7 @@ class ImageGenerator extends EveilAgent
                     fn (Media $reference): ImageFile => ImageFile::fromStorage($reference->getPathRelativeToRoot(), $reference->disk),
                     array_values($this->references),
                 ))
-                ->size($this->format->drawnAt())
+                ->size($this->format->drawnAt(app(AgentSettings::class)->provider(static::slug())))
                 ->timeout($this->timeout())
                 ->generate($this->provider(), $this->model());
 

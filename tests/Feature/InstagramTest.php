@@ -3,6 +3,7 @@
 use App\Actions\AddSocialPostImage;
 use App\Ai\Agents\ImageGenerator;
 use App\Ai\Agents\SocialPostWriter;
+use App\Ai\AgentSettings;
 use App\Ai\Tools\RequestSocialPostImage;
 use App\Ai\Tools\SelectSocialPostImage;
 use App\Enums\AgentRunStatus;
@@ -746,7 +747,8 @@ it('clears only stale Composio attempts when someone starts a connection', funct
         ->and($stale->fresh())->toBeNull();
 });
 
-it('draws each format at the closest ratio models know, then crops it to the exact one', function (ImageFormat $format, int $drawnWidth, int $drawnHeight, int $width, int $height) {
+it('draws each format at the closest ratio the provider knows, then crops it to the exact one', function (string $provider, ImageFormat $format, string $drawnAt, int $drawnWidth, int $drawnHeight, int $width, int $height) {
+    app(AgentSettings::class)->switchProvider(ImageGenerator::slug(), $provider, null);
     $image = imagecreatetruecolor($drawnWidth, $drawnHeight);
     ob_start();
     imagepng($image);
@@ -757,13 +759,19 @@ it('draws each format at the closest ratio models know, then crops it to the exa
     [$deliveredWidth, $deliveredHeight] = getimagesizefromstring($jpeg) ?: [0, 0];
 
     expect([$deliveredWidth, $deliveredHeight])->toBe([$width, $height]);
-    Image::assertGenerated(fn (ImagePrompt $prompt): bool => $prompt->size === $format->drawnAt());
+    Image::assertGenerated(fn (ImagePrompt $prompt): bool => $prompt->size === $drawnAt);
 })->with([
-    'square' => [ImageFormat::Square, 300, 300, 300, 300],
-    'portrait 4:5' => [ImageFormat::Portrait, 200, 300, 200, 250],
-    'story 9:16' => [ImageFormat::Story, 200, 300, 169, 300],
-    'landscape 1.91:1' => [ImageFormat::Landscape, 300, 200, 300, 157],
-    'wide 16:9' => [ImageFormat::Wide, 300, 200, 300, 169],
+    // Gemini draws them natively: nothing to crop but 1.91:1.
+    'gemini square' => ['gemini', ImageFormat::Square, '1:1', 300, 300, 300, 300],
+    'gemini portrait' => ['gemini', ImageFormat::Portrait, '4:5', 400, 500, 400, 500],
+    'gemini story' => ['gemini', ImageFormat::Story, '9:16', 270, 480, 270, 480],
+    'gemini landscape' => ['gemini', ImageFormat::Landscape, '16:9', 320, 180, 320, 168],
+    'gemini wide' => ['gemini', ImageFormat::Wide, '16:9', 320, 180, 320, 180],
+    // Everyone else draws 1:1, 2:3 or 3:2, and the crop does the rest.
+    'openai portrait' => ['openai', ImageFormat::Portrait, '2:3', 200, 300, 200, 250],
+    'openai story' => ['openai', ImageFormat::Story, '2:3', 200, 300, 169, 300],
+    'openai landscape' => ['openai', ImageFormat::Landscape, '3:2', 300, 200, 300, 157],
+    'openai wide' => ['openai', ImageFormat::Wide, '3:2', 300, 200, 300, 169],
 ]);
 
 it('lets the user\'s own instructions put text in the image', function () {

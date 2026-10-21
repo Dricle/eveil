@@ -17,6 +17,12 @@ class SyncAdAccount implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
 
+    /**
+     * Above the default worker's minute: Microsoft builds its report on
+     * request, and waiting for it may take up to two minutes on its own.
+     */
+    public int $timeout = 300;
+
     public function __construct(public AdAccount $account) {}
 
     public function uniqueId(): string

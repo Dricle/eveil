@@ -63,6 +63,11 @@ class MicrosoftAdsClient implements AdClientInterface
      */
     private const REPORT_POLLS = 24;
 
+    /**
+     * The largest page `Accounts/Search` returns.
+     */
+    private const ACCOUNTS_PAGE = 1000;
+
     public function __construct(private AdAccessTokens $tokens) {}
 
     public function capabilities(): AdCapabilities
@@ -121,16 +126,24 @@ class MicrosoftAdsClient implements AdClientInterface
         $user = $request->post(self::CUSTOMER_API.'/User/Query', ['UserId' => null]);
         $this->throwUnless($user);
 
-        $response = $request->post(self::CUSTOMER_API.'/Accounts/Search', [
-            'Predicates' => [['Field' => 'UserId', 'Operator' => 'Equals', 'Value' => (string) $user->json('User.Id')]],
-            'PageInfo' => ['Index' => 0, 'Size' => 1000],
-        ]);
-        $this->throwUnless($response);
+        $accounts = collect();
+        $page = 0;
+
+        do {
+            $response = $request->post(self::CUSTOMER_API.'/Accounts/Search', [
+                'Predicates' => [['Field' => 'UserId', 'Operator' => 'Equals', 'Value' => (string) $user->json('User.Id')]],
+                'PageInfo' => ['Index' => $page++, 'Size' => self::ACCOUNTS_PAGE],
+            ]);
+            $this->throwUnless($response);
+
+            $found = (array) $response->json('Accounts', []);
+            $accounts->push(...$found);
+        } while (count($found) === self::ACCOUNTS_PAGE);
 
         // ponytail: the owning customer is the one every later call names, so
         // an account reached only through an agency's customer is called as
         // its owner. Storing the agency's customer id instead lifts that.
-        return collect((array) $response->json('Accounts', []))
+        return $accounts
             ->map(fn (array $account): AdAccountData => new AdAccountData(
                 externalId: (string) $account['Id'],
                 name: (string) ($account['Name'] ?? $account['Id']),

@@ -13,6 +13,7 @@ use App\Models\PlatformApp;
 use App\Models\Project;
 use App\Models\User;
 use App\Services\Ads\AdPlatformException;
+use App\Services\Ads\AdTokens;
 use App\Services\Ads\MicrosoftAdsClient;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -83,6 +84,25 @@ it('connects every account the Microsoft user can manage, remembering its custom
     Http::assertSent(fn (Request $request): bool => str_ends_with($request->url(), 'Accounts/Search')
         && $request->header('DeveloperToken') === ['dev-token']
         && $request['Predicates'][0]['Value'] === '5');
+});
+
+it('reads every page of accounts a Microsoft user can manage', function () {
+    Http::preventStrayRequests();
+    $app = PlatformApp::factory()->create(['platform' => PlatformAppKind::MicrosoftAds, 'developer_token' => 'dev-token']);
+    $account = fn (int $id): array => ['Id' => (string) $id, 'Name' => "Account {$id}", 'CurrencyCode' => 'EUR', 'ParentCustomerId' => '77'];
+
+    Http::fake([
+        'clientcenter.api.bingads.microsoft.com/CustomerManagement/v13/User/Query' => Http::response(['User' => ['Id' => '5']]),
+        'clientcenter.api.bingads.microsoft.com/CustomerManagement/v13/Accounts/Search' => Http::sequence()
+            ->push(['Accounts' => array_map($account, range(1, 1000))])
+            ->push(['Accounts' => [$account(1001)]]),
+    ]);
+
+    $accounts = app(MicrosoftAdsClient::class)->accounts($app, new AdTokens('at', 'rt', null));
+
+    expect($accounts)->toHaveCount(1001)
+        ->and($accounts->last()->externalId)->toBe('1001');
+    Http::assertSent(fn (Request $request): bool => str_ends_with($request->url(), 'Accounts/Search') && $request['PageInfo']['Index'] === 1);
 });
 
 it('refuses to connect Microsoft accounts until the app has a developer token', function () {

@@ -169,6 +169,20 @@ it('reads the columns in whatever order they were exported', function () {
     expect(Lead::withoutGlobalScopes()->sole()->first_name)->toBe('Sofia');
 });
 
+it('imports an Apollo people export as downloaded', function () {
+    [$user] = importer();
+
+    $this->actingAs($user)->post(route('contacts.import'), [
+        'file' => csvFile("First Name,Last Name,Title,Company,Email,Person Linkedin Url,Website\n"
+            ."Sofia,Rossi,CEO,Acme,sofia@acme.com,https://www.linkedin.com/in/sofia,http://www.acme.com\n"),
+    ]);
+
+    $lead = Lead::withoutGlobalScopes()->sole();
+
+    expect($lead->linkedin_url)->toBe('https://www.linkedin.com/in/sofia')
+        ->and($lead->company->name)->toBe('Acme');
+});
+
 it('rejects a file that is not a CSV', function () {
     [$user] = importer();
 

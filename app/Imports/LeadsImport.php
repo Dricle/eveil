@@ -47,6 +47,17 @@ class LeadsImport implements OnEachRow, SkipsEmptyRows, WithHeadingRow
     ];
 
     /**
+     * Other tools' export headings for our columns, so their file imports as
+     * downloaded. Apollo's people export: `Person Linkedin Url`, `Company`,
+     * `Website`. Our own heading wins when a file carries both.
+     */
+    private const ALIASES = [
+        'person_linkedin_url' => 'linkedin_url',
+        'company' => 'company_name',
+        'website' => 'company_domain',
+    ];
+
+    /**
      * ponytail: an import runs inside the request, so it is bounded rather than
      * queued. Past this the answer is a job with a progress screen, not a
      * bigger number.
@@ -103,6 +114,12 @@ class LeadsImport implements OnEachRow, SkipsEmptyRows, WithHeadingRow
             $this->truncated = true;
 
             return;
+        }
+
+        foreach (self::ALIASES as $alias => $column) {
+            if (blank($values[$column] ?? null) && filled($values[$alias] ?? null)) {
+                $values[$column] = $values[$alias];
+            }
         }
 
         $email = mb_strtolower(trim((string) ($values['email'] ?? '')));

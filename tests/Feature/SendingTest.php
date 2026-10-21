@@ -464,6 +464,8 @@ it('saves a mailbox, grants it to chosen projects only, and never returns the pa
     $mine = Project::factory()->for($user->organizations()->sole())->create(['name' => 'Second product']);
     $someoneElses = Project::factory()->create();
 
+    $this->travelTo(now()->setTime(12, 0));
+
     $this->actingAs($user)
         ->post(route('settings.mailboxes.store'), [
             'name' => 'Contact',

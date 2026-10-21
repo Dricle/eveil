@@ -32,10 +32,11 @@ return [
      * The disk on which to store added files and derived images by default. Choose
      * one or more of the disks you've configured in config/filesystems.php.
      */
-    // The app's own default disk, private unless the operator says otherwise:
-    // the package's default is `public`, which would expose every draft's
-    // images. The app serves them through routes that check the project.
-    'disk_name' => env('MEDIA_DISK', env('FILESYSTEM_DISK', 'local')),
+    // The app's own default disk (`FILESYSTEM_DISK`), one setting for every
+    // file Eveil keeps, private unless the operator says otherwise: the
+    // package's default is `public`, which would expose every draft's images.
+    // The app serves them through routes that check the project.
+    'disk_name' => env('FILESYSTEM_DISK', 'local'),
 
     /*
      * The disk on which to store conversions (thumbnails, etc.) and responsive images

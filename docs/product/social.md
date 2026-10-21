@@ -35,7 +35,7 @@ Setting it up:
 
 Two things to know about this way in:
 
-- **Meta fetches each image itself**, from a link, where Composio receives it as a file. So Eveil's images must be reachable from the internet: on the cloud edition they are; on a self-hosted instance, see [`MEDIA_DISK`](/self-hosted/configuration#environment-variables-env).
+- **Meta fetches each image itself**, from a link, where Composio receives it as a file. So Eveil's images must be reachable from the internet: on the cloud edition they are; on a self-hosted instance, see [`FILESYSTEM_DISK`](/self-hosted/configuration#environment-variables-env).
 - **The token lasts 60 days and is renewed automatically** every day once it is ten days old. The screen shows until when it is valid. If it ever lapses, the account falls back on Composio when it has it, or asks you to connect again.
 
 Each way in can be dropped on its own: **Stop using it** for the Meta app, **Remove** for Composio. The account stays on the other one. The bin icon disconnects the account entirely. Removing your Meta app from the screen moves every account that used it back onto Composio, and removes the ones that had only the Meta app.

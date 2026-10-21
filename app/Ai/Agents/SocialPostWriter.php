@@ -128,7 +128,7 @@ class SocialPostWriter extends EveilAgent implements HasStructuredOutput
                 ->description('Instagram only: the ids of the project\'s official illustrations, from the list you were given, that fit this post\'s image, at most three. The image reuses them instead of inventing. Leave empty when none fits.'),
 
             'image_brief' => $schema->string()
-                ->description('Instagram only: what the post image should show, in two or three concrete sentences (subject, setting, mood). Text in the image only when the user\'s instructions ask for it, and then the exact words to show. Leave empty for other networks.'),
+                ->description('Instagram only: the visual, as a short brief to a designer, in two to four concrete sentences. First its kind, as the user\'s instructions ask for it, otherwise whatever serves this post best: a designed graphic (an ad layout, a poster with a headline, a magazine page, a collage), a photograph with designed elements set into it (a hanging sign or a chalkboard carrying the headline, a brush-stroke banner, an info panel with an icon), an illustration, or a plain photograph. Then its composition and colours, and the exact words of any text on it, each part named (headline, dates, a short line). Text only when the user\'s instructions ask for it or the kind needs it (a headline on an ad layout, the dates of an announcement). Leave empty for other networks.'),
         ];
     }
 
@@ -149,7 +149,7 @@ class SocialPostWriter extends EveilAgent implements HasStructuredOutput
             SocialPlatform::Linkedin => 'LinkedIn style: short paragraphs, plain text, no markdown, at most two or three hashtags and only if they add something. Up to 3000 characters, but most good posts are far shorter.',
             SocialPlatform::X => 'Hard limit: 280 characters, and any URL counts as 23 of them. Aim well under it. Plain text, at most one or two hashtags and only when they add something.',
             SocialPlatform::Bluesky => 'Hard limit: 300 characters, URL included. Aim well under it. Plain text, at most one or two hashtags and only when they add something.',
-            SocialPlatform::Instagram => 'Instagram style: this is the caption under an image. A strong first line, since only it shows before "more", then a few short lines. Links are not clickable in a caption, so name the product instead of pasting its URL. Three to five relevant hashtags at the very end. Up to 2200 characters, but most good captions are far shorter. Also write image_brief: the picture is what stops the scroll, so make it concrete and tied to this post\'s idea, never a generic stock scene.',
+            SocialPlatform::Instagram => 'Instagram style: this is the caption under an image. A strong first line, since only it shows before "more", then a few short lines. Links are not clickable in a caption, so name the product instead of pasting its URL. Three to five relevant hashtags at the very end. Up to 2200 characters, but most good captions are far shorter. Also write image_brief: the visual is what stops the scroll, so make it concrete and tied to this post\'s idea, never a generic stock scene, and in the visual style the user\'s instructions ask for.',
         };
     }
 

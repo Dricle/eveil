@@ -71,17 +71,26 @@ class ImageGenerator extends EveilAgent
     {
         return <<<PROMPT
         A {$this->format->describe()} image a business publishes under its own
-        name, on social media or in an ad. It illustrates one idea, the one in
-        the brief below; it is not a product screenshot. Keep the subject well
-        inside the frame: the edges may be trimmed to fit the exact shape.
+        name, on social media or in an ad. Make the kind of visual the brief
+        and the user's instructions ask for: a designed graphic (an ad layout, a
+        poster with a headline, a magazine page, a collage), a photograph with
+        designed elements set into it (a hanging sign or a chalkboard carrying
+        the headline, a brush-stroke banner, an info panel with an icon, a
+        sticker, a megaphone or other prop), an illustration, or a plain
+        photograph.
+        It carries one idea, the one in the brief below. Keep what
+        matters well inside the frame: the edges may be trimmed to fit the
+        exact shape.
 
         Text only when the brief or the user's own instructions ask for it: a
-        headline, a short line, the site's address. Then exactly the words
-        given, few of them, large and legible, spelled exactly as written.
-        Otherwise no text at all. Never invent a logo or a brand mark of your
-        own. No watermarks. No real, recognisable people. One clear subject,
-        uncluttered, the kind of picture someone would actually stop on in a
-        feed.
+        headline, dates, a short sentence, the site's address. Then exactly the
+        words given, every one of them and nothing more, spelled exactly as
+        written, laid out like a designer would: a clear hierarchy, the
+        headline largest, everything legible on a phone. Otherwise no text at
+        all. Never invent a logo or a brand mark of your
+        own. No watermarks. No real, recognisable people. Organised around one
+        idea: a dense, bold layout is fine as long as its hierarchy reads at a
+        glance. The kind of visual someone would actually stop on in a feed.
         PROMPT.$this->referencesSection().$this->userInstructionsSection();
     }
 

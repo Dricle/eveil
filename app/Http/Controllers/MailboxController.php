@@ -49,11 +49,19 @@ class MailboxController extends Controller
         ]);
     }
 
+    /**
+     * A new mailbox is ramped from the day it is connected: even an old,
+     * trusted address jumping from no cold mail to its full limit is the
+     * spike filters flag.
+     */
     public function store(MailboxRequest $request): RedirectResponse
     {
         $organization = $this->currentProject->organization();
 
-        $mailbox = $organization->emailAccounts()->create($request->safe()->except('projects'));
+        $mailbox = $organization->emailAccounts()->create([
+            ...$request->safe()->except('projects'),
+            'ramp_up_started_at' => now(),
+        ]);
 
         $mailbox->projects()->sync($request->validated('projects', []));
 

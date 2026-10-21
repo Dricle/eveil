@@ -14,7 +14,7 @@ use App\Models\Organization;
  */
 class ChangeComposioKey
 {
-    public function __construct(private DisconnectIntegration $disconnect) {}
+    public function __construct(private DisconnectComposioConnection $disconnect) {}
 
     public function handle(Organization $organization, ?string $apiKey): void
     {
@@ -22,7 +22,7 @@ class ChangeComposioKey
             return;
         }
 
-        $organization->integrations()->each(fn ($integration) => $this->disconnect->handle($integration));
+        $organization->composioConnections()->each(fn ($connection) => $this->disconnect->handle($connection));
 
         $organization->update(['composio_api_key' => $apiKey, 'composio_auth_configs' => null]);
     }

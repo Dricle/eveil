@@ -3,7 +3,7 @@
 namespace App\Enums;
 
 use App\Actions\Composio\ConnectInstagramAccount;
-use App\Models\Integration;
+use App\Models\ComposioConnection;
 use App\Models\Project;
 
 /**
@@ -28,10 +28,10 @@ enum ComposioToolkit: string
      * Eveil, and returns a sentence for the user. Throws when the service
      * cannot be used after all; the caller then drops the connection.
      */
-    public function connected(Integration $integration, Project $project): string
+    public function connected(ComposioConnection $connection, Project $project): string
     {
         return match ($this) {
-            self::Instagram => app(ConnectInstagramAccount::class)->handle($integration, $project),
+            self::Instagram => app(ConnectInstagramAccount::class)->handle($connection, $project),
         };
     }
 

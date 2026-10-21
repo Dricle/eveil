@@ -26,7 +26,7 @@ class ComposioKeyController extends Controller
 
         return Inertia::render('settings/Composio', [
             'configured' => $organization->composio_api_key !== null,
-            'connections' => $organization->integrations()->count(),
+            'connections' => $organization->composioConnections()->count(),
         ]);
     }
 

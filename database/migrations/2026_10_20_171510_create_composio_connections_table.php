@@ -20,7 +20,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('integrations', function (Blueprint $table) {
+        Schema::create('composio_connections', function (Blueprint $table) {
             $table->id();
             $table->foreignId('organization_id')->constrained()->cascadeOnDelete();
             // The Composio toolkit slug, a `ComposioToolkit` case: instagram, ...
@@ -52,6 +52,6 @@ return new class extends Migration
             $table->dropColumn(['composio_api_key', 'composio_auth_configs']);
         });
 
-        Schema::dropIfExists('integrations');
+        Schema::dropIfExists('composio_connections');
     }
 };

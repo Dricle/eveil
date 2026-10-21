@@ -7,7 +7,7 @@ namespace App\Enums;
  * sent to authorize until they come back; error when the service refused it
  * or Composio lost it, which a reconnect fixes.
  */
-enum IntegrationStatus: string
+enum ComposioConnectionStatus: string
 {
     case Pending = 'pending';
     case Active = 'active';

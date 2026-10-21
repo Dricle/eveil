@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Actions\Composio\DisconnectIntegration;
+use App\Actions\Composio\DisconnectComposioConnection;
 use App\Enums\PlatformAppKind;
 use App\Enums\SocialAccountStatus;
 use App\Enums\SocialPlatform;
@@ -101,15 +101,15 @@ class SocialAccountController extends Controller
         return back();
     }
 
-    public function destroy(Request $request, DisconnectIntegration $disconnect, int $socialAccount): RedirectResponse
+    public function destroy(Request $request, DisconnectComposioConnection $disconnect, int $socialAccount): RedirectResponse
     {
         $account = SocialAccount::query()->ownedBy($request->user())->findOrFail($socialAccount);
 
         // An account going through a Composio connection: revoke it there
         // too, not just forget our reference to it. Then the account itself,
         // whatever other way in it had.
-        if ($account->integration !== null) {
-            $disconnect->handle($account->integration);
+        if ($account->composioConnection !== null) {
+            $disconnect->handle($account->composioConnection);
         }
 
         $account->delete();

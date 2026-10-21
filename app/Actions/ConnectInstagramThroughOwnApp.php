@@ -33,7 +33,7 @@ class ConnectInstagramThroughOwnApp
             'external_id' => $profile['id'],
         ]);
 
-        $hadComposio = $account->integration_id !== null;
+        $hadComposio = $account->composio_connection_id !== null;
 
         $account->fill([
             'platform_app_id' => $app->id,

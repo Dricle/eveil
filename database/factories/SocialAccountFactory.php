@@ -4,7 +4,7 @@ namespace Database\Factories;
 
 use App\Enums\SocialAccountStatus;
 use App\Enums\SocialPlatform;
-use App\Models\Integration;
+use App\Models\ComposioConnection;
 use App\Models\Organization;
 use App\Models\SocialAccount;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -60,7 +60,7 @@ class SocialAccountFactory extends Factory
             'external_id' => (string) fake()->unique()->numerify('1784##########'),
             'secret' => null,
             // A closure, so it sees the organization already resolved.
-            'integration_id' => fn (array $attributes): int => Integration::factory()->create(['organization_id' => $attributes['organization_id']])->id,
+            'composio_connection_id' => fn (array $attributes): int => ComposioConnection::factory()->create(['organization_id' => $attributes['organization_id']])->id,
         ]);
     }
 }

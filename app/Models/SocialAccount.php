@@ -26,7 +26,7 @@ use RuntimeException;
  * may use it is a grant on the pivot.
  *
  * `secret` is the credential itself: the access token on LinkedIn, the app
- * password on Bluesky. Instagram goes through Composio (`integration`,
+ * password on Bluesky. Instagram goes through Composio (`composioConnection`,
  * Composio holds the token), through the organization's own Meta app
  * (`platformApp`, the token is `secret`), or both: the Meta app wins
  * whenever its token is alive (`publishesThroughOwnApp()`), Composio is the
@@ -39,7 +39,7 @@ use RuntimeException;
  *
  * @property int $id
  * @property int $organization_id
- * @property int|null $integration_id
+ * @property int|null $composio_connection_id
  * @property int|null $platform_app_id
  * @property SocialPlatform $platform
  * @property string|null $handle
@@ -59,7 +59,7 @@ use RuntimeException;
  * @property Carbon|null $updated_at
  */
 #[Fillable([
-    'organization_id', 'integration_id', 'platform_app_id', 'platform', 'handle', 'external_id', 'display_name',
+    'organization_id', 'composio_connection_id', 'platform_app_id', 'platform', 'handle', 'external_id', 'display_name',
     'secret', 'refresh_secret', 'secret_expires_at', 'refresh_secret_expires_at',
     'stats_secret', 'stats_refresh_secret', 'stats_secret_expires_at', 'stats_refresh_secret_expires_at',
     'status', 'last_error',
@@ -81,11 +81,11 @@ class SocialAccount extends Model
     /**
      * The Composio connection an Instagram account goes through.
      *
-     * @return BelongsTo<Integration, $this>
+     * @return BelongsTo<ComposioConnection, $this>
      */
-    public function integration(): BelongsTo
+    public function composioConnection(): BelongsTo
     {
-        return $this->belongsTo(Integration::class);
+        return $this->belongsTo(ComposioConnection::class);
     }
 
     /**

@@ -330,7 +330,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
                 ->whereIn('connection', ['meta', 'composio'])
                 ->name('instagram.connections.destroy');
 
-            // The organization's own Composio key, every integration's way in.
+            // The organization's own Composio key, every Composio connection's way in.
             Route::get('composio', [ComposioKeyController::class, 'edit'])->name('composio.edit');
             Route::put('composio', [ComposioKeyController::class, 'update'])->name('composio.update');
             Route::delete('composio', [ComposioKeyController::class, 'destroy'])->name('composio.destroy');
@@ -339,8 +339,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
              * Any `ComposioToolkit` connects on Composio's hosted page, then comes
              * back to the one shared `oauth.composio.callback`.
              */
-            Route::get('integrations/{toolkit}/connect', [ComposioOAuthController::class, 'redirect'])
-                ->name('integrations.connect');
+            Route::get('composio/{toolkit}/connect', [ComposioOAuthController::class, 'redirect'])
+                ->name('composio.connect');
             // An organization's own OAuth apps: the ad networks' are listed
             // on their page, the Meta app for Instagram on Instagram's.
             Route::get('ad-platforms', [PlatformAppController::class, 'index'])->name('ad-platforms.index');

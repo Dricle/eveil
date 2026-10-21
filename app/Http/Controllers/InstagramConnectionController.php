@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Actions\Composio\DisconnectIntegration;
+use App\Actions\Composio\DisconnectComposioConnection;
 use App\Actions\DropInstagramMetaConnection;
 use App\Enums\SocialPlatform;
 use App\Models\SocialAccount;
@@ -17,7 +17,7 @@ use Illuminate\Http\Request;
  */
 class InstagramConnectionController extends Controller
 {
-    public function destroy(Request $request, DropInstagramMetaConnection $dropMeta, DisconnectIntegration $disconnect, int $socialAccount, string $connection): RedirectResponse
+    public function destroy(Request $request, DropInstagramMetaConnection $dropMeta, DisconnectComposioConnection $disconnect, int $socialAccount, string $connection): RedirectResponse
     {
         $account = SocialAccount::query()->ownedBy($request->user())
             ->where('platform', SocialPlatform::Instagram)
@@ -27,8 +27,8 @@ class InstagramConnectionController extends Controller
             $dropMeta->handle($account);
         }
 
-        if ($connection === 'composio' && $account->integration !== null) {
-            $disconnect->handle($account->integration);
+        if ($connection === 'composio' && $account->composioConnection !== null) {
+            $disconnect->handle($account->composioConnection);
         }
 
         return back();

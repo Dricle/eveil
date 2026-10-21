@@ -2,7 +2,7 @@
 
 namespace App\Services\Instagram;
 
-use App\Models\Integration;
+use App\Models\ComposioConnection;
 use App\Models\SocialAccount;
 use App\Models\SocialPost;
 use App\Services\Composio\ComposioClient;
@@ -35,9 +35,9 @@ class InstagramClient implements SocialClientInterface
      *
      * @return array{id: string, username: string, name: string}
      */
-    public function profile(Integration $integration): array
+    public function profile(ComposioConnection $connection): array
     {
-        $profile = $this->composio->execute($integration, 'INSTAGRAM_GET_USER_INFO', ['fields' => 'user_id,id,username,name']);
+        $profile = $this->composio->execute($connection, 'INSTAGRAM_GET_USER_INFO', ['fields' => 'user_id,id,username,name']);
 
         // `user_id` is the account's own id whichever app asks, `id` only
         // Composio's app's view of it: see `InstagramGraphApi::profile()`.
@@ -67,17 +67,17 @@ class InstagramClient implements SocialClientInterface
             return $this->graph->publish($account, $text, $image);
         }
 
-        $integration = $this->integration($account);
+        $connection = $this->composioConnection($account);
 
-        $file = $this->composio->uploadFile($integration, 'INSTAGRAM_POST_IG_USER_MEDIA', $image->file_name, 'image/jpeg', (string) stream_get_contents($image->stream()));
+        $file = $this->composio->uploadFile($connection, 'INSTAGRAM_POST_IG_USER_MEDIA', $image->file_name, 'image/jpeg', (string) stream_get_contents($image->stream()));
 
-        $container = $this->composio->execute($integration, 'INSTAGRAM_POST_IG_USER_MEDIA', [
+        $container = $this->composio->execute($connection, 'INSTAGRAM_POST_IG_USER_MEDIA', [
             'ig_user_id' => $account->external_id,
             'caption' => $text,
             'image_file' => $file,
         ]);
 
-        $media = $this->composio->execute($integration, 'INSTAGRAM_POST_IG_USER_MEDIA_PUBLISH', [
+        $media = $this->composio->execute($connection, 'INSTAGRAM_POST_IG_USER_MEDIA_PUBLISH', [
             'ig_user_id' => $account->external_id,
             'creation_id' => (string) $this->field($container, 'id'),
         ]);
@@ -88,7 +88,7 @@ class InstagramClient implements SocialClientInterface
             throw new RuntimeException('Instagram published the post but returned no id.');
         }
 
-        return ['uri' => $mediaId, 'url' => $this->permalink($account, $integration, $mediaId)];
+        return ['uri' => $mediaId, 'url' => $this->permalink($account, $connection, $mediaId)];
     }
 
     /**
@@ -117,11 +117,11 @@ class InstagramClient implements SocialClientInterface
                     continue;
                 }
 
-                if ($account->integration === null) {
+                if ($account->composioConnection === null) {
                     continue;
                 }
 
-                $media = $this->composio->execute($account->integration, 'INSTAGRAM_GET_IG_MEDIA', [
+                $media = $this->composio->execute($account->composioConnection, 'INSTAGRAM_GET_IG_MEDIA', [
                     'ig_media_id' => $post->external_id,
                     'fields' => 'like_count',
                 ]);
@@ -135,19 +135,19 @@ class InstagramClient implements SocialClientInterface
         return $counts;
     }
 
-    private function integration(SocialAccount $account): Integration
+    private function composioConnection(SocialAccount $account): ComposioConnection
     {
-        return $account->integration ?? throw new RuntimeException('This Instagram account has no working connection: connect it again, through Composio or your own Meta app.');
+        return $account->composioConnection ?? throw new RuntimeException('This Instagram account has no working connection: connect it again, through Composio or your own Meta app.');
     }
 
     /**
      * The post's public link. Best effort: the profile when Instagram does not
      * give it back, rather than failing a post that did go out.
      */
-    private function permalink(SocialAccount $account, Integration $integration, string $mediaId): string
+    private function permalink(SocialAccount $account, ComposioConnection $connection, string $mediaId): string
     {
         try {
-            $media = $this->composio->execute($integration, 'INSTAGRAM_GET_IG_MEDIA', [
+            $media = $this->composio->execute($connection, 'INSTAGRAM_GET_IG_MEDIA', [
                 'ig_media_id' => $mediaId,
                 'fields' => 'permalink',
             ]);

@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\ComposioConnectionStatus;
 use App\Enums\ComposioToolkit;
-use App\Enums\IntegrationStatus;
-use Database\Factories\IntegrationFactory;
+use Database\Factories\ComposioConnectionFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -17,7 +17,7 @@ use Illuminate\Support\Carbon;
  * Composio holds the token; this row holds the reference to it
  * (`connected_account_id`) and its state. Whatever a service becomes in
  * Eveil hangs off this row: an Instagram account is a `SocialAccount` with
- * its `integration_id`, gone when the connection is.
+ * its `composio_connection_id`, gone when the connection is.
  *
  * Organization-owned, like a mailbox; never project-scoped, so it is always
  * reached through its organization or what hangs off it.
@@ -26,15 +26,15 @@ use Illuminate\Support\Carbon;
  * @property int $organization_id
  * @property ComposioToolkit $toolkit
  * @property string $connected_account_id
- * @property IntegrationStatus $status
+ * @property ComposioConnectionStatus $status
  * @property string|null $last_error
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
 #[Fillable(['organization_id', 'toolkit', 'connected_account_id', 'status', 'last_error'])]
-class Integration extends Model
+class ComposioConnection extends Model
 {
-    /** @use HasFactory<IntegrationFactory> */
+    /** @use HasFactory<ComposioConnectionFactory> */
     use HasFactory;
 
     /**
@@ -60,7 +60,7 @@ class Integration extends Model
     {
         return [
             'toolkit' => ComposioToolkit::class,
-            'status' => IntegrationStatus::class,
+            'status' => ComposioConnectionStatus::class,
         ];
     }
 }

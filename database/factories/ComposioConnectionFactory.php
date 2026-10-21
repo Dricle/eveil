@@ -2,18 +2,18 @@
 
 namespace Database\Factories;
 
+use App\Enums\ComposioConnectionStatus;
 use App\Enums\ComposioToolkit;
-use App\Enums\IntegrationStatus;
-use App\Models\Integration;
+use App\Models\ComposioConnection;
 use App\Models\Organization;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<Integration>
+ * @extends Factory<ComposioConnection>
  */
-class IntegrationFactory extends Factory
+class ComposioConnectionFactory extends Factory
 {
-    protected $model = Integration::class;
+    protected $model = ComposioConnection::class;
 
     /**
      * @return array<string, mixed>
@@ -24,7 +24,7 @@ class IntegrationFactory extends Factory
             'organization_id' => Organization::factory(),
             'toolkit' => ComposioToolkit::Instagram,
             'connected_account_id' => 'ca_'.fake()->unique()->regexify('[A-Za-z0-9]{12}'),
-            'status' => IntegrationStatus::Active,
+            'status' => ComposioConnectionStatus::Active,
         ];
     }
 }

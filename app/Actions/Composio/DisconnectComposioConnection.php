@@ -2,7 +2,7 @@
 
 namespace App\Actions\Composio;
 
-use App\Models\Integration;
+use App\Models\ComposioConnection;
 use App\Services\Composio\ComposioClient;
 use Throwable;
 
@@ -13,20 +13,20 @@ use Throwable;
  * that app alone. Disconnecting in Eveil must not leave a working token
  * behind.
  */
-class DisconnectIntegration
+class DisconnectComposioConnection
 {
     public function __construct(private ComposioClient $composio) {}
 
-    public function handle(Integration $integration): void
+    public function handle(ComposioConnection $connection): void
     {
         try {
-            $this->composio->deleteConnection($integration);
+            $this->composio->deleteConnection($connection);
         } catch (Throwable) {
             // Already gone on Composio's side, or unreachable: the row goes
             // either way, and the user can still revoke from the service.
         }
 
-        $integration->socialAccounts()->whereNull('platform_app_id')->delete();
-        $integration->delete();
+        $connection->socialAccounts()->whereNull('platform_app_id')->delete();
+        $connection->delete();
     }
 }

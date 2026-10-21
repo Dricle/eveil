@@ -3,7 +3,7 @@
 namespace App\Services\Composio;
 
 use App\Enums\ComposioToolkit;
-use App\Models\Integration;
+use App\Models\ComposioConnection;
 use App\Models\Organization;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
@@ -53,9 +53,9 @@ class ComposioClient
      * `ACTIVE` once the user authorized, something else (`INITIATED`,
      * `FAILED`, `EXPIRED`) otherwise.
      */
-    public function connectionStatus(Integration $integration): string
+    public function connectionStatus(ComposioConnection $connection): string
     {
-        $response = $this->request($integration->organization)->get(self::API."/connected_accounts/{$integration->connected_account_id}");
+        $response = $this->request($connection->organization)->get(self::API."/connected_accounts/{$connection->connected_account_id}");
 
         $this->ensureSuccessful($response->successful(), $response->status(), $response->body());
 
@@ -66,9 +66,9 @@ class ComposioClient
      * Revokes the connection on Composio's side. Best effort: an account
      * already gone there is exactly what the caller wanted.
      */
-    public function deleteConnection(Integration $integration): void
+    public function deleteConnection(ComposioConnection $connection): void
     {
-        $this->request($integration->organization)->delete(self::API."/connected_accounts/{$integration->connected_account_id}");
+        $this->request($connection->organization)->delete(self::API."/connected_accounts/{$connection->connected_account_id}");
     }
 
     /**
@@ -77,11 +77,11 @@ class ComposioClient
      * @param  array<string, mixed>  $arguments
      * @return array<string, mixed>
      */
-    public function execute(Integration $integration, string $tool, array $arguments): array
+    public function execute(ComposioConnection $connection, string $tool, array $arguments): array
     {
-        $response = $this->request($integration->organization)->post(self::API."/tools/execute/{$tool}", [
-            'connected_account_id' => $integration->connected_account_id,
-            'user_id' => $this->userId($integration->organization_id),
+        $response = $this->request($connection->organization)->post(self::API."/tools/execute/{$tool}", [
+            'connected_account_id' => $connection->connected_account_id,
+            'user_id' => $this->userId($connection->organization_id),
             'arguments' => $arguments,
         ]);
 
@@ -103,10 +103,10 @@ class ComposioClient
      *
      * @return array{name: string, mimetype: string, s3key: string}
      */
-    public function uploadFile(Integration $integration, string $tool, string $filename, string $mimetype, string $bytes): array
+    public function uploadFile(ComposioConnection $connection, string $tool, string $filename, string $mimetype, string $bytes): array
     {
-        $response = $this->request($integration->organization)->post(self::API.'/files/upload/request', [
-            'toolkit_slug' => $integration->toolkit->value,
+        $response = $this->request($connection->organization)->post(self::API.'/files/upload/request', [
+            'toolkit_slug' => $connection->toolkit->value,
             'tool_slug' => $tool,
             'filename' => $filename,
             'mimetype' => $mimetype,

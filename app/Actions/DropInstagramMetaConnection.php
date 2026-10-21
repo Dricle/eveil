@@ -13,7 +13,7 @@ class DropInstagramMetaConnection
 {
     public function handle(SocialAccount $account): void
     {
-        if ($account->integration_id === null) {
+        if ($account->composio_connection_id === null) {
             $account->delete();
 
             return;

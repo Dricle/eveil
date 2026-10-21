@@ -31,7 +31,7 @@ use Laravel\Sanctum\HasApiTokens;
  * use-statement sits in.
  *
  * `composio_api_key` is the organization's own Composio PROJECT key, the one
- * every service it connects through Composio goes through (`Integration`).
+ * every service it connects through Composio goes through (`ComposioConnection`).
  * Encrypted with CREDENTIALS_KEY and hidden: write-only from the UI.
  *
  * @property int $id
@@ -101,11 +101,11 @@ class Organization extends Model
     /**
      * The services it connected through Composio.
      *
-     * @return HasMany<Integration, $this>
+     * @return HasMany<ComposioConnection, $this>
      */
-    public function integrations(): HasMany
+    public function composioConnections(): HasMany
     {
-        return $this->hasMany(Integration::class);
+        return $this->hasMany(ComposioConnection::class);
     }
 
     /**

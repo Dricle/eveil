@@ -27,14 +27,14 @@ return new class extends Migration
         });
 
         Schema::table('social_accounts', function (Blueprint $table) {
-            // An Instagram account goes through Composio (`integration_id`,
+            // An Instagram account goes through Composio (`composio_connection_id`,
             // Composio holds the token), through the organization's own Meta
             // app (`platform_app_id`, the token is `secret`), or both, the
             // Meta app first. Losing one keeps the account on the other: so
             // null on delete, and the code removes an account left with
             // neither.
-            $table->foreignId('integration_id')->nullable()->after('organization_id')->constrained()->nullOnDelete();
-            $table->foreignId('platform_app_id')->nullable()->after('integration_id')->constrained()->nullOnDelete();
+            $table->foreignId('composio_connection_id')->nullable()->after('organization_id')->constrained()->nullOnDelete();
+            $table->foreignId('platform_app_id')->nullable()->after('composio_connection_id')->constrained()->nullOnDelete();
             $table->text('secret')->nullable()->change();
         });
 
@@ -91,7 +91,7 @@ return new class extends Migration
 
         Schema::table('social_accounts', function (Blueprint $table) {
             $table->dropConstrainedForeignId('platform_app_id');
-            $table->dropConstrainedForeignId('integration_id');
+            $table->dropConstrainedForeignId('composio_connection_id');
             $table->text('secret')->nullable(false)->change();
         });
 

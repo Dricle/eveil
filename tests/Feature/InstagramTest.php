@@ -9,15 +9,15 @@ use App\Ai\Tools\SelectSocialPostImage;
 use App\Enums\AgentRunStatus;
 use App\Enums\AutonomyLevel;
 use App\Enums\BrandAssetKind;
+use App\Enums\ComposioConnectionStatus;
 use App\Enums\ImageFormat;
-use App\Enums\IntegrationStatus;
 use App\Enums\PlatformAppKind;
 use App\Enums\SocialPlatform;
 use App\Enums\SocialPostStatus;
 use App\Jobs\GenerateSocialPost;
 use App\Jobs\GenerateSocialPostImage;
 use App\Models\AgentRun;
-use App\Models\Integration;
+use App\Models\ComposioConnection;
 use App\Models\Organization;
 use App\Models\PlatformApp;
 use App\Models\Project;
@@ -120,13 +120,13 @@ it('keeps the organization\'s Composio key encrypted and never sends it back', f
 it('disconnects, with the old key, what a new key cannot reach', function () {
     [$user, $project] = instagramSetup();
     $account = SocialAccount::factory()->instagram()->create(['organization_id' => $project->organization_id]);
-    $account->integration->update(['connected_account_id' => 'ca_old']);
+    $account->composioConnection->update(['connected_account_id' => 'ca_old']);
     Http::preventStrayRequests();
     Http::fake([COMPOSIO.'/connected_accounts/ca_old' => Http::response()]);
 
     $this->actingAs($user)->put(route('settings.composio.update'), ['api_key' => 'ak_another-key']);
 
-    expect(Integration::count())->toBe(0)
+    expect(ComposioConnection::count())->toBe(0)
         ->and($account->fresh())->toBeNull()
         ->and($project->organization->fresh()->composio_api_key)->toBe('ak_another-key');
     Http::assertSent(fn (Request $request): bool => $request->method() === 'DELETE' && $request->header('x-api-key') === ['ak_composio-test-key']);
@@ -139,7 +139,7 @@ it('keeps every connection when the same key is saved again', function () {
 
     $this->actingAs($user)->put(route('settings.composio.update'), ['api_key' => 'ak_composio-test-key']);
 
-    expect(Integration::count())->toBe(1);
+    expect(ComposioConnection::count())->toBe(1);
 });
 
 it('cannot reach another organization\'s connections through the key screen', function () {
@@ -162,7 +162,7 @@ it('connects an Instagram account through Composio and grants it to this project
         COMPOSIO.'/tools/execute/INSTAGRAM_GET_USER_INFO' => Http::response(['successful' => true, 'data' => ['id' => '17841', 'username' => 'acme', 'name' => 'Acme']]),
     ]);
 
-    $this->actingAs($user)->get(route('settings.integrations.connect', 'instagram'))
+    $this->actingAs($user)->get(route('settings.composio.connect', 'instagram'))
         ->assertRedirect('https://connect.composio.test/link/abc');
 
     $this->get(route('oauth.composio.callback'))
@@ -173,9 +173,9 @@ it('connects an Instagram account through Composio and grants it to this project
         ->external_id->toBe('17841')
         ->handle->toBe('acme')
         ->secret->toBeNull()
-        ->and(SocialAccount::sole()->integration)
+        ->and(SocialAccount::sole()->composioConnection)
         ->connected_account_id->toBe('ca_new')
-        ->status->toBe(IntegrationStatus::Active)
+        ->status->toBe(ComposioConnectionStatus::Active)
         ->and(SocialAccount::sole()->projects->pluck('id')->all())->toBe([$project->id]);
 
     Http::assertSent(fn (Request $request): bool => str_ends_with($request->url(), '/connected_accounts/link')
@@ -192,13 +192,13 @@ it('stores nothing when the authorization was not completed', function () {
         COMPOSIO.'/connected_accounts/ca_new' => Http::response(['status' => 'FAILED']),
     ]);
 
-    $this->actingAs($user)->get(route('settings.integrations.connect', 'instagram'));
+    $this->actingAs($user)->get(route('settings.composio.connect', 'instagram'));
 
     $this->get(route('oauth.composio.callback'))
         ->assertRedirect(route('settings.instagram.index', ['project' => $project]));
 
     expect(SocialAccount::count())->toBe(0)
-        ->and(Integration::count())->toBe(0);
+        ->and(ComposioConnection::count())->toBe(0);
 });
 
 it('ignores a callback this session never started', function () {
@@ -266,7 +266,7 @@ it('publishes an approved Instagram draft with the picked image as a file', func
 
     Http::assertSent(fn (Request $request): bool => str_starts_with($request->url(), 'https://storage.composio.test/') && $request->body() === 'jpeg-bytes');
     Http::assertSent(fn (Request $request): bool => str_ends_with($request->url(), '/INSTAGRAM_POST_IG_USER_MEDIA')
-        && $request['connected_account_id'] === $account->integration->connected_account_id
+        && $request['connected_account_id'] === $account->composioConnection->connected_account_id
         && $request['arguments'] === [
             'ig_user_id' => '17841',
             'caption' => 'A caption.',
@@ -362,14 +362,14 @@ it('picks which image a draft is published with, among its own only', function (
 it('revokes the Composio connection when an Instagram account is disconnected', function () {
     [$user, $project] = instagramSetup();
     $account = SocialAccount::factory()->instagram()->create(['organization_id' => $project->organization_id]);
-    $account->integration->update(['connected_account_id' => 'ca_old']);
+    $account->composioConnection->update(['connected_account_id' => 'ca_old']);
     Http::preventStrayRequests();
     Http::fake([COMPOSIO.'/connected_accounts/ca_old' => Http::response()]);
 
     $this->actingAs($user)->delete(route('settings.social-accounts.destroy', $account));
 
     expect($account->fresh())->toBeNull()
-        ->and(Integration::count())->toBe(0);
+        ->and(ComposioConnection::count())->toBe(0);
     Http::assertSent(fn (Request $request): bool => $request->method() === 'DELETE' && str_ends_with($request->url(), '/connected_accounts/ca_old'));
 });
 
@@ -388,7 +388,7 @@ it('deletes a draft\'s image files along with the draft', function () {
 it('moves a reconnected Instagram account onto its new connection and revokes the old one', function () {
     [$user, $project] = instagramSetup();
     $account = SocialAccount::factory()->instagram()->create(['organization_id' => $project->organization_id, 'external_id' => '17841']);
-    $account->integration->update(['connected_account_id' => 'ca_old']);
+    $account->composioConnection->update(['connected_account_id' => 'ca_old']);
     Http::preventStrayRequests();
     Http::fake([
         COMPOSIO.'/auth_configs' => Http::response(['auth_config' => ['id' => 'ac_1']], 201),
@@ -398,12 +398,12 @@ it('moves a reconnected Instagram account onto its new connection and revokes th
         COMPOSIO.'/tools/execute/INSTAGRAM_GET_USER_INFO' => Http::response(['successful' => true, 'data' => ['id' => '17841', 'username' => 'acme', 'name' => 'Acme']]),
     ]);
 
-    $this->actingAs($user)->get(route('settings.integrations.connect', 'instagram'));
+    $this->actingAs($user)->get(route('settings.composio.connect', 'instagram'));
     $this->get(route('oauth.composio.callback'));
 
     expect(SocialAccount::sole()->is($account))->toBeTrue()
-        ->and(SocialAccount::sole()->integration->connected_account_id)->toBe('ca_new')
-        ->and(Integration::count())->toBe(1);
+        ->and(SocialAccount::sole()->composioConnection->connected_account_id)->toBe('ca_new')
+        ->and(ComposioConnection::count())->toBe(1);
     Http::assertSent(fn (Request $request): bool => $request->method() === 'DELETE' && str_ends_with($request->url(), '/connected_accounts/ca_old'));
 });
 
@@ -438,7 +438,7 @@ function instagramMetaAccount(Project $project, PlatformApp $app, bool $composio
     $account->projects()->attach($project);
 
     if (! $composio) {
-        $account->integration->delete();
+        $account->composioConnection->delete();
     }
 
     return $account->fresh();
@@ -484,7 +484,7 @@ it('connects through the Meta app on top of Composio, and says the Meta app now 
     expect($account->fresh())
         ->platform_app_id->toBe($app->id)
         ->secret->toBe('long-token')
-        ->integration_id->not->toBeNull()
+        ->composio_connection_id->not->toBeNull()
         ->publishesThroughOwnApp()->toBeTrue();
 
     Http::assertSent(fn (Request $request): bool => str_contains($request->url(), 'api.instagram.com') && $request['code'] === 'the-code');
@@ -546,14 +546,14 @@ it('falls back on Composio once the Meta app token has expired', function () {
 it('keeps the account on the other way in when one is dropped', function () {
     [$user, $project] = instagramSetup();
     $account = instagramMetaAccount($project, instagramMetaApp($project));
-    $account->integration->update(['connected_account_id' => 'ca_old']);
+    $account->composioConnection->update(['connected_account_id' => 'ca_old']);
     Http::preventStrayRequests();
     Http::fake([COMPOSIO.'/connected_accounts/ca_old' => Http::response()]);
 
     $this->actingAs($user)->delete(route('settings.instagram.connections.destroy', [$account, 'composio']));
 
     expect($account->fresh())
-        ->integration_id->toBeNull()
+        ->composio_connection_id->toBeNull()
         ->publishesThroughOwnApp()->toBeTrue();
 
     $this->actingAs($user)->delete(route('settings.instagram.connections.destroy', [$account, 'meta']));
@@ -566,26 +566,26 @@ it('falls an account back on Composio when the Meta app is removed, and drops on
     $app = instagramMetaApp($project);
     $both = instagramMetaAccount($project, $app);
     $metaOnly = SocialAccount::factory()->instagram()->create(['organization_id' => $project->organization_id, 'platform_app_id' => $app->id, 'secret' => 'token']);
-    $metaOnly->integration->delete();
+    $metaOnly->composioConnection->delete();
 
     $this->actingAs($user)->delete(route('settings.platform-apps.destroy', 'instagram'));
 
     expect(PlatformApp::count())->toBe(0)
-        ->and($both->fresh())->secret->toBeNull()->integration_id->not->toBeNull()
+        ->and($both->fresh())->secret->toBeNull()->composio_connection_id->not->toBeNull()
         ->and($metaOnly->fresh())->toBeNull();
 });
 
 it('keeps Meta app accounts when the Composio key goes', function () {
     [$user, $project] = instagramSetup();
     $account = instagramMetaAccount($project, instagramMetaApp($project));
-    $account->integration->update(['connected_account_id' => 'ca_old']);
+    $account->composioConnection->update(['connected_account_id' => 'ca_old']);
     Http::preventStrayRequests();
     Http::fake([COMPOSIO.'/connected_accounts/ca_old' => Http::response()]);
 
     $this->actingAs($user)->delete(route('settings.composio.destroy'));
 
     expect($account->fresh())
-        ->integration_id->toBeNull()
+        ->composio_connection_id->toBeNull()
         ->publishesThroughOwnApp()->toBeTrue();
 });
 
@@ -732,8 +732,8 @@ it('keeps Evie away from another project\'s draft images', function () {
 
 it('clears only stale Composio attempts when someone starts a connection', function () {
     [$user, $project] = instagramSetup();
-    $teammates = Integration::factory()->create(['organization_id' => $project->organization_id, 'status' => IntegrationStatus::Pending]);
-    $stale = Integration::factory()->create(['organization_id' => $project->organization_id, 'status' => IntegrationStatus::Pending, 'connected_account_id' => 'ca_stale', 'created_at' => now()->subHours(2)]);
+    $teammates = ComposioConnection::factory()->create(['organization_id' => $project->organization_id, 'status' => ComposioConnectionStatus::Pending]);
+    $stale = ComposioConnection::factory()->create(['organization_id' => $project->organization_id, 'status' => ComposioConnectionStatus::Pending, 'connected_account_id' => 'ca_stale', 'created_at' => now()->subHours(2)]);
     Http::preventStrayRequests();
     Http::fake([
         COMPOSIO.'/connected_accounts/ca_stale' => Http::response(),
@@ -741,7 +741,7 @@ it('clears only stale Composio attempts when someone starts a connection', funct
         COMPOSIO.'/connected_accounts/link' => Http::response(['redirect_url' => 'https://connect.composio.test/link/abc', 'connected_account_id' => 'ca_new'], 201),
     ]);
 
-    $this->actingAs($user)->get(route('settings.integrations.connect', 'instagram'));
+    $this->actingAs($user)->get(route('settings.composio.connect', 'instagram'));
 
     expect($teammates->fresh())->not->toBeNull()
         ->and($stale->fresh())->toBeNull();

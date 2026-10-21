@@ -4,7 +4,7 @@ namespace App\Actions\Composio;
 
 use App\Enums\SocialAccountStatus;
 use App\Enums\SocialPlatform;
-use App\Models\Integration;
+use App\Models\ComposioConnection;
 use App\Models\Project;
 use App\Models\SocialAccount;
 use App\Services\Instagram\InstagramClient;
@@ -20,22 +20,22 @@ use App\Services\Instagram\InstagramClient;
  */
 class ConnectInstagramAccount
 {
-    public function __construct(private InstagramClient $instagram, private DisconnectIntegration $disconnect) {}
+    public function __construct(private InstagramClient $instagram, private DisconnectComposioConnection $disconnect) {}
 
-    public function handle(Integration $integration, Project $project): string
+    public function handle(ComposioConnection $connection, Project $project): string
     {
-        $profile = $this->instagram->profile($integration);
+        $profile = $this->instagram->profile($connection);
 
         $account = SocialAccount::query()->firstOrNew([
-            'organization_id' => $integration->organization_id,
+            'organization_id' => $connection->organization_id,
             'platform' => SocialPlatform::Instagram,
             'external_id' => $profile['id'],
         ]);
 
-        $previous = $account->integration;
+        $previous = $account->composioConnection;
 
         $account->fill([
-            'integration_id' => $integration->id,
+            'composio_connection_id' => $connection->id,
             'handle' => $profile['username'],
             'display_name' => $profile['name'],
             'status' => SocialAccountStatus::Active,
@@ -45,7 +45,7 @@ class ConnectInstagramAccount
         // Moved first, dropped after: the account hangs off its connection,
         // and dropping the old one while it still pointed there would take
         // the account with it.
-        if ($previous !== null && $previous->isNot($integration)) {
+        if ($previous !== null && $previous->isNot($connection)) {
             $this->disconnect->handle($previous);
         }
 

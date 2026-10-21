@@ -5,7 +5,6 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import SettingsLayout from '@/layouts/SettingsLayout.vue'
 import composioRoutes from '@/routes/settings/composio'
 import instagramRoutes from '@/routes/settings/instagram'
-import integrationRoutes from '@/routes/settings/integrations'
 import platformAppRoutes from '@/routes/settings/platform-apps'
 import socialAccountRoutes from '@/routes/settings/social-accounts'
 import type { Project, SocialAccount } from '@/types'
@@ -256,7 +255,7 @@ const STATUS = {
 
             <!-- A real redirect to Composio's page, not an Inertia visit. -->
             <UButton
-                :href="integrationRoutes.connect.url({ project: slug, toolkit: 'instagram' })"
+                :href="composioRoutes.connect.url({ project: slug, toolkit: 'instagram' })"
                 external
                 icon="i-lucide-plug"
                 label="Connect through Composio"

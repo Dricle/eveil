@@ -1,11 +1,14 @@
 <?php
 
+use App\Actions\AddSocialPostImage;
 use App\Ai\Agents\ImageGenerator;
 use App\Ai\Agents\SocialPostWriter;
 use App\Ai\Tools\RequestSocialPostImage;
 use App\Ai\Tools\SelectSocialPostImage;
 use App\Enums\AgentRunStatus;
 use App\Enums\AutonomyLevel;
+use App\Enums\BrandAssetKind;
+use App\Enums\ImageFormat;
 use App\Enums\IntegrationStatus;
 use App\Enums\PlatformAppKind;
 use App\Enums\SocialPlatform;
@@ -24,6 +27,7 @@ use App\Support\CurrentProject;
 use App\Support\SocialPostProgress;
 use Carbon\CarbonInterface;
 use Illuminate\Http\Client\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
@@ -740,4 +744,147 @@ it('clears only stale Composio attempts when someone starts a connection', funct
 
     expect($teammates->fresh())->not->toBeNull()
         ->and($stale->fresh())->toBeNull();
+});
+
+it('draws each format at the closest ratio models know, then crops it to the exact one', function (ImageFormat $format, int $drawnWidth, int $drawnHeight, int $width, int $height) {
+    $image = imagecreatetruecolor($drawnWidth, $drawnHeight);
+    ob_start();
+    imagepng($image);
+    Image::fake([base64_encode((string) ob_get_clean())]);
+
+    $jpeg = (new ImageGenerator(Project::factory()->create(), 'an ad', 'A workbench at dawn.', format: $format))->generate();
+
+    [$deliveredWidth, $deliveredHeight] = getimagesizefromstring($jpeg) ?: [0, 0];
+
+    expect([$deliveredWidth, $deliveredHeight])->toBe([$width, $height]);
+    Image::assertGenerated(fn (ImagePrompt $prompt): bool => $prompt->size === $format->drawnAt());
+})->with([
+    'square' => [ImageFormat::Square, 300, 300, 300, 300],
+    'portrait 4:5' => [ImageFormat::Portrait, 200, 300, 200, 250],
+    'story 9:16' => [ImageFormat::Story, 200, 300, 169, 300],
+    'landscape 1.91:1' => [ImageFormat::Landscape, 300, 200, 300, 157],
+    'wide 16:9' => [ImageFormat::Wide, 300, 200, 300, 169],
+]);
+
+it('lets the user\'s own instructions put text in the image', function () {
+    [, $project] = instagramSetup();
+    $project->update(['instagram_prompt_instructions' => 'Always show our address, acme.test, at the bottom.']);
+    Storage::fake();
+    $post = SocialPost::factory()->instagram()->create(['project_id' => $project->id, 'image_brief' => 'A workbench at dawn.']);
+    Image::fake([instagramPng()]);
+
+    app(AddSocialPostImage::class)->handle($post->fresh());
+
+    Image::assertGenerated(fn (ImagePrompt $prompt): bool => $prompt->contains('Always show our address, acme.test')
+        && $prompt->contains('Text only when the brief or the user\'s own instructions ask for it'));
+});
+
+/**
+ * A small PNG upload, the kind of file a visual identity library holds.
+ */
+function brandFile(string $name = 'asset.png'): UploadedFile
+{
+    $image = imagecreatetruecolor(100, 100);
+    ob_start();
+    imagepng($image);
+
+    return UploadedFile::fake()->createWithContent($name, (string) ob_get_clean());
+}
+
+function brandAsset(Project $project, BrandAssetKind $kind, string $description): Media
+{
+    return $project->addMedia(brandFile())
+        ->withCustomProperties(['kind' => $kind->value, 'description' => $description])
+        ->toMediaCollection('brand_assets');
+}
+
+it('adds an image to the visual identity library, with its rights confirmed', function () {
+    [$user, $project] = instagramSetup();
+    Storage::fake();
+
+    $this->actingAs($user)->post(route('settings.brand-assets.store'), ['file' => brandFile(), 'kind' => 'illustration', 'description' => 'The mascot waving', 'rights' => '1'])
+        ->assertSessionHasNoErrors();
+
+    $asset = $project->fresh()->brandAssets(BrandAssetKind::Illustration)->sole();
+
+    expect($asset->getCustomProperty('description'))->toBe('The mascot waving')
+        ->and($asset->getCustomProperty('rights_confirmed_by'))->toBe($user->id)
+        ->and($asset->getPathRelativeToRoot())->toStartWith("{$project->organization_id}/branding/");
+
+    $this->get(route('settings.brand-assets.show', $asset->id))->assertOk();
+});
+
+it('refuses an image without the rights confirmed, or an SVG', function () {
+    [$user, $project] = instagramSetup();
+    Storage::fake();
+
+    $this->actingAs($user)->post(route('settings.brand-assets.store'), ['file' => brandFile(), 'kind' => 'example'])
+        ->assertSessionHasErrors('rights');
+    $this->actingAs($user)->post(route('settings.brand-assets.store'), ['file' => UploadedFile::fake()->createWithContent('logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"/>'), 'kind' => 'logo', 'rights' => '1'])
+        ->assertSessionHasErrors('file');
+
+    expect($project->fresh()->getMedia('brand_assets'))->toHaveCount(0);
+});
+
+it('keeps one logo: a new one replaces the old', function () {
+    [$user, $project] = instagramSetup();
+    Storage::fake();
+    $old = brandAsset($project, BrandAssetKind::Logo, 'Old logo');
+
+    $this->actingAs($user)->post(route('settings.brand-assets.store'), ['file' => brandFile(), 'kind' => 'logo', 'description' => 'New logo', 'rights' => '1']);
+
+    expect(Media::find($old->id))->toBeNull()
+        ->and($project->fresh()->logo()->getCustomProperty('description'))->toBe('New logo');
+});
+
+it('never serves or removes another project\'s brand image', function () {
+    [$user] = instagramSetup();
+    Storage::fake();
+    $foreign = brandAsset(Project::factory()->create(), BrandAssetKind::Logo, 'Theirs');
+
+    $this->actingAs($user)->get(route('settings.brand-assets.show', $foreign->id))->assertNotFound();
+    $this->actingAs($user)->delete(route('settings.brand-assets.destroy', $foreign->id))->assertNotFound();
+
+    expect(Media::find($foreign->id))->not->toBeNull();
+});
+
+it('draws from the logo, the style examples and the illustrations picked for the post, in that order', function () {
+    [, $project] = instagramSetup();
+    Storage::fake();
+    brandAsset($project, BrandAssetKind::Logo, 'The full logo');
+    brandAsset($project, BrandAssetKind::Example, 'Our launch post');
+    $picked = brandAsset($project, BrandAssetKind::Illustration, 'The mascot waving');
+    brandAsset($project, BrandAssetKind::Illustration, 'The dashboard');
+    Image::fake([instagramPng()]);
+
+    app(AddSocialPostImage::class)->draw($project->fresh(), SocialPlatform::Instagram, 'A workbench at dawn.', illustrationIds: [$picked->id]);
+
+    Image::assertGenerated(fn (ImagePrompt $prompt): bool => $prompt->attachments->count() === 3
+        && $prompt->contains("1. the business's real logo")
+        && $prompt->contains('It shows: The full logo')
+        && $prompt->contains('2. an example of the brand\'s visual style')
+        && $prompt->contains('3. one of the business\'s official illustrations')
+        && $prompt->contains('It shows: The mascot waving')
+        && ! $prompt->contains('The dashboard'));
+});
+
+it('lets the writer pick the project\'s own illustrations only, and keeps them for every image of the post', function () {
+    Notification::fake();
+    Storage::fake();
+    $project = Project::factory()->create();
+    $mascot = brandAsset($project, BrandAssetKind::Illustration, 'The mascot waving');
+    $foreign = brandAsset(Project::factory()->create(), BrandAssetKind::Illustration, 'Theirs');
+    fakeInstagramWriter(['source_type' => 'knowledge_base', 'evidence' => 'e', 'body' => 'A caption.', 'image_brief' => 'A brief.', 'illustration_ids' => [$mascot->id, $foreign->id, 999999]]);
+    Image::fake([instagramPng(), instagramPng()]);
+
+    GenerateSocialPost::dispatchSync($project, SocialPlatform::Instagram);
+
+    $post = SocialPost::sole();
+
+    expect($post->image_reference_ids)->toBe([$mascot->id])
+        ->and(AgentRun::query()->where('agent', 'social-post-writer')->sole()->input['prompt'])->toContain("{$mascot->id}: The mascot waving");
+
+    app(AddSocialPostImage::class)->handle($post, 'Brighter.');
+
+    Image::assertGenerated(fn (ImagePrompt $prompt): bool => $prompt->contains('Brighter.') && $prompt->contains('It shows: The mascot waving'));
 });

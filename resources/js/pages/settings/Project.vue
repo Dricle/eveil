@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Form, Head, router } from '@inertiajs/vue3'
 import { ref, watch } from 'vue'
+import BrandAssets from '@/components/BrandAssets.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import SettingsLayout from '@/layouts/SettingsLayout.vue'
 import companyRoutes from '@/routes/settings/companies'
@@ -126,6 +127,11 @@ watch(() => props.project, (project) => {
                 </div>
             </Form>
         </UCard>
+
+        <BrandAssets
+            :assets="project.brand_assets"
+            :slug="project.slug"
+        />
 
         <UCard class="border-error/60 bg-error/5">
             <template #header>

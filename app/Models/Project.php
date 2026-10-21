@@ -5,12 +5,14 @@ namespace App\Models;
 use App\Casts\EncryptedCredential;
 use App\Enums\ArticleFrequency;
 use App\Enums\AutonomyLevel;
+use App\Enums\BrandAssetKind;
 use App\Enums\OrganizationRole;
 use App\Enums\RecommendationKind;
 use App\Enums\RecommendationStatus;
 use App\Enums\RedditScanFrequency;
 use App\Enums\SocialPostFrequency;
 use App\Models\Concerns\HasSlug;
+use App\Support\Media\StoresMediaInterface;
 use Database\Factories\ProjectFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -24,6 +26,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 /**
  * One product to promote. Everything the Sales agent touches hangs off this.
@@ -66,11 +71,49 @@ use Illuminate\Support\Collection;
  */
 #[Fillable(['organization_id', 'name', 'slug', 'url', 'github_token', 'knowledge_base', 'knowledge_base_edited_by_user', 'default_language', 'prompt_instructions', 'linkedin_prompt_instructions', 'email_autonomy_level', 'linkedin_autonomy_level', 'daily_lead_limit', 'lead_limit', 'linkedin_post_frequency', 'linkedin_next_post_at', 'reddit_scan_frequency', 'reddit_next_scan_at', 'article_frequency', 'article_next_at', 'x_post_frequency', 'x_next_post_at', 'bluesky_post_frequency', 'bluesky_next_post_at', 'bluesky_autonomy_level', 'ads_autonomy_level', 'x_prompt_instructions', 'bluesky_prompt_instructions', 'instagram_post_frequency', 'instagram_next_post_at', 'instagram_autonomy_level', 'instagram_prompt_instructions'])]
 #[Hidden(['github_token'])]
-class Project extends Model
+class Project extends Model implements HasMedia, StoresMediaInterface
 {
     /** @use HasFactory<ProjectFactory> */
-    use HasFactory, HasSlug {
+    use HasFactory, InteractsWithMedia;
+
+    use HasSlug {
         HasSlug::slugExists as private slugTakenInDatabase;
+    }
+
+    /**
+     * The project's visual identity library: its logo, its official
+     * illustrations, examples of its visual style, every one an image the
+     * user holds the rights to. Each carries its `kind` (`BrandAssetKind`)
+     * and a `description` in its custom properties. The image generator gets
+     * them as references, the source of truth for how the brand looks, so it
+     * reuses rather than invents.
+     */
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('brand_assets');
+    }
+
+    /**
+     * @return Collection<int, Media>
+     */
+    public function brandAssets(BrandAssetKind $kind): Collection
+    {
+        return $this->getMedia('brand_assets', ['kind' => $kind->value])->values();
+    }
+
+    public function logo(): ?Media
+    {
+        return $this->brandAssets(BrandAssetKind::Logo)->first();
+    }
+
+    public function mediaOrganizationId(): int
+    {
+        return $this->organization_id;
+    }
+
+    public function mediaFeature(): string
+    {
+        return 'branding';
     }
 
     /**

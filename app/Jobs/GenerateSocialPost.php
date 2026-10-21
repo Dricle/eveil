@@ -2,12 +2,13 @@
 
 namespace App\Jobs;
 
+use App\Actions\AddSocialPostImage;
 use App\Actions\PublishSocialPost;
-use App\Ai\Agents\ImageGenerator;
 use App\Ai\Agents\SocialPostWriter;
 use App\Enums\AgentRunStatus;
 use App\Enums\ArticleStatus;
 use App\Enums\AutonomyLevel;
+use App\Enums\BrandAssetKind;
 use App\Enums\OutreachStatus;
 use App\Enums\SocialAccountStatus;
 use App\Enums\SocialPlatform;
@@ -30,6 +31,7 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Throwable;
 
 /**
@@ -85,6 +87,7 @@ class GenerateSocialPost implements ShouldQueue
                 $this->posts()->whereNotNull('promoted_at')->latest('promoted_at')->limit(5)->pluck('body'),
                 SocialPostExample::promptDigest($this->platform),
                 $this->brief,
+                $this->illustrations(),
             ))->recordInto($run)->draft()->structured;
 
             $posts = $this->persist($structured, $run->id, $clientWon, $article);
@@ -170,14 +173,22 @@ class GenerateSocialPost implements ShouldQueue
         }
 
         $brief = trim((string) ($structured['image_brief'] ?? '')) ?: $posts->first()->body;
-        $posts->each->update(['image_brief' => $brief]);
+
+        // Never trust the model with which rows exist: only this project's
+        // own illustrations, the ones it was shown.
+        $referenceIds = array_values(array_intersect(
+            array_map('intval', (array) ($structured['illustration_ids'] ?? [])),
+            array_keys($this->illustrations()),
+        ));
+
+        $posts->each->update(['image_brief' => $brief, 'image_reference_ids' => $referenceIds]);
 
         // The drafts are already on the page: say their image is coming.
         $progress = app(SocialPostProgress::class);
         $posts->each(fn (SocialPost $post) => $progress->startDrawing($post));
 
         try {
-            $jpeg = (new ImageGenerator($this->project, "a {$this->platform->label()} post", $brief))->generate();
+            $jpeg = app(AddSocialPostImage::class)->draw($this->project, $this->platform, $brief, illustrationIds: $referenceIds);
         } catch (Throwable $e) {
             $posts->each->update(['last_error' => "The image could not be generated: {$e->getMessage()}"]);
 
@@ -197,6 +208,23 @@ class GenerateSocialPost implements ShouldQueue
 
             $post->update(['image_media_id' => $image->id]);
         }
+    }
+
+    /**
+     * The project's official illustrations the writer may pick for the
+     * image, media id => what each shows. None for a network posting text.
+     *
+     * @return array<int, string>
+     */
+    private function illustrations(): array
+    {
+        if (! $this->platform->requiresImage()) {
+            return [];
+        }
+
+        return $this->project->brandAssets(BrandAssetKind::Illustration)
+            ->mapWithKeys(fn (Media $media): array => [$media->id => (string) ($media->getCustomProperty('description') ?: $media->name)])
+            ->all();
     }
 
     /**

@@ -7,12 +7,16 @@ use App\Ai\Contracts\SpendGuardInterface;
 use App\Ai\OutOfCredit;
 use App\Ai\ProviderCredentials;
 use App\Enums\AgentRunStatus;
+use App\Enums\BrandAssetKind;
+use App\Enums\ImageFormat;
 use App\Models\AgentRun;
 use App\Models\Project;
 use GdImage;
 use Laravel\Ai\Enums\Lab;
+use Laravel\Ai\Files\Image as ImageFile;
 use Laravel\Ai\Image;
 use RuntimeException;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Stringable;
 use Throwable;
 
@@ -38,9 +42,19 @@ class ImageGenerator extends EveilAgent
      * @param  string  $purpose  what the image goes with, in a few words: "an Instagram post"
      * @param  string  $brief  what it should show
      * @param  string|null  $note  what the user asked to change after seeing an earlier image
+     * @param  ImageFormat  $format  the shape it is delivered in, set by where it ends up
+     * @param  string|null  $userInstructions  the user's own box for where it ends up (that network's, say)
+     * @param  array<int, Media>  $references  the project's own images to draw from (`BrandAssetKind`): its logo, illustrations, style examples
      */
-    public function __construct(Project $project, private string $purpose, private string $brief, private ?string $note = null)
-    {
+    public function __construct(
+        Project $project,
+        private string $purpose,
+        private string $brief,
+        private ?string $note = null,
+        private ImageFormat $format = ImageFormat::Square,
+        private ?string $userInstructions = null,
+        private array $references = [],
+    ) {
         parent::__construct($project);
     }
 
@@ -55,16 +69,64 @@ class ImageGenerator extends EveilAgent
 
     public function instructions(): Stringable|string
     {
-        return <<<'PROMPT'
-        A square image a business publishes under its own name, on social media
-        or in an ad. It illustrates one idea, the one in the brief below; it is
-        not a product screenshot.
+        return <<<PROMPT
+        A {$this->format->describe()} image a business publishes under its own
+        name, on social media or in an ad. It illustrates one idea, the one in
+        the brief below; it is not a product screenshot. Keep the subject well
+        inside the frame: the edges may be trimmed to fit the exact shape.
 
-        No words, letters, numbers, logos or watermarks anywhere in the image:
-        generated lettering comes out misspelled. No real, recognisable
-        people. One clear subject, uncluttered, with natural light and colour,
-        the kind of picture someone would actually stop on in a feed.
-        PROMPT;
+        Text only when the brief or the user's own instructions ask for it: a
+        headline, a short line, the site's address. Then exactly the words
+        given, few of them, large and legible, spelled exactly as written.
+        Otherwise no text at all. Never invent a logo or a brand mark of your
+        own. No watermarks. No real, recognisable people. One clear subject,
+        uncluttered, the kind of picture someone would actually stop on in a
+        feed.
+        PROMPT.$this->referencesSection().$this->userInstructionsSection();
+    }
+
+    /**
+     * What each attached reference image is, in the order they are sent:
+     * the business's own images, the source of truth for how it looks.
+     */
+    private function referencesSection(): string
+    {
+        if ($this->references === []) {
+            return '';
+        }
+
+        $lines = [];
+
+        foreach (array_values($this->references) as $index => $reference) {
+            $kind = BrandAssetKind::tryFrom((string) $reference->getCustomProperty('kind')) ?? BrandAssetKind::Example;
+            $description = trim((string) $reference->getCustomProperty('description'));
+            $lines[] = ($index + 1).". {$kind->role()}.".($description === '' ? '' : " It shows: {$description}");
+        }
+
+        return "\n\nYou are given reference images, in this order. They are this business's own, and the source of truth for how it looks: use them rather than inventing.\n\n".implode("\n", $lines);
+    }
+
+    /**
+     * The user's own instructions for how this business's images look, in
+     * their words: brand colours, a style, text they always want. Placed last
+     * and overriding, like every box a user fills in themselves.
+     */
+    private function userInstructionsSection(): string
+    {
+        $instructions = trim((string) $this->userInstructions);
+
+        if ($instructions === '') {
+            return '';
+        }
+
+        return <<<PROMPT
+
+
+            The user's own instructions. Where they disagree with anything above,
+            follow these:
+
+            {$instructions}
+            PROMPT;
     }
 
     /**
@@ -101,7 +163,11 @@ class ImageGenerator extends EveilAgent
 
         try {
             $response = Image::of($prompt)
-                ->square()
+                ->attachments(array_map(
+                    fn (Media $reference): ImageFile => ImageFile::fromStorage($reference->getPathRelativeToRoot(), $reference->disk),
+                    array_values($this->references),
+                ))
+                ->size($this->format->drawnAt())
                 ->timeout($this->timeout())
                 ->generate($this->provider(), $this->model());
 
@@ -155,9 +221,10 @@ class ImageGenerator extends EveilAgent
     }
 
     /**
-     * Whatever format the provider returned, re-encoded as JPEG. GD rather
-     * than trusting the provider's format: some return PNG or WebP whatever
-     * they are asked for.
+     * Whatever the provider returned, cropped around the centre to the
+     * format's exact ratio and re-encoded as JPEG. GD rather than trusting the
+     * provider: some return PNG or WebP whatever they are asked for, and none
+     * draws 4:5 or 1.91:1 at all.
      */
     private function jpeg(string $bytes): string
     {
@@ -167,9 +234,38 @@ class ImageGenerator extends EveilAgent
             throw new RuntimeException('The image provider returned something that is not an image.');
         }
 
+        $image = $this->crop($image);
+
         ob_start();
         imagejpeg($image, null, 90);
 
         return (string) ob_get_clean();
+    }
+
+    /**
+     * The largest centred area at the format's ratio: only ever trims, never
+     * stretches.
+     */
+    private function crop(GdImage $image): GdImage
+    {
+        [$ratioWidth, $ratioHeight] = $this->format->ratio();
+        $width = imagesx($image);
+        $height = imagesy($image);
+
+        $targetWidth = min($width, (int) round($height * $ratioWidth / $ratioHeight));
+        $targetHeight = min($height, (int) round($width * $ratioHeight / $ratioWidth));
+
+        if ($targetWidth === $width && $targetHeight === $height) {
+            return $image;
+        }
+
+        $cropped = imagecrop($image, [
+            'x' => intdiv($width - $targetWidth, 2),
+            'y' => intdiv($height - $targetHeight, 2),
+            'width' => $targetWidth,
+            'height' => $targetHeight,
+        ]);
+
+        return $cropped instanceof GdImage ? $cropped : $image;
     }
 }

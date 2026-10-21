@@ -36,6 +36,7 @@ use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\Auth\InvitationController;
 use App\Http\Controllers\Auth\SetupController;
 use App\Http\Controllers\AutonomyController;
+use App\Http\Controllers\BrandAssetController;
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\CampaignEnrolmentController;
 use App\Http\Controllers\CampaignGenerationController;
@@ -206,6 +207,11 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             Route::get('project', [ProjectController::class, 'edit'])->name('project.edit');
             Route::put('project', [ProjectController::class, 'update'])->name('project.update');
             Route::delete('project', [ProjectController::class, 'destroy'])->name('project.destroy');
+            // The project's visual identity library: logo, illustrations,
+            // style examples, which generated images draw from.
+            Route::get('brand-assets/{asset}', [BrandAssetController::class, 'show'])->whereNumber('asset')->name('brand-assets.show');
+            Route::post('brand-assets', [BrandAssetController::class, 'store'])->name('brand-assets.store');
+            Route::delete('brand-assets/{asset}', [BrandAssetController::class, 'destroy'])->whereNumber('asset')->name('brand-assets.destroy');
 
             /*
              * The same danger zone, one size down from `project.destroy`:

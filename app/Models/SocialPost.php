@@ -45,6 +45,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  * @property string $evidence
  * @property string $body
  * @property string|null $image_brief
+ * @property array<int, int>|null $image_reference_ids
  * @property int|null $image_media_id
  * @property SocialPostStatus $status
  * @property string|null $rejection_reason
@@ -60,7 +61,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  */
 #[Fillable([
     'project_id', 'platform', 'social_account_id', 'agent_run_id',
-    'source_type', 'source_ref', 'variant', 'evidence', 'body', 'image_brief', 'image_media_id',
+    'source_type', 'source_ref', 'variant', 'evidence', 'body', 'image_brief', 'image_reference_ids', 'image_media_id',
     'status', 'rejection_reason', 'external_id', 'url', 'published_at', 'last_error',
     'promoted_at', 'likes_count', 'stats_checked_at',
 ])]
@@ -137,6 +138,7 @@ class SocialPost extends Model implements HasMedia, StoresMediaInterface
             'source_type' => SocialPostSourceType::class,
             'variant' => SocialPostVariant::class,
             'status' => SocialPostStatus::class,
+            'image_reference_ids' => 'array',
             'published_at' => 'datetime',
             'promoted_at' => 'datetime',
             'stats_checked_at' => 'datetime',

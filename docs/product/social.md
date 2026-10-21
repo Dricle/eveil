@@ -62,12 +62,22 @@ Every post includes your product's link (or the article's), since a post nobody 
 
 ## Instagram images
 
-Instagram has no text-only post, so every Instagram draft comes with a square image, generated from a short description the writer gives alongside the caption. The image shows on the draft before you approve it. It never contains text or logos, since generated lettering comes out misspelled.
+Instagram has no text-only post, so every Instagram draft comes with a square image, generated from a short description the writer gives alongside the caption. The image shows on the draft before you approve it. By default it has no text in it. Want a headline, a short line or your site's address on your images? Say so in the Instagram box of **Settings → AI instructions**, or in the note when you ask for a new image, and give the exact words: they are drawn as written. The writer and the image model do not invent your brand: give them your own images under **Settings → Project → Visual identity** (see [below](#your-visual-identity)).
 
 Not convinced? Click **New image** on the draft, optionally saying what should change ("brighter", "a close-up"). The new image appears beside the others a moment later: nothing is replaced, every image stays on the draft, and you click the one you want published. The first image is picked until you choose another. Each new image costs credits on the cloud edition.
 
 If an image could not be generated, the draft says why and waits for you; approving it tries the image again before publishing.
 
+
+## Your visual identity
+
+Under **Settings → Project → Visual identity**, add the images every generated image should draw from, as the source of truth for how your brand looks. Only images you hold the rights to: you confirm it for each, since they are sent to the image model and end up in images published under your name. PNG, JPEG or WebP, up to 5 MB each; SVG is not supported, export it as PNG.
+
+- **Logo**: placed in the images as it is, never redrawn. To leave it out, or place it a certain way, say so in the Instagram box of **Settings → AI instructions**. A new logo replaces the old one.
+- **Official illustrations**: your mascot, your product shots, your illustrations. When one fits a post, the writer picks it and the image reuses it instead of inventing a similar one. Describe each ("the mascot waving", "the dashboard on a laptop"): the description is how the writer knows which fits.
+- **Style examples**: visuals you already published. Every image follows their palette and look, without copying them.
+
+Each image is drawn from your logo, up to three style examples, and up to three illustrations picked for that post. Asking for a new image keeps the same picks. Images already drawn do not change when you edit the library.
 ## Reviewing a draft
 
 Each draft shows why it was written beside the text. You can edit it, publish it (Bluesky, Instagram) or post it and mark it posted (X), reject it, or delete it. **Reject** keeps the draft and optionally asks why; that reason is fed back to the writer next time. **Delete** removes it with no trace. You also get an email when a new draft is waiting, unless Evie wrote it in a conversation you are already in.

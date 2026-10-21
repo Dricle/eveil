@@ -65,6 +65,16 @@ enum SocialPlatform: string
     }
 
     /**
+     * The shape this network's images are drawn in. Square goes everywhere
+     * on Instagram's feed; 4:5 takes more of the screen and is the obvious
+     * next step if it proves worth it.
+     */
+    public function imageFormat(): ImageFormat
+    {
+        return ImageFormat::Square;
+    }
+
+    /**
      * This network's driver.
      */
     public function client(): SocialClientInterface

@@ -37,6 +37,7 @@ class SocialPostWriter extends EveilAgent implements HasStructuredOutput
      * @param  Collection<int, string>  $ownWinners  bodies of this project's own proven posts
      * @param  string  $sharedPoolDigest  `SocialPostExample::promptDigest()` for this network
      * @param  string|null  $brief  what the user asked Evie for; when set, it IS the topic
+     * @param  array<int, string>  $illustrations  the project's official illustrations, media id => what each shows, for a network that needs an image
      */
     public function __construct(
         Project $project,
@@ -49,6 +50,7 @@ class SocialPostWriter extends EveilAgent implements HasStructuredOutput
         private Collection $ownWinners,
         private string $sharedPoolDigest,
         private ?string $brief = null,
+        private array $illustrations = [],
     ) {
         parent::__construct($project);
     }
@@ -122,8 +124,11 @@ class SocialPostWriter extends EveilAgent implements HasStructuredOutput
             'body_anonymized' => $schema->string()
                 ->description('The post text without naming the client, for client_won only. Leave empty otherwise.'),
 
+            'illustration_ids' => $schema->array()->items($schema->integer())
+                ->description('Instagram only: the ids of the project\'s official illustrations, from the list you were given, that fit this post\'s image, at most three. The image reuses them instead of inventing. Leave empty when none fits.'),
+
             'image_brief' => $schema->string()
-                ->description('Instagram only: what the post image should show, in two or three concrete sentences (subject, setting, mood). Never any text in the image. Leave empty for other networks.'),
+                ->description('Instagram only: what the post image should show, in two or three concrete sentences (subject, setting, mood). Text in the image only when the user\'s instructions ask for it, and then the exact words to show. Leave empty for other networks.'),
         ];
     }
 
@@ -190,6 +195,12 @@ class SocialPostWriter extends EveilAgent implements HasStructuredOutput
 
         if ($this->sharedPoolDigest !== '') {
             $sections[] = $this->sharedPoolDigest;
+        }
+
+        if ($this->illustrations !== []) {
+            $sections[] = "## The project's official illustrations, for the image\n\n".collect($this->illustrations)
+                ->map(fn (string $description, int $id): string => "- {$id}: {$description}")
+                ->implode("\n");
         }
 
         $sections[] = "## Today's date\n\n".now()->toDateString();

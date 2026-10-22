@@ -13,16 +13,6 @@ use App\Support\Settings;
 use Illuminate\Support\Collection;
 use Laravel\Ai\Ai;
 
-/**
- * Instance scope: what the person who ran the install decides, and nobody else.
- * Distinct from the organization role and from project access: the whole point
- * of keeping the three apart is that no organization can ever grant this.
- */
-function superAdmin(): User
-{
-    return User::factory()->superAdmin()->create();
-}
-
 it('keeps every app setting away from an ordinary user', function (string $route) {
     $this->actingAs(User::factory()->create())->get(route($route))->assertForbidden();
 })->with([

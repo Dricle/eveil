@@ -111,10 +111,10 @@ class RedditReplyExample extends Model
 
         if ($harvested->isNotEmpty()) {
             $sections[] = "## High-scoring product mentions written by other redditors\n\n"
-                ."These are not ours. Each is a comment somebody else posted publicly under "
-                ."their own name, kept because it recommended a product and the thread upvoted "
-                ."it. Read them for what earns a product mention its upvotes rather than its "
-                ."downvotes. Never reuse a sentence, a phrase or a turn of expression from "
+                .'These are not ours. Each is a comment somebody else posted publicly under '
+                .'their own name, kept because it recommended a product and the thread upvoted '
+                .'it. Read them for what earns a product mention its upvotes rather than its '
+                .'downvotes. Never reuse a sentence, a phrase or a turn of expression from '
                 ."them: the reply you are writing may well be posted in the same subreddit.\n\n"
                 .$harvested->implode("\n\n---\n\n");
         }

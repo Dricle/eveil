@@ -354,3 +354,21 @@ it('says whether the derivation is queued, running or failed, and why it failed'
         ->where('derivation.status', 'failed')
         ->where('derivation.error', 'Not enough credits.'));
 });
+
+it('counts setup as finished once the segments exist when cold email is off', function () {
+    [$user, $project] = newcomer();
+    $project->update(['email_enabled' => false]);
+
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->get(route('dashboard'))
+        ->assertInertia(fn ($page) => $page->where('onboarding', true));
+
+    // No search will ever run with email off, so the segments are the end.
+    TargetProfile::factory()->create(['project_id' => $project->id]);
+
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->get(route('dashboard'))
+        ->assertInertia(fn ($page) => $page->where('onboarding', false));
+});

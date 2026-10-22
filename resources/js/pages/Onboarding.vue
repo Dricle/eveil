@@ -93,7 +93,10 @@ const step = computed(() => {
     }
 
     if (props.profiles.length > 0) {
-        if (confirmedTargets.value && !emailEnabled.value) {
+        // With email off the segments are the end of the run: nothing is
+        // searched, so there is nothing left to confirm them for. Derived from
+        // the project, not from a click, so the dashboard and a reload agree.
+        if (!emailEnabled.value) {
             return 'ready'
         }
 
@@ -219,7 +222,7 @@ function retryAnalysis () {
 function confirmTargets () {
     confirmedTargets.value = true
 
-    if (hasMailbox.value && emailEnabled.value) {
+    if (hasMailbox.value) {
         startSearching()
     }
 }
@@ -559,19 +562,9 @@ function confirmTargets () {
                 />
             </div>
 
-            <p
-                v-if="emailEnabled"
-                class="text-sm text-dimmed"
-            >
+            <p class="text-sm text-dimmed">
                 One search per segment left switched on. Nothing is written to
                 anybody. The searches only find companies.
-            </p>
-            <p
-                v-else
-                class="text-sm text-dimmed"
-            >
-                Cold email is off, so nothing searches for these yet. The
-                other channels write from them.
             </p>
         </div>
 
@@ -631,14 +624,31 @@ function confirmTargets () {
             </p>
             <p class="text-sm text-muted">
                 The channels you switched on draft on their own schedule, and
-                each one has its queue in the sidebar. Turning cold email on
-                from the project settings starts the lead search.
+                each one has its queue in the sidebar. They write for these
+                segments. Turning cold email on from the project settings
+                starts the lead search.
             </p>
+
+            <div class="flex flex-wrap gap-2">
+                <UBadge
+                    v-for="profile in profiles"
+                    :key="profile.id"
+                    color="neutral"
+                    variant="subtle"
+                    :label="profile.name"
+                />
+            </div>
 
             <div class="flex flex-wrap items-center gap-2">
                 <UButton
                     label="Go to the dashboard"
                     @click="router.get(dashboard.url({ project: projectSlug }))"
+                />
+                <UButton
+                    color="neutral"
+                    variant="ghost"
+                    label="Edit the segments"
+                    @click="router.get(targetRoutes.index.url({ project: projectSlug }))"
                 />
             </div>
         </div>

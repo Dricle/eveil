@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\AnalyzeWebsite;
 use App\Ai\Agents\WebsiteAnalyst;
 use App\Enums\AnalysisStatus;
 use App\Enums\ArticleFrequency;
@@ -286,4 +287,29 @@ it('leaves the channels as they are when the reading recommends none', function 
     $project = Project::sole();
     expect($project->email_enabled)->toBeTrue()
         ->and($project->reddit_scan_frequency)->toBe(RedditScanFrequency::Off);
+});
+
+it('leaves alone a channel the user switched while the site was being read', function () {
+    fakeSite();
+    WebsiteAnalyst::fake([[...knowledgeBase(), 'channel_fit' => [
+        ['channel' => 'email', 'recommended' => true, 'reason' => 'B2B buyers.'],
+        ['channel' => 'linkedin', 'recommended' => true, 'reason' => 'Operations managers are on LinkedIn.'],
+        ['channel' => 'reddit', 'recommended' => true, 'reason' => 'Factory owners ask on r/manufacturing.'],
+    ]]]);
+
+    $project = Project::factory()->create(['url' => 'https://acme.test/', 'knowledge_base' => null]);
+
+    // Switched from Settings and from the LinkedIn queue after the job loaded
+    // the project, before it wrote anything.
+    Project::query()->whereKey($project->id)->update([
+        'email_enabled' => false,
+        'linkedin_post_frequency' => SocialPostFrequency::Daily->value,
+    ]);
+
+    app(AnalyzeWebsite::class)->handle($project);
+
+    $project->refresh();
+    expect($project->email_enabled)->toBeFalse()
+        ->and($project->linkedin_post_frequency)->toBe(SocialPostFrequency::Daily)
+        ->and($project->reddit_scan_frequency)->toBe(RedditScanFrequency::Weekly);
 });

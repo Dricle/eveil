@@ -4,6 +4,7 @@ namespace App\Enums;
 
 use App\Actions\EnforceAdBudget;
 use App\Models\Project;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * The ways a project reaches buyers, each one switched on or off as a whole.
@@ -76,6 +77,15 @@ enum Channel: string
         };
     }
 
+    /**
+     * What a new project starts with: email and ads on (their columns default
+     * to true), every cadence off.
+     */
+    public function enabledByDefault(): bool
+    {
+        return $this === self::Email || $this === self::Ads;
+    }
+
     public function isEnabledFor(Project $project): bool
     {
         return match ($this) {
@@ -122,13 +132,21 @@ enum Channel: string
             return;
         }
 
-        $project->update($this->attributes($enabled));
+        if ($this !== self::Ads || $enabled) {
+            $project->update($this->attributes($enabled));
+
+            return;
+        }
 
         // Off has to mean no more money spent now, not at the next hourly
-        // sync: the running campaigns are paused on the spot.
-        if ($this === self::Ads && ! $enabled) {
+        // sync: the running campaigns are paused on the spot. Under the lock
+        // a spending decision holds while it applies (`ApplyAdDecision`), so
+        // a launch already past its last check finishes first and is then
+        // swept, rather than going live after the sweep.
+        Cache::lock("ads-budget:{$project->id}", 300)->block(120, function () use ($project): void {
+            $project->update($this->attributes(false));
             app(EnforceAdBudget::class)->handle($project);
-        }
+        });
     }
 
     /**

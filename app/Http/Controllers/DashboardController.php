@@ -26,6 +26,7 @@ use App\Models\Lead;
 use App\Models\Message;
 use App\Models\RedditReply;
 use App\Models\SocialPost;
+use App\Models\TargetProfile;
 use App\Support\CurrentProject;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -51,8 +52,11 @@ class DashboardController extends Controller
         return Inertia::render('Dashboard', [
             // Somebody who wandered off mid-setup needs the way back: until a
             // search has run there is nothing on this page but zeroes, and a
-            // dashboard of zeroes reads as a product that does not work.
-            'onboarding' => DiscoveryRun::query()->doesntExist(),
+            // dashboard of zeroes reads as a product that does not work. With
+            // cold email off no search ever runs, so there the segments are
+            // the end of setup.
+            'onboarding' => DiscoveryRun::query()->doesntExist()
+                && ($this->currentProject->getOrFail()->email_enabled || TargetProfile::query()->doesntExist()),
             'greeting' => [
                 'name' => explode(' ', (string) $request->user()?->name)[0],
                 'days_running' => (int) $this->currentProject->get()?->created_at?->diffInDays(now()),

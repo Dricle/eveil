@@ -114,7 +114,7 @@ class AnalyzeWebsite
         // The first reading switches the channels on, a later one only
         // updates the reasons: by then the toggles are the user's.
         if ($project->knowledge_base === null) {
-            $project->fill($this->recommendedChannels($summary['channel_fit'] ?? []));
+            $project->fill($this->recommendedChannels($project, $summary['channel_fit'] ?? []));
         }
 
         $project->update([
@@ -134,13 +134,18 @@ class AnalyzeWebsite
     }
 
     /**
-     * Every channel switched to whether the analysis recommended it. Email
-     * included: a product the analysis sees no cold-email buyers for starts
-     * with the lead search paused, and one click turns it back on.
+     * Every channel the user has not touched yet, switched to whether the
+     * analysis recommended it. Email included: a product the analysis sees no
+     * cold-email buyers for starts with the lead search paused, and one click
+     * turns it back on.
+     *
+     * "Not touched" is "still in its default state", read fresh: the reading
+     * takes minutes, and a channel switched from Settings or its own queue in
+     * the meantime is the user's choice, not this run's to overwrite.
      *
      * @return array<string, mixed>
      */
-    private function recommendedChannels(mixed $fit): array
+    private function recommendedChannels(Project $project, mixed $fit): array
     {
         $keys = collect(is_array($fit) ? $fit : [])
             ->filter(fn (mixed $r): bool => is_array($r) && isset($r['channel']) && ($r['recommended'] ?? false) === true)
@@ -152,8 +157,13 @@ class AnalyzeWebsite
             return [];
         }
 
+        $current = $project->fresh() ?? $project;
+
         return collect(Channel::cases())
-            ->flatMap(fn (Channel $channel): array => $channel->attributes($keys->contains($channel->value)))
+            ->filter(fn (Channel $channel): bool => $channel->isEnabledFor($current) === $channel->enabledByDefault())
+            ->flatMap(fn (Channel $channel): array => $channel->isEnabledFor($current) === $keys->contains($channel->value)
+                ? []
+                : $channel->attributes($keys->contains($channel->value)))
             ->all();
     }
 

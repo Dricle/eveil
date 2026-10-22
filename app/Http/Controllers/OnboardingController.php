@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Ai\Agents\TargetProfileDeriver;
+use App\Enums\AgentRunStatus;
+use App\Enums\Channel;
 use App\Http\Resources\ProjectAnalysisResource;
 use App\Http\Resources\ProjectResource;
 use App\Http\Resources\TargetProfileResource;
@@ -34,6 +36,7 @@ class OnboardingController extends Controller
         $project = $this->currentProject->getOrFail()->load('latestAnalysis');
         $organization = $this->currentProject->organization();
         $profiles = TargetProfile::query()->orderBy('id')->get();
+        $derivation = AgentRun::query()->latestFor(TargetProfileDeriver::slug())->first();
 
         return Inertia::render('Onboarding', [
             'analysis' => $project->latestAnalysis === null
@@ -48,10 +51,18 @@ class OnboardingController extends Controller
             // The same in-flight rule the Targets section uses: a run older than
             // fifteen minutes is not believed, so a worker that never came back
             // cannot spin this screen for ever.
-            'deriving' => AgentRun::query()
-                ->latestFor(TargetProfileDeriver::slug())
-                ->first()?->isInFlight() ?? false,
+            'deriving' => $derivation?->isInFlight() ?? false,
+            // What the waiting screen says about the job itself: still queued
+            // (and since when, so a queue nobody works is visible), running,
+            // or failed with the reason. `updated_at` is when it last changed
+            // status, which for a running one is when a worker picked it up.
+            'derivation' => $derivation === null ? null : [
+                'status' => $derivation->status->value,
+                'since' => $derivation->updated_at?->toIso8601String(),
+                'error' => $derivation->status === AgentRunStatus::Failed ? $derivation->error : null,
+            ],
             'searches' => DiscoveryRun::query()->count(),
+            'channels' => Channel::forProject($project),
             // The mailbox step connects one here instead of sending somebody
             // to the settings screen, and that form asks which of the
             // organization's projects may send through the address.

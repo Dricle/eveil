@@ -5,6 +5,7 @@ namespace App\Actions;
 use App\Ai\Agents\WebsiteAnalyst;
 use App\Enums\AnalysisStatus;
 use App\Enums\AnalysisType;
+use App\Enums\Channel;
 use App\Models\Project;
 use App\Models\ProjectAnalysis;
 use App\Services\Discovery\SiteCrawler;
@@ -110,6 +111,12 @@ class AnalyzeWebsite
             return;
         }
 
+        // The first reading switches the channels on, a later one only
+        // updates the reasons: by then the toggles are the user's.
+        if ($project->knowledge_base === null) {
+            $project->fill($this->recommendedChannels($summary['channel_fit'] ?? []));
+        }
+
         $project->update([
             'knowledge_base' => [
                 ...$summary,
@@ -124,6 +131,30 @@ class AnalyzeWebsite
                 ? mb_substr($summary['language'], 0, 2)
                 : $pages->first()?->language,
         ]);
+    }
+
+    /**
+     * Every channel switched to whether the analysis recommended it. Email
+     * included: a product the analysis sees no cold-email buyers for starts
+     * with the lead search paused, and one click turns it back on.
+     *
+     * @return array<string, mixed>
+     */
+    private function recommendedChannels(mixed $fit): array
+    {
+        $keys = collect(is_array($fit) ? $fit : [])
+            ->filter(fn (mixed $r): bool => is_array($r) && isset($r['channel']) && ($r['recommended'] ?? false) === true)
+            ->pluck('channel');
+
+        // No recommendation at all is no opinion, not "none of them": a thin
+        // site must not leave a project with every channel off.
+        if ($keys->isEmpty()) {
+            return [];
+        }
+
+        return collect(Channel::cases())
+            ->flatMap(fn (Channel $channel): array => $channel->attributes($keys->contains($channel->value)))
+            ->all();
     }
 
     /**

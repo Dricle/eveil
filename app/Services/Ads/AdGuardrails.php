@@ -36,6 +36,10 @@ class AdGuardrails
             return 'This ad account is switched off, disconnected, or billed in another currency than the ads budget, so nothing may spend on it.';
         }
 
+        if (! $account->project->ads_enabled) {
+            return 'Ads are switched off for this project, so nothing may spend.';
+        }
+
         if ($account->project->ads_monthly_budget_micros === 0) {
             return 'The project has no monthly ads budget, so nothing may spend.';
         }

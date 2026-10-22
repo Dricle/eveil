@@ -35,6 +35,12 @@ class DiscoverDueCommand extends Command
                 return;
             }
 
+            // Email switched off is what pausing the search means: the
+            // profiles stay, nothing goes looking for them.
+            if (! $project->email_enabled) {
+                return;
+            }
+
             if ($project->hasReachedLeadLimit() || $project->hasReachedDailyLeadLimit()) {
                 return;
             }

@@ -2,6 +2,9 @@
 
 use App\Ai\Agents\WebsiteAnalyst;
 use App\Enums\AnalysisStatus;
+use App\Enums\ArticleFrequency;
+use App\Enums\RedditScanFrequency;
+use App\Enums\SocialPostFrequency;
 use App\Models\AgentRun;
 use App\Models\Organization;
 use App\Models\Project;
@@ -241,4 +244,46 @@ it('keeps a linked repo\'s findings across a website re-analysis', function () {
         ->and($repositories[0]['code_repository_id'])->toBe(1)
         ->and($repositories[0]['name'])->toBe('acme/widgets')
         ->and($repositories[0]['tech_stack'])->toBe(['PHP']);
+});
+
+it('switches on the channels the first reading recommends, and only those', function () {
+    fakeSite();
+    WebsiteAnalyst::fake([
+        [...knowledgeBase(), 'channel_fit' => [
+            ['channel' => 'reddit', 'recommended' => true, 'reason' => 'Factory owners ask for suppliers on r/manufacturing.'],
+            ['channel' => 'linkedin', 'recommended' => true, 'reason' => 'Operations managers are on LinkedIn.'],
+            ['channel' => 'email', 'recommended' => false, 'reason' => 'Buyers order through marketplaces.'],
+        ]],
+        [...knowledgeBase(), 'channel_fit' => [
+            ['channel' => 'email', 'recommended' => true, 'reason' => 'B2B buyers.'],
+        ]],
+    ]);
+
+    $this->artisan('eveil:analyze', ['url' => 'https://acme.test'])->assertSuccessful();
+
+    $project = Project::sole();
+    expect($project->reddit_scan_frequency)->toBe(RedditScanFrequency::Weekly)
+        ->and($project->linkedin_post_frequency)->toBe(SocialPostFrequency::Weekly)
+        ->and($project->article_frequency)->toBe(ArticleFrequency::Off)
+        ->and($project->email_enabled)->toBeFalse();
+
+    // A later reading updates the reasons, never the switches: by then they
+    // are the user's.
+    $this->artisan('eveil:analyze', ['url' => 'https://acme.test', '--fresh' => true])->assertSuccessful();
+
+    $project->refresh();
+    expect($project->email_enabled)->toBeFalse()
+        ->and($project->reddit_scan_frequency)->toBe(RedditScanFrequency::Weekly)
+        ->and($project->knowledge_base['channel_fit'][0]['channel'])->toBe('email');
+});
+
+it('leaves the channels as they are when the reading recommends none', function () {
+    fakeSite();
+    WebsiteAnalyst::fake([knowledgeBase()]);
+
+    $this->artisan('eveil:analyze', ['url' => 'https://acme.test'])->assertSuccessful();
+
+    $project = Project::sole();
+    expect($project->email_enabled)->toBeTrue()
+        ->and($project->reddit_scan_frequency)->toBe(RedditScanFrequency::Off);
 });

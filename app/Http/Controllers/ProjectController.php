@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Channel;
 use App\Http\Requests\ProjectRequest;
 use App\Http\Resources\ProjectDetailResource;
 use App\Jobs\AnalyzeProject;
@@ -73,10 +74,11 @@ class ProjectController extends Controller
 
     public function edit(): Response
     {
+        $project = $this->currentProject->getOrFail()->load('latestAnalysis');
+
         return Inertia::render('settings/Project', [
-            'project' => ProjectDetailResource::make(
-                $this->currentProject->getOrFail()->load('latestAnalysis')
-            ),
+            'project' => ProjectDetailResource::make($project),
+            'channels' => Channel::forProject($project),
         ]);
     }
 

@@ -12,7 +12,11 @@ const page = usePage()
 const props = defineProps<{
     questions: OpenQuestion[]
     title?: string
+    /** The save button's label, where saving also moves somewhere else. */
+    submitLabel?: string
 }>()
+
+const emit = defineEmits<{ saved: [] }>()
 
 // Held here and bound with `v-model`, never left to `default-value`.
 //
@@ -52,6 +56,7 @@ const answered = computed(() => Object.values(draft.value).filter(answer => answ
             v-bind="knowledgeBaseRoutes.answers.form({ project: page.props.currentProject!.slug })"
             :options="{ preserveScroll: true }"
             class="space-y-4"
+            @success="emit('saved')"
         >
             <UFormField
                 v-for="question in questions"
@@ -72,7 +77,7 @@ const answered = computed(() => Object.values(draft.value).filter(answer => answ
                 <UButton
                     type="submit"
                     :loading="processing"
-                    label="Save answers"
+                    :label="submitLabel ?? 'Save answers'"
                 />
                 <span
                     v-if="recentlySuccessful"
@@ -82,6 +87,7 @@ const answered = computed(() => Object.values(draft.value).filter(answer => answ
                     v-else
                     class="text-sm text-dimmed"
                 >{{ answered }} of {{ questions.length }} answered</span>
+                <slot name="actions" />
             </div>
         </Form>
     </div>

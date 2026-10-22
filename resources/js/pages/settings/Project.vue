@@ -2,16 +2,17 @@
 import { Form, Head, router } from '@inertiajs/vue3'
 import { ref, watch } from 'vue'
 import BrandAssets from '@/components/BrandAssets.vue'
+import ChannelCards from '@/components/ChannelCards.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import SettingsLayout from '@/layouts/SettingsLayout.vue'
 import companyRoutes from '@/routes/settings/companies'
 import contactRoutes from '@/routes/settings/contacts'
 import projectRoutes from '@/routes/settings/project'
-import type { ProjectDetail } from '@/types'
+import type { ChannelToggle, ProjectDetail } from '@/types'
 
 defineOptions({ layout: [AppLayout, [SettingsLayout, { title: 'Project' }]] })
 
-const props = defineProps<{ project: ProjectDetail }>()
+const props = defineProps<{ project: ProjectDetail, channels: ChannelToggle[] }>()
 
 const confirmingCompanyDelete = ref(false)
 const confirmingLeadDelete = ref(false)
@@ -126,6 +127,20 @@ watch(() => props.project, (project) => {
                     >Saved.</span>
                 </div>
             </Form>
+        </UCard>
+
+        <UCard>
+            <template #header>
+                <h2 class="font-medium">
+                    Channels
+                </h2>
+                <p class="mt-1 text-sm text-muted">
+                    Where this project reaches buyers. Each channel's own
+                    screen sets how often it runs.
+                </p>
+            </template>
+
+            <ChannelCards :channels="channels" />
         </UCard>
 
         <BrandAssets

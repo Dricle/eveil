@@ -21,7 +21,7 @@ class AdReviewController extends Controller
         $project = $currentProject->getOrFail();
 
         if (! $project->runsAds()) {
-            return back()->withErrors(['review' => 'Set a monthly ads budget and switch on an ad account billed in its currency first.']);
+            return back()->withErrors(['review' => 'Switch ads on, set a monthly ads budget and switch on an ad account billed in its currency first.']);
         }
 
         ReviewAds::dispatch($project, AgentRun::create([

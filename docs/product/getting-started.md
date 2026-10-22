@@ -10,6 +10,12 @@ Paste your product's URL. Eveil's Website AI crawls it into a knowledge base and
 
 It also proposes acquisition ideas your site is missing — a referral scheme, editorial content, a trade fair — each grounded in something specific it found, never generic advice. These show up on the Dashboard while at least one is still open: mark one done or not interested with a click, or talk it through with [Evie](/product/evie).
 
+It also says which channels fit your product: cold email, Reddit replies, LinkedIn, X, Bluesky or Instagram posts, SEO articles, paid ads. Each recommendation comes with the reason it found on your site, and the recommended channels start switched on. Switch any of them on or off during setup, or later under Settings → Project → Channels. Turning a channel on starts it weekly; its own page sets a different pace. Eveil can run on a single channel, Reddit alone for example.
+
+Switching cold email off pauses the lead search and nothing else: your target profiles stay, other channels keep writing from them, and campaigns already running carry on. Setup then ends at the target profiles, without asking for a mailbox.
+
+Switching paid ads off stops the ads agent and pauses every campaign Eveil runs, right away. Switched on, ads still need a connected ad account and a monthly budget before anything spends.
+
 When your site names competitors, Eveil then reads their sites too and lists the features they sell that your product doesn't have yet, each citing which competitor offers it. Same Dashboard card, same done or not interested.
 
 ## 3. Review and approve

@@ -320,3 +320,37 @@ it('starts the search for a project with no mailbox attached', function () {
     // asked for on the way past, and skipping it costs a click.
     expect(DiscoveryRun::query()->where('target_profile_id', $profile->id)->exists())->toBeTrue();
 });
+
+it('starts no search for a project with cold email switched off', function () {
+    [$user, $project] = newcomer();
+    $project->update(['email_enabled' => false]);
+    TargetProfile::factory()->create(['project_id' => $project->id, 'is_active' => true]);
+
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->post(route('onboarding.searches'))
+        ->assertRedirect();
+
+    expect(DiscoveryRun::query()->count())->toBe(0);
+});
+
+it('says whether the derivation is queued, running or failed, and why it failed', function () {
+    [$user, $project] = newcomer();
+
+    $run = AgentRun::query()->create([
+        'project_id' => $project->id,
+        'agent' => 'target-profile-deriver',
+        'status' => AgentRunStatus::Running,
+    ]);
+
+    visiting($user, $project)->assertInertia(fn ($page) => $page
+        ->where('derivation.status', 'running')
+        ->where('derivation.error', null));
+
+    $run->update(['status' => AgentRunStatus::Failed, 'error' => 'Not enough credits.']);
+
+    visiting($user, $project)->assertInertia(fn ($page) => $page
+        ->where('deriving', false)
+        ->where('derivation.status', 'failed')
+        ->where('derivation.error', 'Not enough credits.'));
+});

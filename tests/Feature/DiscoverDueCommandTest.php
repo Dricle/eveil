@@ -107,3 +107,12 @@ it('stops for good once the project has reached its lifetime lead limit', functi
 
     Queue::assertNotPushed(PlanDiscovery::class);
 });
+
+it('leaves a project with cold email switched off alone', function () {
+    $project = Project::factory()->create(['email_autonomy_level' => AutonomyLevel::SemiAuto, 'email_enabled' => false]);
+    TargetProfile::factory()->create(['project_id' => $project->id, 'is_active' => true]);
+
+    $this->artisan('eveil:discover-due')->assertSuccessful();
+
+    Queue::assertNotPushed(PlanDiscovery::class);
+});

@@ -102,6 +102,12 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
         it with GetCampaign first, and check with the user before rewriting
         it.
 
+        SetChannel switches one of the project's channels on or off when the
+        user asks ("stop the Reddit replies", "let's try Instagram"). Turning
+        email off only pauses the automatic lead search: target profiles and
+        running campaigns stay. No approval needed, same as the switch in
+        Settings.
+
         GetKnowledgeBase also returns the open_recommendations list: the
         acquisition ideas the Website agent (or you, or the user) has
         proposed and nobody has decided on yet. When the user wants to talk

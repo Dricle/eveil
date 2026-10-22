@@ -7,6 +7,7 @@ use App\Enums\AgentRunStatus;
 use App\Enums\RedditReplyExampleSource;
 use App\Models\AgentRun;
 use App\Models\Project;
+use App\Models\RedditReply;
 use App\Models\RedditReplyExample;
 use App\Services\Reddit\TopComment;
 use App\Support\Settings;
@@ -132,9 +133,42 @@ class HarvestRedditReplyExamples
             ->whereIn('reddit_comment_id', $pool->map(fn (TopComment $comment): string => $comment->id)->all())
             ->pluck('reddit_comment_id');
 
+        $ours = $this->publishedByUs($pool);
+
         return $pool
-            ->reject(fn (TopComment $comment): bool => $stored->contains($comment->id))
+            ->reject(fn (TopComment $comment): bool => $stored->contains($comment->id) || $ours->contains($comment->id))
             ->take(self::BATCH_LIMIT)
+            ->values();
+    }
+
+    /**
+     * Comment ids, among these, that are one of our own published replies, in
+     * any project: those reach the bank through `FetchRedditReplyStats` under
+     * their true label, never as a stranger's comment. Matched on the id inside
+     * `comment_permalink` rather than the whole link, because that link is
+     * pasted back by the user in whatever form their browser gave them.
+     *
+     * @param  Collection<int, TopComment>  $pool
+     * @return Collection<int, string>
+     */
+    private function publishedByUs(Collection $pool): Collection
+    {
+        // Reddit ids are base 36; anything else would not be safe in the regex.
+        $ids = $pool->map(fn (TopComment $comment): string => $comment->id)
+            ->filter(fn (string $id): bool => ctype_alnum($id));
+
+        if ($ids->isEmpty()) {
+            return new Collection;
+        }
+
+        $pattern = '/('.$ids->implode('|').')(/|\\?|#|$)';
+
+        return RedditReply::query()
+            ->withoutGlobalScopes()
+            ->where('comment_permalink', '~', $pattern)
+            ->pluck('comment_permalink')
+            ->map(fn (string $permalink): ?string => preg_match('~'.$pattern.'~', $permalink, $match) === 1 ? $match[1] : null)
+            ->filter()
             ->values();
     }
 }

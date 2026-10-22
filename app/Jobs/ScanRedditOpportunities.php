@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Actions\HarvestRedditReplyExamples;
 use App\Ai\Agents\RedditOpportunityTriage;
 use App\Ai\Agents\RedditReplyWriter;
+use App\Ai\OutOfCredit;
 use App\Enums\AgentRunStatus;
 use App\Enums\IdeaKind;
 use App\Enums\IdeaStatus;
@@ -28,6 +29,7 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
+use Throwable;
 
 /**
  * One scan cycle for one project: gather candidates from BOTH discovery
@@ -93,7 +95,19 @@ class ScanRedditOpportunities implements ShouldQueue
                 ->filter()
                 ->values();
 
+            // A `seo_thread` candidate carries the comments `SeoThreadFinder`
+            // already fetched to judge it, accepted or not: a thread rejected
+            // because its answers already cover the question well is exactly
+            // where the best examples sit. The harvest never fetches its own.
+            /** @var Collection<int, TopComment> $read */
+            $read = $candidates
+                ->filter(fn (OpportunityCandidate $candidate): bool => $candidate->source === RedditReplySource::SeoThread)
+                ->flatMap(fn (OpportunityCandidate $candidate): array => $candidate->topComments)
+                ->values();
+
             if ($accepted->isEmpty()) {
+                $this->harvest($harvester, $read);
+
                 return;
             }
 
@@ -102,31 +116,46 @@ class ScanRedditOpportunities implements ShouldQueue
 
             $drafted = false;
 
-            /** @var Collection<int, TopComment> $read */
-            $read = new Collection;
-
             foreach ($accepted as [$candidate, $reason]) {
-                // A `seo_thread` candidate carries the comments `SeoThreadFinder`
-                // already fetched to judge it; a `subreddit_scan` one needs the
-                // single call that has ever been made here. Either way this is
-                // the whole of what the harvest sees: it never fetches its own.
-                $comments = $candidate->source === RedditReplySource::SeoThread
-                    ? new Collection($candidate->topComments)
-                    : $topComments->for($candidate->postId, self::TONE_SAMPLE_LIMIT);
-
-                $read = $read->merge($comments);
+                // A `subreddit_scan` candidate needs the single call that has
+                // ever been made here; its comments join what the harvest sees.
+                if ($candidate->source === RedditReplySource::SeoThread) {
+                    $comments = new Collection($candidate->topComments);
+                } else {
+                    $comments = $topComments->for($candidate->postId, self::TONE_SAMPLE_LIMIT);
+                    $read = $read->merge($comments);
+                }
 
                 if ($this->draft($candidate, $reason, $comments, $ownWinners, $sharedPoolDigest)) {
                     $drafted = true;
                 }
             }
 
-            $harvester->handle($this->project, $read);
-
             if ($drafted) {
                 Notification::send($this->project->notifiableUsers(), RedditRepliesDrafted::for($this->project));
             }
+
+            $this->harvest($harvester, $read);
         });
+    }
+
+    /**
+     * The harvest is a side benefit of the scan, never a reason for it to
+     * fail: drafts are already saved and announced by the time it runs, and a
+     * retry would skip those threads anyway. Its failure is reported, the
+     * scan carries on.
+     *
+     * @param  Collection<int, TopComment>  $read
+     */
+    private function harvest(HarvestRedditReplyExamples $harvester, Collection $read): void
+    {
+        try {
+            $harvester->handle($this->project, $read);
+        } catch (OutOfCredit) {
+            // Not a failure: the spend guard already told the owners.
+        } catch (Throwable $e) {
+            report($e);
+        }
     }
 
     /**

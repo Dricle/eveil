@@ -76,6 +76,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        // The previous code knows only `manual` and `promoted`, and would
+        // present a stranger's comment as one of ours.
+        DB::table('reddit_reply_examples')->where('source', 'harvested')->delete();
+
         DB::table('settings')->whereIn('key', [
             'reddit_examples.harvest_enabled',
             'reddit_examples.harvest_min_score',

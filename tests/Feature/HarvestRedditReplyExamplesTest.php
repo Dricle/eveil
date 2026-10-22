@@ -5,6 +5,7 @@ use App\Ai\Agents\RedditExampleTriage;
 use App\Enums\RedditReplyExampleSource;
 use App\Models\AgentRun;
 use App\Models\Project;
+use App\Models\RedditReply;
 use App\Models\RedditReplyExample;
 use App\Services\Reddit\TopComment;
 use App\Support\Settings;
@@ -148,4 +149,16 @@ it('shows the writer our own examples and other people\'s as two separate things
         ->toContain('written by other redditors')
         ->toContain('Never reuse a sentence')
         ->toContain('A stranger\'s upvoted recommendation.');
+});
+
+it('never harvests one of our own published replies, whatever project posted it', function () {
+    $project = Project::factory()->create();
+    RedditReply::factory()->create([
+        'project_id' => Project::factory()->create()->id,
+        'comment_permalink' => 'https://old.reddit.com/r/smallbusiness/comments/abc123/comment/cmt1/?utm_source=share',
+    ]);
+    RedditExampleTriage::fake([keptVerdict()]);
+
+    expect(app(HarvestRedditReplyExamples::class)->handle($project, new Collection([harvestable()])))->toBe(0)
+        ->and(RedditReplyExample::query()->count())->toBe(0);
 });

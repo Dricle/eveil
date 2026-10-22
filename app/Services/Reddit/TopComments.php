@@ -15,11 +15,18 @@ use Throwable;
  * `subreddit_scan` item, purely as a tone sample for `RedditReplyWriter`
  * (a `seo_thread` candidate already carries its top comments from the first
  * call and never needs a second one).
+ *
+ * This is also the only point in a scan where a comment carries a score worth
+ * reading: `OpportunityScanner` pulls a subreddit's NEWEST comments, minutes
+ * old and sitting at 1. Sorting one post's own comments is what surfaces the
+ * ones people actually upvoted, which is why
+ * `App\Actions\HarvestRedditReplyExamples` reads this response instead of
+ * fetching anything of its own.
  */
 class TopComments
 {
     /**
-     * @return Collection<int, string> plain comment bodies, highest score first
+     * @return Collection<int, TopComment> highest score first
      */
     public function for(string $postId, int $limit = 5): Collection
     {
@@ -43,10 +50,25 @@ class TopComments
 
         return (new Collection($comments))
             ->reject(fn (array $comment): bool => $this->isRemoved($comment))
-            ->sortByDesc(fn (array $comment): int => (int) ($comment['score'] ?? $comment['ups'] ?? 0))
+            ->sortByDesc(fn (array $comment): int => $this->score($comment))
             ->take($limit)
-            ->map(fn (array $comment): string => trim((string) $comment['body']))
+            ->map(fn (array $comment): TopComment => new TopComment(
+                id: (string) ($comment['id'] ?? ''),
+                body: trim((string) $comment['body']),
+                author: (string) ($comment['author'] ?? ''),
+                subreddit: is_string($comment['subreddit'] ?? null) ? $comment['subreddit'] : null,
+                permalink: is_string($comment['permalink'] ?? null) ? 'https://www.reddit.com'.$comment['permalink'] : '',
+                score: $this->score($comment),
+            ))
             ->values();
+    }
+
+    /**
+     * @param  array<string, mixed>  $comment
+     */
+    private function score(array $comment): int
+    {
+        return (int) ($comment['score'] ?? $comment['ups'] ?? 0);
     }
 
     /**

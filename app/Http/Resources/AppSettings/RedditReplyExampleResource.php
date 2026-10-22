@@ -21,6 +21,14 @@ class RedditReplyExampleResource extends JsonResource
             'body' => $this->body,
             'source' => $this->source,
             'added_by' => $this->addedBy?->name,
+            // Set on a harvested row only: it is somebody else's comment, so
+            // the screen shows who wrote it, where, what it scored and why it
+            // was kept, rather than asking a superadmin to trust the row.
+            'comment_permalink' => $this->comment_permalink,
+            'comment_author' => $this->comment_author,
+            'subreddit' => $this->subreddit,
+            'score' => $this->score,
+            'harvest_reason' => $this->harvest_reason,
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }

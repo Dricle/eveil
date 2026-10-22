@@ -11,6 +11,7 @@ defineOptions({ layout: [AppLayout, [AppSettingsLayout, { title: 'Reddit reply e
 const props = defineProps<{
     examples: RedditReplyExampleRow[]
     threshold: { min_score: number }
+    harvest: { enabled: boolean, min_score: number }
 }>()
 
 const minScore = ref(props.threshold.min_score)
@@ -19,8 +20,30 @@ watch(() => props.threshold, (threshold) => {
     minScore.value = threshold.min_score
 }, { immediate: true })
 
+const harvestEnabled = ref(props.harvest.enabled)
+const harvestMinScore = ref(props.harvest.min_score)
+
+watch(() => props.harvest, (harvest) => {
+    harvestEnabled.value = harvest.enabled
+    harvestMinScore.value = harvest.min_score
+}, { immediate: true })
+
+const LABELS: Record<string, string> = {
+    promoted: 'Promoted',
+    harvested: 'Harvested',
+    manual: 'Manual'
+}
+
 function sourceLabel (source: string): string {
-    return source === 'promoted' ? 'Promoted' : 'Manual'
+    return LABELS[source] ?? 'Manual'
+}
+
+function sourceColor (source: string): 'primary' | 'warning' | 'neutral' {
+    if (source === 'promoted') {
+        return 'primary'
+    }
+
+    return source === 'harvested' ? 'warning' : 'neutral'
 }
 
 const viewing = ref<RedditReplyExampleRow | null>(null)
@@ -128,6 +151,69 @@ const viewing = ref<RedditReplyExampleRow | null>(null)
         <UCard>
             <template #header>
                 <h2 class="font-medium">
+                    Keeping other people's replies
+                </h2>
+                <p class="mt-1 text-sm text-muted">
+                    While a scan reads a thread, it also sees that thread's
+                    best-scoring comments. The ones that recommend a product
+                    and clear this floor are kept as examples of how a product
+                    mention earns upvotes. They are written by strangers, so
+                    the writer is shown them separately from ours, with the
+                    comment they came from linked here for you to check.
+                </p>
+            </template>
+
+            <Form
+                v-slot="{ errors, processing, recentlySuccessful }"
+                v-bind="redditReplyExamples.harvest.form()"
+                class="space-y-4"
+            >
+                <UFormField
+                    label="Harvest"
+                    name="enabled"
+                    :error="errors.enabled"
+                >
+                    <UCheckbox
+                        v-model="harvestEnabled"
+                        name="enabled"
+                        value="1"
+                        label="Keep other redditors' high-scoring product mentions"
+                    />
+                </UFormField>
+
+                <UFormField
+                    label="Minimum score"
+                    name="min_score"
+                    :error="errors.min_score"
+                    class="max-w-xs"
+                >
+                    <UInput
+                        v-model="harvestMinScore"
+                        name="min_score"
+                        type="number"
+                        min="1"
+                        required
+                        class="w-full"
+                    />
+                </UFormField>
+
+                <div class="flex items-center gap-3">
+                    <UButton
+                        type="submit"
+                        :loading="processing"
+                        label="Save"
+                    />
+                    <span
+                        v-if="recentlySuccessful"
+                        class="text-sm text-muted"
+                    >Saved.</span>
+                </div>
+            </Form>
+        </UCard>
+
+        <UCard>
+            <template #header>
+                <h2 class="font-medium">
                     The bank ({{ examples.length }})
                 </h2>
             </template>
@@ -152,11 +238,17 @@ const viewing = ref<RedditReplyExampleRow | null>(null)
                     <div class="min-w-0">
                         <div class="flex items-center gap-2">
                             <UBadge
-                                :color="example.source === 'promoted' ? 'primary' : 'neutral'"
+                                :color="sourceColor(example.source)"
                                 variant="subtle"
                                 size="sm"
                                 :label="sourceLabel(example.source)"
                             />
+                            <span
+                                v-if="example.source === 'harvested'"
+                                class="text-xs text-muted"
+                            >
+                                {{ example.score }} points<template v-if="example.subreddit"> in r/{{ example.subreddit }}</template>
+                            </span>
                         </div>
                         <p class="mt-1 line-clamp-2 text-sm text-dimmed">
                             {{ example.body }}
@@ -189,7 +281,7 @@ const viewing = ref<RedditReplyExampleRow | null>(null)
             >
                 <div class="flex items-center gap-2">
                     <UBadge
-                        :color="viewing.source === 'promoted' ? 'primary' : 'neutral'"
+                        :color="sourceColor(viewing.source)"
                         variant="subtle"
                         size="sm"
                         :label="sourceLabel(viewing.source)"
@@ -198,10 +290,34 @@ const viewing = ref<RedditReplyExampleRow | null>(null)
                         v-if="viewing.added_by"
                         class="text-sm text-dimmed"
                     >Added by {{ viewing.added_by }}</span>
+                    <span
+                        v-else-if="viewing.comment_author"
+                        class="text-sm text-dimmed"
+                    >Written by u/{{ viewing.comment_author }}, {{ viewing.score }} points</span>
                 </div>
+
+                <p
+                    v-if="viewing.harvest_reason"
+                    class="text-sm text-muted"
+                >
+                    {{ viewing.harvest_reason }}
+                </p>
+
                 <p class="whitespace-pre-line text-sm">
                     {{ viewing.body }}
                 </p>
+
+                <UButton
+                    v-if="viewing.comment_permalink"
+                    :href="viewing.comment_permalink"
+                    external
+                    target="_blank"
+                    color="neutral"
+                    variant="subtle"
+                    size="sm"
+                    icon="i-lucide-external-link"
+                    label="Read it on Reddit"
+                />
             </div>
         </template>
 

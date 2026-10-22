@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Actions\HarvestRedditReplyExamples;
 use App\Ai\Agents\RedditOpportunityTriage;
 use App\Ai\Agents\RedditReplyWriter;
 use App\Enums\AgentRunStatus;
@@ -19,6 +20,7 @@ use App\Notifications\RedditRepliesDrafted;
 use App\Services\Reddit\OpportunityCandidate;
 use App\Services\Reddit\OpportunityScanner;
 use App\Services\Reddit\SeoThreadFinder;
+use App\Services\Reddit\TopComment;
 use App\Services\Reddit\TopComments;
 use App\Support\CurrentProject;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -31,6 +33,11 @@ use Illuminate\Support\Str;
  * One scan cycle for one project: gather candidates from BOTH discovery
  * mechanisms, triage them in one shared batch, draft up to 3 reply angles
  * for each accepted thread. Mirrors `GenerateSocialPost`'s shape.
+ *
+ * The top comments read to give the writer a tone sample are also handed,
+ * once per cycle, to `HarvestRedditReplyExamples` - the only place in the
+ * app where a comment is seen with a real score on it, so the harvest reads
+ * what is already here rather than fetching the same threads again.
  */
 class ScanRedditOpportunities implements ShouldQueue
 {
@@ -53,9 +60,10 @@ class ScanRedditOpportunities implements ShouldQueue
         OpportunityScanner $scanner,
         SeoThreadFinder $seoThreadFinder,
         TopComments $topComments,
+        HarvestRedditReplyExamples $harvester,
         CurrentProject $currentProject,
     ): void {
-        $currentProject->run($this->project, function () use ($scanner, $seoThreadFinder, $topComments): void {
+        $currentProject->run($this->project, function () use ($scanner, $seoThreadFinder, $topComments, $harvester): void {
             $candidates = $scanner->find($this->project)
                 ->merge($seoThreadFinder->find($this->project))
                 ->unique(fn (OpportunityCandidate $candidate): string => $candidate->permalink)
@@ -94,11 +102,26 @@ class ScanRedditOpportunities implements ShouldQueue
 
             $drafted = false;
 
+            /** @var Collection<int, TopComment> $read */
+            $read = new Collection;
+
             foreach ($accepted as [$candidate, $reason]) {
-                if ($this->draft($candidate, $reason, $topComments, $ownWinners, $sharedPoolDigest)) {
+                // A `seo_thread` candidate carries the comments `SeoThreadFinder`
+                // already fetched to judge it; a `subreddit_scan` one needs the
+                // single call that has ever been made here. Either way this is
+                // the whole of what the harvest sees: it never fetches its own.
+                $comments = $candidate->source === RedditReplySource::SeoThread
+                    ? new Collection($candidate->topComments)
+                    : $topComments->for($candidate->postId, self::TONE_SAMPLE_LIMIT);
+
+                $read = $read->merge($comments);
+
+                if ($this->draft($candidate, $reason, $comments, $ownWinners, $sharedPoolDigest)) {
                     $drafted = true;
                 }
             }
+
+            $harvester->handle($this->project, $read);
 
             if ($drafted) {
                 Notification::send($this->project->notifiableUsers(), RedditRepliesDrafted::for($this->project));
@@ -158,14 +181,13 @@ class ScanRedditOpportunities implements ShouldQueue
     }
 
     /**
+     * @param  Collection<int, TopComment>  $comments  this thread's own top comments, the register to match
      * @param  Collection<int, string>  $ownWinners
      * @return bool whether at least one angle was actually drafted
      */
-    private function draft(OpportunityCandidate $candidate, string $reason, TopComments $topComments, Collection $ownWinners, string $sharedPoolDigest): bool
+    private function draft(OpportunityCandidate $candidate, string $reason, Collection $comments, Collection $ownWinners, string $sharedPoolDigest): bool
     {
-        $toneSample = $candidate->source === RedditReplySource::SeoThread
-            ? implode("\n\n", $candidate->topComments)
-            : $topComments->for($candidate->postId, self::TONE_SAMPLE_LIMIT)->implode("\n\n");
+        $toneSample = $comments->map(fn (TopComment $comment): string => $comment->body)->implode("\n\n");
 
         $run = AgentRun::create([
             'project_id' => $this->project->id,

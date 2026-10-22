@@ -35,6 +35,7 @@ class Toolbelt
         DeleteAllLeads::class,
         GetKnowledgeBase::class,
         UpdateKnowledgeBase::class,
+        SetChannel::class,
         ProposeRecommendation::class,
         FindFeatureGaps::class,
         UpdateRecommendation::class,

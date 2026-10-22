@@ -9,7 +9,7 @@ use App\Services\Ads\AdProposals;
 
 /**
  * The hard stop. Once the project has spent its month, or its budget was set
- * to zero, every campaign Eveil runs is paused, on every account, whatever
+ * to zero, or ads were switched off, every campaign Eveil runs is paused, on every account, whatever
  * any agent or person decided before. So is every campaign on an account the
  * budget may no longer reach: switched off, or billed in another currency.
  * Pure code, run after every metrics sync, never left to a prompt.
@@ -34,6 +34,7 @@ class EnforceAdBudget
 
         foreach ($running as $campaign) {
             $reason = match (true) {
+                ! $project->ads_enabled => 'Ads are switched off for this project.',
                 $budget === 0 => 'The monthly ads budget is set to zero.',
                 $exhausted => 'The monthly ads budget is spent.',
                 ! $campaign->account->isUsable() => 'Eveil may no longer spend on this ad account.',

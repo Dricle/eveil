@@ -40,6 +40,10 @@ Tell Evie about something worth writing about and she offers an article alongsid
 
 Evie can list, read, create, correct and delete target profiles — the same segments you'd otherwise manage from the Targets screen. Already know the segment you want? Tell it directly ("also target dental clinics under 10 people") rather than asking it to work one out from the knowledge base. Deleting one takes its discovery run history with it and cannot be undone, so it stops for your approval first, same as starting a real discovery run.
 
+## Switching channels on or off
+
+Ask Evie to start or stop a channel ("stop the Reddit replies", "let's try Instagram") and it flips the same switch as Settings → Project → Channels, with no approval card, since nothing runs until that channel's schedule comes round. Turning cold email off only pauses the lead search.
+
 ## Starting a project's discovery over
 
 Ask Evie to wipe everything found so far ("delete all target profiles and leads, I want to start over") and it deletes every target profile one at a time, plus every company and every lead in one shot each for the two of those. A company and its leads reset independently, so asking for only one of them leaves the other alone.

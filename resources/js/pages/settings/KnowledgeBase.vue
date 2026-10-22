@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { Form, Head, router, usePoll } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
+import KnowledgeBaseForm from '@/components/KnowledgeBaseForm.vue'
 import OpenQuestions from '@/components/OpenQuestions.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import SettingsLayout from '@/layouts/SettingsLayout.vue'
-import knowledgeBase from '@/routes/settings/knowledge-base'
 import projectRoutes from '@/routes/settings/project'
 import repositories from '@/routes/settings/repositories'
 import type { CodeRepositoryRow, ProjectDetail, RepoAnalysisSummary } from '@/types'
@@ -84,41 +84,6 @@ function confirmRetry () {
     retryRepo(confirmingRetryRepo.value)
     confirmingRetryRepoId.value = null
 }
-
-const TEXTS = [
-    { name: 'what_it_does', label: 'What it does', help: 'What the product is, and the problem it removes.' },
-    { name: 'who_it_is_for', label: 'Who it is for', help: 'The kind of company, and the kind of person who buys it.' },
-    { name: 'value_proposition', label: 'Value proposition', help: 'The single strongest reason someone switches to it.' },
-    { name: 'positioning', label: 'Positioning', help: 'How it frames itself against the alternatives, including doing nothing.' },
-    { name: 'pricing_model', label: 'Pricing model', help: 'How it charges, as stated on the site.' }
-] as const
-
-const LISTS = [
-    { name: 'key_features', label: 'Key features' },
-    { name: 'competitors', label: 'Competitors' },
-    { name: 'proof_points', label: 'Proof points' }
-] as const
-
-// The list fields go over the wire one item per line; the server splits them.
-function lines (field: typeof LISTS[number]['name']): string {
-    return (props.project.knowledge_base?.[field] ?? []).join('\n')
-}
-
-// Every box is bound, never left to `default-value`: Nuxt UI reads that prop
-// once at mount, and Vue then patches a form element's value against what the
-// DOM holds, so every later render writes the frozen first value back over what
-// was typed. This page polls every three seconds while a crawl is out, so
-// without this it would wipe what somebody is typing three times a minute.
-const draft = ref<Record<string, string>>({})
-
-function fill () {
-    draft.value = {
-        ...Object.fromEntries(TEXTS.map(field => [field.name, props.project.knowledge_base?.[field.name] ?? ''])),
-        ...Object.fromEntries(LISTS.map(field => [field.name, lines(field.name)]))
-    }
-}
-
-watch(() => props.project, fill, { immediate: true, deep: true })
 </script>
 
 <template>
@@ -394,63 +359,9 @@ watch(() => props.project, fill, { immediate: true, deep: true })
                 </span>
             </div>
 
-            <Form
-                v-slot="{ errors, processing, recentlySuccessful }"
-                v-bind="knowledgeBase.update.form({ project: project.slug })"
-                class="space-y-4"
-            >
-                <UCard>
-                    <div class="space-y-4">
-                        <UFormField
-                            v-for="field in TEXTS"
-                            :key="field.name"
-                            :label="field.label"
-                            :name="field.name"
-                            :help="field.help"
-                            :error="errors[field.name]"
-                        >
-                            <UTextarea
-                                v-model="draft[field.name]"
-                                :name="field.name"
-                                :rows="3"
-                                autoresize
-                                class="w-full"
-                            />
-                        </UFormField>
-
-                        <UFormField
-                            v-for="field in LISTS"
-                            :key="field.name"
-                            :label="field.label"
-                            :name="field.name"
-                            help="One per line."
-                            :error="errors[field.name]"
-                        >
-                            <UTextarea
-                                v-model="draft[field.name]"
-                                :name="field.name"
-                                :rows="3"
-                                autoresize
-                                class="w-full"
-                            />
-                        </UFormField>
-                    </div>
-
-                    <template #footer>
-                        <div class="flex items-center gap-3">
-                            <UButton
-                                type="submit"
-                                :loading="processing"
-                                label="Save"
-                            />
-                            <span
-                                v-if="recentlySuccessful"
-                                class="text-sm text-muted"
-                            >Saved.</span>
-                        </div>
-                    </template>
-                </UCard>
-            </Form>
+            <UCard>
+                <KnowledgeBaseForm :knowledge-base="project.knowledge_base" />
+            </UCard>
         </template>
     </div>
 

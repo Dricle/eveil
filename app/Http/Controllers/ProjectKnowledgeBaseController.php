@@ -42,7 +42,9 @@ class ProjectKnowledgeBaseController extends Controller
             'knowledge_base_edited_by_user' => true,
         ]);
 
-        return to_route('settings.knowledge-base.edit');
+        // Saved from the settings screen or from the onboarding's modal, so
+        // back to whichever one posted it.
+        return back(fallback: route('settings.knowledge-base.edit'));
     }
 
     /**

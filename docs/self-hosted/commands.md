@@ -16,7 +16,7 @@ The scheduler (part of the `app` container, under supervisord) already runs thes
 | `eveil:enrol-due` | every 5 min | Adds newly reachable people to the sequences already running. |
 | `eveil:fetch-replies` | every 5 min | Reads new replies out of every mailbox and acts on them. |
 | `eveil:write-missing` | hourly | Writes a sequence for every segment that has none, on autonomous projects. |
-| `eveil:discover-due` | every 6 hours | Starts the next discovery run for every target profile ready for one. |
+| `eveil:discover-due` | every 6 hours | Starts the next discovery run for every target profile ready for one. Skips projects with cold email switched off. |
 | `eveil:remind-replies` | daily | Emails a project's users when an inbox reply has been waiting in todo for a day. Each reply triggers one reminder at most. |
 | `eveil:promote-proven-emails` | daily | Adds any campaign step that's earned it to the shared examples bank. |
 | `eveil:social-generate-due` | daily | Drafts a LinkedIn, X, Bluesky or Instagram post for every project whose cadence on that network is due, with a generated image for Instagram. LinkedIn, Bluesky and Instagram wait until a working account is granted to the project. |

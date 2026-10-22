@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\RunDiscovery;
 use App\Models\TargetProfile;
+use App\Support\CurrentProject;
 use Illuminate\Http\RedirectResponse;
 
 /**
@@ -16,8 +17,14 @@ use Illuminate\Http\RedirectResponse;
  */
 class OnboardingSearchController extends Controller
 {
-    public function store(RunDiscovery $discover): RedirectResponse
+    public function store(RunDiscovery $discover, CurrentProject $currentProject): RedirectResponse
     {
+        // The screen never asks with email switched off. A stale tab still
+        // could, and the search is the one thing the switch promised to stop.
+        if (! $currentProject->getOrFail()->email_enabled) {
+            return back();
+        }
+
         TargetProfile::query()
             ->where('is_active', true)
             ->whereDoesntHave('discoveryRuns')

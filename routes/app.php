@@ -44,6 +44,7 @@ use App\Http\Controllers\CampaignGenerationController;
 use App\Http\Controllers\CampaignStatusController;
 use App\Http\Controllers\CampaignStepController;
 use App\Http\Controllers\CampaignStepOrderController;
+use App\Http\Controllers\ChannelController;
 use App\Http\Controllers\CodeRepositoryController;
 use App\Http\Controllers\CompanyApprovalController;
 use App\Http\Controllers\CompanyBulkDeleteController;
@@ -225,6 +226,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
                 ->name('companies.destroy-all');
             Route::delete('contacts', [ContactBulkDeleteController::class, 'destroy'])
                 ->name('contacts.destroy-all');
+
+            Route::put('channels/{channel}', [ChannelController::class, 'update'])->name('channels.update');
 
             Route::get('autonomy', [AutonomyController::class, 'edit'])->name('autonomy.edit');
             Route::put('autonomy', [AutonomyController::class, 'update'])->name('autonomy.update');

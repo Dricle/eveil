@@ -197,3 +197,18 @@ it('leaves draft campaigns out of the spend while they wait', function () {
 
     expect($account->activeDailyBudgetMicros())->toBe(10_000_000);
 });
+
+it('pauses every running campaign the moment ads are switched off, and reviews nothing after', function () {
+    Queue::fake([ApplyAdDecision::class, ReviewAds::class]);
+    [$user, $project, $account] = adOwner();
+    AdCampaign::factory()->active()->create(['ad_account_id' => $account->id]);
+
+    $this->actingAs($user)->putJson(route('settings.channels.update', 'ads'), ['enabled' => false])->assertRedirect();
+
+    expect($project->fresh()->ads_enabled)->toBeFalse()
+        ->and(AdDecision::query()->sole()->reasoning)->toBe('Ads are switched off for this project.');
+    Queue::assertPushed(ApplyAdDecision::class);
+
+    $this->actingAs($user)->post(route('ads.reviews.store'))->assertSessionHasErrors('review');
+    Queue::assertNotPushed(ReviewAds::class);
+});

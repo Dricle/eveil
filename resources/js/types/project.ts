@@ -65,6 +65,20 @@ export type OpenQuestion = {
     answer: string | null
 }
 
+/**
+ * A way of reaching buyers, switched on or off as a whole, with the website
+ * analysis's verdict on it. `reason` is null until a site has been read.
+ */
+export type ChannelToggle = {
+    key: string
+    label: string
+    icon: string
+    enabled: boolean
+    recommended: boolean
+    reason: string | null
+    requirement: string | null
+}
+
 export type Analysis = {
     id: number
     type: 'website' | 'repo'

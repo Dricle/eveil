@@ -2,6 +2,7 @@
 
 namespace App\Ai\Agents;
 
+use App\Enums\Channel;
 use App\Models\Project;
 use App\Support\ParsedPage;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -72,6 +73,17 @@ class WebsiteAnalyst extends EveilAgent implements HasStructuredOutput
         weekly" is a recommendation; "do content marketing" is not, and must not be
         written. Rank each by impact and effort rather than listing whatever comes to
         mind first.
+
+        Finally, judge every one of Eveil's channels for this product: cold email,
+        Reddit replies, LinkedIn, X, Bluesky or Instagram posts, SEO articles, paid ads.
+        Recommend a channel only when the pages show its buyers are there: a B2B tool
+        sold to operations managers fits cold email and LinkedIn, a consumer app with a
+        visual product fits Instagram, a developer tool people compare on forums fits
+        Reddit, a product people already search for by category with a clear price fits
+        paid ads. Give the reason either way, in one plain sentence the founder will read
+        next to the switch: what in the pages says the buyers are there, or why they are
+        not. "Your buyers are plant managers, who are not on Instagram" is a reason;
+        "not relevant" is not.
         PROMPT;
     }
 
@@ -176,6 +188,20 @@ class WebsiteAnalyst extends EveilAgent implements HasStructuredOutput
                     .'impact and effort rather than listed in whatever order they came to mind. Empty when nothing '
                     .'concrete enough to act on is visible from what you were given.'
                 )
+                ->required(),
+
+            'channel_fit' => $schema->array()
+                ->items($schema->object([
+                    'channel' => $schema->string()->enum(array_column(Channel::cases(), 'value'))
+                        ->required(),
+                    'recommended' => $schema->boolean()
+                        ->description('True only when the pages show this product\'s buyers are reachable there.')
+                        ->required(),
+                    'reason' => $schema->string()
+                        ->description('One sentence, in the language of the site, read next to the switch: why it fits, or why it does not.')
+                        ->required(),
+                ]))
+                ->description('Every channel exactly once, recommended or not, each with its reason.')
                 ->required(),
         ];
     }

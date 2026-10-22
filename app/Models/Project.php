@@ -47,6 +47,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  * @property string|null $prompt_instructions
  * @property string|null $linkedin_prompt_instructions
  * @property AutonomyLevel $email_autonomy_level
+ * @property bool $email_enabled
  * @property AutonomyLevel $linkedin_autonomy_level
  * @property int|null $daily_lead_limit
  * @property int|null $lead_limit
@@ -62,6 +63,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  * @property Carbon|null $bluesky_next_post_at
  * @property AutonomyLevel $bluesky_autonomy_level
  * @property AutonomyLevel $ads_autonomy_level
+ * @property bool $ads_enabled
  * @property int $ads_monthly_budget_micros
  * @property string|null $ads_currency
  * @property string|null $x_prompt_instructions
@@ -73,7 +75,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['organization_id', 'name', 'slug', 'url', 'github_token', 'knowledge_base', 'knowledge_base_edited_by_user', 'default_language', 'prompt_instructions', 'linkedin_prompt_instructions', 'email_autonomy_level', 'linkedin_autonomy_level', 'daily_lead_limit', 'lead_limit', 'linkedin_post_frequency', 'linkedin_next_post_at', 'reddit_scan_frequency', 'reddit_next_scan_at', 'article_frequency', 'article_next_at', 'x_post_frequency', 'x_next_post_at', 'bluesky_post_frequency', 'bluesky_next_post_at', 'bluesky_autonomy_level', 'ads_autonomy_level', 'ads_monthly_budget_micros', 'ads_currency', 'x_prompt_instructions', 'bluesky_prompt_instructions', 'instagram_post_frequency', 'instagram_next_post_at', 'instagram_autonomy_level', 'instagram_prompt_instructions'])]
+#[Fillable(['organization_id', 'name', 'slug', 'url', 'github_token', 'knowledge_base', 'knowledge_base_edited_by_user', 'default_language', 'prompt_instructions', 'linkedin_prompt_instructions', 'email_autonomy_level', 'email_enabled', 'linkedin_autonomy_level', 'daily_lead_limit', 'lead_limit', 'linkedin_post_frequency', 'linkedin_next_post_at', 'reddit_scan_frequency', 'reddit_next_scan_at', 'article_frequency', 'article_next_at', 'x_post_frequency', 'x_next_post_at', 'bluesky_post_frequency', 'bluesky_next_post_at', 'bluesky_autonomy_level', 'ads_autonomy_level', 'ads_enabled', 'ads_monthly_budget_micros', 'ads_currency', 'x_prompt_instructions', 'bluesky_prompt_instructions', 'instagram_post_frequency', 'instagram_next_post_at', 'instagram_autonomy_level', 'instagram_prompt_instructions'])]
 #[Hidden(['github_token'])]
 class Project extends Model implements HasMedia, StoresMediaInterface
 {
@@ -151,6 +153,8 @@ class Project extends Model implements HasMedia, StoresMediaInterface
      */
     protected $attributes = [
         'prompt_instructions' => self::DEFAULT_INSTRUCTIONS,
+        'email_enabled' => true,
+        'ads_enabled' => true,
     ];
 
     /**
@@ -321,12 +325,12 @@ class Project extends Model implements HasMedia, StoresMediaInterface
     }
 
     /**
-     * Whether Eveil has anything to run ads with: a budget and somewhere to
-     * spend it.
+     * Whether Eveil may run ads: the channel switched on, a budget, and
+     * somewhere to spend it.
      */
     public function runsAds(): bool
     {
-        return $this->ads_monthly_budget_micros > 0 && $this->usableAdAccounts()->exists();
+        return $this->ads_enabled && $this->ads_monthly_budget_micros > 0 && $this->usableAdAccounts()->exists();
     }
 
     /**
@@ -574,6 +578,7 @@ class Project extends Model implements HasMedia, StoresMediaInterface
             'knowledge_base' => 'array',
             'knowledge_base_edited_by_user' => 'boolean',
             'email_autonomy_level' => AutonomyLevel::class,
+            'email_enabled' => 'boolean',
             'linkedin_autonomy_level' => AutonomyLevel::class,
             'github_token' => EncryptedCredential::class,
             'linkedin_post_frequency' => SocialPostFrequency::class,
@@ -591,6 +596,7 @@ class Project extends Model implements HasMedia, StoresMediaInterface
             'instagram_next_post_at' => 'datetime',
             'instagram_autonomy_level' => AutonomyLevel::class,
             'ads_autonomy_level' => AutonomyLevel::class,
+            'ads_enabled' => 'boolean',
             'ads_monthly_budget_micros' => 'integer',
         ];
     }

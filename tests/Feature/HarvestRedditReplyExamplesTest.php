@@ -162,3 +162,14 @@ it('never harvests one of our own published replies, whatever project posted it'
     expect(app(HarvestRedditReplyExamples::class)->handle($project, new Collection([harvestable()])))->toBe(0)
         ->and(RedditReplyExample::query()->count())->toBe(0);
 });
+
+it('does not mistake a stranger\'s comment for ours when its id is the post id of one of our replies', function () {
+    $project = Project::factory()->create();
+    RedditReply::factory()->create([
+        'project_id' => $project->id,
+        'comment_permalink' => 'https://www.reddit.com/r/smallbusiness/comments/cmt1/best_tools/ours99/',
+    ]);
+    RedditExampleTriage::fake([keptVerdict()]);
+
+    expect(app(HarvestRedditReplyExamples::class)->handle($project, new Collection([harvestable()])))->toBe(1);
+});

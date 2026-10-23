@@ -161,7 +161,8 @@ class HarvestRedditReplyExamples
             return [];
         }
 
-        $pattern = '/('.$ids->implode('|').')(/|\\?|#|$)';
+        // The comment id is always the link's last segment, the post id never.
+        $pattern = '/('.$ids->implode('|').')/?([?#]|$)';
 
         return RedditReply::query()
             ->withoutGlobalScopes()

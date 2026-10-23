@@ -14,7 +14,7 @@ use App\Enums\RedditReplySource;
 readonly class OpportunityCandidate
 {
     /**
-     * @param  array<int, string>  $topComments  already fetched for a `seo_thread` candidate (needed to judge it at triage time); empty for `subreddit_scan`, fetched later only if accepted
+     * @param  array<int, TopComment>  $topComments  already fetched for a `seo_thread` candidate (needed to judge it at triage time); empty for `subreddit_scan`, fetched later only if accepted
      */
     public function __construct(
         public string $permalink,

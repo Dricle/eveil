@@ -2,8 +2,10 @@
 
 namespace App\Jobs;
 
+use App\Actions\HarvestRedditReplyExamples;
 use App\Ai\Agents\RedditOpportunityTriage;
 use App\Ai\Agents\RedditReplyWriter;
+use App\Ai\OutOfCredit;
 use App\Enums\AgentRunStatus;
 use App\Enums\IdeaKind;
 use App\Enums\IdeaStatus;
@@ -19,6 +21,7 @@ use App\Notifications\RedditRepliesDrafted;
 use App\Services\Reddit\OpportunityCandidate;
 use App\Services\Reddit\OpportunityScanner;
 use App\Services\Reddit\SeoThreadFinder;
+use App\Services\Reddit\TopComment;
 use App\Services\Reddit\TopComments;
 use App\Support\CurrentProject;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -26,11 +29,17 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
+use Throwable;
 
 /**
  * One scan cycle for one project: gather candidates from BOTH discovery
  * mechanisms, triage them in one shared batch, draft up to 3 reply angles
  * for each accepted thread. Mirrors `GenerateSocialPost`'s shape.
+ *
+ * The top comments read to give the writer a tone sample are also handed,
+ * once per cycle, to `HarvestRedditReplyExamples` - the only place in the
+ * app where a comment is seen with a real score on it, so the harvest reads
+ * what is already here rather than fetching the same threads again.
  */
 class ScanRedditOpportunities implements ShouldQueue
 {
@@ -53,9 +62,10 @@ class ScanRedditOpportunities implements ShouldQueue
         OpportunityScanner $scanner,
         SeoThreadFinder $seoThreadFinder,
         TopComments $topComments,
+        HarvestRedditReplyExamples $harvester,
         CurrentProject $currentProject,
     ): void {
-        $currentProject->run($this->project, function () use ($scanner, $seoThreadFinder, $topComments): void {
+        $currentProject->run($this->project, function () use ($scanner, $seoThreadFinder, $topComments, $harvester): void {
             $candidates = $scanner->find($this->project)
                 ->merge($seoThreadFinder->find($this->project))
                 ->unique(fn (OpportunityCandidate $candidate): string => $candidate->permalink)
@@ -85,7 +95,19 @@ class ScanRedditOpportunities implements ShouldQueue
                 ->filter()
                 ->values();
 
+            // A `seo_thread` candidate carries the comments `SeoThreadFinder`
+            // already fetched to judge it, accepted or not: a thread rejected
+            // because its answers already cover the question well is exactly
+            // where the best examples sit. The harvest never fetches its own.
+            /** @var Collection<int, TopComment> $read */
+            $read = $candidates
+                ->filter(fn (OpportunityCandidate $candidate): bool => $candidate->source === RedditReplySource::SeoThread)
+                ->flatMap(fn (OpportunityCandidate $candidate): array => $candidate->topComments)
+                ->values();
+
             if ($accepted->isEmpty()) {
+                $this->harvest($harvester, $read);
+
                 return;
             }
 
@@ -95,7 +117,16 @@ class ScanRedditOpportunities implements ShouldQueue
             $drafted = false;
 
             foreach ($accepted as [$candidate, $reason]) {
-                if ($this->draft($candidate, $reason, $topComments, $ownWinners, $sharedPoolDigest)) {
+                // A `subreddit_scan` candidate needs the single call that has
+                // ever been made here; its comments join what the harvest sees.
+                if ($candidate->source === RedditReplySource::SeoThread) {
+                    $comments = new Collection($candidate->topComments);
+                } else {
+                    $comments = $topComments->for($candidate->postId, self::TONE_SAMPLE_LIMIT);
+                    $read = $read->merge($comments);
+                }
+
+                if ($this->draft($candidate, $reason, $comments, $ownWinners, $sharedPoolDigest)) {
                     $drafted = true;
                 }
             }
@@ -103,7 +134,28 @@ class ScanRedditOpportunities implements ShouldQueue
             if ($drafted) {
                 Notification::send($this->project->notifiableUsers(), RedditRepliesDrafted::for($this->project));
             }
+
+            $this->harvest($harvester, $read);
         });
+    }
+
+    /**
+     * The harvest is a side benefit of the scan, never a reason for it to
+     * fail: drafts are already saved and announced by the time it runs, and a
+     * retry would skip those threads anyway. Its failure is reported, the
+     * scan carries on.
+     *
+     * @param  Collection<int, TopComment>  $read
+     */
+    private function harvest(HarvestRedditReplyExamples $harvester, Collection $read): void
+    {
+        try {
+            $harvester->handle($this->project, $read);
+        } catch (OutOfCredit) {
+            // Not a failure: the spend guard already told the owners.
+        } catch (Throwable $e) {
+            report($e);
+        }
     }
 
     /**
@@ -158,14 +210,13 @@ class ScanRedditOpportunities implements ShouldQueue
     }
 
     /**
+     * @param  Collection<int, TopComment>  $comments  this thread's own top comments, the register to match
      * @param  Collection<int, string>  $ownWinners
      * @return bool whether at least one angle was actually drafted
      */
-    private function draft(OpportunityCandidate $candidate, string $reason, TopComments $topComments, Collection $ownWinners, string $sharedPoolDigest): bool
+    private function draft(OpportunityCandidate $candidate, string $reason, Collection $comments, Collection $ownWinners, string $sharedPoolDigest): bool
     {
-        $toneSample = $candidate->source === RedditReplySource::SeoThread
-            ? implode("\n\n", $candidate->topComments)
-            : $topComments->for($candidate->postId, self::TONE_SAMPLE_LIMIT)->implode("\n\n");
+        $toneSample = $comments->map(fn (TopComment $comment): string => $comment->body)->implode("\n\n");
 
         $run = AgentRun::create([
             'project_id' => $this->project->id,

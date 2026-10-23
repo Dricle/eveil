@@ -13,11 +13,13 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * The shared bank of proven Reddit replies, and the score bar a reply's own
- * performance has to clear to join it automatically - see
- * `App\Actions\FetchRedditReplyStats`, the thing that actually promotes
- * one. This screen only manages the bank and its threshold, never promotes
- * anything itself. Mirrors `SocialPostExampleController` exactly.
+ * The shared bank of proven Reddit replies, and the two score bars that let
+ * something join it on its own: one for our own published replies
+ * (`App\Actions\FetchRedditReplyStats`), one for a stranger's product
+ * recommendation off a thread the scan read
+ * (`App\Actions\HarvestRedditReplyExamples`). This screen manages the bank
+ * and those settings, never promotes or harvests anything itself. Mirrors
+ * `SocialPostExampleController` exactly.
  */
 class RedditReplyExampleController extends Controller
 {
@@ -31,6 +33,10 @@ class RedditReplyExampleController extends Controller
             ),
             'threshold' => [
                 'min_score' => $this->settings->int('reddit_examples.min_score'),
+            ],
+            'harvest' => [
+                'enabled' => $this->settings->bool('reddit_examples.harvest_enabled'),
+                'min_score' => $this->settings->int('reddit_examples.harvest_min_score'),
             ],
         ]);
     }

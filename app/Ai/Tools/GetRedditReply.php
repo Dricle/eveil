@@ -5,6 +5,7 @@ namespace App\Ai\Tools;
 use App\Models\Project;
 use App\Models\RedditReply;
 use App\Services\Reddit\SeoThreadFinder;
+use App\Services\Reddit\TopComment;
 use App\Services\Reddit\TopComments;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\Tool;
@@ -63,7 +64,9 @@ class GetRedditReply implements Tool
         return [
             'title' => (string) ($post['title'] ?? ''),
             'text' => (string) ($post['selftext'] ?? ''),
-            'top_comments' => app(TopComments::class)->for((string) ($post['id'] ?? ''))->all(),
+            'top_comments' => app(TopComments::class)->for((string) ($post['id'] ?? ''))
+                ->map(fn (TopComment $comment): string => $comment->body)
+                ->all(),
         ];
     }
 

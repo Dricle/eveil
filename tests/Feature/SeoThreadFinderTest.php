@@ -44,6 +44,7 @@ it('reads a matching search result into a candidate, with its top comments', fun
             'author' => 'asker1',
         ]]]),
         'arctic-shift.photon-reddit.com/api/comments/search*' => Http::response(['data' => [[
+            'id' => 'cmt1',
             'body' => 'I use an old spreadsheet, honestly.',
             'score' => 12,
             'author' => 'replier1',
@@ -63,7 +64,13 @@ it('reads a matching search result into a candidate, with its top comments', fun
         ->and($candidate->threadTitle)->toBe('Best invoicing tools 2026')
         ->and($candidate->text)->toContain('What do you all use?')
         ->and($candidate->text)->toContain('I use an old spreadsheet, honestly.')
-        ->and($candidate->topComments)->toBe(['I use an old spreadsheet, honestly.']);
+        ->and($candidate->topComments)->toHaveCount(1)
+        // The comment arrives whole, score and author included: that is what
+        // lets the harvest judge it later without a second fetch.
+        ->and($candidate->topComments[0]->body)->toBe('I use an old spreadsheet, honestly.')
+        ->and($candidate->topComments[0]->id)->toBe('cmt1')
+        ->and($candidate->topComments[0]->score)->toBe(12)
+        ->and($candidate->topComments[0]->author)->toBe('replier1');
 });
 
 it('never revisits a thread that already has a reply row in this project', function () {

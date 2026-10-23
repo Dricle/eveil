@@ -158,7 +158,7 @@ class SeoThreadFinder
         $comments = $this->topComments->for($id, self::TOP_COMMENTS_LIMIT);
 
         $text = mb_substr(trim(
-            "{$title}\n\n{$selftext}\n\n".$comments->map(fn (string $c): string => "> {$c}")->implode("\n\n")
+            "{$title}\n\n{$selftext}\n\n".$comments->map(fn (TopComment $c): string => "> {$c->body}")->implode("\n\n")
         ), 0, 3000);
 
         return new OpportunityCandidate(

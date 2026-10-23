@@ -28,6 +28,7 @@ use App\Http\Controllers\AppSettings\LinkedinStatsCredentialsController;
 use App\Http\Controllers\AppSettings\ProviderController;
 use App\Http\Controllers\AppSettings\ProviderTestController;
 use App\Http\Controllers\AppSettings\RedditReplyExampleController;
+use App\Http\Controllers\AppSettings\RedditReplyExampleHarvestController;
 use App\Http\Controllers\AppSettings\RedditReplyExampleThresholdController;
 use App\Http\Controllers\AppSettings\SendingController;
 use App\Http\Controllers\AppSettings\SocialExampleThresholdController;
@@ -834,6 +835,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             ->name('reddit-reply-examples.destroy');
         Route::put('reddit-reply-examples/threshold', [RedditReplyExampleThresholdController::class, 'update'])
             ->name('reddit-reply-examples.threshold');
+        Route::put('reddit-reply-examples/harvest', [RedditReplyExampleHarvestController::class, 'update'])
+            ->name('reddit-reply-examples.harvest');
     });
 
     /*

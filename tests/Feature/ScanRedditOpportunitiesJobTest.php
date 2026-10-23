@@ -1,11 +1,14 @@
 <?php
 
+use App\Actions\HarvestRedditReplyExamples;
+use App\Ai\Agents\RedditExampleTriage;
 use App\Ai\Agents\RedditOpportunityTriage;
 use App\Ai\Agents\RedditReplyWriter;
 use App\Enums\IdeaKind;
 use App\Enums\IdeaStatus;
 use App\Enums\OrganizationRole;
 use App\Enums\RedditReplyAngle;
+use App\Enums\RedditReplyExampleSource;
 use App\Enums\RedditReplySource;
 use App\Enums\RedditReplyStatus;
 use App\Jobs\ScanRedditOpportunities;
@@ -17,7 +20,12 @@ use App\Models\RedditReplyExample;
 use App\Models\TargetProfile;
 use App\Models\User;
 use App\Notifications\RedditRepliesDrafted;
+use App\Services\Reddit\OpportunityCandidate;
+use App\Services\Reddit\SeoThreadFinder;
+use App\Services\Reddit\TopComment;
 use Illuminate\Http\Client\Factory;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 
@@ -356,6 +364,81 @@ it('never reopens an idea the user dismissed', function () {
     expect(Idea::sole()->status)->toBe(IdeaStatus::Dismissed);
 });
 
+it('keeps a high-scoring product mention off a thread it was already reading', function () {
+    $project = scannableProject();
+
+    $comment = [
+        'permalink' => '/r/SaaS/comments/xyz789/what_do_you_use/def456/',
+        'subreddit' => 'SaaS',
+        'author' => 'buildercorp',
+        'body' => 'I ran Acme for two years before moving off it. Genuinely good at recurring invoices, but the reporting never got there, so check that side before you commit.',
+        'link_id' => 't3_xyz789',
+        'id' => 'def456',
+        'score' => 40,
+    ];
+
+    Http::swap(new Factory);
+    Http::fake([
+        'arctic-shift.photon-reddit.com/api/posts/search*' => Http::response(['data' => []]),
+        'arctic-shift.photon-reddit.com/api/comments/search*' => Http::response(['data' => [$comment]]),
+    ]);
+
+    RedditOpportunityTriage::fake([[
+        'items' => [[
+            'permalink' => 'https://www.reddit.com/r/SaaS/comments/xyz789/what_do_you_use/def456/',
+            'is_opportunity' => true,
+            'reason' => 'e',
+        ]],
+    ]]);
+    RedditReplyWriter::fake([[
+        'body_value_comment' => 'A reply.',
+        'body_soft_mention' => '',
+        'body_dm_invite' => '',
+    ]]);
+    RedditExampleTriage::fake([[
+        'items' => [[
+            'id' => 'def456',
+            'is_good_example' => true,
+            'reason' => 'Names a product and explains the trade-off behind leaving it.',
+        ]],
+    ]]);
+
+    ScanRedditOpportunities::dispatchSync($project);
+
+    $example = RedditReplyExample::query()->sole();
+
+    expect($example->source)->toBe(RedditReplyExampleSource::Harvested)
+        ->and($example->reddit_comment_id)->toBe('def456')
+        ->and($example->score)->toBe(40);
+
+    // The harvest reads the tone sample the writer was already given. Two
+    // calls go out per cycle - the subreddit's posts and its comments - and
+    // the tone sample for the one accepted thread. Nothing extra for this.
+    expect(count(Http::recorded(fn ($request) => str_contains($request->url(), 'arctic-shift'))))->toBe(3);
+});
+
+it('harvests nothing from a scan whose top comments all sit at no score', function () {
+    $project = scannableProject();
+
+    RedditOpportunityTriage::fake([[
+        'items' => [[
+            'permalink' => 'https://www.reddit.com/r/SaaS/comments/xyz789/what_do_you_use/def456/',
+            'is_opportunity' => true,
+            'reason' => 'e',
+        ]],
+    ]]);
+    RedditReplyWriter::fake([[
+        'body_value_comment' => 'A reply.',
+        'body_soft_mention' => '',
+        'body_dm_invite' => '',
+    ]]);
+
+    ScanRedditOpportunities::dispatchSync($project);
+
+    expect(RedditReplyExample::query()->count())->toBe(0)
+        ->and(AgentRun::where('agent', RedditExampleTriage::slug())->count())->toBe(0);
+});
+
 it('splits a large scan into several triage calls so the prompt stays within the context window', function () {
     $project = scannableProject();
 
@@ -393,4 +476,65 @@ it('splits a large scan into several triage calls so the prompt stays within the
 
     expect(AgentRun::where('agent', RedditOpportunityTriage::slug())->count())->toBe(2)
         ->and(RedditReply::sole()->thread_permalink)->toBe('https://www.reddit.com/r/SaaS/comments/xyz789/what_do_you_use/c45/');
+});
+
+it('harvests a thread the triage turned down, from the comments it was judged on', function () {
+    $project = scannableProject();
+
+    $this->mock(SeoThreadFinder::class, fn ($mock) => $mock->shouldReceive('find')->andReturn(new Collection([
+        new OpportunityCandidate(
+            permalink: 'https://www.reddit.com/r/SaaS/comments/seo111/best_invoicing_tool/',
+            subreddit: 'SaaS',
+            source: RedditReplySource::SeoThread,
+            searchQuery: 'best invoicing tool',
+            author: 'asker',
+            text: 'Which invoicing tool do you use?',
+            threadTitle: 'Best invoicing tool?',
+            postId: 'seo111',
+            topComments: [new TopComment(
+                id: 'good01',
+                body: 'I ran Acme for two years before moving off it. Genuinely good at recurring invoices, but the reporting never got there, so check that side before you commit.',
+                author: 'veteran',
+                subreddit: 'SaaS',
+                permalink: 'https://www.reddit.com/r/SaaS/comments/seo111/best_invoicing_tool/good01/',
+                score: 40,
+            )],
+        ),
+    ])));
+
+    RedditOpportunityTriage::fake([['items' => []]]);
+    RedditExampleTriage::fake([[
+        'items' => [['id' => 'good01', 'is_good_example' => true, 'reason' => 'Explains the trade-off.']],
+    ]]);
+
+    ScanRedditOpportunities::dispatchSync($project);
+
+    expect(RedditReplyExample::query()->sole()->reddit_comment_id)->toBe('good01');
+});
+
+it('still announces its drafts when the harvest fails', function () {
+    $project = scannableProject();
+    $project->users()->attach(User::factory()->create());
+    Notification::fake();
+    Exceptions::fake();
+
+    $this->mock(HarvestRedditReplyExamples::class, fn ($mock) => $mock->shouldReceive('handle')->andThrow(new RuntimeException('provider timed out')));
+
+    RedditOpportunityTriage::fake([[
+        'items' => [[
+            'permalink' => 'https://www.reddit.com/r/SaaS/comments/xyz789/what_do_you_use/def456/',
+            'is_opportunity' => true,
+            'reason' => 'e',
+        ]],
+    ]]);
+    RedditReplyWriter::fake([[
+        'body_value_comment' => 'A reply.',
+        'body_soft_mention' => '',
+        'body_dm_invite' => '',
+    ]]);
+
+    ScanRedditOpportunities::dispatchSync($project);
+
+    Notification::assertSentTo($project->users, RedditRepliesDrafted::class);
+    Exceptions::assertReported(RuntimeException::class);
 });

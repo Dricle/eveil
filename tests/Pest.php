@@ -61,6 +61,16 @@ use App\Services\Outreach\SendFailure;
 use App\Support\CurrentProject;
 
 /**
+ * Instance scope: what the person who ran the install decides, and nobody else.
+ * Distinct from the organization role and from project access: the whole point
+ * of keeping the three apart is that no organization can ever grant this.
+ */
+function superAdmin(): User
+{
+    return User::factory()->superAdmin()->create();
+}
+
+/**
  * Binds the project a `route()`/`to_route()` call resolves `{project}` to
  * when none is passed explicitly - the test equivalent of what
  * `SetCurrentProject` binds per-request in production

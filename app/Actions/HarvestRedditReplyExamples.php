@@ -136,7 +136,7 @@ class HarvestRedditReplyExamples
         $ours = $this->publishedByUs($pool);
 
         return $pool
-            ->reject(fn (TopComment $comment): bool => $stored->contains($comment->id) || $ours->contains($comment->id))
+            ->reject(fn (TopComment $comment): bool => $stored->contains($comment->id) || in_array($comment->id, $ours, true))
             ->take(self::BATCH_LIMIT)
             ->values();
     }
@@ -149,16 +149,16 @@ class HarvestRedditReplyExamples
      * pasted back by the user in whatever form their browser gave them.
      *
      * @param  Collection<int, TopComment>  $pool
-     * @return Collection<int, string>
+     * @return array<int, string>
      */
-    private function publishedByUs(Collection $pool): Collection
+    private function publishedByUs(Collection $pool): array
     {
         // Reddit ids are base 36; anything else would not be safe in the regex.
         $ids = $pool->map(fn (TopComment $comment): string => $comment->id)
             ->filter(fn (string $id): bool => ctype_alnum($id));
 
         if ($ids->isEmpty()) {
-            return new Collection;
+            return [];
         }
 
         $pattern = '/('.$ids->implode('|').')(/|\\?|#|$)';
@@ -169,6 +169,7 @@ class HarvestRedditReplyExamples
             ->pluck('comment_permalink')
             ->map(fn (string $permalink): ?string => preg_match('~'.$pattern.'~', $permalink, $match) === 1 ? $match[1] : null)
             ->filter()
-            ->values();
+            ->values()
+            ->all();
     }
 }

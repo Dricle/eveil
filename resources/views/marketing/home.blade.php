@@ -187,18 +187,22 @@
                                 </div>
                             @else
                                 {{-- One brain fanning out to every channel --}}
-                                <div class="relative w-full max-w-[260px] h-[136px]">
-                                    <svg viewBox="0 0 260 136" class="absolute inset-0 w-full h-full" fill="none">
-                                        @foreach ([0, 23, 46, 69, 92, 114] as $top)
-                                            <path d="M58 68 C 130 68, 130 {{ $top + 11 }}, 224 {{ $top + 11 }}" stroke="rgba(111,211,236,.4)" stroke-width="1.2" class="anim-flow" />
+                                @php
+                                    $fanHeight = 152;
+                                    $fanStep = ($fanHeight - 18) / (count($channels) - 1);
+                                @endphp
+                                <div class="relative w-full max-w-[260px]" style="height: {{ $fanHeight }}px">
+                                    <svg viewBox="0 0 260 {{ $fanHeight }}" class="absolute inset-0 w-full h-full" fill="none">
+                                        @foreach ($channels as $channel)
+                                            <path d="M58 {{ $fanHeight / 2 }} C 130 {{ $fanHeight / 2 }}, 130 {{ $loop->index * $fanStep + 9 }}, 228 {{ $loop->index * $fanStep + 9 }}" stroke="rgba(111,211,236,.4)" stroke-width="1.2" class="anim-flow" />
                                         @endforeach
                                     </svg>
-                                    <div class="anim-pulse absolute left-[14px] top-[46px] w-11 h-11 rounded-xl bg-[#6fd3ec] text-[#06222c] flex items-center justify-center">
+                                    <div class="anim-pulse absolute left-[14px] w-11 h-11 rounded-xl bg-[#6fd3ec] text-[#06222c] flex items-center justify-center" style="top: {{ $fanHeight / 2 - 22 }}px">
                                         <x-marketing.icon name="brain" class="w-6 h-6" />
                                     </div>
                                     @foreach ($channels as $channel)
-                                        <div class="absolute right-[14px] w-[22px] h-[22px] rounded-md border border-[rgba(232,236,242,.16)] bg-[#101520] flex items-center justify-center text-[#6fd3ec]" style="top: {{ $loop->index * 23 - ($loop->last ? 1 : 0) }}px">
-                                            <x-marketing.icon :name="$channel['icon']" class="w-3 h-3" />
+                                        <div class="absolute right-[14px] w-[18px] h-[18px] rounded-[5px] border border-[rgba(232,236,242,.16)] bg-[#101520] flex items-center justify-center text-[#6fd3ec]" style="top: {{ $loop->index * $fanStep }}px">
+                                            <x-marketing.icon :name="$channel['icon']" class="w-[11px] h-[11px]" />
                                         </div>
                                     @endforeach
                                 </div>

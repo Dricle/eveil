@@ -189,6 +189,17 @@ it('dismisses an idea for good', function () {
     expect($idea->fresh()->status)->toBe(IdeaStatus::Dismissed);
 });
 
+it('dismisses every open article idea of the project at once', function () {
+    [$user, $project] = articleSetup();
+    $ideas = Idea::factory()->count(2)->create(['project_id' => $project->id]);
+    $foreign = Idea::factory()->create();
+
+    $this->actingAs($user)->post(route('seo.ideas.dismiss-all'))->assertRedirect();
+
+    expect($ideas->map->fresh()->pluck('status')->unique()->all())->toBe([IdeaStatus::Dismissed])
+        ->and($foreign->fresh()->status)->toBe(IdeaStatus::Open);
+});
+
 it('cannot reach another project\'s idea by id', function () {
     [$user] = articleSetup();
     $foreign = Idea::factory()->create();

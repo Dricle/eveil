@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\IdeaKind;
 use App\Enums\IdeaStatus;
 use App\Jobs\GenerateArticle;
 use App\Models\Idea;
@@ -28,6 +29,20 @@ class IdeaController extends Controller
     public function dismiss(int $idea): RedirectResponse
     {
         Idea::query()->findOrFail($idea)->update(['status' => IdeaStatus::Dismissed]);
+
+        return back();
+    }
+
+    /**
+     * The scan notes far more ideas than a weekly cadence can use, so the
+     * whole list can be cleared in one go.
+     */
+    public function dismissAll(): RedirectResponse
+    {
+        Idea::query()
+            ->where('kind', IdeaKind::Article)
+            ->where('status', IdeaStatus::Open)
+            ->update(['status' => IdeaStatus::Dismissed]);
 
         return back();
     }

@@ -65,6 +65,17 @@ function dismissIdea (idea: ArticleIdea) {
     })
 }
 
+const dismissingAll = ref(false)
+
+function dismissAllIdeas () {
+    dismissingAll.value = true
+    router.post(ideaRoutes.dismissAll.url({ project: page.props.currentProject!.slug }), {}, {
+        preserveScroll: true,
+        onSuccess: () => toast.add({ title: 'All ideas dismissed', color: 'neutral' }),
+        onFinish: () => dismissingAll.value = false
+    })
+}
+
 const generating = ref(false)
 
 function generate () {
@@ -142,12 +153,24 @@ function generate () {
             :ui="{ body: 'p-1.5 sm:p-1.5' }"
         >
             <template #header>
-                <h3 class="text-sm font-semibold">
-                    Article ideas from Reddit
-                </h3>
-                <p class="mt-0.5 text-xs text-muted">
-                    Discussions worth an article on your blog, noticed while scanning Reddit.
-                </p>
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-sm font-semibold">
+                            Article ideas from Reddit
+                        </h3>
+                        <p class="mt-0.5 text-xs text-muted">
+                            Discussions worth an article on your blog, noticed while scanning Reddit.
+                        </p>
+                    </div>
+                    <UButton
+                        color="neutral"
+                        variant="ghost"
+                        size="xs"
+                        :label="`Dismiss all (${ideas.length})`"
+                        :loading="dismissingAll"
+                        @click="dismissAllIdeas"
+                    />
+                </div>
             </template>
 
             <div

@@ -502,6 +502,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
                 ->name('articles.reject');
             Route::delete('articles/{article}', [ArticleController::class, 'destroy'])
                 ->name('articles.destroy');
+            Route::post('ideas/dismiss-all', [IdeaController::class, 'dismissAll'])
+                ->name('ideas.dismiss-all');
             Route::post('ideas/{idea}/write', [IdeaController::class, 'write'])
                 ->name('ideas.write');
             Route::post('ideas/{idea}/dismiss', [IdeaController::class, 'dismiss'])

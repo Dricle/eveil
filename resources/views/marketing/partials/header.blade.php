@@ -17,7 +17,7 @@
             <a href="{{ route('home') }}#how" class="text-[rgba(232,236,242,.72)]">How it works</a>
             <a href="{{ route('home') }}#channels" class="text-[rgba(232,236,242,.72)]">Channels</a>
             <a href="{{ route('home') }}#editions" class="text-[rgba(232,236,242,.72)]">Self-hosted</a>
-            <a href="{{ route('home') }}#pricing" class="text-[rgba(232,236,242,.72)]">Pricing</a>
+            <a href="{{ route('pricing') }}" class="text-[rgba(232,236,242,.72)]">Pricing</a>
             <a href="{{ route('blog.index') }}" class="text-[rgba(232,236,242,.72)]">Blog</a>
             <a href="https://github.com/Dricle/eveil" class="text-[rgba(232,236,242,.72)]">GitHub</a>
         </nav>

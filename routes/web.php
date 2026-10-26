@@ -23,6 +23,10 @@ Route::get('/', fn () => config('eveil.edition') === 'cloud'
     ? view('marketing.home')
     : response('', 302, ['Location' => '/app']))->name('home');
 
+Route::get('/pricing', fn () => config('eveil.edition') === 'cloud'
+    ? view('marketing.pricing')
+    : response('', 302, ['Location' => '/app']))->name('pricing');
+
 Route::get('/privacy', fn () => config('eveil.edition') === 'cloud'
     ? view('marketing.privacy')
     : response('', 302, ['Location' => '/app']))->name('privacy');

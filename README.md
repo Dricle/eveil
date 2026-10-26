@@ -143,7 +143,9 @@ features; it removes setup, hosting and the AI-key requirement.
 email verification cost nothing: most competitors bill verification. A full
 100-lead campaign runs about 3,500 credits end to end. New accounts start
 with a trial grant, capped to one project and to leads discovered rather than
-just credits spent, with no CSV export before a first payment.
+just credits spent, with no CSV export before a first payment. The whole grid,
+what every AI step costs and what costs nothing, is published at
+[eveil.cloud/pricing](https://eveil.cloud/pricing).
 
 ---
 

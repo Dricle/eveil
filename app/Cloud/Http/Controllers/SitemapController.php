@@ -22,7 +22,7 @@ class SitemapController extends Controller
      * Only the pages a stranger can reach: the application itself lives
      * behind authentication and has nothing to index.
      */
-    private const MARKETING_ROUTES = ['home', 'blog.index', 'contact', 'privacy', 'terms', 'data-retention'];
+    private const MARKETING_ROUTES = ['home', 'pricing', 'blog.index', 'contact', 'privacy', 'terms', 'data-retention'];
 
     public function __invoke(Settings $settings): Response
     {

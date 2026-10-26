@@ -75,12 +75,22 @@ class CompanyQualifier extends EveilAgent implements HasStructuredOutput
         online" link may lead to a reseller's shop; a search snippet is a cut sentence
         that may say something else in full. Never turn that into "they have a webshop".
 
+        Fit first, then timing. The profile may list trigger signals: events that make a
+        company worth writing to now (hiring for a role, a new location, a launch, a
+        switch of tool, a complaint about the problem). Look for evidence of one in what
+        you were given. A signal never lifts a company that does not fit: no fit, below
+        40, whatever is happening there. Between two companies that fit equally, one with
+        an observed signal scores higher, a recent or dated one higher still, and two
+        independent signals beat one. A signal you cannot point to on the page is not a
+        signal: never infer one from the trade alone.
+
         The reason you give is a factual note for whoever writes to them next, not a
         mail: no greeting, no pitch, no "you". Say what you saw, where you saw it, and
         why it connects to the profile. Keep what the page states apart from what you
         infer, and mark the inference as one. "Matches the profile" is useless. "Site
         lists rates as a PDF download; no login or client area anywhere on the page" is
-        what a salesperson can build on.
+        what a salesperson can build on. When a trigger signal was observed, name it and
+        where it was seen, so the note also says why now.
 
         Write the reason in the language of the company's own website.
         PROMPT;

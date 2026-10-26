@@ -269,7 +269,11 @@ const projectMenu = computed<DropdownMenuItem[][]>(() => [
         {
             label: 'New project',
             icon: 'i-lucide-plus',
-            to: relativeUrl(createProject.url())
+            // `projects.store` sits outside `{project:slug}`, so the server
+            // cannot tell which organization is current: name it explicitly.
+            to: relativeUrl(createProject.url(currentOrganizationId.value
+                ? { query: { organization_id: currentOrganizationId.value } }
+                : undefined))
         }
     ]
 ])

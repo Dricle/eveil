@@ -28,9 +28,9 @@ class ProjectController extends Controller
     public function create(Request $request): Response
     {
         return Inertia::render('projects/Create', [
-            // Only ever present right after `organizations/Create`'s
-            // redirect: the brand new organization this project should join,
-            // which nothing in the session can name yet.
+            // The organization this project should join: the switcher's
+            // current one, or the one `organizations/Create` just made.
+            // Nothing server side can name it, this route has no `{project}`.
             'organizationId' => $request->integer('organization_id') ?: null,
             // One-shot: set by CreateNewUser when registration arrived with a
             // URL from the marketing homepage's hero form, and `pull()` clears

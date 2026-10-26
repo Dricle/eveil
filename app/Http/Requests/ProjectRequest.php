@@ -51,20 +51,19 @@ class ProjectRequest extends FormRequest
             // The throttle on continuous discovery. Null stays uncapped.
             'daily_lead_limit' => ['nullable', 'integer', 'min:1'],
             'lead_limit' => ['nullable', 'integer', 'min:1'],
-            // `store` only, and only ever sent by `organizations/Create`'s
-            // follow-on redirect: which organization a brand new project with
-            // no history joins cannot be read from `CurrentProject`, since a
-            // just-created organization has no project of its own yet for the
-            // session to have selected.
+            // `store` only: `projects.store` sits outside `{project:slug}`, so
+            // `CurrentProject` is never set there and cannot say which
+            // organization the new project joins. Sent by the switcher's "New
+            // project" (the current organization) and by `organizations/Create`'s
+            // follow-on redirect (the one just created).
             'organization_id' => ['sometimes', 'integer'],
         ];
     }
 
     /**
      * The organization a project being created should join: the one named
-     * explicitly (only ever the organization just created on the previous
-     * screen, and only usable if this user actually belongs to it), else the
-     * usual `CurrentProject`-derived one. Shared between `authorize()` and
+     * explicitly (only usable if this user actually belongs to it), else the
+     * `CurrentProject`-derived one, which falls back to the user's first. Shared between `authorize()` and
      * the controller so both ask the same question the same way.
      */
     public function organization(CurrentProject $currentProject): Organization

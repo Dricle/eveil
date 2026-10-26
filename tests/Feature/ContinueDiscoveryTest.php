@@ -92,18 +92,57 @@ it('starts the scheduled search even while a manual link submission is open for 
     expect(startedRuns($profile))->toBe(1);
 });
 
-it('keeps searching a proven profile after a quiet run, unlike a genuinely bad one', function () {
-    $profile = TargetProfile::factory()->create(['source' => TargetProfileSource::Human, 'is_active' => true]);
-
-    DiscoveryRun::factory()->create([
+function finishedSearch(TargetProfile $profile, string $status, ?string $diagnosis, int $hoursAgo): DiscoveryRun
+{
+    return DiscoveryRun::factory()->create([
         'project_id' => $profile->project_id,
         'target_profile_id' => $profile->id,
         'origin' => DiscoveryRunOrigin::Search,
-        'status' => DiscoveryRunStatus::Exhausted,
-        'diagnosis' => 'saturated',
+        'status' => $status,
+        'diagnosis' => $diagnosis,
+        'finished_at' => now()->subHours($hoursAgo),
     ]);
+}
+
+it('keeps searching a proven profile after a quiet run, unlike a genuinely bad one', function () {
+    $profile = TargetProfile::factory()->create(['source' => TargetProfileSource::Human, 'is_active' => true]);
+
+    finishedSearch($profile, 'exhausted', 'saturated', hoursAgo: 13);
 
     expect(startedRuns($profile))->toBe(1);
+});
+
+it('waits longer before re-searching a saturated profile, doubling with each quiet run', function () {
+    $profile = TargetProfile::factory()->create(['source' => TargetProfileSource::Human, 'is_active' => true]);
+
+    // One saturated run: 12 hours.
+    finishedSearch($profile, 'exhausted', 'saturated', hoursAgo: 11);
+    expect(startedRuns($profile))->toBe(0);
+
+    // Two in a row: 24 hours, so 13 hours after the latest is still too soon.
+    finishedSearch($profile, 'exhausted', 'saturated', hoursAgo: 13);
+    expect(startedRuns($profile))->toBe(0);
+
+    DiscoveryRun::query()->latest('id')->first()->update(['finished_at' => now()->subHours(25)]);
+    expect(startedRuns($profile))->toBe(1);
+});
+
+it('lets one productive run reset the saturated wait', function () {
+    $profile = TargetProfile::factory()->create(['source' => TargetProfileSource::Human, 'is_active' => true]);
+
+    finishedSearch($profile, 'exhausted', 'saturated', hoursAgo: 30);
+    finishedSearch($profile, 'succeeded', null, hoursAgo: 1);
+
+    expect(startedRuns($profile))->toBe(1);
+});
+
+it('does not let a failed run interrupt the saturated wait', function () {
+    $profile = TargetProfile::factory()->create(['source' => TargetProfileSource::Human, 'is_active' => true]);
+
+    finishedSearch($profile, 'exhausted', 'saturated', hoursAgo: 11);
+    finishedSearch($profile, 'failed', null, hoursAgo: 1);
+
+    expect(startedRuns($profile))->toBe(0);
 });
 
 it('never lets a manual submission stand in for the profile\'s latest search', function () {

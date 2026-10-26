@@ -3,6 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Actions\ContinueDiscovery;
+use App\Ai\Agents\DiscoveryPlanner;
+use App\Ai\Contracts\SpendGuardInterface;
 use App\Enums\AutonomyLevel;
 use App\Models\Project;
 use App\Support\CurrentProject;
@@ -23,11 +25,11 @@ class DiscoverDueCommand extends Command
 
     protected $description = 'Start the next discovery run for every target profile ready for one';
 
-    public function handle(ContinueDiscovery $continue, CurrentProject $currentProject): int
+    public function handle(ContinueDiscovery $continue, CurrentProject $currentProject, SpendGuardInterface $spendGuard): int
     {
         $total = 0;
 
-        Project::query()->each(function (Project $project) use ($continue, $currentProject, &$total): void {
+        Project::query()->each(function (Project $project) use ($continue, $currentProject, $spendGuard, &$total): void {
             // Same reasoning as eveil:enrol-due: supervised means the user
             // decides WHEN, and a tick that started a search behind them would
             // take that decision away.
@@ -42,6 +44,14 @@ class DiscoverDueCommand extends Command
             }
 
             if ($project->hasReachedLeadLimit() || $project->hasReachedDailyLeadLimit()) {
+                return;
+            }
+
+            // The planner would be refused anyway, but only after the run
+            // row exists: on prod that left hundreds of failed runs, one per
+            // profile every six hours, for an organization that simply had
+            // not topped up yet.
+            if ($spendGuard->refusal($project, DiscoveryPlanner::slug()) !== null) {
                 return;
             }
 

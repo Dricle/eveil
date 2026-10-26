@@ -455,7 +455,7 @@
                 </div>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-[14px]">
-                @foreach ([['5,000', 'credits free at signup. Enough for a full campaign through to replies.'], ['$0.10', 'per qualified lead, all in: found, read, written to and delivered.'], ['$0', 'for verifying an address and sending the mail. Always.']] as [$figure, $caption])
+                @foreach ([['5,000', 'credits free at signup. No card, and no clock running down.'], ['$1', 'buys 1,000 credits. They never expire, and a quiet month costs nothing.'], ['$0', 'for verifying an address and sending the mail. Always.']] as [$figure, $caption])
                     <div class="reveal lift bg-[#101520] border border-[rgba(232,236,242,.09)] rounded-xl px-6 py-7" style="--delay: {{ $loop->index * .08 }}s">
                         <div class="font-[Sora,sans-serif] font-semibold text-[40px] leading-none tracking-[-.03em] mb-3">{{ $figure }}</div>
                         <div class="text-[14px] text-[rgba(232,236,242,.58)]">{{ $caption }}</div>

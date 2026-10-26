@@ -1,5 +1,6 @@
 <?php
 
+use App\Ai\Contracts\SpendGuardInterface;
 use App\Enums\AutonomyLevel;
 use App\Enums\DiscoveryDiagnosis;
 use App\Enums\DiscoveryRunStatus;
@@ -114,5 +115,17 @@ it('leaves a project with cold email switched off alone', function () {
 
     $this->artisan('eveil:discover-due')->assertSuccessful();
 
+    Queue::assertNotPushed(PlanDiscovery::class);
+});
+
+it('starts nothing for a project whose planner call would be refused for credits', function () {
+    $this->mock(SpendGuardInterface::class, fn ($mock) => $mock->shouldReceive('refusal')->andReturn('This project has no credits left.'));
+
+    $project = Project::factory()->create(['email_autonomy_level' => AutonomyLevel::SemiAuto]);
+    TargetProfile::factory()->create(['project_id' => $project->id, 'is_active' => true]);
+
+    $this->artisan('eveil:discover-due')->assertSuccessful();
+
+    expect(DiscoveryRun::query()->count())->toBe(0);
     Queue::assertNotPushed(PlanDiscovery::class);
 });

@@ -2,8 +2,11 @@
 
 namespace App\Actions;
 
+use App\Enums\DiscoveryDiagnosis;
 use App\Enums\DiscoveryRunOrigin;
+use App\Enums\DiscoveryRunStatus;
 use App\Enums\TargetProfileSource;
+use App\Models\DiscoveryRun;
 use App\Models\Project;
 use App\Models\TargetProfile;
 use App\Support\Settings;
@@ -16,6 +19,14 @@ use App\Support\Settings;
  */
 class ContinueDiscovery
 {
+    /** How often `eveil:discover-due` ticks (routes/console.php). */
+    private const CADENCE_HOURS = 6;
+
+    private const MAX_BACKOFF_HOURS = 24 * 7;
+
+    /** Enough doublings to reach the cap: 6h × 2^5 > a week. */
+    private const MAX_SATURATED_STREAK = 5;
+
     public function __construct(private RunDiscovery $discover, private Settings $settings) {}
 
     public function handle(Project $project): int
@@ -59,7 +70,43 @@ class ContinueDiscovery
 
         $latest = (clone $searches)->latest('id')->first();
 
-        return $latest === null || $latest->mayWiden();
+        if ($latest === null) {
+            return true;
+        }
+
+        return $latest->mayWiden() && ! $this->isBackingOff($profile);
+    }
+
+    /**
+     * A saturated profile is proven, so it is never stopped, but every run on
+     * it still pays for a plan and a round of qualifications that find
+     * nothing. Measured on prod: saturated runs were 61% of paying
+     * organizations' discovery credits, for zero companies, because the
+     * cadence re-ran them every six hours. Each consecutive saturated run
+     * doubles the wait, capped at a week; one productive run resets it.
+     *
+     * Failed runs (refused for credits, a crash) say nothing about the market,
+     * so they neither count toward the streak nor break it.
+     */
+    private function isBackingOff(TargetProfile $profile): bool
+    {
+        $finished = $profile->discoveryRuns()
+            ->where('origin', DiscoveryRunOrigin::Search)
+            ->where('status', '!=', DiscoveryRunStatus::Failed)
+            ->whereNotNull('finished_at')
+            ->latest('id')
+            ->limit(self::MAX_SATURATED_STREAK)
+            ->get(['diagnosis', 'finished_at']);
+
+        $streak = $finished->takeWhile(fn (DiscoveryRun $run): bool => $run->diagnosis === DiscoveryDiagnosis::Saturated)->count();
+
+        if ($streak === 0) {
+            return false;
+        }
+
+        $waitHours = min(self::CADENCE_HOURS * 2 ** $streak, self::MAX_BACKOFF_HOURS);
+
+        return $finished->first()->finished_at->addHours($waitHours)->isFuture();
     }
 
     /**

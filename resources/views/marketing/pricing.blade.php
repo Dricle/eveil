@@ -17,13 +17,13 @@
         ['what' => 'Reading a listing page', 'credits' => '3', 'when' => 'Per page'],
         ['what' => 'Finding a company\'s contact page', 'credits' => '2', 'when' => 'Per company'],
         ['what' => 'Qualifying a company', 'credits' => '3', 'when' => 'Per company read'],
-        ['what' => 'Extracting a contact', 'credits' => '8', 'when' => 'Per contact found'],
+        ['what' => 'Extracting contacts from a company', 'credits' => '8', 'when' => 'Per company read, whether it finds contacts or not'],
         ['what' => 'Writing a sequence', 'credits' => '100', 'when' => 'Per campaign'],
         ['what' => 'Writing another version of a step to test against', 'credits' => '40', 'when' => 'Per version'],
         ['what' => 'Personalising one message', 'credits' => '3', 'when' => 'Per message, per lead'],
         ['what' => 'Reading a reply and deciding what to do with it', 'credits' => '1', 'when' => 'Per reply received'],
         ['what' => 'Generating the image that goes with a post', 'credits' => '100', 'when' => 'Per image'],
-        ['what' => 'Reading your ad accounts and deciding what to change', 'credits' => '300', 'when' => 'Once a day, while campaigns are running'],
+        ['what' => 'Reading your ad accounts and deciding what to change', 'credits' => '300', 'when' => 'Per review: once a day while ads are switched on, plus any you ask for'],
         ['what' => 'Asking Evie a question', 'credits' => '1 - 3', 'when' => 'Per message, by how long the conversation is'],
     ];
 
@@ -151,9 +151,10 @@
             </div>
 
             <p class="reveal mt-5 text-[13.5px] text-[rgba(232,236,242,.45)] max-w-[70ch]">Prices can change as the
-                models behind them do. A change applies to runs after it and never to credits you have already bought.
-                Ad budgets are not in this table at all: that money goes straight to the ad platform, and we take no
-                percentage of it.
+                models behind them do. A change never re-charges a run you already paid for and never takes credits off
+                your balance; it applies to runs made after it, including the ones you pay for out of credits you bought
+                earlier. Ad budgets are not in this table at all: that money goes straight to the ad platform, and we
+                take no percentage of it.
             </p>
         </div>
     </section>

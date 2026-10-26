@@ -7,26 +7,6 @@
         ['figure' => '$0', 'caption' => 'to verify an address or send a mail. Always, on both editions.'],
     ];
 
-    $grid = [
-        ['what' => 'Reading your product site and writing its portrait', 'credits' => '200', 'when' => 'Once per project, and whenever you ask for a refresh'],
-        ['what' => 'Reading your competitors\' sites for the features they sell and you do not', 'credits' => '200', 'when' => 'Per run, when you ask for one'],
-        ['what' => 'Reading a linked code repository', 'credits' => '600', 'when' => 'Per repo, confirmed before it starts'],
-        ['what' => 'Deriving a target profile', 'credits' => '150', 'when' => 'Per profile'],
-        ['what' => 'Planning where to look for companies', 'credits' => '500', 'when' => 'Per discovery run'],
-        ['what' => 'Triaging a search result', 'credits' => '2', 'when' => 'Per result considered'],
-        ['what' => 'Reading a listing page', 'credits' => '3', 'when' => 'Per page'],
-        ['what' => 'Finding a company\'s contact page', 'credits' => '2', 'when' => 'Per company'],
-        ['what' => 'Qualifying a company', 'credits' => '3', 'when' => 'Per company read'],
-        ['what' => 'Extracting contacts from a company', 'credits' => '8', 'when' => 'Per company read, whether it finds contacts or not'],
-        ['what' => 'Writing a sequence', 'credits' => '100', 'when' => 'Per campaign'],
-        ['what' => 'Writing another version of a step to test against', 'credits' => '40', 'when' => 'Per version'],
-        ['what' => 'Personalising one message', 'credits' => '3', 'when' => 'Per message, per lead'],
-        ['what' => 'Reading a reply and deciding what to do with it', 'credits' => '1', 'when' => 'Per reply received'],
-        ['what' => 'Generating the image that goes with a post', 'credits' => '100', 'when' => 'Per image'],
-        ['what' => 'Reading your ad accounts and deciding what to change', 'credits' => '300', 'when' => 'Per review: once a day while ads are switched on, plus any you ask for'],
-        ['what' => 'Asking Evie a question', 'credits' => '1 - 3', 'when' => 'Per message, by how long the conversation is'],
-    ];
-
     $free = [
         [
             'icon' => 'shield-check',
@@ -71,7 +51,7 @@
         ['q' => 'What happens when I run out?', 'a' => 'The agents stop and tell you. Nothing is deleted, nothing is cancelled, and no card is charged that you did not ask us to charge. Auto top-up is off until you turn it on, and then it only fires at the threshold and the amount you set, under a monthly ceiling you choose.'],
         ['q' => 'Is there a free trial?', 'a' => '5,000 credits at signup, no card. A trial runs one project and stops at 500 leads found. Both limits lift the first time you top up.'],
         ['q' => 'Do you charge per seat or per mailbox?', 'a' => 'Neither. Invite the whole team and connect every mailbox you have; nothing about that changes what you pay.'],
-        ['q' => 'Am I going to get a surprise bill?', 'a' => 'There is no bill. There is a balance you topped up on purpose, and a grid that tells you what each action takes out of it.'],
+        ['q' => 'Am I going to get a surprise bill?', 'a' => 'There is no bill. There is a balance you topped up on purpose.'],
         ['q' => 'What is the catch with self-hosting?', 'a' => 'There is not one. Same repository, same code, AGPL-3.0, no feature gate. You bring your own AI provider key and pay that provider directly.'],
         ['q' => 'Can I start on cloud and move to my own server later?', 'a' => 'Yes. It is the same codebase: Docker, five minutes, your own key. Nothing is missing.'],
     ];
@@ -98,7 +78,7 @@
             <h1 class="reveal font-[Sora,sans-serif] font-semibold text-[38px] sm:text-[50px] lg:text-[60px] leading-[1.06] tracking-[-.035em] mb-[22px] max-w-[18ch] [text-wrap:balance]" style="--delay: .08s">
                 No seats. No plans. No subscription.</h1>
             <p class="reveal text-[17px] sm:text-[19px] leading-[1.6] max-w-[60ch] mb-10 text-[rgba(232,236,242,.66)] [text-wrap:pretty]" style="--delay: .16s">
-                You buy credits once, at one flat rate, and they never expire. Every AI step has a published price and
+                You buy credits once, at one flat rate, and they never expire. Every AI step
                 is charged only when it actually runs. Everything that is not AI, verifying an address and sending the
                 mail included, costs nothing on every edition, forever.</p>
 
@@ -110,52 +90,6 @@
                     </div>
                 @endforeach
             </div>
-        </div>
-    </section>
-
-    {{-- The grid --}}
-    <section id="grid" class="border-b border-[rgba(232,236,242,.08)] bg-[#0d1119]">
-        <div class="max-w-[1180px] mx-auto px-6 py-16 lg:py-20">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-[60px] md:items-end mb-8 lg:mb-11">
-                <div class="reveal">
-                    <div class="font-[Geist_Mono,monospace] text-[11.5px] tracking-[.1em] uppercase text-[#6fd3ec] mb-[14px]">
-                        The grid
-                    </div>
-                    <h2 class="font-[Sora,sans-serif] font-semibold text-[28px] sm:text-[34px] lg:text-[40px] leading-[1.12] tracking-[-.03em]">
-                        What a credit actually buys.</h2>
-                </div>
-                <p class="reveal text-[rgba(232,236,242,.62)] max-w-[48ch]" style="--delay: .1s">Most tools bill you for
-                    a tier and leave you to work out what you used. Here is what every AI step costs, and each one is
-                    charged only when it runs.</p>
-            </div>
-
-            <div class="reveal overflow-x-auto border border-[rgba(232,236,242,.09)] rounded-xl bg-[#101520]">
-                <table class="w-full border-collapse text-left text-[14.5px]">
-                    <thead>
-                        <tr class="border-b border-[rgba(232,236,242,.12)] font-[Geist_Mono,monospace] text-[10.5px] tracking-[.08em] uppercase text-[rgba(232,236,242,.45)]">
-                            <th class="px-6 py-4 font-normal">What runs</th>
-                            <th class="px-6 py-4 font-normal whitespace-nowrap">Credits</th>
-                            <th class="px-6 py-4 font-normal">When</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($grid as $row)
-                            <tr class="border-b border-[rgba(232,236,242,.07)] last:border-b-0">
-                                <td class="px-6 py-4 text-[rgba(232,236,242,.82)]">{{ $row['what'] }}</td>
-                                <td class="px-6 py-4 font-[Geist_Mono,monospace] text-[#6fd3ec] whitespace-nowrap">{{ $row['credits'] }}</td>
-                                <td class="px-6 py-4 text-[rgba(232,236,242,.55)]">{{ $row['when'] }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-
-            <p class="reveal mt-5 text-[13.5px] text-[rgba(232,236,242,.45)] max-w-[70ch]">Prices can change as the
-                models behind them do. A change never re-charges a run you already paid for and never takes credits off
-                your balance; it applies to runs made after it, including the ones you pay for out of credits you bought
-                earlier. Ad budgets are not in this table at all: that money goes straight to the ad platform, and we
-                take no percentage of it.
-            </p>
         </div>
     </section>
 

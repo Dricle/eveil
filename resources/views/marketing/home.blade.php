@@ -119,6 +119,10 @@
                     what it understood before it writes a word.</p>
             </form>
 
+            <p class="reveal mt-5 text-[14px] text-[rgba(232,236,242,.55)]" style="--delay: .28s">
+                Rather ask a person first? <a href="{{ route('contact') }}" class="text-[#6fd3ec]">Write to us</a>
+                or email <a href="mailto:support@eveil.cloud" class="text-[#6fd3ec]">support@eveil.cloud</a>.</p>
+
             <div class="mt-10">
                 <div class="reveal font-[Geist_Mono,monospace] text-[11px] tracking-[.08em] uppercase text-[rgba(232,236,242,.4)] mb-4" style="--delay: .3s">
                     One knowledge base, every channel

@@ -200,6 +200,8 @@
                 </div>
                 <h2 class="font-[Sora,sans-serif] font-semibold text-[28px] sm:text-[34px] lg:text-[40px] leading-[1.12] tracking-[-.03em]">
                     Before you top up.</h2>
+                <p class="mt-4 text-[rgba(232,236,242,.6)] max-w-[36ch]">Not answered here?
+                    <a href="{{ route('contact') }}" class="text-[#6fd3ec]">Ask a person</a> on the team.</p>
             </div>
             <div class="reveal border-t border-[rgba(232,236,242,.08)]" style="--delay: .1s">
                 @foreach ($faqs as $faq)

@@ -65,7 +65,7 @@ class LinkedinClient implements SocialClientInterface
 
     /**
      * Reaction counts, per post, through the SEPARATE stats token (the
-     * Community Management app's restricted `r_member_social_feed`). A post
+     * Community Management app's `r_member_postAnalytics`). A post
      * whose account never made that second connection is skipped outright,
      * expected for most accounts; one LinkedIn refuses is skipped too.
      *
@@ -86,7 +86,9 @@ class LinkedinClient implements SocialClientInterface
             try {
                 $response = Http::withToken($token)
                     ->withHeaders($this->headers())
-                    ->get("https://api.linkedin.com/rest/socialMetadata/{$post->external_id}");
+                    // ponytail: built by hand, Rest.li wants the parens and colons left unencoded
+                    ->get('https://api.linkedin.com/rest/memberCreatorPostAnalytics?q=entity&queryType=REACTION&aggregation=TOTAL&entity=('
+                        .(str_contains((string) $post->external_id, ':ugcPost:') ? 'ugc' : 'share').':'.rawurlencode((string) $post->external_id).')');
             } catch (Throwable) {
                 continue;
             }
@@ -95,10 +97,10 @@ class LinkedinClient implements SocialClientInterface
                 continue;
             }
 
-            /** @var array<string, array{count: int}> $reactions */
-            $reactions = $response->json('reactionSummaries') ?? [];
+            /** @var list<array{count: int}> $elements */
+            $elements = $response->json('elements') ?? [];
 
-            $counts[$post->id] = array_sum(array_column($reactions, 'count'));
+            $counts[$post->id] = array_sum(array_column($elements, 'count'));
         }
 
         return $counts;

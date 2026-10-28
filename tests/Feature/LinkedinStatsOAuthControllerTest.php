@@ -31,7 +31,7 @@ it('redirects to LinkedIn with the stats app client id and scope', function () {
     expect($response->headers->get('Location'))
         ->toContain('linkedin.com/oauth/v2/authorization')
         ->toContain('client_id=stats-client-id')
-        ->toContain('scope=r_member_social_feed');
+        ->toContain('scope=r_member_postAnalytics');
 });
 
 it('refuses to start the stats connection for another organization\'s account', function () {
@@ -87,10 +87,10 @@ it('shows LinkedIn\'s own reason when the stats connection is refused', function
         ->get(route('oauth.linkedin.stats.callback', [
             'state' => $state,
             'error' => 'unauthorized_scope_error',
-            'error_description' => 'Scope "r_member_social_feed" is not authorized for your application',
+            'error_description' => 'Scope "r_member_postAnalytics" is not authorized for your application',
         ]))
         ->assertRedirect(route('settings.linkedin.index', $project))
-        ->assertSessionHas('status', 'LinkedIn did not grant performance-polling access: Scope "r_member_social_feed" is not authorized for your application');
+        ->assertSessionHas('status', 'LinkedIn did not grant performance-polling access: Scope "r_member_postAnalytics" is not authorized for your application');
 
     expect($account->fresh()->hasStatsAccess())->toBeFalse();
 });

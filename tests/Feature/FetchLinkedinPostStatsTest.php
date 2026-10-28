@@ -41,7 +41,7 @@ it('never checks an account that never connected performance polling', function 
 
 it('records the like count without promoting when under the threshold', function () {
     $post = publishedLinkedinPost(statsToken: 'token');
-    Http::fake(['api.linkedin.com/*' => Http::response(['reactionSummaries' => [['count' => 3]]])]);
+    Http::fake(['api.linkedin.com/*' => Http::response(['elements' => [['count' => 3, 'metricType' => 'REACTION']]])]);
 
     app(FetchSocialPostStats::class)->handle();
 
@@ -50,11 +50,13 @@ it('records the like count without promoting when under the threshold', function
         ->stats_checked_at->not->toBeNull()
         ->promoted_at->toBeNull()
         ->and(SocialPostExample::count())->toBe(0);
+
+    Http::assertSent(fn ($request) => str_contains($request->url(), 'rest/memberCreatorPostAnalytics?q=entity&queryType=REACTION&aggregation=TOTAL&entity=(share:urn%3Ali%3Ashare%3A1)'));
 });
 
 it('promotes a post into the shared LinkedIn bank once it crosses the threshold', function () {
     $post = publishedLinkedinPost(statsToken: 'token');
-    Http::fake(['api.linkedin.com/*' => Http::response(['reactionSummaries' => [['count' => 15], ['count' => 10]]])]);
+    Http::fake(['api.linkedin.com/*' => Http::response(['elements' => [['count' => 25, 'metricType' => 'REACTION']]])]);
 
     expect(app(FetchSocialPostStats::class)->handle())->toBe(1)
         ->and($post->fresh()->promoted_at)->not->toBeNull()

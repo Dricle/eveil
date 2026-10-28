@@ -44,7 +44,7 @@ class LinkedinCredentials
 
     /**
      * A SECOND LinkedIn Developer App, for the Community Management API's
-     * restricted `r_member_social_feed` (post-performance polling).
+     * restricted `r_member_postAnalytics` (post-performance polling).
      * LinkedIn does not allow that product to live on the same app as Share
      * on LinkedIn, so this is a genuinely separate registration - its own
      * client id/secret, its own review wait - never a wider scope on the

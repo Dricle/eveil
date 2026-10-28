@@ -14,7 +14,7 @@ use Illuminate\Support\Str;
 
 /**
  * A SECOND OAuth connection, to a SECOND LinkedIn Developer App: the
- * Community Management API's restricted `r_member_social_feed`
+ * Community Management API's restricted `r_member_postAnalytics`
  * (post-performance polling) cannot live on the same app as Share on
  * LinkedIn - LinkedIn does not allow it, confirmed by trying. So this
  * attaches a second token to an already-connected LinkedIn `SocialAccount` rather
@@ -42,7 +42,7 @@ class LinkedinStatsOAuthController extends Controller
             'response_type' => 'code',
             'client_id' => $credentials->statsClientId(),
             'redirect_uri' => route('oauth.linkedin.stats.callback'),
-            'scope' => 'r_member_social_feed',
+            'scope' => 'r_member_postAnalytics',
             'state' => $state,
         ]);
 

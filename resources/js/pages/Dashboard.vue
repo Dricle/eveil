@@ -303,7 +303,7 @@ const topupPercent = computed(() => {
                 <!-- The stat strip: what the run has produced, not how far
                      people have got in a sequence - that funnel lives on
                      the campaign it belongs to. -->
-                <div class="grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-default ring ring-default sm:grid-cols-4">
+                <div class="grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-default ring ring-default sm:grid-cols-3 lg:grid-cols-5">
                     <div class="bg-elevated p-4">
                         <p class="mb-1.5 text-xs text-muted">
                             Companies found
@@ -343,6 +343,17 @@ const topupPercent = computed(() => {
                         </p>
                         <p class="mt-1 text-xs text-dimmed">
                             {{ stats.awaiting_human }} waiting on you
+                        </p>
+                    </div>
+                    <!-- Calls booked from a reply, with an invite sent.
+                         The step after "interested", and the one the
+                         rest of the strip leads to. -->
+                    <div class="bg-elevated p-4">
+                        <p class="mb-1.5 text-xs text-muted">
+                            Meetings booked
+                        </p>
+                        <p class="font-mono text-2xl text-success">
+                            {{ stats.meetings_booked.toLocaleString() }}
                         </p>
                     </div>
                 </div>

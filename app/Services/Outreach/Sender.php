@@ -4,6 +4,7 @@ namespace App\Services\Outreach;
 
 use App\Models\EmailAccount;
 use App\Models\Lead;
+use App\Services\Meetings\CalendarPart;
 use Symfony\Component\Mailer\Mailer;
 use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;
 use Symfony\Component\Mime\Address;
@@ -32,6 +33,10 @@ use Throwable;
  * auto-pause, and the STOP that is the only way out. It is stored and compared
  * BARE: the angle brackets belong to the header syntax and are added on the way
  * out, never kept.
+ *
+ * The one attachment it ever carries is a calendar invite, and only on an
+ * answer the user wrote themselves to somebody who already replied: what a
+ * person does when they send an invite. A cold mail never has one.
  */
 class Sender
 {
@@ -47,6 +52,7 @@ class Sender
         string $body,
         ?string $inReplyTo = null,
         ?string $quote = null,
+        ?string $invitation = null,
     ): string {
         $messageId = $this->messageId($account);
 
@@ -71,6 +77,10 @@ class Sender
             // Plain text only. A multipart mail with an HTML half is how every
             // bulk sender writes, and none of the personalisation above needs it.
             ->text($text);
+
+        if ($invitation !== null) {
+            $mail->addPart(new CalendarPart($invitation));
+        }
 
         $headers = $mail->getHeaders();
         $headers->addIdHeader('Message-ID', mb_trim($messageId, '<>'));

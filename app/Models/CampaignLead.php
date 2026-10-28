@@ -31,11 +31,12 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $next_action_at
  * @property Carbon|null $paused_at
  * @property string|null $pause_reason
+ * @property array<int, string>|null $proposed_meeting_slots the times, ISO 8601 in UTC, that the last drafted answer offered: what the invite picker shows first
  * @property Carbon|null $attention_resolved_at set once a person has dealt with this conversation - by the user's own toggle, or automatically the moment they set a status. Reset to null whenever a new reply arrives, whatever it said last time.
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['campaign_id', 'lead_id', 'email_account_id', 'current_step_position', 'status', 'next_action_at', 'paused_at', 'pause_reason', 'attention_resolved_at'])]
+#[Fillable(['campaign_id', 'lead_id', 'email_account_id', 'current_step_position', 'status', 'next_action_at', 'paused_at', 'pause_reason', 'attention_resolved_at', 'proposed_meeting_slots'])]
 class CampaignLead extends Model
 {
     /** @use HasFactory<CampaignLeadFactory> */
@@ -88,6 +89,14 @@ class CampaignLead extends Model
     public function emailAccount(): BelongsTo
     {
         return $this->belongsTo(EmailAccount::class);
+    }
+
+    /**
+     * @return HasMany<Meeting, $this>
+     */
+    public function meetings(): HasMany
+    {
+        return $this->hasMany(Meeting::class)->orderBy('starts_at');
     }
 
     /**
@@ -200,6 +209,7 @@ class CampaignLead extends Model
             'next_action_at' => 'datetime',
             'paused_at' => 'datetime',
             'attention_resolved_at' => 'datetime',
+            'proposed_meeting_slots' => 'array',
         ];
     }
 }

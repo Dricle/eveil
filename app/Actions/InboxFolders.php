@@ -103,6 +103,7 @@ class InboxFolders
                 'lead.company',
                 'lead.notes.user',
                 'messages',
+                'meetings',
             ])
             ->orderedByLastActivity()
             ->get()

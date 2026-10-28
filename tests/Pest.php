@@ -171,12 +171,12 @@ function fakeSender(): object
 {
     $fake = new class extends Sender
     {
-        /** @var array<int, array{subject: string, body: string, in_reply_to: string|null, quote: string|null, to: string}> */
+        /** @var array<int, array{subject: string, body: string, in_reply_to: string|null, quote: string|null, invitation: string|null, to: string}> */
         public array $sent = [];
 
         public ?string $failWith = null;
 
-        public function send(EmailAccount $account, Lead $lead, string $subject, string $body, ?string $inReplyTo = null, ?string $quote = null): string
+        public function send(EmailAccount $account, Lead $lead, string $subject, string $body, ?string $inReplyTo = null, ?string $quote = null, ?string $invitation = null): string
         {
             if ($this->failWith !== null) {
                 throw SendFailure::fromTransportError($this->failWith);
@@ -188,6 +188,7 @@ function fakeSender(): object
                 'body' => $body,
                 'in_reply_to' => $inReplyTo,
                 'quote' => $quote,
+                'invitation' => $invitation,
             ];
 
             return '<'.count($this->sent).'@friterie.test>';

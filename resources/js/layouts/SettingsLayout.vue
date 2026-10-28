@@ -16,6 +16,7 @@ import adPlatforms from '@/routes/settings/ad-platforms'
 import project from '@/routes/settings/project'
 import aiInstructions from '@/routes/settings/ai-instructions'
 import autonomy from '@/routes/settings/autonomy'
+import meetings from '@/routes/settings/meetings'
 import apiTokens from '@/routes/settings/api-tokens'
 import webhooks from '@/routes/settings/webhooks'
 
@@ -43,6 +44,7 @@ const projectItems = computed<NavigationMenuItem[]>(() => [
     { label: 'Project knowledge', icon: 'i-lucide-book-open', to: relativeUrl(knowledgeBase.edit.url({ project: page.props.currentProject!.slug })) },
     { label: 'AI instructions', icon: 'i-lucide-sparkles', to: relativeUrl(aiInstructions.edit.url({ project: page.props.currentProject!.slug })) },
     { label: 'Autonomy', icon: 'i-lucide-gauge', to: relativeUrl(autonomy.edit.url({ project: page.props.currentProject!.slug })) },
+    { label: 'Meetings', icon: 'i-lucide-calendar-clock', to: relativeUrl(meetings.edit.url({ project: page.props.currentProject!.slug })) },
     { label: 'Webhooks', icon: 'i-lucide-webhook', to: relativeUrl(webhooks.index.url({ project: page.props.currentProject!.slug })) }
 ].map(withActive))
 

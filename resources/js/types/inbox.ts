@@ -51,7 +51,18 @@ export type Conversation = {
     sent_at: string | null
     /** What became of it. Anything but `sent` means it never reached anybody. */
     delivery: 'queued' | 'sent' | 'failed' | 'bounced' | null
+    /** ISO times, UTC: what the last drafted answer offered. */
+    proposed_meeting_slots: string[]
+    meetings: ConversationMeeting[]
     messages: ConversationMessage[]
+}
+
+/** A call booked with this person, sent to them as a calendar invite. */
+export type ConversationMeeting = {
+    id: number
+    starts_at: string
+    duration_minutes: number
+    timezone: string
 }
 
 /** One entry in the inbox's folder strip: an `OutreachStatus` value, or `sent`. */
@@ -77,6 +88,7 @@ export type DashboardStats = {
     replies: number
     positive: number
     positive_rate: number | null
+    meetings_booked: number
     awaiting_human: number
 } & ({ tokens_in: number, tokens_out: number } | { credits_spent: number })
 

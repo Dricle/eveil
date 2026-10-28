@@ -60,6 +60,7 @@ use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ContactSearchController;
 use App\Http\Controllers\ContactStatusController;
 use App\Http\Controllers\ConversationAttentionController;
+use App\Http\Controllers\ConversationMeetingDraftController;
 use App\Http\Controllers\ConversationReplyController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DiscoveryLinkController;
@@ -80,6 +81,7 @@ use App\Http\Controllers\LinkedinStatsOAuthController;
 use App\Http\Controllers\MailboxController;
 use App\Http\Controllers\MailboxReactivateController;
 use App\Http\Controllers\MailboxTestController;
+use App\Http\Controllers\MeetingSettingsController;
 use App\Http\Controllers\OnboardingAnalysisController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\OnboardingSearchController;
@@ -232,6 +234,10 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
             Route::get('autonomy', [AutonomyController::class, 'edit'])->name('autonomy.edit');
             Route::put('autonomy', [AutonomyController::class, 'update'])->name('autonomy.update');
+
+            // When the user takes calls: what an answer offering times reads.
+            Route::get('meetings', [MeetingSettingsController::class, 'edit'])->name('meetings.edit');
+            Route::put('meetings', [MeetingSettingsController::class, 'update'])->name('meetings.update');
 
             /*
              * Tokens for `routes/api.php` and the MCP server. Organization-
@@ -717,6 +723,10 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             ->name('inbox.reply');
         Route::put('inbox/{conversation}/attention', [ConversationAttentionController::class, 'update'])
             ->name('inbox.attention');
+        // A draft offering times, returned to the reply box. Sends nothing:
+        // the user edits it and sends it through `inbox.reply`.
+        Route::post('inbox/{conversation}/meeting-draft', [ConversationMeetingDraftController::class, 'store'])
+            ->name('inbox.meeting-draft');
 
         /*
          * A list somebody already had. A button on Leads, never a section of

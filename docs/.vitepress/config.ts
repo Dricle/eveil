@@ -20,6 +20,7 @@ export default defineConfig({
                         { text: 'Autonomy levels', link: '/product/autonomy' },
                         { text: 'How discovery finds companies', link: '/product/discovery' },
                         { text: 'Statuses and the inbox', link: '/product/statuses' },
+                        { text: 'Booking a call from a reply', link: '/product/meetings' },
                         { text: 'The timeline', link: '/product/timeline' },
                         { text: 'Chatting with Evie', link: '/product/evie' },
                         { text: 'Posting to LinkedIn', link: '/product/linkedin' },

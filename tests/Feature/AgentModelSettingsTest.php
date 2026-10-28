@@ -167,6 +167,7 @@ it('lists every agent it finds in the code, not a hand-kept list', function () {
         'evie',
         'image-generator',
         'listing-extractor',
+        'meeting-proposal-writer',
         'message-personalizer',
         'reddit-example-triage',
         'reddit-opportunity-triage',

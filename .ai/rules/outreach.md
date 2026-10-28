@@ -134,6 +134,8 @@ Send failures are sorted by what the caller must do, via `SendFailure::kind`: `r
 
 `Sender` builds a Symfony transport per mailbox and never uses the `Mail` facade: each mail goes through the mailbox the sequence pinned, not the configured mailer. Plain text only, and the `Message-ID` is anchored on the SENDER's domain.
 
+The one attachment allowed is a calendar invite (`App\Services\Meetings\CalendarPart`, `text/calendar; method=REQUEST`), and only on a reply the user wrote by hand through `ReplyToConversation` to somebody who already answered. Never on a sequence step. The `.ics` names the sender's domain in `PRODID` and nothing of ours. No agent ever sends a reply, in any autonomy mode: `MeetingProposalWriter` only fills the reply box, and the user sends.
+
 ## OUTREACH_REDIRECT_TO diverts the recipient, nothing else
 Setting `OUTREACH_REDIRECT_TO` (config `eveil.outreach.redirect_to`) makes `Sender` send every outreach mail to that one address instead of the lead's. Everything else stays real: the mailbox connected in the app is still the sender, the mail still goes over its own SMTP, and the reply still arrives in that mailbox over its own IMAP. That is what makes it the only way to exercise the whole loop without writing to a stranger.
 

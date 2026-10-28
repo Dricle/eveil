@@ -6,6 +6,10 @@ export type Project = {
     analyzed: boolean
     organization_id: number
     organization_name: string
+    /** Whether meeting hours are set, so an answer can offer times. */
+    takes_meetings: boolean
+    /** The zone those hours, and a time typed for an invite, are meant in. */
+    meeting_timezone: string | null
 }
 
 /** The switcher's "other organizations" list, and the current one's label. */

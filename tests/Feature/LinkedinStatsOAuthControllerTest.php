@@ -74,3 +74,23 @@ it('refuses a callback whose state does not match', function () {
 
     expect($account->fresh()->hasStatsAccess())->toBeFalse();
 });
+
+it('shows LinkedIn\'s own reason when the stats connection is refused', function () {
+    [$user, $account, $project] = statsOauthSetup();
+    app(LinkedinCredentials::class)->saveStats('stats-client-id', 'stats-secret');
+    Http::fake(['linkedin.com/oauth/v2/accessToken' => Http::response(['error' => 'invalid_request'], 400)]);
+
+    $this->actingAs($user)->get(route('settings.linkedin.stats.connect', $account));
+    $state = session('linkedin_stats_oauth_state');
+
+    $this->actingAs($user)
+        ->get(route('oauth.linkedin.stats.callback', [
+            'state' => $state,
+            'error' => 'unauthorized_scope_error',
+            'error_description' => 'Scope "r_member_social_feed" is not authorized for your application',
+        ]))
+        ->assertRedirect(route('settings.linkedin.index', $project))
+        ->assertSessionHas('status', 'LinkedIn did not grant performance-polling access: Scope "r_member_social_feed" is not authorized for your application');
+
+    expect($account->fresh()->hasStatsAccess())->toBeFalse();
+});

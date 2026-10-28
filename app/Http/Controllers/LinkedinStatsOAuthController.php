@@ -80,7 +80,9 @@ class LinkedinStatsOAuthController extends Controller
         ]);
 
         if (! $token->successful()) {
-            return to_route('settings.linkedin.index', ['project' => $project])->with('status', 'LinkedIn did not grant performance-polling access. LinkedIn grants r_member_social_feed selectively - this may simply be refused.');
+            $reason = $request->query('error_description') ?? $token->json('error_description') ?? $token->json('error') ?? "HTTP {$token->status()}";
+
+            return to_route('settings.linkedin.index', ['project' => $project])->with('status', "LinkedIn did not grant performance-polling access: {$reason}");
         }
 
         $account->update([

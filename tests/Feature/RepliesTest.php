@@ -387,6 +387,21 @@ it('holds an interested reply for a human and never answers it itself', function
         ->and(Message::query()->where('direction', MessageDirection::Outbound)->count())->toBe(1);
 });
 
+it('never saves a draft for a reply that is no longer the last word', function () {
+    $reply = pausedReply('Oui, appelons-nous.');
+
+    // The user answered before the queued job got to this reply.
+    Message::factory()->create([
+        'lead_id' => $reply->lead_id,
+        'campaign_lead_id' => $reply->campaign_lead_id,
+        'email_account_id' => $reply->email_account_id,
+    ]);
+
+    (new MarkNeedsHuman($reply))->handle(new ToolRequest(['interested' => true, 'summary' => 'Wants a call.', 'draft' => 'Mardi 10h ?']));
+
+    expect($reply->campaignLead->refresh()->reply_draft)->toBeNull();
+});
+
 it('drops the draft written for an earlier reply when a new one arrives', function () {
     [$mailbox, $membership] = awaitingReply();
     $membership->update(['reply_draft' => 'Written for their first answer.']);

@@ -8,6 +8,7 @@ use App\Enums\CampaignLeadStatus;
 use App\Enums\OutreachStatus;
 use App\Enums\ReplyClassification;
 use App\Enums\SuppressionLayer;
+use App\Models\CampaignLead;
 use App\Models\Message;
 use App\Models\Suppression;
 
@@ -78,8 +79,18 @@ class ReplyOutcomes
             'status' => CampaignLeadStatus::Paused,
             'paused_at' => now(),
             'pause_reason' => 'awaiting_human',
-            'reply_draft' => $draft,
         ]);
+
+        // `HandleReply` is queued: a job for an older reply finishing after a
+        // newer one arrived, or after the user answered, must not bring back a
+        // draft written for the wrong mail. One conditional statement, so a
+        // concurrent write cannot slip between the check and the save.
+        if ($draft !== null && $reply->campaign_lead_id !== null) {
+            CampaignLead::query()
+                ->whereKey($reply->campaign_lead_id)
+                ->whereDoesntHave('messages', fn ($query) => $query->where('id', '>', $reply->id))
+                ->update(['reply_draft' => $draft]);
+        }
 
         $this->record($reply, $interested ? ReplyClassification::Interested : ReplyClassification::NeedsHuman);
     }

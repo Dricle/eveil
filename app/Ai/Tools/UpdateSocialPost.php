@@ -27,7 +27,7 @@ class UpdateSocialPost implements Tool
     {
         return <<<'TEXT'
         Rewrites the text of an existing LinkedIn, X, Bluesky or Instagram draft, in place - call
-        ListSocialPosts first to find its id. Only works on a draft; once
+        ListSocialPosts or GetSocialPost first to find it. Only works on a draft; once
         published or rejected it refuses.
         TEXT;
     }
@@ -57,7 +57,7 @@ class UpdateSocialPost implements Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'social_post_id' => $schema->integer()->description('The draft to update, from ListSocialPosts.')->required(),
+            'social_post_id' => $schema->integer()->description('The draft to update, from ListSocialPosts or GetSocialPost.')->required(),
             'body' => $schema->string()->description('The full replacement post text.')->required(),
         ];
     }

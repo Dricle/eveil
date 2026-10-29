@@ -8,6 +8,7 @@ use App\Enums\CampaignLeadStatus;
 use App\Enums\OutreachStatus;
 use App\Enums\ReplyClassification;
 use App\Enums\SuppressionLayer;
+use App\Models\CampaignLead;
 use App\Models\Message;
 use App\Models\Suppression;
 
@@ -70,7 +71,7 @@ class ReplyOutcomes
      * nobody can act on automatically: it stays paused and goes to the top of
      * the inbox rather than getting an automated reply it did not ask for.
      */
-    public function needsHuman(Message $reply, bool $interested = false): void
+    public function needsHuman(Message $reply, bool $interested = false, ?string $draft = null): void
     {
         $this->setStatus->forLead($reply->lead, OutreachStatus::Replied);
 
@@ -79,6 +80,17 @@ class ReplyOutcomes
             'paused_at' => now(),
             'pause_reason' => 'awaiting_human',
         ]);
+
+        // `HandleReply` is queued: a job for an older reply finishing after a
+        // newer one arrived, or after the user answered, must not bring back a
+        // draft written for the wrong mail. One conditional statement, so a
+        // concurrent write cannot slip between the check and the save.
+        if ($draft !== null && $reply->campaign_lead_id !== null) {
+            CampaignLead::query()
+                ->whereKey($reply->campaign_lead_id)
+                ->whereDoesntHave('messages', fn ($query) => $query->where('id', '>', $reply->id))
+                ->update(['reply_draft' => $draft]);
+        }
 
         $this->record($reply, $interested ? ReplyClassification::Interested : ReplyClassification::NeedsHuman);
     }

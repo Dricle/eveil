@@ -31,11 +31,12 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $next_action_at
  * @property Carbon|null $paused_at
  * @property string|null $pause_reason
+ * @property string|null $reply_draft the answer `ReplyHandler` drafted to their last reply, pre-filled in the inbox's reply box; cleared when a new reply arrives or the user answers
  * @property Carbon|null $attention_resolved_at set once a person has dealt with this conversation - by the user's own toggle, or automatically the moment they set a status. Reset to null whenever a new reply arrives, whatever it said last time.
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['campaign_id', 'lead_id', 'email_account_id', 'current_step_position', 'status', 'next_action_at', 'paused_at', 'pause_reason', 'attention_resolved_at'])]
+#[Fillable(['campaign_id', 'lead_id', 'email_account_id', 'current_step_position', 'status', 'next_action_at', 'paused_at', 'pause_reason', 'attention_resolved_at', 'reply_draft'])]
 class CampaignLead extends Model
 {
     /** @use HasFactory<CampaignLeadFactory> */

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form, router, usePage } from '@inertiajs/vue3'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import ActivityTimeline from '@/components/ActivityTimeline.vue'
 import StatusSelect from '@/components/StatusSelect.vue'
 import { OUTREACH_STATUSES } from '@/lib/status'
@@ -41,6 +41,17 @@ function toggleAttention () {
 function when (value: string | null) {
     return value === null ? '' : new Date(value).toLocaleString()
 }
+
+// The reply box, started from the answer drafted when their reply came in.
+// A draft arriving or changing replaces only text the user has not touched:
+// a poll must never overwrite what they are typing.
+const body = ref('')
+
+watch(() => [props.conversation.id, props.conversation.reply_draft] as const, ([id, draft], previous) => {
+    if (id !== previous?.[0] || body.value === '' || body.value === (previous?.[1] ?? '')) {
+        body.value = draft ?? ''
+    }
+}, { immediate: true })
 
 function initial (conversation: Conversation) {
     return (conversation.lead.name ?? conversation.lead.email ?? '?').charAt(0).toUpperCase()
@@ -164,6 +175,7 @@ function initial (conversation: Conversation) {
                     v-bind="replyRoute.form({ project: projectSlug, conversation: conversation.id })"
                     class="shrink-0 space-y-2 border-t border-default p-4"
                     :options="{ preserveScroll: true }"
+                    @success="body = ''"
                 >
                     <UFormField
                         name="body"
@@ -173,8 +185,9 @@ function initial (conversation: Conversation) {
                             : 'Sent from the same mailbox, in the same thread. Your signature is added if the mailbox has one.'"
                     >
                         <UTextarea
+                            v-model="body"
                             name="body"
-                            :rows="4"
+                            :rows="6"
                             placeholder="Write back…"
                             class="w-full"
                         />

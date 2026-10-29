@@ -3,7 +3,11 @@
 namespace App\Actions;
 
 use App\Ai\Agents\VideoDirector;
+use App\Enums\BrandAssetKind;
+use App\Models\Project;
 use App\Models\SocialPost;
+use App\Services\Discovery\PageFetcher;
+use App\Services\Video\BrandStyle;
 use App\Services\Video\VideoAudio;
 use App\Services\Video\VideoRenderer;
 use App\Services\Video\VideoRenderFailed;
@@ -36,7 +40,17 @@ class DirectSocialPostVideo
 
     private const ATTEMPTS = 2;
 
-    public function __construct(private VideoRenderer $renderer, private VideoAudio $audio) {}
+    /**
+     * Style examples shown to the director beside the logo, newest first.
+     */
+    private const MAX_EXAMPLES = 3;
+
+    public function __construct(
+        private VideoRenderer $renderer,
+        private VideoAudio $audio,
+        private BrandStyle $style,
+        private PageFetcher $fetcher,
+    ) {}
 
     /**
      * @throws VideoRenderFailed when neither attempt built
@@ -54,10 +68,18 @@ class DirectSocialPostVideo
         $stillTimes = $revising ? $this->stillTimes($at) : [];
         $stills = $revising ? $this->stills($post->video_composition, $assets, $stillTimes) : [];
 
+        $examples = $project->brandAssets(BrandAssetKind::Example)->sortByDesc('id')->take(self::MAX_EXAMPLES)->values();
+        $stored = fn (Media $media): Image => Image::fromStorage($media->getPathRelativeToRoot(), $media->disk);
+
+        // In the order the director is told: screenshots, logo, style examples, stills.
         $images = [
-            ...$screenshots->map(fn (Media $media): Image => Image::fromStorage($media->getPathRelativeToRoot(), $media->disk))->values()->all(),
+            ...$screenshots->map($stored)->values()->all(),
+            ...(isset($assets['logo']) ? [$stored($assets['logo'])] : []),
+            ...$examples->map($stored)->all(),
             ...array_map(fn (string $png): Image => Image::fromBase64(base64_encode($png), 'image/png'), $stills),
         ];
+
+        $brand = $this->brand($project, $assets['logo'] ?? null);
 
         $current = $revising ? $post->video_composition : null;
         $error = null;
@@ -83,6 +105,8 @@ class DirectSocialPostVideo
                 $post->video_revisions ?? [],
                 $error,
                 $voiced,
+                $brand,
+                $examples->count(),
             ))->direct()->structured;
 
             $composition = trim((string) ($structured['composition'] ?? ''));
@@ -139,11 +163,12 @@ class DirectSocialPostVideo
         $kept = $post->getMedia('video_audio');
         $audio = ['voices' => [], 'music' => null];
         $manifest = $this->renderer->manifest($composition, $assets);
+        $narrator = isset(VideoAudio::NARRATORS[$manifest['narrator'] ?? '']) ? (string) $manifest['narrator'] : VideoAudio::DEFAULT_NARRATOR;
 
         try {
             foreach ($manifest['voices'] as $text) {
-                $audio['voices'][$text] = $kept->first(fn (Media $media): bool => $media->getCustomProperty('voice') === $text)
-                    ?? $this->speak($post, $text);
+                $audio['voices'][$text] = $kept->first(fn (Media $media): bool => $media->getCustomProperty('voice') === $text && $media->getCustomProperty('narrator') === $narrator)
+                    ?? $this->speak($post, $text, $narrator);
             }
 
             $manifest = $this->renderer->manifest($composition, $assets, $audio['voices']);
@@ -169,14 +194,39 @@ class DirectSocialPostVideo
      * One voice line, kept on the post with how long it reads: ElevenLabs
      * answers in MP3 at a constant 128 kbit/s, 16 000 bytes a second.
      */
-    private function speak(SocialPost $post, string $text): Media
+    private function speak(SocialPost $post, string $text, string $narrator): Media
     {
-        $mp3 = $this->audio->speak($text);
+        $mp3 = $this->audio->speak($text, $narrator);
 
         return $post->addMediaFromString($mp3)
             ->usingFileName(Str::uuid().'.mp3')
-            ->withCustomProperties(['voice' => $text, 'seconds' => round(strlen($mp3) / 16000, 2)])
+            ->withCustomProperties(['voice' => $text, 'narrator' => $narrator, 'seconds' => round(strlen($mp3) / 16000, 2)])
             ->toMediaCollection('video_audio');
+    }
+
+    /**
+     * What the brand looks like, as hints beside the images: the logo's
+     * colours, and the colours and fonts its homepage declares. Best effort:
+     * a homepage that cannot be read leaves the logo and examples to speak.
+     *
+     * @return array{logo_colors: array<int, string>, site_colors: array<int, string>, site_fonts: array<int, string>}
+     */
+    private function brand(Project $project, ?Media $logo): array
+    {
+        $site = ['colors' => [], 'fonts' => []];
+
+        try {
+            $page = $this->fetcher->fetch((string) $project->url);
+            $site = $page?->content ? $this->style->site($page->content) : $site;
+        } catch (Throwable) {
+            // The homepage is a hint, never a reason not to make the video.
+        }
+
+        return [
+            'logo_colors' => $logo !== null ? $this->style->palette((string) stream_get_contents($logo->stream())) : [],
+            'site_colors' => $site['colors'],
+            'site_fonts' => $site['fonts'],
+        ];
     }
 
     /**

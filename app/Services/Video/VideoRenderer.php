@@ -63,7 +63,7 @@ class VideoRenderer
      *
      * @param  array<string, Media>  $assets
      * @param  array<string, Media>  $voices  voice line => audio
-     * @return array{duration: float, voices: array<int, string>, music: string|null}
+     * @return array{duration: float, voices: array<int, string>, narrator: string|null, music: string|null}
      *
      * @throws VideoRenderFailed
      */
@@ -80,6 +80,7 @@ class VideoRenderer
         return [
             'duration' => (float) ($manifest['duration'] ?? 0),
             'voices' => array_values(array_unique(array_map('strval', $manifest['voices'] ?? []))),
+            'narrator' => isset($manifest['narrator']) ? (string) $manifest['narrator'] : null,
             'music' => isset($manifest['music']) ? (string) $manifest['music'] : null,
         ];
     }

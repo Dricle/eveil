@@ -4,6 +4,7 @@ namespace App\Ai\Agents;
 
 use App\Enums\SocialPlatform;
 use App\Models\Project;
+use App\Services\Video\VideoAudio;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\HasStructuredOutput;
 use Laravel\Ai\Files\Image;
@@ -33,6 +34,8 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
      * @param  array<int, Image>  $images  the screenshots, in the order of `$screenshots`, then the stills
      * @param  array<int, float>  $stillTimes  the second each still was taken at
      * @param  array<int, array{feedback: string|null, at: float|null, summary: string}>  $revisions  earlier rounds with the user
+     * @param  array{logo_colors?: array<int, string>, site_colors?: array<int, string>, site_fonts?: array<int, string>}  $brand  colours and fonts read from the brand's own material
+     * @param  int  $exampleCount  how many style examples are attached, after the logo
      */
     public function __construct(
         Project $project,
@@ -50,6 +53,8 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
         private array $revisions = [],
         private ?string $buildError = null,
         private bool $voiced = false,
+        private array $brand = [],
+        private int $exampleCount = 0,
     ) {
         parent::__construct($project);
     }
@@ -65,10 +70,22 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
         THE LIBRARY
 
         v.theme({ background, surface, ink, muted, accent, accent2, display, body, grid })
-          Colours as CSS strings. display/body are font names: only 'Sora',
-          'Inter' and 'JetBrains Mono' are installed. grid: true/false, a faint
-          moving grid behind everything. Call it first. Default: dark navy
-          background, near-white ink, cyan and lavender accents.
+          ALWAYS call it first, with every value: the default is a plain grey
+          that belongs to no brand. Colours as CSS strings; accent and accent2
+          make the gradient on **words**. display is the headline font, body
+          the rest, from the fonts below. grid: true/false, a faint moving grid
+          behind everything.
+
+        Fonts installed, and nothing else:
+          Grotesque and clean: 'Inter' (neutral), 'Manrope' (soft, modern),
+            'Outfit' (geometric, friendly), 'Space Grotesk' (techy, quirky),
+            'Archivo' (sturdy, compact), 'Sora' (rounded tech).
+          Display with character: 'Bricolage Grotesque' (warm, editorial),
+            'Syne' (artsy, wide), 'Unbounded' (bold, playful, very wide).
+          Rounded: 'Nunito'.
+          Serif: 'Fraunces' (soft, expressive), 'Playfair Display' (elegant,
+            high contrast), 'Lora' (bookish, calm).
+          Mono, used for small labels: 'JetBrains Mono'.
 
         v.scene(seconds, (s) => { ... })
           One scene. Scenes play back to back, each entering and leaving with a
@@ -134,8 +151,17 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
         - End on the outro, with the product's name or URL as the call to action.
         - Vary the structure from the project's earlier videos you are shown:
           a different opening brick, a different order, a different rhythm.
-        - Pick the theme from the brand: the logo and screenshots show its
-          colours. Keep strong contrast between ink and background.
+        - Dress it in the brand, never in a house style: background, ink and
+          accents from the logo, the style examples and the site's colours you
+          are given; a light background when the brand is light. Fonts: the
+          site's own when it is installed, else the closest in feel; with
+          nothing to go on, a display font whose character fits the product
+          (a serif for something crafted or premium, a wide display face for
+          something playful), and a different pairing from the last videos.
+          Sora with Inter is only for a brand that already uses them. Keep
+          strong contrast between ink and background. Two projects must never
+          look alike, and this project's videos may vary their palette within
+          the brand.
         - Write in the site language. No dash punctuation in any text.
         - Plain JavaScript only: no imports, no network, no DOM of your own,
           no timers. Only `v` and the bricks.
@@ -154,11 +180,20 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
     private function voiceSection(): string
     {
         if (! $this->voiced) {
-            return 'This instance has no voice and no music: do not call s.voice() or v.music().';
+            return 'This instance has no voice and no music: do not call s.voice(), v.narrator() or v.music().';
         }
 
-        return <<<'PROMPT'
+        $narrators = collect(VideoAudio::NARRATORS)
+            ->map(fn (array $narrator, string $name): string => "  '{$name}': {$narrator['sound']}")
+            ->implode("\n");
+
+        return <<<PROMPT
         VOICE AND MUSIC (available here)
+
+        v.narrator(name)   who reads the voice lines, one of:
+        {$narrators}
+          Pick the one that fits this brand and this video's tone, and not the
+          one the project's last video used.
 
         s.voice(text, { at })   a narrator reads this line aloud, `at` seconds into
           the scene. A scene is lengthened to fit its lines, so keep each line
@@ -214,7 +249,14 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
                 ->map(fn (array $shot, string $name): string => "- '{$name}' ({$shot['width']} by {$shot['height']} px): {$shot['description']}")
                 ->implode("\n");
 
-        $sections[] = "## Logo\n\n".($this->hasLogo ? "Available as the asset 'logo', shown by s.outro()." : 'None: the outro shows the tagline and call to action only.');
+        $sections[] = "## Logo\n\n".($this->hasLogo ? "Available as the asset 'logo', shown by s.outro(), and attached after the screenshots." : 'None: the outro shows the tagline and call to action only.');
+
+        $sections[] = "## What the brand looks like\n\n".implode("\n", array_filter([
+            $this->exampleCount > 0 ? "- {$this->exampleCount} of its own published visuals are attached after the logo: follow their palette and type." : null,
+            ($this->brand['logo_colors'] ?? []) !== [] ? '- Logo colours, most present first: '.implode(', ', $this->brand['logo_colors']) : null,
+            ($this->brand['site_colors'] ?? []) !== [] ? '- Colours its homepage uses, most used first: '.implode(', ', $this->brand['site_colors']) : null,
+            ($this->brand['site_fonts'] ?? []) !== [] ? '- Fonts its homepage uses: '.implode(', ', $this->brand['site_fonts']) : null,
+        ]) ?: ['Nothing to go on: pick a palette and fonts that suit what the product is and who it is for, never the default.']);
 
         if ($this->recentCompositions !== []) {
             $sections[] = "## This project's last videos, do not repeat their structure\n\n".implode("\n\n---\n\n", $this->recentCompositions);

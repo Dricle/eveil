@@ -1,4 +1,19 @@
+The fonts in this directory are each licensed under the SIL Open Font License, Version 1.1, reproduced below, with these copyright notices:
+
 Copyright 2019 The Sora Project Authors (https://github.com/sora-xor/sora-font)
+Copyright 2020 The Inter Project Authors (https://github.com/rsms/inter)
+Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)
+Copyright 2018 The Fraunces Project Authors (https://github.com/undercasetype/Fraunces)
+Copyright 2017 The Playfair Display Project Authors (https://github.com/clauseggers/Playfair-Display), with Reserved Font Name "Playfair Display"
+Copyright 2011 The Lora Project Authors (https://github.com/cyrealtype/Lora-Cyrillic), with Reserved Font Name "Lora".
+Copyright 2020 The Space Grotesk Project Authors (https://github.com/floriankarsten/space-grotesk)
+Copyright 2022 The Bricolage Grotesque Project Authors (https://github.com/ateliertriay/bricolage)
+Copyright 2018 The Manrope Project Authors (https://github.com/googlefonts/manrope)
+Copyright 2014 The Nunito Project Authors (https://github.com/googlefonts/nunito)
+Copyright 2021 The Outfit Project Authors (https://github.com/Outfitio/Outfit-Fonts)
+Copyright 2020 The Archivo Project Authors (https://github.com/Omnibus-Type/Archivo)
+Copyright 2017 The Syne Project Authors (https://gitlab.com/bonjour-monde/fonderie/syne-typeface)
+Copyright 2022 The Unbounded Project Authors (https://github.com/googlefonts/unbounded)
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 

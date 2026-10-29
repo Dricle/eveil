@@ -11,12 +11,15 @@ use App\Enums\SocialPlatform;
 use App\Enums\SocialPostStatus;
 use App\Jobs\GenerateSocialPost;
 use App\Jobs\GenerateSocialPostVideo;
+use App\Models\CrawledPage;
 use App\Models\Organization;
 use App\Models\PlatformApp;
 use App\Models\Project;
 use App\Models\SocialAccount;
 use App\Models\SocialPost;
 use App\Models\User;
+use App\Services\Discovery\PageFetcher;
+use App\Services\Video\BrandStyle;
 use App\Services\Video\VideoAudio;
 use App\Services\Video\VideoRenderer;
 use App\Services\Video\VideoRenderFailed;
@@ -38,6 +41,10 @@ use Laravel\Ai\Responses\StructuredTextResponse;
 use Laravel\Ai\Tools\Request as ToolRequest;
 use Mockery\MockInterface;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
+
+// The director reads the project's homepage for its colours and fonts: never
+// over the network in a test.
+beforeEach(fn () => $this->mock(PageFetcher::class)->shouldReceive('fetch')->andReturnNull()->byDefault());
 
 /**
  * @return array{0: User, 1: Project}
@@ -400,17 +407,17 @@ it('gives the video a voice and music when the instance has a key, reuses them, 
     VideoDirector::fake([videoStructured(videoScript('One')), videoStructured(videoScript('Two'))]);
     $this->mock(VideoAudio::class, function (MockInterface $mock): void {
         $mock->shouldReceive('available')->andReturnTrue();
-        $mock->shouldReceive('speak')->with('Meet Cargo.')->once()->andReturn(str_repeat('v', 32000));
-        $mock->shouldReceive('speak')->with('Try it free.')->once()->andReturn('voice-2');
+        $mock->shouldReceive('speak')->with('Meet Cargo.', 'Brian')->once()->andReturn(str_repeat('v', 32000));
+        $mock->shouldReceive('speak')->with('Try it free.', 'Brian')->once()->andReturn('voice-2');
         $mock->shouldReceive('compose')->with('warm lo-fi', 12.0)->once()->andReturn('music');
     });
     $this->mock(VideoRenderer::class, function (MockInterface $mock): void {
         // Each version asks twice: what to voice, then the length once voiced.
         $mock->shouldReceive('manifest')->times(4)->andReturn(
-            ['duration' => 9.0, 'voices' => ['Meet Cargo.', 'Try it free.'], 'music' => 'warm lo-fi'],
-            ['duration' => 12.0, 'voices' => ['Meet Cargo.', 'Try it free.'], 'music' => 'warm lo-fi'],
-            ['duration' => 8.0, 'voices' => ['Meet Cargo.'], 'music' => 'warm lo-fi'],
-            ['duration' => 10.0, 'voices' => ['Meet Cargo.'], 'music' => 'warm lo-fi'],
+            ['duration' => 9.0, 'voices' => ['Meet Cargo.', 'Try it free.'], 'narrator' => 'Brian', 'music' => 'warm lo-fi'],
+            ['duration' => 12.0, 'voices' => ['Meet Cargo.', 'Try it free.'], 'narrator' => 'Brian', 'music' => 'warm lo-fi'],
+            ['duration' => 8.0, 'voices' => ['Meet Cargo.'], 'narrator' => 'Brian', 'music' => 'warm lo-fi'],
+            ['duration' => 10.0, 'voices' => ['Meet Cargo.'], 'narrator' => 'Brian', 'music' => 'warm lo-fi'],
         );
         $mock->shouldReceive('render')->twice()
             ->withArgs(fn (string $composition, array $assets, array $audio): bool => isset($audio['voices']['Meet Cargo.'], $audio['music']))
@@ -517,3 +524,59 @@ it('lengthens a scene to fit its voice lines, one after the other, so they never
     // 0.2 + 2.0 + 0.15, then 1.5 + 0.15, then 0.35 of air: 4.35 s, plus the 1 s scene.
     expect($manifest['duration'])->toBe(5.35);
 })->skip(fn (): bool => ! is_executable((string) exec('command -v '.escapeshellarg((string) config('eveil.video.chrome')))), 'Chromium is not installed here.');
+
+it('dresses the video in the brand: shows the director its logo and style examples, with their colours and the site\'s', function () {
+    [, $project] = videoSetup();
+    Storage::fake();
+    $project->update(['url' => 'https://brand.test']);
+    $logo = imagecreatetruecolor(20, 20);
+    imagefill($logo, 0, 0, imagecolorallocate($logo, 0xEE, 0x33, 0x11));
+    ob_start();
+    imagepng($logo);
+    $project->addMediaFromString((string) ob_get_clean())->usingFileName('logo.png')->withCustomProperties(['kind' => BrandAssetKind::Logo->value])->toMediaCollection('brand_assets');
+    $project->addMediaFromString((string) file_get_contents(base_path('public/apple-touch-icon.png')))->usingFileName('ex.png')->withCustomProperties(['kind' => BrandAssetKind::Example->value])->toMediaCollection('brand_assets');
+    $this->mock(PageFetcher::class)->shouldReceive('fetch')->with('https://brand.test')->andReturn(new CrawledPage(['content' => '<meta name="theme-color" content="#0a7"><link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700">']));
+    $post = SocialPost::factory()->instagram()->create(['project_id' => $project->id]);
+    VideoDirector::fake([videoStructured(videoScript())]);
+    $this->mock(VideoRenderer::class, fn (MockInterface $mock) => $mock->shouldReceive('render')->once()->andReturn(renderedVideo()));
+
+    app(DirectSocialPostVideo::class)->handle($post);
+
+    VideoDirector::assertPrompted(fn (AgentPrompt $prompt): bool => $prompt->contains('Logo colours, most present first: #ee3311')
+        && $prompt->contains('Colours its homepage uses, most used first: #00aa77')
+        && $prompt->contains('Fonts its homepage uses: Space Grotesk')
+        && $prompt->contains('1 of its own published visuals are attached after the logo')
+        && $prompt->attachments->count() === 2);
+});
+
+it('reads a homepage\'s colours and fonts, leaving generic ones out', function () {
+    $site = app(BrandStyle::class)->site(<<<'HTML'
+        <meta name="theme-color" content="#123456">
+        <link href="https://fonts.bunny.net/css?family=bricolage-grotesque:400,700" rel="stylesheet">
+        <style>body { font-family: 'Fraunces', serif; color: #333; } a { color: #ff6600 } .b { background: #ff6600 }</style>
+        <script>const notAColour = '#abcdef';</script>
+        HTML);
+
+    expect($site['colors'])->toBe(['#123456', '#ff6600', '#333333'])
+        ->and($site['fonts'])->toBe(['Bricolage Grotesque', 'Fraunces']);
+});
+
+it('gives a new narrator\'s voice to the same line rather than reusing another narrator\'s', function () {
+    [, $project] = videoSetup();
+    Storage::fake();
+    $post = SocialPost::factory()->instagram()->create(['project_id' => $project->id]);
+    $post->addMediaFromString('old')->usingFileName('a.mp3')->withCustomProperties(['voice' => 'Meet Cargo.', 'narrator' => 'Eric', 'seconds' => 1.0])->toMediaCollection('video_audio');
+    VideoDirector::fake([videoStructured(videoScript())]);
+    $this->mock(VideoAudio::class, function (MockInterface $mock): void {
+        $mock->shouldReceive('available')->andReturnTrue();
+        $mock->shouldReceive('speak')->with('Meet Cargo.', 'Alice')->once()->andReturn('new');
+    });
+    $this->mock(VideoRenderer::class, function (MockInterface $mock): void {
+        $mock->shouldReceive('manifest')->twice()->andReturn(['duration' => 5.0, 'voices' => ['Meet Cargo.'], 'narrator' => 'Alice', 'music' => null]);
+        $mock->shouldReceive('render')->once()->andReturn(renderedVideo());
+    });
+
+    app(DirectSocialPostVideo::class)->handle($post);
+
+    expect($post->fresh()->getMedia('video_audio')->sole()->getCustomProperty('narrator'))->toBe('Alice');
+});

@@ -18,16 +18,18 @@
 (() => {
     const SOUNDS = ['pop', 'click', 'typing', 'chime', 'reveal']
 
+    // Deliberately plain: a composition sets its own theme from the brand,
+    // and a forgotten one should look unbranded rather than like anyone's.
     const DEFAULT_THEME = {
-        background: '#0b1018',
-        surface: '#121926',
-        ink: '#eef2f7',
-        muted: 'rgba(238,242,247,.62)',
-        accent: '#6fd3ec',
-        accent2: '#a8b8ff',
-        display: 'Sora',
+        background: '#121212',
+        surface: '#1c1c1c',
+        ink: '#f4f4f4',
+        muted: 'rgba(244,244,244,.62)',
+        accent: '#f4f4f4',
+        accent2: '#bdbdbd',
+        display: 'Inter',
         body: 'Inter',
-        grid: true
+        grid: false
     }
 
     const ease = 'cubic-bezier(.22,1,.36,1)'
@@ -94,6 +96,13 @@
             if (SOUNDS.includes(name)) {
                 this.sounds.push({ name, at: Math.max(0, at), volume })
             }
+
+            return this
+        }
+
+        /** Who reads the voice lines, by the name of one of the narrators offered. */
+        narrator (name) {
+            this.voiceName = String(name)
 
             return this
         }
@@ -177,6 +186,7 @@
                 duration: this.duration,
                 sounds: [...this.sounds, ...voiced, ...music],
                 voices: this.voices.map(line => line.text),
+                narrator: this.voiceName ?? null,
                 music: this.track?.prompt ?? null
             }
         }
@@ -640,9 +650,11 @@
                     // A missing image leaves its brick empty rather than failing the video.
                 }
             }))
-            await document.fonts.ready
             const video = new Video({ ...options, assets })
             build(video)
+            // Only the fonts the theme picked, before the first frame is taken.
+            await Promise.all([video.colors.display, video.colors.body, 'JetBrains Mono'].map(font => document.fonts.load(`650 40px "${font}"`)))
+            await document.fonts.ready
             video.background()
             for (const animation of video.root.getAnimations({ subtree: true })) {
                 animation.pause()

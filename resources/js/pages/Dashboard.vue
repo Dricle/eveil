@@ -711,6 +711,7 @@ const topupPercent = computed(() => {
                     v-else-if="reviewSocialPost"
                     :post="reviewSocialPost"
                     :accounts="review.socialAccounts.filter(account => account.platform === reviewSocialPost!.platform)"
+                    @rework="reviewOpen = false"
                 />
                 <ArticleCard
                     v-else-if="reviewArticle"

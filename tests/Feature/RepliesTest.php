@@ -374,15 +374,28 @@ it('resumes the sequence when the agent recognises a machine', function () {
 it('holds an interested reply for a human and never answers it itself', function () {
     $reply = pausedReply('Oui, ça m\'intéresse. Quels sont vos tarifs ?');
 
-    (new MarkNeedsHuman($reply))->handle(new ToolRequest(['interested' => true, 'summary' => 'Wants pricing.']));
+    (new MarkNeedsHuman($reply))->handle(new ToolRequest(['interested' => true, 'summary' => 'Wants pricing.', 'draft' => "Bonjour Marcel,\n\nMerci !"]));
 
     expect($reply->refresh()->classification)->toBe(ReplyClassification::Interested)
         ->and($reply->classification->isPositive())->toBeTrue()
         ->and($reply->campaignLead->refresh()->status)->toBe(CampaignLeadStatus::Paused)
         ->and($reply->campaignLead->pause_reason)->toBe('awaiting_human')
+        // Drafted for the reply box, not sent.
+        ->and($reply->campaignLead->reply_draft)->toBe("Bonjour Marcel,\n\nMerci !")
         // Nothing was written back: the promise is that these read as one
         // person writing to another.
         ->and(Message::query()->where('direction', MessageDirection::Outbound)->count())->toBe(1);
+});
+
+it('drops the draft written for an earlier reply when a new one arrives', function () {
+    [$mailbox, $membership] = awaitingReply();
+    $membership->update(['reply_draft' => 'Written for their first answer.']);
+
+    Queue::fake();
+    fakeImap([inbound('En fait, rappelez-moi en janvier.')]);
+    app(FetchReplies::class)->handle($mailbox);
+
+    expect($membership->refresh()->reply_draft)->toBeNull();
 });
 
 it('counts an ambiguous reply as needing a person, not as a positive', function () {
@@ -851,6 +864,7 @@ it('answers from the mailbox the sequence pinned, in the same thread, and stops 
 
     fakeImap([inbound('Quels sont vos tarifs ?', ['messageId' => 'theirs-9@friterie.test'])]);
     app(FetchReplies::class)->handle($mailbox);
+    $membership->update(['reply_draft' => 'Bonjour Marcel,']);
 
     $this->actingAs($user)
         ->withSession(['current_project_id' => $project->id])
@@ -871,7 +885,8 @@ it('answers from the mailbox the sequence pinned, in the same thread, and stops 
         // automated follow-up.
         ->and($membership->refresh()->status)->toBe(CampaignLeadStatus::Stopped)
         ->and($membership->pause_reason)->toBe('answered_by_hand')
-        ->and($membership->next_action_at)->toBeNull();
+        ->and($membership->next_action_at)->toBeNull()
+        ->and($membership->reply_draft)->toBeNull();
 });
 
 it('reports the positive reply rate and the funnel, never a raw rate', function () {

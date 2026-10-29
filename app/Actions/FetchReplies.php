@@ -269,6 +269,8 @@ class FetchReplies
             // resolved to: somebody who replied twice does not get the
             // second reply hidden because the first one was dealt with.
             'attention_resolved_at' => null,
+            // Written for the previous reply, not this one.
+            'reply_draft' => null,
         ]);
 
         $reply->lead->update(['status' => OutreachStatus::Replied]);

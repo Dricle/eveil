@@ -60,6 +60,9 @@ class ConversationResource extends JsonResource
             // would tell somebody their mail went out when it never left.
             'sent_at' => $lastOutbound?->sent_at?->toIso8601String(),
             'delivery' => $lastOutbound?->status?->value,
+            // Drafted by `ReplyHandler` when the reply needed the user:
+            // the reply box starts from it.
+            'reply_draft' => $this->reply_draft,
             // Newest reply on top, like the thread list itself.
             'messages' => $this->messages->reverse()->map(fn (Message $message): array => [
                 'id' => $message->id,

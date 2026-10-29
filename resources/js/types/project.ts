@@ -6,8 +6,6 @@ export type Project = {
     analyzed: boolean
     organization_id: number
     organization_name: string
-    /** Whether meeting hours are set, so an answer can offer times. */
-    takes_meetings: boolean
 }
 
 /** The switcher's "other organizations" list, and the current one's label. */

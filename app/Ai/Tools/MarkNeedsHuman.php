@@ -12,7 +12,8 @@ use Stringable;
 /**
  * The reply worth having. Nothing is answered automatically: the whole promise
  * is that these mails read as one person writing to another, and an agent
- * replying to a real question would end that in one message.
+ * replying to a real question would end that in one message. The `draft` only
+ * pre-fills the inbox's reply box; the user edits it and sends it.
  */
 class MarkNeedsHuman implements Tool
 {
@@ -30,12 +31,17 @@ class MarkNeedsHuman implements Tool
         the number the user judges the whole product on, so an ambiguous
         "possibly, tell me more" is `interested: false` and still lands at the
         top of their inbox.
+
+        Also write `draft`: the user's answer, which they will read and edit
+        before sending.
         TEXT;
     }
 
     public function handle(Request $request): Stringable|string
     {
-        app(ReplyOutcomes::class)->needsHuman($this->reply, (bool) ($request['interested'] ?? false));
+        $draft = mb_trim((string) ($request['draft'] ?? ''));
+
+        app(ReplyOutcomes::class)->needsHuman($this->reply, (bool) ($request['interested'] ?? false), $draft === '' ? null : $draft);
 
         return 'Flagged for the user. The sequence stays paused until they answer.';
     }
@@ -51,6 +57,9 @@ class MarkNeedsHuman implements Tool
                 ->required(),
             'summary' => $schema->string()
                 ->description('One sentence on what they want, shown beside the reply.')
+                ->required(),
+            'draft' => $schema->string()
+                ->description('The answer the user could send, as plain text in the language of their reply: no subject, no signature.')
                 ->required(),
         ];
     }

@@ -72,14 +72,10 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  * @property Carbon|null $instagram_next_post_at
  * @property AutonomyLevel $instagram_autonomy_level
  * @property string|null $instagram_prompt_instructions
- * @property int $meeting_duration_minutes
- * @property string|null $meeting_timezone
- * @property array<int, array{day: int, start: string, end: string}>|null $meeting_hours
- * @property string|null $meeting_location
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['organization_id', 'name', 'slug', 'url', 'github_token', 'knowledge_base', 'knowledge_base_edited_by_user', 'default_language', 'prompt_instructions', 'linkedin_prompt_instructions', 'email_autonomy_level', 'email_enabled', 'linkedin_autonomy_level', 'daily_lead_limit', 'lead_limit', 'linkedin_post_frequency', 'linkedin_next_post_at', 'reddit_scan_frequency', 'reddit_next_scan_at', 'article_frequency', 'article_next_at', 'x_post_frequency', 'x_next_post_at', 'bluesky_post_frequency', 'bluesky_next_post_at', 'bluesky_autonomy_level', 'ads_autonomy_level', 'ads_enabled', 'ads_monthly_budget_micros', 'ads_currency', 'x_prompt_instructions', 'bluesky_prompt_instructions', 'instagram_post_frequency', 'instagram_next_post_at', 'instagram_autonomy_level', 'instagram_prompt_instructions', 'meeting_duration_minutes', 'meeting_timezone', 'meeting_hours', 'meeting_location'])]
+#[Fillable(['organization_id', 'name', 'slug', 'url', 'github_token', 'knowledge_base', 'knowledge_base_edited_by_user', 'default_language', 'prompt_instructions', 'linkedin_prompt_instructions', 'email_autonomy_level', 'email_enabled', 'linkedin_autonomy_level', 'daily_lead_limit', 'lead_limit', 'linkedin_post_frequency', 'linkedin_next_post_at', 'reddit_scan_frequency', 'reddit_next_scan_at', 'article_frequency', 'article_next_at', 'x_post_frequency', 'x_next_post_at', 'bluesky_post_frequency', 'bluesky_next_post_at', 'bluesky_autonomy_level', 'ads_autonomy_level', 'ads_enabled', 'ads_monthly_budget_micros', 'ads_currency', 'x_prompt_instructions', 'bluesky_prompt_instructions', 'instagram_post_frequency', 'instagram_next_post_at', 'instagram_autonomy_level', 'instagram_prompt_instructions'])]
 #[Hidden(['github_token'])]
 class Project extends Model implements HasMedia, StoresMediaInterface
 {
@@ -417,15 +413,6 @@ class Project extends Model implements HasMedia, StoresMediaInterface
     }
 
     /**
-     * Whether a reply can offer times at all: the user has said when they are
-     * free, and in which zone those hours are meant.
-     */
-    public function takesMeetings(): bool
-    {
-        return $this->meeting_timezone !== null && ! empty($this->meeting_hours);
-    }
-
-    /**
      * The questions the reading of the site left open, in one shape whatever
      * the analysis that wrote them: `key` is the identity, `answer` is null
      * until the user types one.
@@ -611,8 +598,6 @@ class Project extends Model implements HasMedia, StoresMediaInterface
             'ads_autonomy_level' => AutonomyLevel::class,
             'ads_enabled' => 'boolean',
             'ads_monthly_budget_micros' => 'integer',
-            'meeting_duration_minutes' => 'integer',
-            'meeting_hours' => 'array',
         ];
     }
 }

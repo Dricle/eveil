@@ -92,8 +92,8 @@ abstract class EveilAgent implements Agent
      * The project's own instructions for the EMAILS written in its name: tone,
      * language, words to avoid. The "How the AI writes" box on Settings ->
      * Project. Appended by the agents that write an email a lead actually
-     * reads - `MessagePersonalizer`, `SequenceWriter`, `VariantWriter`,
-     * `MeetingProposalWriter` - and by them only. Not appended to agents whose output is raw material for
+     * reads - `MessagePersonalizer`, `SequenceWriter`, `VariantWriter`, and
+     * `ReplyHandler` for the answer it drafts - and by them only. Not appended to agents whose output is raw material for
      * those (`CompanyQualifier`'s fit_reason, `WebsiteAnalyst`'s portrait,
      * `TargetProfileDeriver`'s profiles): the actual email writer re-applies
      * style when it turns that material into prose, so requiring compliance

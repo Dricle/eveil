@@ -51,6 +51,8 @@ export type Conversation = {
     sent_at: string | null
     /** What became of it. Anything but `sent` means it never reached anybody. */
     delivery: 'queued' | 'sent' | 'failed' | 'bounced' | null
+    /** The answer drafted to their last reply, for the user to edit and send. */
+    reply_draft: string | null
     messages: ConversationMessage[]
 }
 

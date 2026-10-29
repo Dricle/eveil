@@ -1,13 +1,12 @@
 <script setup lang="ts">
-import { Form, router, useHttp, usePage } from '@inertiajs/vue3'
-import { computed, ref, watch } from 'vue'
+import { Form, router, usePage } from '@inertiajs/vue3'
+import { computed, ref } from 'vue'
 import ActivityTimeline from '@/components/ActivityTimeline.vue'
 import StatusSelect from '@/components/StatusSelect.vue'
 import { OUTREACH_STATUSES } from '@/lib/status'
 import { relativeUrl } from '@/lib/utils'
 import contactRoutes from '@/routes/contacts'
-import { attention as attentionRoute, meetingDraft as meetingDraftRoute, reply as replyRoute } from '@/routes/inbox'
-import meetingSettingsRoutes from '@/routes/settings/meetings'
+import { attention as attentionRoute, reply as replyRoute } from '@/routes/inbox'
 import type { Conversation } from '@/types'
 
 // One conversation, opened: who they are, the thread, and answering it.
@@ -41,33 +40,6 @@ function toggleAttention () {
 
 function when (value: string | null) {
     return value === null ? '' : new Date(value).toLocaleString()
-}
-
-const toast = useToast()
-
-// The reply box holds a local draft rather than an uncontrolled field, so
-// "Propose times" can fill it. `Form` still collects it by `name`.
-const body = ref('')
-
-const takesMeetings = computed(() => page.props.currentProject!.takes_meetings)
-
-// A draft offering times, dropped into the reply box for the user to read
-// and edit. Nothing is sent until they press send.
-const draft = useHttp<Record<string, never>, { body: string }>({})
-
-function proposeTimes () {
-    draft.post(meetingDraftRoute.url({ project: projectSlug.value, conversation: props.conversation.id }), {
-        onSuccess: (response) => {
-            body.value = response.body
-            toast.add({ title: 'Draft ready', description: 'Read it over before you send it.', color: 'success' })
-        }
-    })
-}
-
-watch(() => props.conversation.id, () => resetReply())
-
-function resetReply () {
-    body.value = ''
 }
 
 function initial (conversation: Conversation) {
@@ -192,46 +164,32 @@ function initial (conversation: Conversation) {
                     v-bind="replyRoute.form({ project: projectSlug, conversation: conversation.id })"
                     class="shrink-0 space-y-2 border-t border-default p-4"
                     :options="{ preserveScroll: true }"
-                    @success="resetReply"
                 >
                     <UFormField
                         name="body"
-                        :error="errors.body ?? draft.errors.draft"
+                        :error="errors.body"
                         :help="sent
                             ? 'Sent from the same mailbox, in the same thread. Writing by hand stops the sequence: nobody should get your mail and the queued follow-up as well.'
                             : 'Sent from the same mailbox, in the same thread. Your signature is added if the mailbox has one.'"
                     >
+                        <!-- Pre-filled with the answer drafted when their
+                             reply came in. Keyed so that opening another
+                             conversation starts from that one's draft. -->
                         <UTextarea
-                            v-model="body"
+                            :key="conversation.id"
                             name="body"
-                            :rows="5"
+                            :default-value="conversation.reply_draft ?? undefined"
+                            :rows="6"
                             placeholder="Write back…"
                             class="w-full"
                         />
                     </UFormField>
 
-                    <div class="flex flex-wrap items-center gap-2">
-                        <UButton
-                            type="submit"
-                            :loading="processing"
-                            :label="sent ? 'Send and stop the sequence' : 'Send reply'"
-                        />
-
-                        <UButton
-                            v-if="takesMeetings"
-                            color="neutral"
-                            variant="outline"
-                            icon="i-lucide-calendar-clock"
-                            label="Propose times"
-                            :loading="draft.processing"
-                            @click="proposeTimes"
-                        />
-                        <ULink
-                            v-else
-                            :href="relativeUrl(meetingSettingsRoutes.edit.url({ project: projectSlug }))"
-                            class="text-xs text-muted hover:text-default"
-                        >Set your meeting hours to propose times</ULink>
-                    </div>
+                    <UButton
+                        type="submit"
+                        :loading="processing"
+                        :label="sent ? 'Send and stop the sequence' : 'Send reply'"
+                    />
                 </Form>
             </div>
         </div>

@@ -71,6 +71,7 @@ class ReplyToConversation
             'status' => CampaignLeadStatus::Stopped,
             'pause_reason' => 'answered_by_hand',
             'next_action_at' => null,
+            'reply_draft' => null,
         ]);
 
         return $reply;

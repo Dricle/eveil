@@ -25,10 +25,11 @@ use Stringable;
  * "please stop writing to me", which are one lead and one complaint
  * respectively.
  *
- * It never writes a reply. The whole promise is that these mails read as one
+ * It never sends a reply. The whole promise is that these mails read as one
  * person writing to another, and an agent answering a real question would end
  * that in a single message; an interested reply goes to the top of the user's
- * inbox instead.
+ * inbox instead, with a drafted answer waiting in the reply box for the user
+ * to edit and send.
  */
 #[MaxSteps(3)]
 class ReplyHandler extends EveilAgent implements HasTools
@@ -61,11 +62,20 @@ class ReplyHandler extends EveilAgent implements HasTools
         answering; only a machine's message is ignore_reply, and calling it
         resumes the sequence.
 
-        You do not write replies and you have no tool to send one. When the
-        answer needs words, that is mark_needs_human and the user writes them.
+        You have no tool to send a reply. When the answer needs words, that is
+        mark_needs_human, and its `draft` is the answer the user will read, edit
+        and send themselves:
+
+        - in the language of their reply, a few short lines of plain text: no
+          lists, no links, no signature (the mailbox adds the sender's own)
+        - answer only what you can from what you are given. Never invent a
+          price, a feature or a fact: leave it for the user to add
+        - when they agree to talk or ask for a call, suggest two or three
+          concrete times on different working days over the next week, in
+          business hours, and ask which suits. The user will adjust them
 
         Call one tool. Do not explain yourself in prose afterwards.
-        PROMPT;
+        PROMPT.$this->emailWritingInstructions();
     }
 
     /**
@@ -113,6 +123,8 @@ class ReplyHandler extends EveilAgent implements HasTools
             'from' => $lead->email,
             'their_name' => mb_trim($lead->first_name.' '.$lead->last_name) ?: null,
             'their_company' => $lead->company?->name,
+            'sender' => $this->reply->emailAccount?->from_name,
+            'today' => now()->format('l j F Y'),
             'we_wrote' => $ours === null ? null : [
                 'subject' => $ours->subject,
                 'body' => $ours->body,

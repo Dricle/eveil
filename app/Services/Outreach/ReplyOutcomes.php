@@ -70,7 +70,7 @@ class ReplyOutcomes
      * nobody can act on automatically: it stays paused and goes to the top of
      * the inbox rather than getting an automated reply it did not ask for.
      */
-    public function needsHuman(Message $reply, bool $interested = false): void
+    public function needsHuman(Message $reply, bool $interested = false, ?string $draft = null): void
     {
         $this->setStatus->forLead($reply->lead, OutreachStatus::Replied);
 
@@ -78,6 +78,7 @@ class ReplyOutcomes
             'status' => CampaignLeadStatus::Paused,
             'paused_at' => now(),
             'pause_reason' => 'awaiting_human',
+            'reply_draft' => $draft,
         ]);
 
         $this->record($reply, $interested ? ReplyClassification::Interested : ReplyClassification::NeedsHuman);

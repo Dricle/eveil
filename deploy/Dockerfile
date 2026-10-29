@@ -7,6 +7,9 @@
 # process on its own, so a worker dying does not take the site with it.
 FROM php:8.5-fpm
 
+# Chromium and ffmpeg render the short videos that go out with a post
+# (`resources/video/render.mjs`, with the Node installed below); the emoji
+# font keeps an emoji in a video's text from showing as an empty box.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx \
     supervisor \
@@ -17,6 +20,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpng-dev \
     libonig-dev \
     libicu-dev \
+    chromium \
+    ffmpeg \
+    fonts-noto-color-emoji \
     && rm -rf /var/lib/apt/lists/*
 
 # `pdo`, `mbstring` and `opcache` are already built into this image. Asking for
@@ -29,9 +35,10 @@ RUN docker-php-ext-install pdo_pgsql pgsql bcmath pcntl gd zip intl exif
 # locks: all four, so this one is not optional.
 RUN pecl install redis && docker-php-ext-enable redis
 
-# Node only to build the front end. `yarn build` shells out to
+# Node builds the front end: `yarn build` shells out to
 # `php artisan wayfinder:generate`, so the assets cannot be built in a stage
-# without PHP. It is built here and thrown away below.
+# without PHP. Its packages are thrown away below, but Node itself stays: the
+# video renderer runs on it, with no package of its own.
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
     && npm install -g corepack \

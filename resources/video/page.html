@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<base href="{{BASE}}">
+<style>
+@font-face { font-family: 'Sora'; src: url('fonts/Sora.ttf') format('truetype'); font-weight: 100 900; }
+@font-face { font-family: 'Inter'; src: url('fonts/Inter.ttf') format('truetype'); font-weight: 100 900; }
+@font-face { font-family: 'JetBrains Mono'; src: url('fonts/JetBrainsMono.ttf') format('truetype'); font-weight: 100 900; }
+html, body { margin: 0; background: #000; overflow: hidden; }
+.grad { background-image: linear-gradient(90deg, var(--accent), var(--accent2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+</style>
+<script src="runtime.js"></script>
+</head>
+<body>
+<script>
+window.VIDEO_OPTIONS = {{OPTIONS}};
+document.fonts.load('650 10px Sora');
+document.fonts.load('400 10px Inter');
+document.fonts.load('400 10px "JetBrains Mono"');
+Video.compose((v) => {
+{{COMPOSITION}}
+}).catch((error) => {
+    window.videoError = String(error && error.stack || error);
+    window.dispatchEvent(new CustomEvent('video:error', { detail: window.videoError }));
+    if (window.parent !== window) {
+        window.parent.postMessage({ source: 'eveil-video', type: 'error', message: String(error && error.message || error) }, '*');
+    }
+});
+</script>
+</body>
+</html>

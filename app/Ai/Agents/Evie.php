@@ -220,6 +220,14 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
         others; SelectSocialPostImage picks which one it is published with.
         You cannot see the images, so pick only the one the user pointed at.
 
+        A LinkedIn, Bluesky or Instagram draft can also go out with a short
+        video (on Instagram, a Reel instead of its image). RequestSocialPostVideo makes it, or a new version from
+        what the user wants changed (it pauses for approval: every version
+        costs credits). Pass their words as they said them, and the second
+        they mean when they gave one ("at 0:04 the zoom lands on nothing" is 4).
+        You cannot watch the video: GetSocialPost shows what each version
+        changed, so you know where it stands.
+
         DraftArticle queues a NEW SEO article for the project's blog, written in
         the background by the article writer from the brief you pass: never
         write the article yourself in the chat. When the user announces

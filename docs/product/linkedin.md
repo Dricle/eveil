@@ -24,6 +24,8 @@ The same writer drafts for [X, Bluesky and Instagram](/product/social), each wit
 
 By default nothing publishes on its own. Every draft — whatever it came from — lands in **LinkedIn** (its own item in the main navigation, badged with how many are waiting on you, the same way Inbox is), showing why it was written (the evidence) beside the text itself. From there you can edit the body, approve and publish it, reject it, or delete it. LinkedIn has its own [autonomy setting](/product/autonomy), separate from email's: posting to a public feed under your name is a different call from a private, one-to-one email. Set it to Autonomous and posts publish as soon as they're written, except a post naming a client, or any post on a project with several LinkedIn accounts: those still wait here for you. You also get an email whenever a new draft is ready to review, unless it was Evie who wrote it into the same conversation you're already in.
 
+A post that shows a feature in action can come with a short vertical video of your product, published as a native LinkedIn video with it: see [Videos](/product/social#videos) for how it is made and how to change it.
+
 If more than one LinkedIn account is granted to the project, approving asks which one to publish through; with only one connected, approving publishes to it directly with no extra step.
 
 **Reject vs. delete** are two different things. Delete removes the draft with no trace. Reject keeps it, marks it rejected, and optionally asks why ("too many emojis", "wrong tone") — that reason is fed back to the writer on the next cycle so it doesn't repeat the mistake, alongside every other recently rejected draft. Approving one of a client-win pair automatically rejects its sibling this way too.

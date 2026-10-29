@@ -65,6 +65,16 @@ enum SocialPlatform: string
     }
 
     /**
+     * Whether a post here can go out with a short video, rendered from a
+     * composition `VideoDirector` writes: as a Reel on Instagram, a native
+     * video on LinkedIn and Bluesky. Not on X, posted by hand.
+     */
+    public function supportsVideo(): bool
+    {
+        return $this->publishesThroughApi();
+    }
+
+    /**
      * The shape this network's images are drawn in. Square goes everywhere
      * on Instagram's feed; 4:5 takes more of the screen and is the obvious
      * next step if it proves worth it.

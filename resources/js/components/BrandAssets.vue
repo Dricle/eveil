@@ -5,7 +5,8 @@ import brandAssetRoutes from '@/routes/settings/brand-assets'
 import type { ProjectDetail } from '@/types'
 
 // The project's visual identity library: the images generated for it (an
-// Instagram post's, an ad's) draw from these rather than inventing.
+// Instagram post's, an ad's) draw from these rather than inventing, and the
+// videos film its screenshots.
 const props = defineProps<{
     assets: ProjectDetail['brand_assets']
     slug: string
@@ -15,7 +16,7 @@ const toast = useToast()
 const removing = ref<number | null>(null)
 // One per section's form, sent through a hidden input: the same explicit
 // shape the other forms here use rather than relying on the checkbox's own.
-const rights = ref<Record<string, boolean>>({ logo: false, illustration: false, example: false })
+const rights = ref<Record<string, boolean>>({ logo: false, illustration: false, example: false, screenshot: false })
 
 const SECTIONS = [
     {
@@ -35,6 +36,12 @@ const SECTIONS = [
         title: 'Style examples',
         description: 'Visuals you already published: every image follows their palette and look, without copying them.',
         placeholder: 'E.g. our launch announcement'
+    },
+    {
+        kind: 'screenshot' as const,
+        title: 'Product screenshots',
+        description: 'Screens of the product itself, filmed in the short videos that go out with a post: the camera zooms in, points and clicks. Full-size captures read best. Describe what each screen shows so the right one is picked.',
+        placeholder: 'E.g. the dashboard with a week of data, the editor with a draft open'
     }
 ]
 

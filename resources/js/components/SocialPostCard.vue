@@ -3,6 +3,7 @@ import { Form, router, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 import { openEvieChat } from '@/composables/useChatPanel'
 import { PLATFORM_LABEL, PLATFORM_LIMIT, postLength } from '@/lib/social'
+import { relativeUrl } from '@/lib/utils'
 import socialPostRoutes from '@/routes/social/posts'
 import type { SocialAccount, SocialPost } from '@/types'
 
@@ -55,6 +56,7 @@ const imageOpen = ref(false)
 const imageNote = ref('')
 const requestingImage = ref(false)
 const selectingImage = ref<number | null>(null)
+const requestingVideo = ref(false)
 
 const limit = computed(() => PLATFORM_LIMIT[props.post.platform])
 const length = computed(() => postLength(props.post.platform, editing.value ? editBody.value : props.post.body))
@@ -171,6 +173,18 @@ function selectImage (imageId: number) {
     })
 }
 
+// The first version of the video. Made on the queue: the page rereads on
+// its own and the video shows up beside the image.
+function requestVideo () {
+    requestingVideo.value = true
+    router.post(socialPostRoutes.video.store.url({ project: slug.value, social_post: props.post.id }), {}, {
+        preserveScroll: true,
+        onSuccess: () => toast.add({ title: 'Making the video', description: 'It appears here in a minute or two.', color: 'success' }),
+        onError: errors => toast.add({ title: errors.feedback ?? 'Could not start the video', color: 'error' }),
+        onFinish: () => requestingVideo.value = false
+    })
+}
+
 function promote () {
     promoting.value = true
     router.post(socialPostRoutes.promote.url({ project: slug.value, social_post: props.post.id }), {}, {
@@ -260,7 +274,7 @@ function promote () {
                     size="xs"
                     label="Approve & publish"
                     :loading="approving"
-                    :disabled="!activeAccounts.length || post.drawing_image"
+                    :disabled="!activeAccounts.length || post.drawing_image || post.making_video"
                     @click="approve"
                 />
                 <UButton
@@ -304,27 +318,57 @@ function promote () {
         </p>
 
         <div
-            v-if="post.image_url || post.platform === 'instagram'"
+            v-if="post.image_url || post.platform === 'instagram' || post.video_url || post.making_video || (post.supports_video && post.status === 'draft')"
             class="space-y-2"
         >
-            <img
-                v-if="post.image_url"
-                :src="post.image_url"
-                alt="The image published with this post"
-                class="aspect-square w-full max-w-xs rounded-md object-cover"
-            >
+            <div class="flex flex-wrap items-start gap-3">
+                <img
+                    v-if="post.image_url"
+                    :src="post.image_url"
+                    alt="The image published with this post"
+                    class="aspect-square w-full max-w-xs rounded-md object-cover"
+                >
 
-            <!-- Its first image, still being drawn. -->
-            <div
-                v-else-if="post.drawing_image"
-                class="flex aspect-square w-full max-w-xs animate-pulse items-center justify-center gap-2 rounded-md bg-elevated text-sm text-muted"
-            >
-                <UIcon
-                    name="i-lucide-loader-circle"
-                    class="size-4 animate-spin"
+                <!-- Its first image, still being drawn. -->
+                <div
+                    v-else-if="post.drawing_image"
+                    class="flex aspect-square w-full max-w-xs animate-pulse items-center justify-center gap-2 rounded-md bg-elevated text-sm text-muted"
+                >
+                    <UIcon
+                        name="i-lucide-loader-circle"
+                        class="size-4 animate-spin"
+                    />
+                    Drawing the image…
+                </div>
+
+                <!-- The video, published instead of the image once there is one. -->
+                <video
+                    v-if="post.video_url"
+                    :key="post.video_url"
+                    :src="post.video_url"
+                    controls
+                    playsinline
+                    preload="metadata"
+                    class="aspect-[9/16] w-40 rounded-md bg-black object-cover"
                 />
-                Drawing the image…
+                <div
+                    v-else-if="post.making_video"
+                    class="flex aspect-[9/16] w-40 animate-pulse flex-col items-center justify-center gap-2 rounded-md bg-elevated p-3 text-center text-sm text-muted"
+                >
+                    <UIcon
+                        name="i-lucide-loader-circle"
+                        class="size-4 animate-spin"
+                    />
+                    Making the video…
+                </div>
             </div>
+
+            <p
+                v-if="post.video_url && post.status === 'draft'"
+                class="text-xs text-dimmed"
+            >
+                {{ post.platform === 'instagram' ? 'The video goes out as a Reel, instead of the image.' : 'The video goes out with the post.' }}
+            </p>
 
             <!-- Every image drawn so far, to compare and pick from before publishing. -->
             <div
@@ -350,17 +394,39 @@ function promote () {
                 </button>
             </div>
 
-            <UButton
-                v-if="post.status === 'draft' && post.platform === 'instagram'"
-                icon="i-lucide-image-plus"
-                color="neutral"
-                variant="subtle"
-                size="xs"
-                :label="post.drawing_image ? 'Drawing a new image…' : 'New image'"
-                :loading="post.drawing_image"
-                :disabled="post.drawing_image"
-                @click="imageOpen = true"
-            />
+            <div class="flex flex-wrap gap-2">
+                <UButton
+                    v-if="post.status === 'draft' && post.platform === 'instagram'"
+                    icon="i-lucide-image-plus"
+                    color="neutral"
+                    variant="subtle"
+                    size="xs"
+                    :label="post.drawing_image ? 'Drawing a new image…' : 'New image'"
+                    :loading="post.drawing_image"
+                    :disabled="post.drawing_image"
+                    @click="imageOpen = true"
+                />
+                <UButton
+                    v-if="post.status === 'draft' && post.supports_video && post.video_preview_url"
+                    :to="relativeUrl(socialPostRoutes.video.show.url({ project: slug, social_post: post.id }))"
+                    icon="i-lucide-clapperboard"
+                    color="neutral"
+                    variant="subtle"
+                    size="xs"
+                    label="Edit the video"
+                />
+                <UButton
+                    v-else-if="post.status === 'draft' && post.supports_video"
+                    icon="i-lucide-clapperboard"
+                    color="neutral"
+                    variant="subtle"
+                    size="xs"
+                    :label="post.making_video ? 'Making the video…' : 'Make a video'"
+                    :loading="post.making_video || requestingVideo"
+                    :disabled="post.making_video"
+                    @click="requestVideo"
+                />
+            </div>
         </div>
 
         <Form

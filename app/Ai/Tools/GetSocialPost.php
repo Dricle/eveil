@@ -20,7 +20,7 @@ class GetSocialPost implements Tool
 
     public function description(): Stringable|string
     {
-        return 'Reads one LinkedIn, X, Bluesky or Instagram post in full by its id: network, status, source and body.';
+        return 'Reads one LinkedIn, X, Bluesky or Instagram post in full by its id: network, status, source, body, and its video, if any, with every change asked for so far.';
     }
 
     public function handle(Request $request): Stringable|string
@@ -41,6 +41,11 @@ class GetSocialPost implements Tool
             'variant' => $post->variant?->value,
             'evidence' => $post->evidence,
             'body' => $post->body,
+            'video' => $post->platform->supportsVideo() ? [
+                'brief' => $post->video_brief,
+                'made' => $post->video_media_id !== null,
+                'revisions' => $post->video_revisions ?? [],
+            ] : null,
         ]);
     }
 

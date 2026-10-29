@@ -146,6 +146,41 @@ class InstagramGraphApi
         return ['uri' => $mediaId, 'url' => $this->permalink($mediaId, $token, $account)];
     }
 
+    /**
+     * Same as `publish()` with a video, as a Reel shared to the feed too.
+     * Meta takes far longer over a video than an image, hence the longer wait.
+     *
+     * @return array{uri: string, url: string}
+     */
+    public function publishReel(SocialAccount $account, string $caption, Media $video): array
+    {
+        $token = $account->credential();
+
+        $container = Http::asForm()->post(self::GRAPH.'/'.self::VERSION."/{$account->external_id}/media", [
+            'media_type' => 'REELS',
+            'video_url' => $video->getTemporaryUrl(now()->addHour()),
+            'share_to_feed' => 'true',
+            'caption' => $caption,
+            'access_token' => $token,
+        ]);
+
+        $this->ensureSuccessful($container->successful(), $container->status(), $container->body());
+
+        $containerId = (string) $container->json('id');
+        $this->waitUntilReady($containerId, $token, attempts: 90);
+
+        $published = Http::asForm()->post(self::GRAPH.'/'.self::VERSION."/{$account->external_id}/media_publish", [
+            'creation_id' => $containerId,
+            'access_token' => $token,
+        ]);
+
+        $this->ensureSuccessful($published->successful(), $published->status(), $published->body());
+
+        $mediaId = (string) $published->json('id');
+
+        return ['uri' => $mediaId, 'url' => $this->permalink($mediaId, $token, $account)];
+    }
+
     public function likeCount(SocialAccount $account, string $mediaId): int
     {
         $response = Http::get(self::GRAPH.'/'.self::VERSION."/{$mediaId}", [
@@ -160,11 +195,12 @@ class InstagramGraphApi
 
     /**
      * An image container is usually ready at once; polled briefly anyway,
-     * since publishing one that is not refuses the post.
+     * since publishing one that is not refuses the post. A video takes a
+     * minute or more, so it is given more attempts.
      */
-    private function waitUntilReady(string $containerId, string $token): void
+    private function waitUntilReady(string $containerId, string $token, int $attempts = 10): void
     {
-        foreach (range(1, 10) as $attempt) {
+        foreach (range(1, $attempts) as $attempt) {
             $status = (string) Http::get(self::GRAPH.'/'.self::VERSION."/{$containerId}", [
                 'fields' => 'status_code',
                 'access_token' => $token,
@@ -175,13 +211,13 @@ class InstagramGraphApi
             }
 
             if ($status === 'ERROR' || $status === 'EXPIRED') {
-                throw new RuntimeException("Instagram could not process the image (status {$status}). Is the media disk reachable from the internet?");
+                throw new RuntimeException("Instagram could not process the media (status {$status}). Is the media disk reachable from the internet?");
             }
 
             Sleep::for(2)->seconds();
         }
 
-        throw new RuntimeException('Instagram was still processing the image after 20 seconds.');
+        throw new RuntimeException('Instagram was still processing the media after '.($attempts * 2).' seconds.');
     }
 
     private function permalink(string $mediaId, string $token, SocialAccount $account): string

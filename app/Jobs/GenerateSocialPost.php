@@ -3,14 +3,13 @@
 namespace App\Jobs;
 
 use App\Actions\AddSocialPostImage;
-use App\Actions\PublishSocialPost;
+use App\Actions\PublishSocialPostIfAutonomous;
 use App\Ai\Agents\SocialPostWriter;
 use App\Enums\AgentRunStatus;
 use App\Enums\ArticleStatus;
 use App\Enums\AutonomyLevel;
 use App\Enums\BrandAssetKind;
 use App\Enums\OutreachStatus;
-use App\Enums\SocialAccountStatus;
 use App\Enums\SocialPlatform;
 use App\Enums\SocialPostSourceType;
 use App\Enums\SocialPostStatus;
@@ -53,7 +52,7 @@ class GenerateSocialPost implements ShouldQueue
         $this->onQueue('ai');
     }
 
-    public function handle(NewsSearch $newsSearch, CurrentProject $currentProject, PublishSocialPost $publish, SocialPostProgress $progress): void
+    public function handle(NewsSearch $newsSearch, CurrentProject $currentProject, PublishSocialPostIfAutonomous $publish, SocialPostProgress $progress): void
     {
         $progress->startWriting($this->project, $this->platform);
 
@@ -64,7 +63,7 @@ class GenerateSocialPost implements ShouldQueue
         }
     }
 
-    private function write(NewsSearch $newsSearch, CurrentProject $currentProject, PublishSocialPost $publish): void
+    private function write(NewsSearch $newsSearch, CurrentProject $currentProject, PublishSocialPostIfAutonomous $publish): void
     {
         $currentProject->run($this->project, function () use ($newsSearch, $publish): void {
             $clientWon = $this->brief === null ? $this->pendingClientWin() : null;
@@ -94,13 +93,20 @@ class GenerateSocialPost implements ShouldQueue
 
             $this->attachImage($posts, $structured);
 
+            $videoComing = $this->requestVideo($posts, $structured);
+
             // Asked for from chat: always a draft, since no Evie tool ever
             // publishes, and no email about something the user is waiting for.
             if ($posts->isEmpty() || $this->brief !== null) {
                 return;
             }
 
-            $this->publishIfAutonomous($posts, $publish);
+            // The post waits for its video, which publishes it once made.
+            if ($videoComing) {
+                return;
+            }
+
+            $publish->handle($this->project, $this->platform, $posts);
 
             // Only what still waits on a person is worth an email.
             if ($posts->contains(fn (SocialPost $post): bool => $post->fresh()?->status === SocialPostStatus::Draft)) {
@@ -228,41 +234,33 @@ class GenerateSocialPost implements ShouldQueue
     }
 
     /**
-     * The network's autonomous setting: publish straight away. Two cases still
-     * stop for a person. Several accounts on the project: which one to post as
-     * is a choice nobody has made. A client win: only the anonymized variant
-     * ever goes out on its own, since naming a client in public is theirs to
-     * agree to, and the named sibling is rejected the same way approving by
-     * hand rejects it. X is always supervised: it is posted by hand.
+     * The video the writer asked for, on a network that takes one: made for
+     * the first draft only, since a client win's two siblings tell the same
+     * story and the anonymized one is the one that can go out on its own.
+     * Whether the post now waits for it before publishing on its own.
      *
      * @param  Collection<int, SocialPost>  $posts
+     * @param  array<string, mixed>  $structured
      */
-    private function publishIfAutonomous(Collection $posts, PublishSocialPost $publish): void
+    private function requestVideo(Collection $posts, array $structured): bool
     {
-        if ($this->platform->autonomyLevel($this->project) !== AutonomyLevel::Autonomous) {
-            return;
+        $brief = trim((string) ($structured['video_brief'] ?? ''));
+
+        if (! $this->platform->supportsVideo() || $brief === '' || $posts->isEmpty()) {
+            return false;
         }
 
-        $accounts = $this->project->socialAccounts()
-            ->where('platform', $this->platform)
-            ->where('status', SocialAccountStatus::Active)
-            ->get();
+        $posts->each->update(['video_brief' => $brief]);
 
-        // Read again: the drafts were on the page while their image was drawn,
-        // and the user may have rejected or edited one in the meantime.
-        $post = $posts->first(fn (SocialPost $post): bool => $post->variant !== SocialPostVariant::Named)?->fresh();
+        $post = $posts->first(fn (SocialPost $post): bool => $post->variant !== SocialPostVariant::Named);
 
-        // No image, no Instagram post: it stays a draft showing why.
-        if ($accounts->count() !== 1 || $post === null || $post->status !== SocialPostStatus::Draft || ($this->platform->requiresImage() && $post->image_media_id === null)) {
-            return;
-        }
+        app(SocialPostProgress::class)->startDirecting($post);
 
-        $post->sibling()->update([
-            'status' => SocialPostStatus::Rejected,
-            'rejection_reason' => 'Superseded by the other variant.',
-        ]);
+        $publishAfter = $this->brief === null && $this->platform->autonomyLevel($this->project) === AutonomyLevel::Autonomous;
 
-        $publish->handle($post, $accounts->sole());
+        GenerateSocialPostVideo::dispatch($post, publishAfter: $publishAfter);
+
+        return $publishAfter;
     }
 
     /**

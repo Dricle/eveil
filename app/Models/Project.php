@@ -92,7 +92,8 @@ class Project extends Model implements HasMedia, StoresMediaInterface
      * user holds the rights to. Each carries its `kind` (`BrandAssetKind`)
      * and a `description` in its custom properties. The image generator gets
      * them as references, the source of truth for how the brand looks, so it
-     * reuses rather than invents.
+     * reuses rather than invents. Screenshots of the product are the
+     * exception: only the videos show them (`videoAssets()`).
      */
     public function registerMediaCollections(): void
     {
@@ -110,6 +111,28 @@ class Project extends Model implements HasMedia, StoresMediaInterface
     public function logo(): ?Media
     {
         return $this->brandAssets(BrandAssetKind::Logo)->first();
+    }
+
+    /**
+     * What a video composition can show, by the name it calls it: the latest
+     * screenshots as `screen-{id}`, at most `$screenshots` of them since a
+     * model reads each one, and the logo as `logo`.
+     *
+     * @return array<string, Media>
+     */
+    public function videoAssets(int $screenshots = 6): array
+    {
+        $assets = $this->brandAssets(BrandAssetKind::Screenshot)
+            ->sortByDesc('id')
+            ->take($screenshots)
+            ->keyBy(fn (Media $media): string => "screen-{$media->id}")
+            ->all();
+
+        if ($logo = $this->logo()) {
+            $assets['logo'] = $logo;
+        }
+
+        return $assets;
     }
 
     public function mediaOrganizationId(): int
@@ -131,7 +154,7 @@ class Project extends Model implements HasMedia, StoresMediaInterface
      *
      * @var list<string>
      */
-    private const RESERVED_SLUGS = ['projects', 'organizations', 'app-settings', 'account', 'setup', 'invitations', 'oauth'];
+    private const RESERVED_SLUGS = ['projects', 'organizations', 'app-settings', 'account', 'setup', 'invitations', 'oauth', 'video'];
 
     /**
      * What a new project starts with in its writing instructions.

@@ -18,7 +18,8 @@ use Throwable;
  *
  * A network that needs a picture and has none yet (its drawing failed when
  * the draft was written) gets one drawn here first, from the post itself:
- * approving again is the retry for that too.
+ * approving again is the retry for that too. A post with a video sends it
+ * as well, and the network uses it instead of the image.
  */
 class PublishSocialPost
 {
@@ -29,11 +30,14 @@ class PublishSocialPost
         $post->update(['social_account_id' => $account->id]);
 
         try {
-            if ($post->platform->requiresImage() && $post->image_media_id === null) {
+            $video = $post->platform->supportsVideo() ? $post->video : null;
+
+            // A video goes out instead of the image: no image to draw then.
+            if ($post->platform->requiresImage() && $post->image_media_id === null && $video === null) {
                 $this->addImage->handle($post);
             }
 
-            $published = $post->platform->client()->publish($account, $post->body, $post->project->default_language, $post->image);
+            $published = $post->platform->client()->publish($account, $post->body, $post->project->default_language, $post->image, $video);
         } catch (Throwable $e) {
             $post->update(['last_error' => $e->getMessage()]);
 

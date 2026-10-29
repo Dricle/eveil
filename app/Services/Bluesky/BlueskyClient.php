@@ -5,12 +5,14 @@ namespace App\Services\Bluesky;
 use App\Models\SocialAccount;
 use App\Models\SocialPost;
 use App\Services\Social\SocialClientInterface;
+use App\Services\Video\VideoRenderer;
 use App\Support\HtmlText;
 use DOMXPath;
 use GuzzleHttp\Psr7\Uri;
 use GuzzleHttp\Psr7\UriResolver;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Sleep;
 use RuntimeException;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Throwable;
@@ -33,6 +35,9 @@ class BlueskyClient implements SocialClientInterface
 
     // Reads that need no session: profiles and post counts.
     private const PUBLIC_API = 'https://public.api.bsky.app';
+
+    // Transcodes uploaded videos and hands back the blob to embed.
+    private const VIDEO_SERVICE = 'https://video.bsky.app';
 
     // Bluesky's own limit on an uploaded image.
     private const MAX_THUMB_BYTES = 1_000_000;
@@ -66,7 +71,7 @@ class BlueskyClient implements SocialClientInterface
      *
      * @return array{uri: string, url: string}
      */
-    public function publish(SocialAccount $account, string $text, ?string $language = null, ?Media $image = null): ?array
+    public function publish(SocialAccount $account, string $text, ?string $language = null, ?Media $image = null, ?Media $video = null): ?array
     {
         $session = $this->session($account->external_id, $account->credential());
 
@@ -86,11 +91,20 @@ class BlueskyClient implements SocialClientInterface
             $record['langs'] = [$language];
         }
 
-        $link = $this->firstLink($text);
-        $card = $link === null ? null : $this->linkCard($link, $session['accessJwt']);
+        // One embed per post: the video when there is one, else the link card.
+        if ($video !== null) {
+            $record['embed'] = [
+                '$type' => 'app.bsky.embed.video',
+                'video' => $this->uploadVideo($session, $video),
+                'aspectRatio' => ['width' => VideoRenderer::WIDTH, 'height' => VideoRenderer::HEIGHT],
+            ];
+        } else {
+            $link = $this->firstLink($text);
+            $card = $link === null ? null : $this->linkCard($link, $session['accessJwt']);
 
-        if ($card !== null) {
-            $record['embed'] = ['$type' => 'app.bsky.embed.external', 'external' => $card];
+            if ($card !== null) {
+                $record['embed'] = ['$type' => 'app.bsky.embed.external', 'external' => $card];
+            }
         }
 
         $response = Http::withToken($session['accessJwt'])
@@ -136,7 +150,59 @@ class BlueskyClient implements SocialClientInterface
     }
 
     /**
-     * @return array{accessJwt: string, did: string, handle: string}
+     * Uploads a video through Bluesky's video service, which transcodes it,
+     * and waits for the blob to embed. The service is reached with a token
+     * the account's own PDS signs for it, so its host comes from the
+     * session's DID document.
+     *
+     * @param  array{accessJwt: string, did: string, handle: string, pds: string|null}  $session
+     * @return array<string, mixed> the blob
+     */
+    private function uploadVideo(array $session, Media $video): array
+    {
+        $pds = parse_url((string) $session['pds'], PHP_URL_HOST) ?: parse_url(self::SERVICE, PHP_URL_HOST);
+
+        $auth = Http::withToken($session['accessJwt'])->get(self::SERVICE.'/xrpc/com.atproto.server.getServiceAuth', [
+            'aud' => "did:web:{$pds}",
+            'lxm' => 'com.atproto.repo.uploadBlob',
+            'exp' => now()->addMinutes(30)->getTimestamp(),
+        ]);
+
+        if (! $auth->successful()) {
+            throw new RuntimeException("Bluesky refused to sign the video upload: HTTP {$auth->status()} {$auth->body()}");
+        }
+
+        $upload = Http::withToken((string) $auth->json('token'))
+            ->withBody((string) stream_get_contents($video->stream()), 'video/mp4')
+            ->timeout(120)
+            ->post(self::VIDEO_SERVICE.'/xrpc/app.bsky.video.uploadVideo?'.http_build_query(['did' => $session['did'], 'name' => $video->file_name]));
+
+        // Uploading the same file twice answers 409 with the first job.
+        $jobId = (string) ($upload->json('jobId') ?? $upload->json('jobStatus.jobId'));
+
+        if ($jobId === '') {
+            throw new RuntimeException("Bluesky refused the video: HTTP {$upload->status()} {$upload->body()}");
+        }
+
+        foreach (range(1, 60) as $attempt) {
+            $status = Http::get(self::VIDEO_SERVICE.'/xrpc/app.bsky.video.getJobStatus', ['jobId' => $jobId])->json('jobStatus');
+
+            if (($status['state'] ?? null) === 'JOB_STATE_COMPLETED' && isset($status['blob'])) {
+                return $status['blob'];
+            }
+
+            if (($status['state'] ?? null) === 'JOB_STATE_FAILED') {
+                throw new RuntimeException('Bluesky could not process the video: '.($status['error'] ?? $status['message'] ?? 'no reason given'));
+            }
+
+            Sleep::for(2)->seconds();
+        }
+
+        throw new RuntimeException('Bluesky was still processing the video after two minutes.');
+    }
+
+    /**
+     * @return array{accessJwt: string, did: string, handle: string, pds: string|null}
      */
     private function session(string $identifier, string $appPassword): array
     {
@@ -153,6 +219,8 @@ class BlueskyClient implements SocialClientInterface
             'accessJwt' => (string) $response->json('accessJwt'),
             'did' => (string) $response->json('did'),
             'handle' => (string) $response->json('handle'),
+            // Where the account actually lives, which `bsky.social` only fronts.
+            'pds' => collect((array) $response->json('didDoc.service', []))->firstWhere('id', '#atproto_pds')['serviceEndpoint'] ?? null,
         ];
     }
 

@@ -210,7 +210,10 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
         then has to notice and reject by hand. Found the right one? Use
         UpdateSocialPost, not DraftSocialPost. UpdateSocialPost only works on a
         draft still awaiting approval - once published or rejected it refuses,
-        since the queue's own edit option is gone by then too.
+        since the queue's own edit option is gone by then too. When the user
+        hands you a post by its id ("rework the LinkedIn post #12"), call
+        GetSocialPost to read it, then UpdateSocialPost with the whole new
+        body, keeping everything they did not ask to change word for word.
 
         An Instagram draft carries an image. RequestSocialPostImage draws one
         more for it (it pauses for approval: images cost credits), keeping the

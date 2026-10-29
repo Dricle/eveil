@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Form, router, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
+import { openEvieChat } from '@/composables/useChatPanel'
 import { PLATFORM_LABEL, PLATFORM_LIMIT, postLength } from '@/lib/social'
 import socialPostRoutes from '@/routes/social/posts'
 import type { SocialAccount, SocialPost } from '@/types'
@@ -14,6 +15,10 @@ const props = defineProps<{
     /** The project's granted accounts on this post's network. */
     accounts: SocialAccount[]
 }>()
+
+// Emitted when the user hands the draft to Evie, so a modal around this card
+// can get out of the chat panel's way.
+const emit = defineEmits<{ rework: [] }>()
 
 const page = usePage()
 const toast = useToast()
@@ -58,6 +63,11 @@ const activeAccounts = computed(() => props.accounts.filter(account => account.s
 
 function accountName (account: { handle: string | null, display_name: string }): string {
     return account.handle ? `@${account.handle}` : account.display_name
+}
+
+function rework () {
+    openEvieChat(`Let's rework the ${label.value} post #${props.post.id}.`)
+    emit('rework')
 }
 
 function toggleEdit () {
@@ -206,6 +216,15 @@ function promote () {
             >{{ post.likes_count }} {{ post.likes_count === 1 ? 'like' : 'likes' }}</span>
 
             <div class="ml-auto flex flex-wrap items-center gap-2">
+                <UButton
+                    v-if="post.status === 'draft'"
+                    icon="i-lucide-sparkles"
+                    color="neutral"
+                    variant="ghost"
+                    size="xs"
+                    label="Rework with Evie"
+                    @click="rework"
+                />
                 <UButton
                     v-if="post.status === 'draft'"
                     icon="i-lucide-pencil"

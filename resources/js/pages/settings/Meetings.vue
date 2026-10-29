@@ -71,8 +71,8 @@ function save () {
                 </h2>
                 <p class="mt-1 text-sm text-muted">
                     When somebody answers that they are interested, the inbox can
-                    draft your reply with three times from these hours, and send
-                    the invite for the one they pick. No calendar is connected:
+                    draft your reply with three times from these hours. No
+                    calendar is connected:
                     leave out the hours you are never free.
                 </p>
             </template>
@@ -157,7 +157,7 @@ function save () {
 
                 <UFormField
                     label="Where"
-                    help="A video link, a phone number or an address. It goes into the invite, never into the mail itself."
+                    help="A video link, a phone number or an address. The draft puts it in the mail as you wrote it."
                     :error="form.errors.meeting_location"
                 >
                     <UInput

@@ -101,10 +101,9 @@ unlimited mailboxes, unlimited leads, your data on your own machine.
   URL back, and Eveil won't write it twice.
 - **Reads and threads replies itself**, over IMAP, matched on the mail's own
   `Message-ID` so a reply always attaches to the lead it answers.
-- **Books the call from an interested reply.** Drafts your answer with three
-  free times from the hours you set, in their language, and sends the
-  calendar invite with your reply once they pick one. You still send every
-  word yourself. See [booking a call](https://docs.eveil.cloud/product/meetings).
+- **Proposes times to an interested reply.** Drafts your answer with three
+  times from the hours you set, in their language. You still send every
+  word yourself. See [proposing times](https://docs.eveil.cloud/product/meetings).
 - **A bounce circuit breaker**, scoped per mailbox, that pauses sending before
   a bad batch burns a domain's reputation, not per campaign, per address.
 - **An API and an MCP server for the rest of your stack.** Organization tokens

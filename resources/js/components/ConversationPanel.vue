@@ -49,70 +49,25 @@ const toast = useToast()
 // "Propose times" can fill it. `Form` still collects it by `name`.
 const body = ref('')
 
-// The call this reply books, if any: one of the times the last draft offered
-// (an ISO instant), or a time typed by hand, read in the project's meeting
-// zone by the server. Only one of the two is ever set.
-const inviting = ref(false)
-const pickedSlot = ref<string | null>(null)
-const typedTime = ref('')
-const meetingAt = computed(() => pickedSlot.value ?? (typedTime.value || null))
-
 const takesMeetings = computed(() => page.props.currentProject!.takes_meetings)
-const meetingZone = computed(() => page.props.currentProject!.meeting_timezone ?? undefined)
-
-// The times the last draft offered. Seeded from the conversation and
-// replaced by a new draft's, so the invite picker follows without a reload.
-const offeredSlots = ref<string[]>([])
-
-watch(() => props.conversation, (conversation) => {
-    offeredSlots.value = conversation.proposed_meeting_slots
-}, { immediate: true })
-
-watch(() => props.conversation.id, () => resetReply())
-
-watch(typedTime, (value) => {
-    if (value) {
-        pickedSlot.value = null
-    }
-})
-
-function pickSlot (slot: string) {
-    pickedSlot.value = slot
-    typedTime.value = ''
-}
-
-// Written out in the zone the hours were set in, which is the zone the
-// draft quoted them in: the user's own browser may sit somewhere else.
-function slotLabel (value: string) {
-    return new Date(value).toLocaleString(undefined, {
-        timeZone: meetingZone.value,
-        weekday: 'short',
-        day: 'numeric',
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit'
-    })
-}
 
 // A draft offering times, dropped into the reply box for the user to read
 // and edit. Nothing is sent until they press send.
-const draft = useHttp<Record<string, never>, { body: string, slots: string[] }>({})
+const draft = useHttp<Record<string, never>, { body: string }>({})
 
 function proposeTimes () {
     draft.post(meetingDraftRoute.url({ project: projectSlug.value, conversation: props.conversation.id }), {
         onSuccess: (response) => {
             body.value = response.body
-            offeredSlots.value = response.slots
             toast.add({ title: 'Draft ready', description: 'Read it over before you send it.', color: 'success' })
         }
     })
 }
 
+watch(() => props.conversation.id, () => resetReply())
+
 function resetReply () {
     body.value = ''
-    inviting.value = false
-    pickedSlot.value = null
-    typedTime.value = ''
 }
 
 function initial (conversation: Conversation) {
@@ -239,23 +194,12 @@ function initial (conversation: Conversation) {
                     :options="{ preserveScroll: true }"
                     @success="resetReply"
                 >
-                    <p
-                        v-for="meeting in conversation.meetings"
-                        :key="meeting.id"
-                        class="flex items-center gap-1.5 text-xs text-success"
-                    >
-                        <UIcon name="i-lucide-calendar-check" />
-                        Call booked {{ new Date(meeting.starts_at).toLocaleString(undefined, { timeZone: meeting.timezone, dateStyle: 'full', timeStyle: 'short' }) }}, {{ meeting.duration_minutes }} min
-                    </p>
-
                     <UFormField
                         name="body"
                         :error="errors.body ?? draft.errors.draft"
-                        :help="inviting
-                            ? 'The calendar invite goes out with this reply, from the same mailbox, in the same thread.'
-                            : sent
-                                ? 'Sent from the same mailbox, in the same thread. Writing by hand stops the sequence: nobody should get your mail and the queued follow-up as well.'
-                                : 'Sent from the same mailbox, in the same thread. Your signature is added if the mailbox has one.'"
+                        :help="sent
+                            ? 'Sent from the same mailbox, in the same thread. Writing by hand stops the sequence: nobody should get your mail and the queued follow-up as well.'
+                            : 'Sent from the same mailbox, in the same thread. Your signature is added if the mailbox has one.'"
                     >
                         <UTextarea
                             v-model="body"
@@ -266,77 +210,27 @@ function initial (conversation: Conversation) {
                         />
                     </UFormField>
 
-                    <!-- The invite, attached to this reply: one of the
-                         times the draft offered, or any other. -->
-                    <div
-                        v-if="inviting"
-                        class="space-y-2 rounded-lg p-3 ring ring-default"
-                    >
-                        <p class="text-xs text-muted">
-                            Calendar invite for ({{ meetingZone }})
-                        </p>
-
-                        <div
-                            v-if="offeredSlots.length"
-                            class="flex flex-wrap gap-1.5"
-                        >
-                            <UButton
-                                v-for="slot in offeredSlots"
-                                :key="slot"
-                                size="xs"
-                                :variant="pickedSlot === slot ? 'solid' : 'outline'"
-                                :label="slotLabel(slot)"
-                                @click="pickSlot(slot)"
-                            />
-                        </div>
-
-                        <UFormField
-                            :error="errors.meeting_at"
-                            :help="offeredSlots.length ? 'Or another time:' : undefined"
-                        >
-                            <UInput
-                                v-model="typedTime"
-                                type="datetime-local"
-                            />
-                        </UFormField>
-
-                        <input
-                            type="hidden"
-                            name="meeting_at"
-                            :value="meetingAt ?? ''"
-                        >
-                    </div>
-
                     <div class="flex flex-wrap items-center gap-2">
                         <UButton
                             type="submit"
                             :loading="processing"
-                            :disabled="inviting && meetingAt === null"
-                            :label="inviting ? 'Send with the invite' : sent ? 'Send and stop the sequence' : 'Send reply'"
+                            :label="sent ? 'Send and stop the sequence' : 'Send reply'"
                         />
 
-                        <template v-if="takesMeetings">
-                            <UButton
-                                color="neutral"
-                                variant="outline"
-                                icon="i-lucide-calendar-clock"
-                                label="Propose times"
-                                :loading="draft.processing"
-                                @click="proposeTimes"
-                            />
-                            <UButton
-                                color="neutral"
-                                variant="ghost"
-                                :icon="inviting ? 'i-lucide-calendar-x' : 'i-lucide-calendar-plus'"
-                                :label="inviting ? 'No invite' : 'Attach an invite'"
-                                @click="inviting = !inviting"
-                            />
-                        </template>
+                        <UButton
+                            v-if="takesMeetings"
+                            color="neutral"
+                            variant="outline"
+                            icon="i-lucide-calendar-clock"
+                            label="Propose times"
+                            :loading="draft.processing"
+                            @click="proposeTimes"
+                        />
                         <ULink
                             v-else
                             :href="relativeUrl(meetingSettingsRoutes.edit.url({ project: projectSlug }))"
                             class="text-xs text-muted hover:text-default"
-                        >Set your meeting hours to propose times and send invites</ULink>
+                        >Set your meeting hours to propose times</ULink>
                     </div>
                 </Form>
             </div>

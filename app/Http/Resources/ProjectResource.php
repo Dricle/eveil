@@ -29,10 +29,8 @@ class ProjectResource extends JsonResource
             // organization that owns them.
             'organization_id' => $this->organization_id,
             'organization_name' => $this->organization->name,
-            // Whether the inbox can offer times, and the zone a typed time
-            // is read in.
+            // Whether the inbox can offer times.
             'takes_meetings' => $this->takesMeetings(),
-            'meeting_timezone' => $this->meeting_timezone,
         ];
     }
 }

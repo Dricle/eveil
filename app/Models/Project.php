@@ -417,14 +417,6 @@ class Project extends Model implements HasMedia, StoresMediaInterface
     }
 
     /**
-     * @return HasMany<Meeting, $this>
-     */
-    public function meetings(): HasMany
-    {
-        return $this->hasMany(Meeting::class);
-    }
-
-    /**
      * Whether a reply can offer times at all: the user has said when they are
      * free, and in which zone those hours are meant.
      */

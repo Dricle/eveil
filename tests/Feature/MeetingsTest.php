@@ -1,6 +1,5 @@
 <?php
 
-use App\Actions\SummarizeProjectStats;
 use App\Ai\Agents\MeetingProposalWriter;
 use App\Enums\CampaignLeadStatus;
 use App\Enums\MessageDirection;
@@ -8,14 +7,10 @@ use App\Enums\ReplyClassification;
 use App\Models\AgentRun;
 use App\Models\CampaignLead;
 use App\Models\EmailAccount;
-use App\Models\Lead;
-use App\Models\Meeting;
 use App\Models\Message;
 use App\Models\Project;
 use App\Models\User;
 use App\Services\Meetings\Availability;
-use App\Services\Meetings\CalendarPart;
-use App\Services\Meetings\Invitation;
 use Carbon\CarbonImmutable;
 
 /**
@@ -81,7 +76,7 @@ function interestedConversation(): array
     return [$user, $project, $mailbox, $membership];
 }
 
-it('offers one free time a day from tomorrow, in the zone the hours were set in', function () {
+it('offers one time a day from tomorrow, in the zone the hours were set in', function () {
     [, $project] = interestedConversation();
 
     $slots = app(Availability::class)->slots($project);
@@ -91,20 +86,6 @@ it('offers one free time a day from tomorrow, in the zone the hours were set in'
         '2026-11-05T13:00:00+00:00',
         '2026-11-10T09:00:00+00:00',
     ]);
-});
-
-it('never offers a time already booked', function () {
-    [, $project, , $membership] = interestedConversation();
-
-    Meeting::factory()->create([
-        'project_id' => $project->id,
-        'campaign_lead_id' => $membership->id,
-        'lead_id' => $membership->lead_id,
-        'starts_at' => CarbonImmutable::parse('2026-11-03 09:00:00', 'UTC'),
-        'duration_minutes' => 30,
-    ]);
-
-    expect(app(Availability::class)->slots($project, 1)[0]->toIso8601String())->toBe('2026-11-03T09:30:00+00:00');
 });
 
 it('offers nothing until the user has said when they take calls', function () {
@@ -124,9 +105,7 @@ it('drafts an answer offering the free times, without sending anything', functio
     $this->actingAs($user)
         ->postJson(route('inbox.meeting-draft', $membership))
         ->assertOk()
-        ->assertJsonPath('body', "Bonjour Marcel,\n\nMardi 3 novembre à 10h ?")
-        ->assertJsonPath('slots.0', '2026-11-03T09:00:00+00:00')
-        ->assertJsonCount(3, 'slots');
+        ->assertExactJson(['body' => "Bonjour Marcel,\n\nMardi 3 novembre à 10h ?"]);
 
     // The agent is given the times, written out in the user's zone, and
     // their reply to answer: it chooses nothing.
@@ -135,7 +114,7 @@ it('drafts an answer offering the free times, without sending anything', functio
     expect($prompt)->toContain('Tuesday 3 November 2026, 10:00')
         ->toContain('Thursday 5 November 2026, 14:00')
         ->toContain('appelons-nous')
-        ->and($membership->refresh()->proposed_meeting_slots)->toHaveCount(3)
+        ->toContain('https://meet.example.com/claire')
         ->and($fake->sent)->toBe([]);
 });
 
@@ -168,110 +147,6 @@ it('does not draft for a conversation in another project', function () {
     MeetingProposalWriter::assertNeverPrompted();
 });
 
-it('sends the invite with the reply and books the meeting', function () {
-    [$user, $project, $mailbox, $membership] = interestedConversation();
-    $fake = fakeSender();
-
-    // Typed without an offset: read in the project's zone, not the server's.
-    $this->actingAs($user)
-        ->post(route('inbox.reply', $membership), [
-            'body' => 'Parfait, je vous envoie l\'invitation.',
-            'meeting_at' => '2026-11-05T14:00',
-        ])
-        ->assertRedirect();
-
-    $meeting = Meeting::query()->sole();
-    $reply = Message::query()->where('direction', MessageDirection::Outbound)->latest('id')->first();
-
-    expect($meeting->starts_at->toIso8601String())->toBe('2026-11-05T13:00:00+00:00')
-        ->and($meeting->project_id)->toBe($project->id)
-        ->and($meeting->email_account_id)->toBe($mailbox->id)
-        ->and($meeting->timezone)->toBe('Europe/Brussels')
-        ->and($meeting->location)->toBe('https://meet.example.com/claire')
-        ->and($meeting->message_id)->toBe($reply->id)
-        ->and($fake->sent)->toHaveCount(1)
-        ->and($fake->sent[0]['in_reply_to'])->toBe('theirs-1@friterie.test')
-        ->and($fake->sent[0]['invitation'])->toContain('DTSTART:20261105T130000Z')
-        ->toContain('UID:'.$meeting->uid);
-});
-
-it('sends a reply without an invite when no time is given', function () {
-    [$user, , , $membership] = interestedConversation();
-    $fake = fakeSender();
-
-    $this->actingAs($user)
-        ->post(route('inbox.reply', $membership), ['body' => 'Quelle semaine vous arrange ?'])
-        ->assertRedirect();
-
-    expect($fake->sent[0]['invitation'])->toBeNull()
-        ->and(Meeting::query()->count())->toBe(0);
-});
-
-it('refuses an invite for a time already past', function () {
-    [$user, , , $membership] = interestedConversation();
-    $fake = fakeSender();
-
-    $this->actingAs($user)
-        ->post(route('inbox.reply', $membership), [
-            'body' => 'Parfait.',
-            'meeting_at' => '2026-11-01T10:00:00+00:00',
-        ])
-        ->assertSessionHasErrors('meeting_at');
-
-    expect($fake->sent)->toBe([])
-        ->and(Meeting::query()->count())->toBe(0);
-});
-
-it('books nothing when the mail carrying the invite never left', function () {
-    [$user, , , $membership] = interestedConversation();
-    $fake = fakeSender();
-    $fake->failWith = '550 mailbox unavailable';
-
-    $this->withoutExceptionHandling();
-
-    expect(fn () => $this->actingAs($user)->post(route('inbox.reply', $membership), [
-        'body' => 'Parfait.',
-        'meeting_at' => '2026-11-03T09:00:00+00:00',
-    ]))->toThrow(RuntimeException::class);
-
-    expect(Meeting::query()->count())->toBe(0);
-});
-
-it('writes an invite a calendar accepts, naming only the sender', function () {
-    [, $project, $mailbox, $membership] = interestedConversation();
-
-    $meeting = Meeting::factory()->create([
-        'project_id' => $project->id,
-        'campaign_lead_id' => $membership->id,
-        'lead_id' => $membership->lead_id,
-        'uid' => 'abc@studio.test',
-        'starts_at' => CarbonImmutable::parse('2026-11-03 09:00:00', 'UTC'),
-        'duration_minutes' => 45,
-        'location' => 'Rue de la Loi 16, Bruxelles; 2e étage, sonnez chez Studio Martin & Associés pour entrer',
-    ]);
-
-    $ics = app(Invitation::class)->ics($meeting, $mailbox, Lead::query()->findOrFail($membership->lead_id));
-    $lines = explode("\r\n", mb_rtrim($ics, "\r\n"));
-
-    expect($ics)->toContain("METHOD:REQUEST\r\n")
-        ->toContain("DTSTART:20261103T090000Z\r\n")
-        ->toContain("DTEND:20261103T094500Z\r\n")
-        ->toContain('ORGANIZER;CN="Claire Martin":mailto:claire@studio.test')
-        ->toContain('mailto:marcel@friterie.test')
-        ->toContain('PRODID:-//studio.test//EN')
-        ->and(mb_strtolower($ics))->not->toContain('eveil')
-        // A comma in a value ends it unless escaped.
-        ->and(str_replace("\r\n ", '', $ics))->toContain('LOCATION:Rue de la Loi 16\, Bruxelles\; 2e étage')
-        // Folded at 75 octets, never inside a multibyte character.
-        ->and(collect($lines)->every(fn (string $line): bool => strlen($line) <= 75 && mb_check_encoding($line, 'UTF-8')))->toBeTrue();
-});
-
-it('attaches the invite as a calendar request, not a file to download', function () {
-    $type = (new CalendarPart("BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n"))->getPreparedHeaders()->get('Content-Type')?->getBodyAsString();
-
-    expect($type)->toContain('text/calendar')->toContain('method=REQUEST');
-});
-
 it('saves the hours the user takes calls', function () {
     [$user, $project] = interestedConversation();
 
@@ -302,13 +177,4 @@ it('refuses hours that end before they start, or a zone that does not exist', fu
         ->assertJsonValidationErrors(['meeting_timezone', 'meeting_hours.0.end']);
 
     expect($project->refresh()->meeting_timezone)->toBe('Europe/Brussels');
-});
-
-it('counts the meetings booked in this project only', function () {
-    [, $project, , $membership] = interestedConversation();
-
-    Meeting::factory()->create(['project_id' => $project->id, 'campaign_lead_id' => $membership->id, 'lead_id' => $membership->lead_id]);
-    Meeting::factory()->create();
-
-    expect(app(SummarizeProjectStats::class)->handle()['meetings_booked'])->toBe(1);
 });

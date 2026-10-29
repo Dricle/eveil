@@ -8,7 +8,6 @@ use App\Enums\ReplyClassification;
 use App\Models\AgentRun;
 use App\Models\CampaignLead;
 use App\Models\Company;
-use App\Models\Meeting;
 use App\Models\Message;
 use App\Support\CurrentProject;
 use Carbon\CarbonInterface;
@@ -34,7 +33,7 @@ class SummarizeProjectStats
     public function __construct(private CurrentProject $currentProject) {}
 
     /**
-     * @return array{companies_found: int, companies_kept: int, sent: int, replies: int, positive: int, positive_rate: int|null, meetings_booked: int, awaiting_human: int, credits_spent?: int, tokens_in?: int, tokens_out?: int}
+     * @return array{companies_found: int, companies_kept: int, sent: int, replies: int, positive: int, positive_rate: int|null, awaiting_human: int, credits_spent?: int, tokens_in?: int, tokens_out?: int}
      */
     public function handle(?CarbonInterface $since = null): array
     {
@@ -60,9 +59,6 @@ class SummarizeProjectStats
             'replies' => Message::query()->whereHas('lead')->where('direction', MessageDirection::Inbound)->when($since, fn ($query) => $query->where('received_at', '>=', $since))->count(),
             'positive' => $positive,
             'positive_rate' => $sent === 0 ? null : (int) round($positive / $sent * 100),
-            // Counted when booked, not when the call takes place: "this week"
-            // means invites sent this week.
-            'meetings_booked' => Meeting::query()->when($since, fn ($query) => $query->where('created_at', '>=', $since))->count(),
             'awaiting_human' => CampaignLead::query()
                 ->whereHas('campaign')
                 ->where('pause_reason', 'awaiting_human')

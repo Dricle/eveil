@@ -7,13 +7,9 @@ use App\Enums\MessageDirection;
 use App\Enums\MessageStatus;
 use App\Models\CampaignLead;
 use App\Models\EmailAccount;
-use App\Models\Meeting;
 use App\Models\Message;
-use App\Services\Meetings\Invitation;
 use App\Services\Outreach\Sender;
 use App\Services\Outreach\SendFailure;
-use Carbon\CarbonImmutable;
-use Illuminate\Support\Str;
 use RuntimeException;
 
 /**
@@ -27,16 +23,12 @@ use RuntimeException;
  * The sequence stays stopped afterwards. Somebody who is being written to by
  * hand must not also receive the automated follow-up that was queued behind
  * them: that is the mistake this whole screen exists to prevent.
- *
- * Given a time, the answer also carries a calendar invite for it, and the
- * meeting is recorded once the mail has actually left: an invite that was
- * refused at the door was never booked.
  */
 class ReplyToConversation
 {
-    public function __construct(private Sender $sender, private Invitation $invitation) {}
+    public function __construct(private Sender $sender) {}
 
-    public function handle(CampaignLead $conversation, string $body, ?CarbonImmutable $meetingAt = null): Message
+    public function handle(CampaignLead $conversation, string $body): Message
     {
         $account = $conversation->emailAccount;
 
@@ -46,7 +38,6 @@ class ReplyToConversation
 
         $thread = $conversation->messages->last();
         $subject = $this->subject($conversation);
-        $meeting = $meetingAt === null ? null : $this->meeting($conversation, $account, $meetingAt);
 
         try {
             $messageId = $this->sender->send(
@@ -56,7 +47,6 @@ class ReplyToConversation
                 $body,
                 $thread?->message_id,
                 $thread === null ? null : $this->quote($thread, $conversation, $account),
-                $meeting === null ? null : $this->invitation->ics($meeting, $account, $conversation->lead),
             );
         } catch (SendFailure $failure) {
             // Surfaced rather than swallowed: the user is standing in front of
@@ -83,32 +73,7 @@ class ReplyToConversation
             'next_action_at' => null,
         ]);
 
-        $meeting?->fill(['message_id' => $reply->id])->save();
-
         return $reply;
-    }
-
-    /**
-     * The meeting the invite describes, not saved yet. The duration, zone and
-     * place are the project's as they stand now, and are copied onto the row:
-     * changing the settings next month must not move a call already booked.
-     */
-    private function meeting(CampaignLead $conversation, EmailAccount $account, CarbonImmutable $startsAt): Meeting
-    {
-        $project = $conversation->campaign->project;
-        $domain = mb_substr(mb_strrchr($account->from_email, '@') ?: '@localhost', 1);
-
-        return new Meeting([
-            'project_id' => $project->id,
-            'campaign_lead_id' => $conversation->id,
-            'lead_id' => $conversation->lead_id,
-            'email_account_id' => $account->id,
-            'uid' => Str::uuid()->toString().'@'.$domain,
-            'starts_at' => $startsAt->utc(),
-            'duration_minutes' => $project->meeting_duration_minutes,
-            'timezone' => $project->meeting_timezone ?? (string) config('app.timezone'),
-            'location' => $project->meeting_location,
-        ]);
     }
 
     /**

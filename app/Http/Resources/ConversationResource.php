@@ -3,7 +3,6 @@
 namespace App\Http\Resources;
 
 use App\Models\CampaignLead;
-use App\Models\Meeting;
 use App\Models\Message;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -61,15 +60,6 @@ class ConversationResource extends JsonResource
             // would tell somebody their mail went out when it never left.
             'sent_at' => $lastOutbound?->sent_at?->toIso8601String(),
             'delivery' => $lastOutbound?->status?->value,
-            // The times the last drafted answer offered, for the invite
-            // picker; and the calls already booked with this person.
-            'proposed_meeting_slots' => $this->proposed_meeting_slots ?? [],
-            'meetings' => $this->meetings->map(fn (Meeting $meeting): array => [
-                'id' => $meeting->id,
-                'starts_at' => $meeting->starts_at->toIso8601String(),
-                'duration_minutes' => $meeting->duration_minutes,
-                'timezone' => $meeting->timezone,
-            ])->values()->all(),
             // Newest reply on top, like the thread list itself.
             'messages' => $this->messages->reverse()->map(fn (Message $message): array => [
                 'id' => $message->id,

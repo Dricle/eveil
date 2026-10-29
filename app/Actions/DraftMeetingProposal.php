@@ -24,7 +24,7 @@ class DraftMeetingProposal
     public function __construct(private Availability $availability) {}
 
     /**
-     * @return array{body: string, slots: list<string>}
+     * @return array{body: string}
      */
     public function handle(CampaignLead $conversation): array
     {
@@ -57,15 +57,6 @@ class DraftMeetingProposal
             $project->meeting_location,
         ))->write();
 
-        $offered = array_map(fn (CarbonImmutable $slot): string => $slot->toIso8601String(), $slots);
-
-        // Kept so that once the lead picks one, booking it is a click rather
-        // than retyping a date the draft already held.
-        $conversation->update(['proposed_meeting_slots' => $offered]);
-
-        return [
-            'body' => mb_trim((string) ($response->structured['body'] ?? '')),
-            'slots' => $offered,
-        ];
+        return ['body' => mb_trim((string) ($response->structured['body'] ?? ''))];
     }
 }

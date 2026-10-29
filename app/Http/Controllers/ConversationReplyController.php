@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Actions\ReplyToConversation;
 use App\Http\Requests\ReplyRequest;
 use App\Models\CampaignLead;
-use App\Support\CurrentProject;
 use Illuminate\Http\RedirectResponse;
 
 /**
@@ -17,7 +16,7 @@ use Illuminate\Http\RedirectResponse;
  */
 class ConversationReplyController extends Controller
 {
-    public function store(ReplyRequest $request, ReplyToConversation $reply, CurrentProject $currentProject, int $conversation): RedirectResponse
+    public function store(ReplyRequest $request, ReplyToConversation $reply, int $conversation): RedirectResponse
     {
         // `CampaignLead` carries no `project_id` of its own: `whereHas('campaign')`
         // is what confines this to the current project rather than any id on the
@@ -25,7 +24,6 @@ class ConversationReplyController extends Controller
         $reply->handle(
             CampaignLead::query()->whereHas('campaign')->with(['lead', 'emailAccount', 'messages'])->findOrFail($conversation),
             $request->string('body')->value(),
-            $request->date('meeting_at', tz: $currentProject->getOrFail()->meeting_timezone)?->toImmutable(),
         );
 
         return back();

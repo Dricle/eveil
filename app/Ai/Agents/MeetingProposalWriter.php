@@ -54,9 +54,9 @@ class MeetingProposalWriter extends EveilAgent implements HasStructuredOutput
         one the way a person would in that language (weekday, date, hour), and say
         once which time zone they are in. Say how long the call takes.
 
-        Say how the call happens in words: a video call, a phone call, or meeting in
-        person. Never paste a link or a phone number into the mail: the calendar invite
-        that follows carries it.
+        Say how the call happens, using where_the_call_happens exactly as given: a
+        video link, a phone number or an address goes into the mail as it stands.
+        When it is empty, do not say where.
 
         If their reply asks a question you cannot answer from what you are given, do
         not answer it and do not invent an answer: stick to the times. The user reads
@@ -65,7 +65,7 @@ class MeetingProposalWriter extends EveilAgent implements HasStructuredOutput
         The mail must read as if the sender typed it themselves:
 
         - plain text, a few short lines, no lists, no headings, no bold
-        - no links of any kind
+        - no links, except the call's own when that is where it happens
         - no signature block: the mailbox adds the sender's own
         - no merge tags, placeholders or brackets for the user to fill in: a draft
           that is sent as it stands must still read right
@@ -79,7 +79,7 @@ class MeetingProposalWriter extends EveilAgent implements HasStructuredOutput
     {
         return [
             'body' => $schema->string()
-                ->description('The answer as plain text, in the language of their reply: no subject, no signature, no links.')
+                ->description('The answer as plain text, in the language of their reply: no subject, no signature.')
                 ->required(),
         ];
     }

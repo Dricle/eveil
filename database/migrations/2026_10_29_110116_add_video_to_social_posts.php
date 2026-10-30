@@ -41,7 +41,7 @@ return new class extends Migration
 
         DB::table('credit_prices')->insert([
             'agent' => 'video-director',
-            'credits' => 150,
+            'credits' => 500,
             'effective_from' => now(),
             'created_at' => now(),
             'updated_at' => now(),

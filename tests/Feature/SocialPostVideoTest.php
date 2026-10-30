@@ -580,3 +580,13 @@ it('gives a new narrator\'s voice to the same line rather than reusing another n
 
     expect($post->fresh()->getMedia('video_audio')->sole()->getCustomProperty('narrator'))->toBe('Alice');
 });
+
+it('leaves out an image whose file is gone, instead of failing the video', function () {
+    [, $project] = videoSetup();
+    Storage::fake();
+    $kept = screenshotOf($project);
+    $gone = screenshotOf($project);
+    Storage::disk($gone->disk)->delete($gone->getPathRelativeToRoot());
+
+    expect(array_keys($project->videoAssets()))->toBe(["screen-{$kept->id}"]);
+});

@@ -28,6 +28,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -132,7 +133,8 @@ class Project extends Model implements HasMedia, StoresMediaInterface
             $assets['logo'] = $logo;
         }
 
-        return $assets;
+        // A row whose file is gone would stop the render: the video does without it.
+        return array_filter($assets, fn (Media $media): bool => Storage::disk($media->disk)->exists($media->getPathRelativeToRoot()));
     }
 
     public function mediaOrganizationId(): int

@@ -68,6 +68,16 @@ Not convinced? Click **New image** on the draft, optionally saying what should c
 
 If an image could not be generated, the draft says why and waits for you; approving it tries the image again before publishing.
 
+## Videos
+
+When moving pictures genuinely help a post (a feature shown in action, a launch, a before and after), the writer also asks for a short video, 12 to 25 seconds, in each network's own shape, and Eveil makes it: big animated type, and your product's own screens filmed by a camera that zooms in, outlines what matters and clicks. On Instagram it goes out as a full screen Reel (9:16), shared to your feed too, **instead of the image**; on Bluesky as a tall native video (9:16); on LinkedIn as a native video in 4:5, the shape its feed shows uncropped. On X it is landscape (16:9): since you post there by hand, click **Download the video** on the draft and attach it to your post. A plain announcement, a client win or a news post stays as it is. Any draft can also get one on demand: click **Make a video** on it.
+
+When the instance has an ElevenLabs key (the cloud edition does; on a self-hosted one, see [voice and music](/self-hosted/configuration#voice-and-music-for-videos-optional)), the video also gets a narrator and background music. Most people watch with the sound off, so everything still reads on screen: the voice adds, it never carries.
+
+The video shows on the draft once made, a minute or two after the caption. To change it, click **Edit the video**: it plays beside every version so far, each with what changed. Pause where something is off, say what should change ("the zoom lands on nothing", "slower here", "end on our pricing page"), and click **Make a new version**: the moment you paused at goes with your words, so Eveil sees what you saw. You can also ask Evie in the chat ("redo the video of post #12, the intro is too fast"). Each version costs credits on the cloud edition. While a version is being made, the draft cannot be approved, so it never goes out without it. On an Autonomous network, a post that asked for a video waits for it, then publishes.
+
+The videos film the screenshots you add under **Product screenshots** in your [visual identity](#your-visual-identity): without any, they tell the story with type alone. They wear your brand, not Eveil's: colours from your logo, your style examples and your homepage, and the font your site uses when it is one of the fourteen installed, or the closest in feel. Each video is written fresh, with its own art direction (a poster look, an editorial one, something playful…), flat colour scenes, transitions and moving shapes, its own narrator picked from nine voices, and Eveil looks at your last ones so they do not all start, look or sound the same way.
+
 
 ## Your visual identity
 
@@ -76,6 +86,7 @@ Under **Settings → Project → Visual identity**, add the images every generat
 - **Logo**: placed in the images as it is, never redrawn. To leave it out, or place it a certain way, say so in the Instagram box of **Settings → AI instructions**. A new logo replaces the old one.
 - **Official illustrations**: your mascot, your product shots, your illustrations. When one fits a post, the writer picks it and the image reuses it instead of inventing a similar one. Describe each ("the mascot waving", "the dashboard on a laptop"): the description is how the writer knows which fits.
 - **Style examples**: visuals you already published. Every image follows their palette and look, without copying them.
+- **Product screenshots**: screens of your product itself, filmed in the [videos](#videos), never sent to the image model. Full-size captures read best, since the camera zooms in. Describe what each screen shows: the description is how the video picks the right one. The six latest are used.
 
 Each image is drawn from your logo, up to three style examples, and up to three illustrations picked for that post. Asking for a new image keeps the same picks. Images already drawn do not change when you edit the library.
 ## Reviewing a draft

@@ -33,7 +33,7 @@ const label = computed(() => PLATFORM_LABEL[props.platform])
 // soon after it is done. `usePoll`'s interval is fixed: two polls, the fast
 // one only running while there is something to wait for.
 usePoll(15000, { only: ['posts', 'writing'] })
-const working = computed(() => props.writing || props.posts.some(post => post.drawing_image))
+const working = computed(() => props.writing || props.posts.some(post => post.drawing_image || post.making_video))
 const fastPoll = usePoll(4000, { only: ['posts', 'writing'] }, { autoStart: false })
 watch(working, value => value ? fastPoll.start() : fastPoll.stop(), { immediate: true })
 

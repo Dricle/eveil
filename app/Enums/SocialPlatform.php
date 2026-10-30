@@ -65,6 +65,21 @@ enum SocialPlatform: string
     }
 
     /**
+     * The shape of the short video a post here can go out with, rendered
+     * from a composition `VideoDirector` writes: a full screen Reel on
+     * Instagram, the tall video Bluesky's app plays, the 4:5 LinkedIn's feed
+     * shows uncropped, and X's own 16:9, where the user attaches it by hand.
+     */
+    public function videoFormat(): ImageFormat
+    {
+        return match ($this) {
+            self::Instagram, self::Bluesky => ImageFormat::Story,
+            self::Linkedin => ImageFormat::Portrait,
+            self::X => ImageFormat::Wide,
+        };
+    }
+
+    /**
      * The shape this network's images are drawn in. Square goes everywhere
      * on Instagram's feed; 4:5 takes more of the screen and is the obvious
      * next step if it proves worth it.

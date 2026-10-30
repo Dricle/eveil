@@ -37,6 +37,15 @@ class SocialPostResource extends JsonResource
             ])->values()->all()),
             // A new image queued or being drawn for this draft.
             'drawing_image' => $this->platform->requiresImage() && app(SocialPostProgress::class)->isDrawing($this->resource),
+            // Width and height, so a player keeps the video's shape before it loads.
+            'video_size' => $this->platform->videoFormat()->videoSize(),
+            'video_brief' => $this->video_brief,
+            'video_url' => $this->video_media_id === null ? null : route('social.posts.video.file', ['project' => $this->project->slug, 'social_post' => $this->id, 'v' => $this->video_media_id]),
+            // The live preview, once there is a script to play.
+            'video_preview_url' => $this->video_composition === null ? null : route('social.posts.video.preview', ['project' => $this->project->slug, 'social_post' => $this->id, 'v' => $this->video_media_id]),
+            'video_revisions' => $this->video_revisions ?? [],
+            // A video queued or being made for this draft.
+            'making_video' => app(SocialPostProgress::class)->isDirecting($this->resource),
             'status' => $this->status->value,
             'rejection_reason' => $this->rejection_reason,
             'social_account' => $this->whenLoaded('socialAccount', fn () => $this->socialAccount === null ? null : [

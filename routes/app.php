@@ -100,12 +100,17 @@ use App\Http\Controllers\SocialCadenceController;
 use App\Http\Controllers\SocialInstructionsController;
 use App\Http\Controllers\SocialPostController;
 use App\Http\Controllers\SocialPostImageController;
+use App\Http\Controllers\SocialPostVideoController;
+use App\Http\Controllers\SocialPostVideoFileController;
+use App\Http\Controllers\SocialPostVideoPreviewController;
 use App\Http\Controllers\StepVariantController;
 use App\Http\Controllers\StepVariantGenerationController;
 use App\Http\Controllers\TargetProfileActivationController;
 use App\Http\Controllers\TargetProfileController;
 use App\Http\Controllers\TargetProfileDerivationController;
 use App\Http\Controllers\TargetProfileSubredditsController;
+use App\Http\Controllers\VideoAssetController;
+use App\Http\Controllers\VideoRuntimeController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -131,6 +136,20 @@ Route::middleware('guest')->group(function (): void {
  */
 Route::get('invitations/accept', [InvitationController::class, 'show'])->name('invitations.accept');
 Route::post('invitations/accept', [InvitationController::class, 'store']);
+
+/*
+ * What a video's live preview loads. The preview runs sandboxed, with no
+ * session, so neither route can ask for one: the runtime is the same file
+ * for everyone, and an image is reached only through a signed, expiring
+ * link that the preview of a post in its project hands out.
+ */
+Route::get('video/runtime/{file}', [VideoRuntimeController::class, 'show'])
+    ->where('file', 'runtime\.js|fonts/[A-Za-z]+\.ttf|sounds/[a-z]+\.mp3')
+    ->name('video.runtime.show');
+Route::get('video/assets/{media}', [VideoAssetController::class, 'show'])
+    ->whereNumber('media')
+    ->middleware('signed')
+    ->name('video.assets.show');
 
 Route::middleware(['auth', 'verified'])->group(function (): void {
     /*
@@ -452,6 +471,15 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
                 Route::post('{social_post}/images', [SocialPostImageController::class, 'store'])->name('images.store');
                 Route::get('{social_post}/images/{image}', [SocialPostImageController::class, 'show'])->whereNumber('image')->name('images.show');
                 Route::put('{social_post}/images/{image}', [SocialPostImageController::class, 'update'])->whereNumber('image')->name('images.update');
+                /*
+                 * The video that goes out instead of the image, on a network
+                 * that takes one: its editor, a new version from what the
+                 * user said, the rendered file, and the live preview.
+                 */
+                Route::get('{social_post}/video', [SocialPostVideoController::class, 'show'])->name('video.show');
+                Route::post('{social_post}/video', [SocialPostVideoController::class, 'store'])->name('video.store');
+                Route::get('{social_post}/video/file', [SocialPostVideoFileController::class, 'show'])->name('video.file');
+                Route::get('{social_post}/video/preview', [SocialPostVideoPreviewController::class, 'show'])->name('video.preview');
             });
         });
 

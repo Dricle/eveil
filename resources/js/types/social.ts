@@ -43,6 +43,18 @@ export type SocialPost = {
     images?: { id: number, url: string, selected: boolean }[]
     /** Instagram only: an image queued or being drawn for this post right now. */
     drawing_image: boolean
+    /** Width and height the video is rendered at, in this network's shape. */
+    video_size: [number, number]
+    /** What the writer said the video should show, when it asked for one. */
+    video_brief: string | null
+    /** The rendered video, published instead of the image. */
+    video_url: string | null
+    /** The live preview of the current script, for the editor. */
+    video_preview_url: string | null
+    /** Every version so far: what the user asked, at which second, and what changed. */
+    video_revisions: { feedback: string | null, at: number | null, summary: string, created_at: string }[]
+    /** A video queued or being made for this post right now. */
+    making_video: boolean
     status: 'draft' | 'published' | 'rejected'
     rejection_reason: string | null
     /** The account it went out on. Always null on X. */

@@ -34,6 +34,16 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  * `image_brief` is what the writer said the picture should show, the
  * starting point of every new one. Empty on the networks that post text only.
  *
+ * On any network, in its own shape (`SocialPlatform::videoFormat()`), the
+ * writer may also ask for a video in `video_brief`, only when moving pictures
+ * genuinely help (a feature shown in action). `VideoDirector` turns it into
+ * `video_composition`, a script for `resources/video/runtime.js`, and the
+ * rendered file sits in the `videos` collection as `video_media_id`; it then
+ * goes out instead of the image. `video_revisions` keeps every change the
+ * user asked for in the editor, with what was changed. Its voice lines and
+ * music, when the instance can make them, sit in `video_audio`, each tagged
+ * with its text or its prompt so a new version reuses what it kept.
+ *
  * @property int $id
  * @property int $project_id
  * @property SocialPlatform $platform
@@ -47,6 +57,10 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  * @property string|null $image_brief
  * @property array<int, int>|null $image_reference_ids
  * @property int|null $image_media_id
+ * @property string|null $video_brief
+ * @property string|null $video_composition
+ * @property int|null $video_media_id
+ * @property array<int, array{feedback: string|null, at: float|null, summary: string, created_at: string}>|null $video_revisions
  * @property SocialPostStatus $status
  * @property string|null $rejection_reason
  * @property string|null $external_id
@@ -62,6 +76,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 #[Fillable([
     'project_id', 'platform', 'social_account_id', 'agent_run_id',
     'source_type', 'source_ref', 'variant', 'evidence', 'body', 'image_brief', 'image_reference_ids', 'image_media_id',
+    'video_brief', 'video_composition', 'video_media_id', 'video_revisions',
     'status', 'rejection_reason', 'external_id', 'url', 'published_at', 'last_error',
     'promoted_at', 'likes_count', 'stats_checked_at',
 ])]
@@ -91,6 +106,8 @@ class SocialPost extends Model implements HasMedia, StoresMediaInterface
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('images');
+        $this->addMediaCollection('videos')->singleFile();
+        $this->addMediaCollection('video_audio');
     }
 
     /**
@@ -101,6 +118,16 @@ class SocialPost extends Model implements HasMedia, StoresMediaInterface
     public function image(): BelongsTo
     {
         return $this->belongsTo(Media::class, 'image_media_id');
+    }
+
+    /**
+     * The rendered video that goes out instead of the image, when there is one.
+     *
+     * @return BelongsTo<Media, $this>
+     */
+    public function video(): BelongsTo
+    {
+        return $this->belongsTo(Media::class, 'video_media_id');
     }
 
     /**
@@ -139,6 +166,7 @@ class SocialPost extends Model implements HasMedia, StoresMediaInterface
             'variant' => SocialPostVariant::class,
             'status' => SocialPostStatus::class,
             'image_reference_ids' => 'array',
+            'video_revisions' => 'array',
             'published_at' => 'datetime',
             'promoted_at' => 'datetime',
             'stats_checked_at' => 'datetime',

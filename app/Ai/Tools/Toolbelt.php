@@ -53,6 +53,7 @@ class Toolbelt
         UpdateSocialPost::class,
         RequestSocialPostImage::class,
         SelectSocialPostImage::class,
+        RequestSocialPostVideo::class,
         ListArticles::class,
         GetArticle::class,
         DraftArticle::class,

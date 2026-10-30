@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<base href="{{BASE}}">
+<style>
+@font-face { font-family: 'Sora'; src: url('fonts/Sora.ttf') format('truetype'); font-weight: 100 900; }
+@font-face { font-family: 'Inter'; src: url('fonts/Inter.ttf') format('truetype'); font-weight: 100 900; }
+@font-face { font-family: 'JetBrains Mono'; src: url('fonts/JetBrainsMono.ttf') format('truetype'); font-weight: 100 900; }
+@font-face { font-family: 'Fraunces'; src: url('fonts/Fraunces.ttf') format('truetype'); font-weight: 100 900; }
+@font-face { font-family: 'Playfair Display'; src: url('fonts/PlayfairDisplay.ttf') format('truetype'); font-weight: 100 900; }
+@font-face { font-family: 'Lora'; src: url('fonts/Lora.ttf') format('truetype'); font-weight: 100 900; }
+@font-face { font-family: 'Space Grotesk'; src: url('fonts/SpaceGrotesk.ttf') format('truetype'); font-weight: 100 900; }
+@font-face { font-family: 'Bricolage Grotesque'; src: url('fonts/BricolageGrotesque.ttf') format('truetype'); font-weight: 100 900; }
+@font-face { font-family: 'Manrope'; src: url('fonts/Manrope.ttf') format('truetype'); font-weight: 100 900; }
+@font-face { font-family: 'Nunito'; src: url('fonts/Nunito.ttf') format('truetype'); font-weight: 100 900; }
+@font-face { font-family: 'Outfit'; src: url('fonts/Outfit.ttf') format('truetype'); font-weight: 100 900; }
+@font-face { font-family: 'Archivo'; src: url('fonts/Archivo.ttf') format('truetype'); font-weight: 100 900; }
+@font-face { font-family: 'Syne'; src: url('fonts/Syne.ttf') format('truetype'); font-weight: 100 900; }
+@font-face { font-family: 'Unbounded'; src: url('fonts/Unbounded.ttf') format('truetype'); font-weight: 100 900; }
+html, body { margin: 0; background: #000; overflow: hidden; }
+.grad { background-image: linear-gradient(90deg, var(--accent), var(--accent2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+</style>
+<script src="runtime.js"></script>
+</head>
+<body>
+<script>
+window.VIDEO_OPTIONS = {{OPTIONS}};
+Video.compose((v) => {
+{{COMPOSITION}}
+}).catch((error) => {
+    window.videoError = String(error && error.stack || error);
+    window.dispatchEvent(new CustomEvent('video:error', { detail: window.videoError }));
+    if (window.parent !== window) {
+        window.parent.postMessage({ source: 'eveil-video', type: 'error', message: String(error && error.message || error) }, '*');
+    }
+});
+</script>
+</body>
+</html>

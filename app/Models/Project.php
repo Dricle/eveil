@@ -28,6 +28,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -92,7 +93,8 @@ class Project extends Model implements HasMedia, StoresMediaInterface
      * user holds the rights to. Each carries its `kind` (`BrandAssetKind`)
      * and a `description` in its custom properties. The image generator gets
      * them as references, the source of truth for how the brand looks, so it
-     * reuses rather than invents.
+     * reuses rather than invents. Screenshots of the product are the
+     * exception: only the videos show them (`videoAssets()`).
      */
     public function registerMediaCollections(): void
     {
@@ -110,6 +112,32 @@ class Project extends Model implements HasMedia, StoresMediaInterface
     public function logo(): ?Media
     {
         return $this->brandAssets(BrandAssetKind::Logo)->first();
+    }
+
+    /**
+     * What a video composition can show, by the name it calls it: the latest
+     * screenshots as `screen-{id}`, at most `$screenshots` of them since a
+     * model reads each one, and the logo as `logo`. Given a composition, the
+     * screenshots it already films too, however many were added since.
+     *
+     * @return array<string, Media>
+     */
+    public function videoAssets(int $screenshots = 6, ?string $composition = null): array
+    {
+        preg_match_all('/screen-(\d+)/', (string) $composition, $filmed);
+
+        $all = $this->brandAssets(BrandAssetKind::Screenshot)->sortByDesc('id');
+        $assets = $all->take($screenshots)
+            ->merge($all->whereIn('id', array_map('intval', $filmed[1])))
+            ->keyBy(fn (Media $media): string => "screen-{$media->id}")
+            ->all();
+
+        if ($logo = $this->logo()) {
+            $assets['logo'] = $logo;
+        }
+
+        // A row whose file is gone would stop the render: the video does without it.
+        return array_filter($assets, fn (Media $media): bool => Storage::disk($media->disk)->exists($media->getPathRelativeToRoot()));
     }
 
     public function mediaOrganizationId(): int
@@ -131,7 +159,7 @@ class Project extends Model implements HasMedia, StoresMediaInterface
      *
      * @var list<string>
      */
-    private const RESERVED_SLUGS = ['projects', 'organizations', 'app-settings', 'account', 'setup', 'invitations', 'oauth'];
+    private const RESERVED_SLUGS = ['projects', 'organizations', 'app-settings', 'account', 'setup', 'invitations', 'oauth', 'video'];
 
     /**
      * What a new project starts with in its writing instructions.

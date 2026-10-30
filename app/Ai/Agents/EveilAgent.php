@@ -8,9 +8,11 @@ use App\Enums\SocialPlatform;
 use App\Models\AgentRun;
 use App\Models\Project;
 use Illuminate\Support\Str;
+use Laravel\Ai\Ai;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Enums\Lab;
 use Laravel\Ai\Promptable;
+use Throwable;
 
 /**
  * What every Eveil agent shares: the project it acts for, where its model comes
@@ -243,12 +245,28 @@ abstract class EveilAgent implements Agent
         $credentials = app(ProviderCredentials::class);
 
         foreach (Lab::cases() as $lab) {
-            if ($lab->value !== $primary && $credentials->isConfigured($lab->value)) {
+            if ($lab->value !== $primary && $credentials->isConfigured($lab->value) && $this->canServe($lab)) {
                 return $lab;
             }
         }
 
         return null;
+    }
+
+    /**
+     * Whether this provider does what this agent needs: writing, or drawing
+     * for an image agent. A key stored for a voice-only provider (the one
+     * the videos speak with) must never become a writer's fallback.
+     */
+    private function canServe(Lab $lab): bool
+    {
+        try {
+            static::generatesImages() ? Ai::imageProvider($lab->value) : Ai::textProvider($lab->value);
+        } catch (Throwable) {
+            return false;
+        }
+
+        return true;
     }
 
     public function model(): ?string

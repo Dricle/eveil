@@ -19,11 +19,12 @@ interface SocialClientInterface
      * Publishes as the account. Null when this network is not published
      * through its API, and nothing was sent. `$image` is the picked image,
      * given on the networks that need one (`SocialPlatform::requiresImage()`)
-     * and ignored by the others.
+     * and ignored by the others. `$video`, when the post has one, goes out
+     * instead of the image.
      *
      * @return array{uri: string, url: string}|null
      */
-    public function publish(SocialAccount $account, string $text, ?string $language = null, ?Media $image = null): ?array;
+    public function publish(SocialAccount $account, string $text, ?string $language = null, ?Media $image = null, ?Media $video = null): ?array;
 
     /**
      * Like counts for this network's published posts, keyed by post id, for

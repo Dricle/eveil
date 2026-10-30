@@ -392,10 +392,16 @@ it('lets Evie ask for a new version of a video, behind approval, on this project
 
 it('films a real composition to an MP4 and to stills', function () {
     $video = app(VideoRenderer::class)->render("v.scene(1, (s) => { s.title('Hello **there**'); });", []);
-    $stills = app(VideoRenderer::class)->stills("v.scene(1, (s) => { s.title('Hello'); });", [], [0.5]);
+    // Every scene option and decoration, so a runtime error in any of them fails here.
+    $stills = app(VideoRenderer::class)->stills(<<<'JS'
+        v.scene(1, (s) => { s.title('Hello'); });
+        v.scene({ duration: 1, background: 'accent', transition: 'wipe' }, (s) => { s.shape('blob', { spin: 30 }); s.marquee('Hi', { outline: true }); s.slam(['Hi']); });
+        v.scene({ duration: 1, transition: 'push' }, (s) => { s.shape('band', { drift: 20 }); });
+        JS, [], [0.5, 1.3, 2.5]);
 
     expect(filesize($video))->toBeGreaterThan(1000)
-        ->and(substr($stills[0], 1, 3))->toBe('PNG');
+        ->and($stills)->toHaveCount(3)
+        ->and(substr($stills[2], 1, 3))->toBe('PNG');
 
     unlink($video);
 })->skip(fn (): bool => ! is_executable((string) exec('command -v '.escapeshellarg((string) config('eveil.video.chrome')))) || ! is_executable((string) exec('command -v ffmpeg')), 'Chromium and ffmpeg are not installed here.');

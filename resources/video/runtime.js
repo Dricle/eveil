@@ -46,6 +46,33 @@
         return node
     }
 
+    // Any CSS colour as #rrggbb, so the bricks can append an alpha to it.
+    const probe = document.createElement('canvas').getContext('2d')
+    const hex = (color) => {
+        probe.fillStyle = '#000000'
+        probe.fillStyle = String(color)
+
+        return probe.fillStyle
+    }
+    const luminance = (color) => {
+        const h = hex(color)
+        if (!h.startsWith('#')) {
+            return 0.5
+        }
+        const [r, g, b] = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255).map(c => c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)
+
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+    }
+    const contrast = (a, b) => {
+        const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x)
+
+        return (light + 0.05) / (dark + 0.05)
+    }
+
+    // How a scene arrives. The covering ones slide their own colour field
+    // over the scene before, which stays put underneath until covered.
+    const COVERING = ['push', 'rise', 'wipe', 'iris']
+
     /** `**words**` become the accent gradient, the rest stays plain text. */
     const rich = (node, text) => {
         String(text)
@@ -119,21 +146,23 @@
 
         /**
          * One scene of `duration` seconds. Scenes play back to back, each
-         * entering and leaving with a short zoom and blur.
+         * arriving by its `transition`: a short zoom and blur by default.
          */
         scene (options, build) {
             const duration = typeof options === 'number' ? options : options.duration
             const scene = new Scene(this, this.duration, duration, typeof options === 'object' ? options : {})
+            const previous = this.scenes.at(-1)
             this.scenes.push(scene)
             build(scene)
             scene.finish()
+            previous?.leave(scene)
             this.duration += scene.duration
 
             return this
         }
 
-        animate (node, keyframes, at, duration, easing = ease) {
-            return node.animate(keyframes, { delay: at * 1000, duration: Math.max(1, duration * 1000), fill: 'both', easing })
+        animate (node, keyframes, at, duration, easing = ease, fill = 'both') {
+            return node.animate(keyframes, { delay: at * 1000, duration: Math.max(1, duration * 1000), fill, easing })
         }
 
         /** Runs `fn(t)` on every seek, for what CSS cannot animate (numbers, typed text). */
@@ -208,8 +237,16 @@
                 gap: `${40 * v.unit}px`,
                 padding: `${110 * v.unit}px ${80 * v.unit}px`,
                 boxSizing: 'border-box',
+                // Its own stacking context: shapes sit behind its bricks, not behind the video.
+                isolation: 'isolate',
                 textAlign: options.align === 'left' ? 'left' : 'center'
             }, v.root)
+            this.transition = ['blur', 'cut', ...COVERING].includes(options.transition) ? options.transition : 'blur'
+            // A covering scene needs a field of its own to cover with.
+            const field = options.background ?? (COVERING.includes(this.transition) ? 'background' : null)
+            if (field) {
+                this.paint(field, options.ink)
+            }
             this.lines = []
             if (options.label) {
                 this.label(options.label)
@@ -233,15 +270,57 @@
             }
             this.duration = Math.max(this.duration, end + 0.35)
 
-            const duration = this.duration
-            const enter = Math.min(0.3, duration / 4) / duration
-            const exit = Math.min(0.25, duration / 4) / duration
-            this.video.animate(this.node, [
-                { opacity: 0, transform: 'scale(1.08)', filter: 'blur(14px)' },
-                { offset: enter, opacity: 1, transform: 'scale(1)', filter: 'blur(0px)', easing: 'linear' },
-                { offset: 1 - exit, opacity: 1, transform: 'scale(1.03)', filter: 'blur(0px)', easing: 'ease-in' },
-                { opacity: 0, transform: 'scale(.96)', filter: 'blur(10px)' }
-            ], this.start, duration, 'linear')
+            const v = this.video
+            const length = Math.min(this.transition === 'blur' ? 0.3 : 0.5, this.duration / 4)
+            const arrivals = {
+                blur: [{ opacity: 0, transform: 'scale(1.08)', filter: 'blur(14px)' }, { opacity: 1, transform: 'scale(1)', filter: 'blur(0px)' }],
+                cut: [{ opacity: 1 }, { opacity: 1 }],
+                push: [{ transform: 'translateX(100%)' }, { transform: 'translateX(0)' }],
+                rise: [{ transform: 'translateY(100%)' }, { transform: 'translateY(0)' }],
+                wipe: [{ clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0% 0 0)' }],
+                iris: [{ clipPath: 'circle(0% at 50% 50%)' }, { clipPath: 'circle(75% at 50% 50%)' }]
+            }
+            // Hidden until its turn, then in.
+            v.animate(this.node, [{ visibility: 'hidden' }, { visibility: 'visible' }], this.start, 0.001, 'linear')
+            v.animate(this.node, arrivals[this.transition], this.start, length, this.transition === 'blur' ? ease : easeInOut)
+        }
+
+        /**
+         * Once the next scene is known: steps aside the way it arrives. A
+         * covering one is let in over this scene, a push pushes it out, the
+         * others fade it.
+         */
+        leave (next) {
+            const v = this.video
+            const end = this.start + this.duration
+            if (next.transition === 'push') {
+                v.animate(this.node, [{ transform: 'translateX(0)' }, { transform: 'translateX(-35%)', opacity: 0.4 }], end, 0.5, easeInOut, 'forwards')
+            } else if (next.transition === 'cut') {
+                v.animate(this.node, [{ opacity: 1 }, { opacity: 0 }], end, 0.001, 'linear', 'forwards')
+                return
+            } else if (!COVERING.includes(next.transition)) {
+                v.animate(this.node, [{ opacity: 1, filter: 'blur(0px)', transform: 'scale(1)' }, { opacity: 0, filter: 'blur(10px)', transform: 'scale(.96)' }], end - 0.25, 0.25, 'ease-in', 'forwards')
+                return
+            }
+            // Gone once fully covered, so its animations never show through.
+            v.animate(this.node, [{ visibility: 'visible' }, { visibility: 'hidden' }], end + 0.55, 0.001, 'linear', 'forwards')
+        }
+
+        /**
+         * Fills the scene with a colour (a theme name like 'accent' or 'ink',
+         * or any CSS colour) and recolours its bricks to stay readable on it.
+         */
+        paint (field, ink) {
+            const theme = this.video.colors
+            const background = hex(theme[field] ?? field)
+            const text = ink ? hex(theme[ink] ?? ink) : [theme.ink, theme.background, '#ffffff', '#111111'].map(hex).find(c => contrast(c, background) >= 4.5) ?? '#ffffff'
+            const readable = color => contrast(color, background) >= 2.2 ? hex(color) : text
+            const accent = readable(theme.accent)
+            this.palette = { background, ink: text, muted: `${text}bf`, surface: `${text}14`, accent, accent2: accent === text ? text : readable(theme.accent2) }
+            this.node.style.background = background
+            this.node.style.color = text
+            this.node.style.setProperty('--accent', this.palette.accent)
+            this.node.style.setProperty('--accent2', this.palette.accent2)
         }
 
         get unit () {
@@ -249,7 +328,7 @@
         }
 
         get colors () {
-            return this.video.colors
+            return this.palette ? { ...this.video.colors, ...this.palette } : this.video.colors
         }
 
         /** Absolute time of a moment inside this scene. */
@@ -305,6 +384,7 @@
                     padding: `0 ${60 * this.unit}px`,
                     color: i % 2 ? this.colors.accent : this.colors.ink
                 }, box), word)
+                node.dataset.fit = this.video.width
                 const start = this.at(at + i * every)
                 const last = i === words.length - 1
                 this.video.animate(node, [
@@ -332,6 +412,7 @@
                 letterSpacing: '-.035em',
                 textWrap: 'balance'
             }, this.node)
+            node.dataset.fit = this.video.width - 160 * this.unit
             let i = 0
             String(text)
                 .split(/(\*\*[^*]+\*\*)/)
@@ -611,6 +692,70 @@
             return this
         }
 
+        /**
+         * A flat shape behind the bricks: 'circle', 'ring', 'square', 'blob'
+         * or 'band' (a stripe across the whole width). x and y place its
+         * centre as fractions of the frame, size is in px at 1080 wide.
+         */
+        shape (kind, { x = 0.5, y = 0.5, size = 520, color = 'accent', at = 0, spin = 0, drift = 0, opacity = 1 } = {}) {
+            const v = this.video
+            const u = this.unit
+            // Decoration keeps the brand's own colours, readable or not.
+            const fill = hex(v.colors[color] ?? color)
+            const box = size * u
+            const band = kind === 'band'
+            const node = el('div', {
+                position: 'absolute',
+                zIndex: '-1',
+                left: band ? '-10%' : `${x * v.width - box / 2}px`,
+                top: `${y * v.height - (band ? box / 4 : box / 2)}px`,
+                width: band ? '120%' : `${box}px`,
+                height: band ? `${box / 2}px` : `${box}px`,
+                borderRadius: { circle: '50%', ring: '50%', blob: '42% 58% 63% 37% / 41% 44% 56% 59%', square: `${box * 0.12}px` }[kind] ?? '0',
+                background: kind === 'ring' ? 'transparent' : fill,
+                border: kind === 'ring' ? `${Math.max(6, box * 0.07)}px solid ${fill}` : 'none',
+                boxSizing: 'border-box',
+                opacity: String(opacity)
+            }, this.node)
+            v.animate(node, [{ transform: band ? 'scaleX(0)' : 'scale(0) rotate(-20deg)' }, { transform: band ? 'scaleX(1)' : 'scale(1) rotate(0deg)' }], this.at(at), 0.6, 'cubic-bezier(.34,1.3,.64,1)', 'backwards')
+            if (spin || drift) {
+                // Keeps moving for the rest of the scene, so a still frame never looks frozen.
+                const rest = Math.max(0.1, this.duration - at - 0.6)
+                node.animate([{ translate: '0 0', rotate: '0deg' }, { translate: `0 ${-drift * u}px`, rotate: `${spin}deg` }], { delay: this.at(at + 0.6) * 1000, duration: rest * 1000, fill: 'both', easing: 'linear' })
+            }
+
+            return this
+        }
+
+        /**
+         * A line of huge type running across the frame, repeated, at y (a
+         * fraction of the height). Behind the bricks unless `front`.
+         */
+        marquee (text, { y = 0.5, size = 220, color = 'ink', speed = 160, reverse = false, outline = false, opacity = 1, front = false } = {}) {
+            const v = this.video
+            const u = this.unit
+            const ink = hex(this.colors[color] ?? color)
+            const node = el('div', {
+                position: 'absolute',
+                zIndex: front ? '1' : '-1',
+                left: '0',
+                top: `${y * v.height - size * u * 0.6}px`,
+                whiteSpace: 'nowrap',
+                fontFamily: `${this.colors.display}, sans-serif`,
+                fontWeight: '800',
+                fontSize: `${size * u}px`,
+                lineHeight: '1.2',
+                letterSpacing: '-.03em',
+                color: outline ? 'transparent' : ink,
+                webkitTextStroke: outline ? `${3 * u}px ${ink}` : '0',
+                opacity: String(opacity)
+            }, this.node, `${text}  ·  `.repeat(8))
+            const travel = speed * u * this.duration
+            v.animate(node, [{ transform: `translateX(${reverse ? -travel : 0}px)` }, { transform: `translateX(${reverse ? 0 : -travel}px)` }], this.start, this.duration, 'linear')
+
+            return this
+        }
+
         /** The closing card: logo, a line, and where to go. */
         outro ({ tagline = '', cta = '', at = 0.1, sound = true } = {}) {
             const u = this.unit
@@ -655,6 +800,12 @@
             // Only the fonts the theme picked, before the first frame is taken.
             await Promise.all([video.colors.display, video.colors.body, 'JetBrains Mono'].map(font => document.fonts.load(`650 40px "${font}"`)))
             await document.fonts.ready
+            // A word too long for the frame in a wide font shrinks until it fits.
+            for (const node of video.root.querySelectorAll('[data-fit]')) {
+                for (let i = 0; i < 12 && Math.max(node.scrollWidth, node.clientWidth) > Number(node.dataset.fit); i++) {
+                    node.style.fontSize = `${parseFloat(node.style.fontSize) * 0.9}px`
+                }
+            }
             video.background()
             for (const animation of video.root.getAnimations({ subtree: true })) {
                 animation.pause()

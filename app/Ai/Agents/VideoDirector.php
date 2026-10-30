@@ -6,6 +6,7 @@ use App\Enums\SocialPlatform;
 use App\Models\Project;
 use App\Services\Video\VideoAudio;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Support\Arr;
 use Laravel\Ai\Contracts\HasStructuredOutput;
 use Laravel\Ai\Files\Image;
 use Laravel\Ai\Responses\StructuredAgentResponse;
@@ -59,6 +60,21 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
         parent::__construct($project);
     }
 
+    /**
+     * One drawn at random for each new video, so two projects with the same
+     * kind of brand, or the same project twice, do not land on the same look.
+     *
+     * @var array<int, string>
+     */
+    private const DIRECTIONS = [
+        'Swiss poster: hard cuts and pushes, a different flat colour field every scene, huge tight type filling the width, bands and squares as structure. Display Archivo or Space Grotesk.',
+        'Editorial: a serif display (Fraunces or Playfair Display), calm wipes, generous space, a warm light background alternating with deep ink scenes, a single ring or circle as ornament.',
+        'Playful pop: bouncy, blobs and circles drifting behind the words, iris and rise transitions, saturated fields in turns. Display Unbounded or Nunito.',
+        'Bold type wall: outlined marquees scrolling behind every scene, slams, cuts on the beat, two colours alternating. Display Syne or Bricolage Grotesque.',
+        'Product hero: the screenshots carry it, each scene on a solid field framing the product, rise transitions, a counter or a field typing between them. Display Manrope or Outfit.',
+        'Minimal premium: few words very large, slow iris and blur transitions, deep dark fields with one accent shape, lots of empty space. Display Playfair Display or Sora.',
+    ];
+
     public function instructions(): Stringable|string
     {
         return <<<PROMPT
@@ -88,11 +104,20 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
           Mono, used for small labels: 'JetBrains Mono'.
 
         v.scene(seconds, (s) => { ... })
-          One scene. Scenes play back to back, each entering and leaving with a
-          short zoom and blur. Bricks inside a scene stack top to bottom, centred.
-          Every `at` below is seconds from the start of THAT scene.
-          v.scene({ duration, align: 'left', justify: 'flex-start', label }, fn)
-          is the long form: label puts a small uppercase line at the top.
+          One scene. Scenes play back to back. Bricks inside a scene stack top
+          to bottom, centred. Every `at` below is seconds from the start of THAT
+          scene. The long form takes options:
+          v.scene({ duration, background, ink, transition, align: 'left', justify: 'flex-start', label }, fn)
+          background: fills the whole scene with a flat colour, a theme name
+            ('accent', 'accent2', 'ink', 'surface', 'background') or any CSS
+            colour. The bricks recolour themselves to stay readable on it; ink
+            forces the text colour.
+          transition: how the scene arrives. 'blur' (default, a soft zoom),
+            'cut' (instant, punchy), 'push' (slides in from the right, pushing
+            the last scene out), 'rise' (slides up from the bottom), 'wipe'
+            (revealed left to right), 'iris' (a circle opening from the centre).
+            The four moving ones slide a colour field in: give them a background.
+          label: a small uppercase line at the top.
 
         In any text, **double stars** paint those words with the accent gradient.
 
@@ -127,6 +152,16 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
           is a big line under the picture. Read the screenshot carefully before
           placing anything: a spot or a click on the wrong element is the
           worst mistake you can make here.
+        s.shape(kind, { x, y, size, color, at, spin, drift, opacity })
+          A flat shape behind the bricks: 'circle', 'ring', 'square', 'blob', or
+          'band' (a stripe across the full width). x and y are its centre as
+          fractions of the frame (they may go past the edges, to crop it), size
+          in px. color is a theme name or a CSS colour. spin (degrees) and drift
+          (px upwards) keep it moving through the scene.
+        s.marquee(text, { y, size, color, speed, reverse, outline, opacity, front })
+          A line of huge type scrolling across the frame at height y (a
+          fraction), repeated, behind the bricks unless front. outline: true
+          draws only its contour. Great as texture with a few words.
         s.outro({ tagline, cta })   the closing card: the logo (when the project
           has one), a tagline, and a button-like call to action.
         v.sound(name, atSecondsFromVideoStart, volume)
@@ -149,6 +184,13 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
           screenshots, tell it with type: slam, title, field, list, cards.
         - Few words, big. One idea per scene. Captions are four to eight words.
         - End on the outro, with the product's name or URL as the call to action.
+        - Design it like a motion designer, never as slides of text on one
+          background. Most scenes get a flat colour field, and consecutive
+          scenes change colour (background, accent, ink, accent2, in turns that
+          suit the brand). Use at least three different transitions, shapes or
+          a marquee for texture in several scenes, and big type that fills the
+          frame. A list or cards at most once per video, and never two text
+          scenes built the same way in a row.
         - Vary the structure from the project's earlier videos you are shown:
           a different opening brick, a different order, a different rhythm.
         - Dress it in the brand, never in a house style: background, ink and
@@ -260,6 +302,10 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
 
         if ($this->recentCompositions !== []) {
             $sections[] = "## This project's last videos, do not repeat their structure\n\n".implode("\n\n---\n\n", $this->recentCompositions);
+        }
+
+        if ($this->currentComposition === null) {
+            $sections[] = '## Art direction for this one\n\n'.Arr::random(self::DIRECTIONS).' Apply it within the brand: its colours always win, and its own fonts when it has them.';
         }
 
         if ($this->currentComposition !== null) {

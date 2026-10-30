@@ -318,7 +318,7 @@ function promote () {
         </p>
 
         <div
-            v-if="post.image_url || post.platform === 'instagram' || post.video_url || post.making_video || (post.supports_video && post.status === 'draft')"
+            v-if="post.image_url || post.platform === 'instagram' || post.video_url || post.making_video || post.status === 'draft'"
             class="space-y-2"
         >
             <div class="flex flex-wrap items-start gap-3">
@@ -349,11 +349,15 @@ function promote () {
                     controls
                     playsinline
                     preload="metadata"
-                    class="aspect-[9/16] w-40 rounded-md bg-black object-cover"
+                    :style="{ aspectRatio: `${post.video_size[0]} / ${post.video_size[1]}` }"
+                    class="max-h-72 max-w-xs rounded-md bg-black object-cover"
+                    :class="post.video_size[0] > post.video_size[1] ? 'w-full' : 'w-40'"
                 />
                 <div
                     v-else-if="post.making_video"
-                    class="flex aspect-[9/16] w-40 animate-pulse flex-col items-center justify-center gap-2 rounded-md bg-elevated p-3 text-center text-sm text-muted"
+                    :style="{ aspectRatio: `${post.video_size[0]} / ${post.video_size[1]}` }"
+                    :class="post.video_size[0] > post.video_size[1] ? 'w-full max-w-xs' : 'w-40'"
+                    class="flex animate-pulse flex-col items-center justify-center gap-2 rounded-md bg-elevated p-3 text-center text-sm text-muted"
                 >
                     <UIcon
                         name="i-lucide-loader-circle"
@@ -367,7 +371,7 @@ function promote () {
                 v-if="post.video_url && post.status === 'draft'"
                 class="text-xs text-dimmed"
             >
-                {{ post.platform === 'instagram' ? 'The video goes out as a Reel, instead of the image.' : 'The video goes out with the post.' }}
+                {{ post.platform === 'instagram' ? 'The video goes out as a Reel, instead of the image.' : post.platform === 'x' ? 'Download the video and attach it when you post.' : 'The video goes out with the post.' }}
             </p>
 
             <!-- Every image drawn so far, to compare and pick from before publishing. -->
@@ -407,7 +411,17 @@ function promote () {
                     @click="imageOpen = true"
                 />
                 <UButton
-                    v-if="post.status === 'draft' && post.supports_video && post.video_preview_url"
+                    v-if="post.video_url && post.platform === 'x'"
+                    :href="post.video_url"
+                    download
+                    icon="i-lucide-download"
+                    color="neutral"
+                    variant="subtle"
+                    size="xs"
+                    label="Download the video"
+                />
+                <UButton
+                    v-if="post.status === 'draft' && post.video_preview_url"
                     :to="relativeUrl(socialPostRoutes.video.show.url({ project: slug, social_post: post.id }))"
                     icon="i-lucide-clapperboard"
                     color="neutral"
@@ -416,7 +430,7 @@ function promote () {
                     label="Edit the video"
                 />
                 <UButton
-                    v-else-if="post.status === 'draft' && post.supports_video"
+                    v-else-if="post.status === 'draft'"
                     icon="i-lucide-clapperboard"
                     color="neutral"
                     variant="subtle"

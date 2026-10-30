@@ -2,10 +2,10 @@
 
 namespace App\Services\Bluesky;
 
+use App\Enums\SocialPlatform;
 use App\Models\SocialAccount;
 use App\Models\SocialPost;
 use App\Services\Social\SocialClientInterface;
-use App\Services\Video\VideoRenderer;
 use App\Support\HtmlText;
 use DOMXPath;
 use GuzzleHttp\Psr7\Uri;
@@ -96,7 +96,7 @@ class BlueskyClient implements SocialClientInterface
             $record['embed'] = [
                 '$type' => 'app.bsky.embed.video',
                 'video' => $this->uploadVideo($session, $video),
-                'aspectRatio' => ['width' => VideoRenderer::WIDTH, 'height' => VideoRenderer::HEIGHT],
+                'aspectRatio' => array_combine(['width', 'height'], SocialPlatform::Bluesky->videoFormat()->videoSize()),
             ];
         } else {
             $link = $this->firstLink($text);

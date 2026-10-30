@@ -20,8 +20,7 @@ interface SocialClientInterface
      * through its API, and nothing was sent. `$image` is the picked image,
      * given on the networks that need one (`SocialPlatform::requiresImage()`)
      * and ignored by the others. `$video`, when the post has one, goes out
-     * instead of the image on the networks that take one
-     * (`SocialPlatform::supportsVideo()`) and is ignored by the others.
+     * instead of the image.
      *
      * @return array{uri: string, url: string}|null
      */

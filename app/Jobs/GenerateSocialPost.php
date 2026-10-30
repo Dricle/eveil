@@ -246,7 +246,7 @@ class GenerateSocialPost implements ShouldQueue
     {
         $brief = trim((string) ($structured['video_brief'] ?? ''));
 
-        if (! $this->platform->supportsVideo() || $brief === '' || $posts->isEmpty()) {
+        if ($brief === '' || $posts->isEmpty()) {
             return false;
         }
 

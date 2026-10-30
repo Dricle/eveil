@@ -49,7 +49,7 @@ class SocialPostVideoPreviewController extends Controller
 
         $base = Str::beforeLast(route('video.runtime.show', ['file' => 'runtime.js']), 'runtime.js');
 
-        return response($renderer->page($post->video_composition, $assets, $base, $audioUrls))
+        return response($renderer->page($post->video_composition, $post->platform->videoFormat(), $assets, $base, $audioUrls))
             ->header('Content-Type', 'text/html; charset=utf-8')
             ->header('Content-Security-Policy', "default-src 'none'; script-src 'unsafe-inline' {$origin}; style-src 'unsafe-inline'; img-src {$origin} data:; font-src {$origin}; media-src {$origin}; connect-src 'none'; frame-ancestors 'self'; sandbox allow-scripts")
             ->header('X-Content-Type-Options', 'nosniff');

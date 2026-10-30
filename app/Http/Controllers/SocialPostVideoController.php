@@ -23,8 +23,6 @@ class SocialPostVideoController extends Controller
     {
         $post = SocialPost::query()->with(['media', 'project'])->findOrFail($socialPost);
 
-        abort_unless($post->platform->supportsVideo(), 404);
-
         return Inertia::render('social/VideoEditor', [
             'post' => new SocialPostResource($post),
         ]);
@@ -37,8 +35,6 @@ class SocialPostVideoController extends Controller
     public function store(SocialPostVideoRequest $request, SocialPostProgress $progress, int $socialPost): RedirectResponse
     {
         $post = SocialPost::query()->where('status', SocialPostStatus::Draft)->findOrFail($socialPost);
-
-        abort_unless($post->platform->supportsVideo(), 404);
 
         if ($progress->isDirecting($post)) {
             return back()->withErrors(['feedback' => 'A version is already being made: wait for it, then say what to change.']);

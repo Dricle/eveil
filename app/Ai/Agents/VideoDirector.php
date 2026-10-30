@@ -2,6 +2,7 @@
 
 namespace App\Ai\Agents;
 
+use App\Enums\ImageFormat;
 use App\Enums\SocialPlatform;
 use App\Models\Project;
 use App\Services\Video\VideoAudio;
@@ -78,8 +79,8 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
     public function instructions(): Stringable|string
     {
         return <<<PROMPT
-        You direct short vertical videos (1080 by 1920) that go out with a
-        social post for a product. You write the video as JavaScript for a small
+        You direct short videos that go out with a social post for a product.
+        {$this->frame()} You write the video as JavaScript for a small
         animation library. Your script is the body of a function given `v`, the
         video. It runs in a browser with no network: only the calls below exist.
 
@@ -126,7 +127,7 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
           (default 0.38). The last one stays. Best as an opening hook, two to
           four words.
         s.title(text, { at, size })   headline, words arrive one by one. size
-          defaults to 104 (px at 1080 wide). Keep it under about twelve words.
+          defaults to 104 (px at 1080 on the short side). Keep it under about twelve words.
         s.text(text, { at, size })    a paragraph under the title, size 46.
         s.field(text, { at, label, button, speed })
           an input that types itself (speed in characters per second, default
@@ -175,10 +176,7 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
           long enough to READ: count about 0.35 s per word on screen, plus a
           second, and never under 2.5 s except the opening slam. A screen
           scene needs about 2.2 s per shot. The outro needs 3 s.
-        - The screen is a phone held upright. A screenshot of a wide desktop
-          page is unreadable whole: frame a region about 0.3 to 0.45 of the
-          image wide, never the full width, and move between regions. A mobile
-          screenshot can be framed whole.
+        - {$this->framing()}
         - Show the product working, not adjectives. The brief says what the
           video is for; the screenshots are what you can show. Without
           screenshots, tell it with type: slam, title, field, list, cards.
@@ -214,6 +212,25 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
         sentence summary for the user, without dash punctuation either: what
         the video shows, or, when revising, what you changed.
         PROMPT;
+    }
+
+    private function frame(): string
+    {
+        [$width, $height] = $this->platform->videoFormat()->videoSize();
+
+        return "This one is {$width} by {$height} px, ".$this->platform->videoFormat()->describe().", for {$this->platform->label()}. Every size below is in px at 1080 on the short side.";
+    }
+
+    /**
+     * How a screenshot reads in this shape.
+     */
+    private function framing(): string
+    {
+        return match ($this->platform->videoFormat()) {
+            ImageFormat::Story => 'The screen is a phone held upright. A screenshot of a wide desktop page is unreadable whole: frame a region about 0.3 to 0.45 of the image wide, never the full width, and move between regions. A mobile screenshot can be framed whole.',
+            ImageFormat::Wide, ImageFormat::Landscape => 'The frame is wide, watched on a desktop as much as a phone: a desktop screenshot can be framed whole for context, then move in on a region about half its width. A mobile screenshot sits small in it: frame it whole and let shapes or type fill the sides.',
+            default => 'The frame is a little taller than square, watched in a phone\'s feed: a desktop screenshot is unreadable whole, frame a region about 0.4 to 0.6 of its width and move between regions. A mobile screenshot can be framed whole.',
+        };
     }
 
     /**

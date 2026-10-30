@@ -2,6 +2,7 @@
 
 namespace App\Services\Video;
 
+use App\Enums\ImageFormat;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Str;
@@ -18,10 +19,6 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  */
 class VideoRenderer
 {
-    public const WIDTH = 1080;
-
-    public const HEIGHT = 1920;
-
     public const FPS = 30;
 
     /**
@@ -32,11 +29,13 @@ class VideoRenderer
      * @param  array<string, string>  $assetUrls  asset name => URL
      * @param  array{voices?: array<string, string>, durations?: array<string, float>, music?: string|null}  $audioUrls
      */
-    public function page(string $composition, array $assetUrls, string $base, array $audioUrls = []): string
+    public function page(string $composition, ImageFormat $format, array $assetUrls, string $base, array $audioUrls = []): string
     {
+        [$width, $height] = $format->videoSize();
+
         $options = json_encode([
-            'width' => self::WIDTH,
-            'height' => self::HEIGHT,
+            'width' => $width,
+            'height' => $height,
             'fps' => self::FPS,
             'assets' => (object) $assetUrls,
             'audio' => [
@@ -67,9 +66,9 @@ class VideoRenderer
      *
      * @throws VideoRenderFailed
      */
-    public function manifest(string $composition, array $assets, array $voices = []): array
+    public function manifest(string $composition, ImageFormat $format, array $assets, array $voices = []): array
     {
-        $directory = $this->stage($composition, $assets, ['voices' => $voices]);
+        $directory = $this->stage($composition, $format, $assets, ['voices' => $voices]);
 
         try {
             $manifest = json_decode($this->run($directory, ['-', '--manifest']), true);
@@ -94,9 +93,9 @@ class VideoRenderer
      *
      * @throws VideoRenderFailed when the composition does not build or the encoder fails
      */
-    public function render(string $composition, array $assets, array $audio = []): string
+    public function render(string $composition, ImageFormat $format, array $assets, array $audio = []): string
     {
-        $directory = $this->stage($composition, $assets, $audio);
+        $directory = $this->stage($composition, $format, $assets, $audio);
         $out = sys_get_temp_dir().'/'.Str::uuid().'.mp4';
 
         try {
@@ -119,9 +118,9 @@ class VideoRenderer
      *
      * @throws VideoRenderFailed
      */
-    public function stills(string $composition, array $assets, array $times, array $voices = []): array
+    public function stills(string $composition, ImageFormat $format, array $assets, array $times, array $voices = []): array
     {
-        $directory = $this->stage($composition, $assets, ['voices' => $voices]);
+        $directory = $this->stage($composition, $format, $assets, ['voices' => $voices]);
 
         try {
             $this->run($directory, ["{$directory}/stills", '--stills='.implode(',', array_map(fn (float $t): string => number_format($t, 2, '.', ''), $times))]);
@@ -139,7 +138,7 @@ class VideoRenderer
      * @param  array<string, Media>  $assets
      * @param  array{voices?: array<string, Media>, music?: Media|null}  $audio
      */
-    private function stage(string $composition, array $assets, array $audio = []): string
+    private function stage(string $composition, ImageFormat $format, array $assets, array $audio = []): string
     {
         $directory = sys_get_temp_dir().'/video-'.Str::uuid();
         File::ensureDirectoryExists($directory.'/assets');
@@ -164,7 +163,7 @@ class VideoRenderer
             $audioUrls['durations'][$text] = (float) $media->getCustomProperty('seconds', 0);
         }
 
-        File::put($directory.'/page.html', $this->page($composition, $urls, 'file://'.resource_path('video').'/', $audioUrls));
+        File::put($directory.'/page.html', $this->page($composition, $format, $urls, 'file://'.resource_path('video').'/', $audioUrls));
 
         return $directory;
     }

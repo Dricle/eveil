@@ -6,6 +6,7 @@ use App\Ai\Agents\VideoDirector;
 use App\Ai\Tools\RequestSocialPostVideo;
 use App\Enums\AutonomyLevel;
 use App\Enums\BrandAssetKind;
+use App\Enums\ImageFormat;
 use App\Enums\PlatformAppKind;
 use App\Enums\SocialPlatform;
 use App\Enums\SocialPostStatus;
@@ -100,7 +101,7 @@ function videoOf(SocialPost $post): void
     $post->update(['video_composition' => "v.scene(3, (s) => s.title('Hi'));", 'video_media_id' => $media->id]);
 }
 
-it('asks for a video when the writer wants one, on the networks that take one', function (SocialPlatform $platform, bool $queued) {
+it('asks for a video when the writer wants one, on every network', function (SocialPlatform $platform) {
     Notification::fake();
     Storage::fake();
     Queue::fake([GenerateSocialPostVideo::class]);
@@ -112,14 +113,12 @@ it('asks for a video when the writer wants one, on the networks that take one', 
 
     $post = SocialPost::sole();
 
-    expect($post->video_brief)->toBe($queued ? 'Show the editor in action.' : null);
-    $queued
-        ? Queue::assertPushed(GenerateSocialPostVideo::class, fn (GenerateSocialPostVideo $job): bool => $job->post->is($post) && ! $job->publishAfter)
-        : Queue::assertNotPushed(GenerateSocialPostVideo::class);
+    expect($post->video_brief)->toBe('Show the editor in action.');
+    Queue::assertPushed(GenerateSocialPostVideo::class, fn (GenerateSocialPostVideo $job): bool => $job->post->is($post) && ! $job->publishAfter);
 })->with([
-    'Instagram' => [SocialPlatform::Instagram, true],
-    'LinkedIn' => [SocialPlatform::Linkedin, true],
-    'X, posted by hand' => [SocialPlatform::X, false],
+    'Instagram' => [SocialPlatform::Instagram],
+    'LinkedIn' => [SocialPlatform::Linkedin],
+    'X, posted by hand with the video attached' => [SocialPlatform::X],
 ]);
 
 it('holds an autonomous post until its video is made, then publishes it with the video', function () {
@@ -147,7 +146,7 @@ it('makes the video from the brief and the project\'s screenshots, and keeps wha
     VideoDirector::fake([videoStructured(videoScript())]);
     $this->mock(VideoRenderer::class, fn (MockInterface $mock) => $mock->shouldReceive('render')
         ->once()
-        ->withArgs(fn (string $composition, array $assets): bool => $composition === videoScript()['composition'] && $assets === ["screen-{$screenshot->id}" => $assets["screen-{$screenshot->id}"]] && $assets["screen-{$screenshot->id}"]->is($screenshot))
+        ->withArgs(fn (string $composition, ImageFormat $format, array $assets): bool => $composition === videoScript()['composition'] && $assets === ["screen-{$screenshot->id}" => $assets["screen-{$screenshot->id}"]] && $assets["screen-{$screenshot->id}"]->is($screenshot))
         ->andReturn(renderedVideo()));
 
     app(DirectSocialPostVideo::class)->handle($post);
@@ -200,7 +199,7 @@ it('revises the video from what the user said, showing the director the moment t
     videoOf($post);
     VideoDirector::fake([videoStructured(videoScript('Slower'))]);
     $this->mock(VideoRenderer::class, function (MockInterface $mock): void {
-        $mock->shouldReceive('stills')->once()->withArgs(fn (string $composition, array $assets, array $times): bool => $times === [3.4, 4.0, 4.8])->andReturn(['png-1', 'png-2', 'png-3']);
+        $mock->shouldReceive('stills')->once()->withArgs(fn (string $composition, ImageFormat $format, array $assets, array $times): bool => $times === [3.4, 4.0, 4.8])->andReturn(['png-1', 'png-2', 'png-3']);
         $mock->shouldReceive('render')->once()->andReturn(renderedVideo());
     });
 
@@ -239,15 +238,33 @@ it('refuses a new version while one is being made', function () {
     Queue::assertNothingPushed();
 });
 
-it('keeps the video editor to this project\'s drafts on networks that take a video', function () {
+it('renders each network\'s video in its own shape, and tells the director which', function (SocialPlatform $platform, ImageFormat $format, array $size) {
+    [, $project] = videoSetup();
+    Storage::fake();
+    $post = SocialPost::factory()->create(['project_id' => $project->id, 'platform' => $platform]);
+    VideoDirector::fake([videoStructured(videoScript())]);
+    $this->mock(VideoRenderer::class, fn (MockInterface $mock) => $mock->shouldReceive('render')->once()
+        ->withArgs(fn (string $composition, ImageFormat $given): bool => $given === $format)
+        ->andReturnUsing(fn (): string => renderedVideo()));
+
+    app(DirectSocialPostVideo::class)->handle($post);
+
+    expect($format->videoSize())->toBe($size);
+    VideoDirector::assertPrompted(fn (AgentPrompt $prompt): bool => str_contains((string) $prompt->agent->instructions(), "This one is {$size[0]} by {$size[1]} px"));
+})->with([
+    'Instagram, a full screen Reel' => [SocialPlatform::Instagram, ImageFormat::Story, [1080, 1920]],
+    'Bluesky, tall' => [SocialPlatform::Bluesky, ImageFormat::Story, [1080, 1920]],
+    'LinkedIn, 4:5 in the feed' => [SocialPlatform::Linkedin, ImageFormat::Portrait, [1080, 1350]],
+    'X, landscape' => [SocialPlatform::X, ImageFormat::Wide, [1920, 1080]],
+]);
+
+it('keeps the video editor to this project\'s drafts', function () {
     [$user, $project] = videoSetup();
     Queue::fake([GenerateSocialPostVideo::class]);
     $foreign = SocialPost::factory()->instagram()->create();
-    $x = SocialPost::factory()->x()->create(['project_id' => $project->id]);
     $published = SocialPost::factory()->instagram()->create(['project_id' => $project->id, 'status' => SocialPostStatus::Published]);
 
     $this->actingAs($user)->get(route('social.posts.video.show', $foreign))->assertNotFound();
-    $this->actingAs($user)->get(route('social.posts.video.show', $x))->assertNotFound();
     $this->actingAs($user)->post(route('social.posts.video.store', $foreign))->assertNotFound();
     $this->actingAs($user)->post(route('social.posts.video.store', $published))->assertNotFound();
     $this->actingAs($user)->get(route('social.posts.video.preview', $foreign))->assertNotFound();
@@ -297,7 +314,7 @@ it('serves the runtime files to the preview, and nothing else', function () {
 });
 
 it('keeps a closing script tag in a composition from ending the page\'s script', function () {
-    $page = app(VideoRenderer::class)->page("v.scene(2, (s) => s.title('</script><img src=x>'));", [], 'https://app.test/');
+    $page = app(VideoRenderer::class)->page("v.scene(2, (s) => s.title('</script><img src=x>'));", ImageFormat::Story, [], 'https://app.test/');
 
     expect($page)->not->toContain("'</script>")
         ->and($page)->toContain("'<\\/script><img src=x>'");
@@ -392,13 +409,14 @@ it('lets Evie ask for a new version of a video, behind approval, on this project
 });
 
 it('films a real composition to an MP4 and to stills', function () {
-    $video = app(VideoRenderer::class)->render("v.scene(1, (s) => { s.title('Hello **there**'); });", []);
+    // X's landscape, the shape furthest from the vertical the bricks were first made for.
+    $video = app(VideoRenderer::class)->render("v.scene(1, (s) => { s.title('Hello **there**'); });", ImageFormat::Wide, []);
     // Every scene option and decoration, so a runtime error in any of them fails here.
     $stills = app(VideoRenderer::class)->stills(<<<'JS'
         v.scene(1, (s) => { s.title('Hello'); });
         v.scene({ duration: 1, background: 'accent', transition: 'wipe' }, (s) => { s.shape('blob', { spin: 30 }); s.marquee('Hi', { outline: true }); s.slam(['Hi']); });
         v.scene({ duration: 1, transition: 'push' }, (s) => { s.shape('band', { drift: 20 }); });
-        JS, [], [0.5, 1.3, 2.5]);
+        JS, ImageFormat::Portrait, [], [0.5, 1.3, 2.5]);
 
     expect(filesize($video))->toBeGreaterThan(1000)
         ->and($stills)->toHaveCount(3)
@@ -417,7 +435,7 @@ it('never lets a composition show a file from outside its own staging directory'
         frame.src = 'file://{$outside}';
         frame.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:0;z-index:9';
         document.body.appendChild(frame);
-        JS, [], [0.8])[0];
+        JS, ImageFormat::Story, [], [0.8])[0];
     unlink($outside);
 
     $image = imagecreatefromstring($still);
@@ -446,7 +464,7 @@ it('gives the video a voice and music when the instance has a key, reuses them, 
             ['duration' => 10.0, 'voices' => ['Meet Cargo.'], 'narrator' => 'Brian', 'music' => 'warm lo-fi'],
         );
         $mock->shouldReceive('render')->twice()
-            ->withArgs(fn (string $composition, array $assets, array $audio): bool => isset($audio['voices']['Meet Cargo.'], $audio['music']))
+            ->withArgs(fn (string $composition, ImageFormat $format, array $assets, array $audio): bool => isset($audio['voices']['Meet Cargo.'], $audio['music']))
             ->andReturnUsing(fn (): string => renderedVideo());
     });
 
@@ -475,7 +493,7 @@ it('keeps the current voice and music when a new version fails, and times the st
     });
     $this->mock(VideoRenderer::class, function (MockInterface $mock): void {
         $mock->shouldReceive('stills')->once()
-            ->withArgs(fn (string $composition, array $assets, array $times, array $voices): bool => array_keys($voices) === ['Meet Cargo.'])
+            ->withArgs(fn (string $composition, ImageFormat $format, array $assets, array $times, array $voices): bool => array_keys($voices) === ['Meet Cargo.'])
             ->andReturn([]);
         $mock->shouldReceive('manifest')->andReturn(['duration' => 5.0, 'voices' => ['Meet Cargo.'], 'narrator' => 'Alice', 'music' => null]);
         $mock->shouldReceive('render')->twice()->andThrow(new VideoRenderFailed('Timed out'));
@@ -604,7 +622,7 @@ it('lengthens a scene to fit its voice lines, one after the other, so they never
     $post = SocialPost::factory()->instagram()->create();
     $line = fn (string $text, float $seconds): Media => $post->addMediaFromString('mp3')->usingFileName('a.mp3')->withCustomProperties(['voice' => $text, 'seconds' => $seconds])->toMediaCollection('video_audio');
 
-    $manifest = app(VideoRenderer::class)->manifest($script, [], [
+    $manifest = app(VideoRenderer::class)->manifest($script, ImageFormat::Story, [], [
         'First line.' => $line('First line.', 2.0),
         'Second line.' => $line('Second line.', 1.5),
     ]);

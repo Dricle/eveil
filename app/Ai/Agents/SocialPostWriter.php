@@ -25,9 +25,8 @@ use Stringable;
  * anonymized one (`PublishSocialPostIfAutonomous`).
  *
  * On a network that needs a picture (`SocialPlatform::requiresImage()`) it
- * also writes `image_brief`, which `ImageGenerator` draws from. On a
- * network that takes a video (`SocialPlatform::supportsVideo()`) it may write
- * `video_brief`, only when moving pictures genuinely help: `VideoDirector`
+ * also writes `image_brief`, which `ImageGenerator` draws from. On any
+ * network it may write `video_brief`, only when moving pictures genuinely help: `VideoDirector`
  * makes the video from it.
  */
 class SocialPostWriter extends EveilAgent implements HasStructuredOutput
@@ -131,7 +130,7 @@ class SocialPostWriter extends EveilAgent implements HasStructuredOutput
                 ->description('Instagram only: the ids of the project\'s official illustrations, from the list you were given, that fit this post\'s image, at most three. The image reuses them instead of inventing. Leave empty when none fits.'),
 
             'video_brief' => $schema->string()
-                ->description('Not on X. Only when a short video genuinely helps this post: showing a feature or a workflow in action, a launch, a before and after. Leave empty for a plain announcement, a client win, news or an opinion, where text and image are enough. When set: two to four sentences saying what the video should show, in which order, and the one thing a viewer should remember.'),
+                ->description('Only when a short video genuinely helps this post: showing a feature or a workflow in action, a launch, a before and after. Leave empty for a plain announcement, a client win, news or an opinion, where text and image are enough. When set: two to four sentences saying what the video should show, in which order, and the one thing a viewer should remember.'),
 
             'image_brief' => $schema->string()
                 ->description('Instagram only: the visual, as a short brief to a designer, in two to four concrete sentences. First its kind, as the user\'s instructions ask for it, otherwise whatever serves this post best: a designed graphic (an ad layout, a poster with a headline, a magazine page, a collage), a photograph with designed elements set into it (a hanging sign or a chalkboard carrying the headline, a brush-stroke banner, an info panel with an icon), an illustration, or a plain photograph. Then its composition and colours, and the exact words of any text on it, each part named (headline, dates, a short line). Text only when the user\'s instructions ask for it or the kind needs it (a headline on an ad layout, the dates of an announcement). Leave empty for other networks.'),

@@ -30,7 +30,7 @@ class PublishSocialPost
         $post->update(['social_account_id' => $account->id]);
 
         try {
-            $video = $post->platform->supportsVideo() ? $post->video : null;
+            $video = $post->video;
 
             // A video goes out instead of the image: no image to draw then.
             if ($post->platform->requiresImage() && $post->image_media_id === null && $video === null) {

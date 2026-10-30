@@ -43,8 +43,8 @@ export type SocialPost = {
     images?: { id: number, url: string, selected: boolean }[]
     /** Instagram only: an image queued or being drawn for this post right now. */
     drawing_image: boolean
-    /** Whether this network takes a video with the post (Instagram, as a Reel). */
-    supports_video: boolean
+    /** Width and height the video is rendered at, in this network's shape. */
+    video_size: [number, number]
     /** What the writer said the video should show, when it asked for one. */
     video_brief: string | null
     /** The rendered video, published instead of the image. */

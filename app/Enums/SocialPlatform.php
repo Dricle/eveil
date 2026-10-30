@@ -65,13 +65,18 @@ enum SocialPlatform: string
     }
 
     /**
-     * Whether a post here can go out with a short video, rendered from a
-     * composition `VideoDirector` writes: as a Reel on Instagram, a native
-     * video on LinkedIn and Bluesky. Not on X, posted by hand.
+     * The shape of the short video a post here can go out with, rendered
+     * from a composition `VideoDirector` writes: a full screen Reel on
+     * Instagram, the tall video Bluesky's app plays, the 4:5 LinkedIn's feed
+     * shows uncropped, and X's own 16:9, where the user attaches it by hand.
      */
-    public function supportsVideo(): bool
+    public function videoFormat(): ImageFormat
     {
-        return $this->publishesThroughApi();
+        return match ($this) {
+            self::Instagram, self::Bluesky => ImageFormat::Story,
+            self::Linkedin => ImageFormat::Portrait,
+            self::X => ImageFormat::Wide,
+        };
     }
 
     /**

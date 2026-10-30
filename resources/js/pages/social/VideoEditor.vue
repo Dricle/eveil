@@ -127,7 +127,11 @@ function submit () {
                 />
             </div>
 
-            <div class="relative aspect-[9/16] h-[70vh] max-w-full overflow-hidden rounded-xl bg-black ring ring-default">
+            <div
+                class="relative max-h-[70vh] max-w-full overflow-hidden rounded-xl bg-black ring ring-default"
+                :class="post.video_size[0] > post.video_size[1] ? 'w-full' : 'h-[70vh]'"
+                :style="{ aspectRatio: `${post.video_size[0]} / ${post.video_size[1]}` }"
+            >
                 <iframe
                     v-if="post.video_preview_url"
                     ref="frame"

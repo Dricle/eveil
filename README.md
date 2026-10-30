@@ -93,10 +93,11 @@ unlimited mailboxes, unlimited leads, your data on your own machine.
   Eveil generates for it, published to a Business or Creator account through
   your own free Composio account, so nobody has to create a Meta app.
 - **Short videos of your product, made for the post.** When a post shows a
-  feature in action, Eveil also makes a vertical video: animated type and your
+  feature in action, Eveil also makes a short video: animated type and your
   own product screenshots filmed by a camera that zooms in, points and clicks,
   with a voice over and music if you add an ElevenLabs key. It goes out as a
-  Reel on Instagram and as a native video on LinkedIn and Bluesky. Pause where
+  Reel on Instagram and as a native video on LinkedIn and Bluesky, each in its
+  own shape, and is ready to download and attach on X. Pause where
   something is off, say what to change, and get a new version: no designer, no
   editing software. Rendered on your own instance with Chromium and ffmpeg.
 - **Finds Reddit threads worth replying to.** Live subreddits and evergreen

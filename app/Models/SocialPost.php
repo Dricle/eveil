@@ -34,8 +34,8 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  * `image_brief` is what the writer said the picture should show, the
  * starting point of every new one. Empty on the networks that post text only.
  *
- * On a network that takes a video (`SocialPlatform::supportsVideo()`), the
- * writer may also ask for one in `video_brief`, only when moving pictures
+ * On any network, in its own shape (`SocialPlatform::videoFormat()`), the
+ * writer may also ask for a video in `video_brief`, only when moving pictures
  * genuinely help (a feature shown in action). `VideoDirector` turns it into
  * `video_composition`, a script for `resources/video/runtime.js`, and the
  * rendered file sits in the `videos` collection as `video_media_id`; it then

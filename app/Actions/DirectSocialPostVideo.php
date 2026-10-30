@@ -115,7 +115,7 @@ class DirectSocialPostVideo
 
             try {
                 $audio = $voiced ? $this->audioFor($post, $composition, $assets) : [];
-                $file = $this->renderer->render($composition, $assets, $audio);
+                $file = $this->renderer->render($composition, $post->platform->videoFormat(), $assets, $audio);
             } catch (VideoRenderFailed $e) {
                 if ($attempt === self::ATTEMPTS) {
                     $post->media()->where('collection_name', 'video_audio')->whereNotIn('id', $kept)->get()->each->delete();
@@ -168,7 +168,7 @@ class DirectSocialPostVideo
     {
         $kept = $post->getMedia('video_audio');
         $audio = ['voices' => [], 'music' => null];
-        $manifest = $this->renderer->manifest($composition, $assets);
+        $manifest = $this->renderer->manifest($composition, $post->platform->videoFormat(), $assets);
         // A script that names no narrator, or one that does not exist: the
         // voice it already had, so its lines are not paid for again, else any.
         $narrator = isset(VideoAudio::NARRATORS[$manifest['narrator'] ?? ''])
@@ -181,7 +181,7 @@ class DirectSocialPostVideo
                     ?? $this->speak($post, $text, $narrator);
             }
 
-            $manifest = $this->renderer->manifest($composition, $assets, $audio['voices']);
+            $manifest = $this->renderer->manifest($composition, $post->platform->videoFormat(), $assets, $audio['voices']);
 
             if ($manifest['music'] !== null) {
                 $audio['music'] = $kept->first(fn (Media $media): bool => $media->getCustomProperty('music') === $manifest['music'] && $media->getCustomProperty('seconds') >= $manifest['duration'])
@@ -281,7 +281,7 @@ class DirectSocialPostVideo
             ->all();
 
         try {
-            return $this->renderer->stills((string) $post->video_composition, $assets, $times, $voices);
+            return $this->renderer->stills((string) $post->video_composition, $post->platform->videoFormat(), $assets, $times, $voices);
         } catch (Throwable) {
             return [];
         }

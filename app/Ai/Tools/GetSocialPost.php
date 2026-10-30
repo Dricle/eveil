@@ -41,11 +41,11 @@ class GetSocialPost implements Tool
             'variant' => $post->variant?->value,
             'evidence' => $post->evidence,
             'body' => $post->body,
-            'video' => $post->platform->supportsVideo() ? [
+            'video' => [
                 'brief' => $post->video_brief,
                 'made' => $post->video_media_id !== null,
                 'revisions' => $post->video_revisions ?? [],
-            ] : null,
+            ],
         ]);
     }
 

@@ -30,7 +30,7 @@
             'key' => 'social',
             'label' => 'LinkedIn, X, Bluesky & Instagram',
             'title' => 'Posts that sound like you',
-            'text' => 'A fact about your product, a client you just won, your latest article or relevant industry news, drafted for each network and queued for approval. Instagram posts come with an image Eveil generates, and a post that shows a feature gets a short video of your product in action, with voice and music, that you refine by saying what to change. LinkedIn, Bluesky and Instagram publish for you; X you copy and post yourself.',
+            'text' => 'A fact about your product, a client you just won, your latest article or relevant industry news, drafted for each network and queued for approval. Instagram posts come with an image Eveil generates, and a post that shows a feature gets a short video of your product in action, with voice and music, that you refine by saying what to change. LinkedIn, Bluesky and Instagram publish for you; X you copy and post yourself, video included.',
         ],
         [
             'key' => 'seo',

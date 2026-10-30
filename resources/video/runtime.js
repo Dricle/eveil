@@ -695,7 +695,7 @@
         /**
          * A flat shape behind the bricks: 'circle', 'ring', 'square', 'blob'
          * or 'band' (a stripe across the whole width). x and y place its
-         * centre as fractions of the frame, size is in px at 1080 wide.
+         * centre as fractions of the frame, size is in px at 1080 on the short side.
          */
         shape (kind, { x = 0.5, y = 0.5, size = 520, color = 'accent', at = 0, spin = 0, drift = 0, opacity = 1 } = {}) {
             const v = this.video

@@ -468,12 +468,16 @@ it('keeps the current voice and music when a new version fails, and times the st
     $line = $post->addMediaFromString('voice')->usingFileName('v.mp3')->withCustomProperties(['voice' => 'Meet Cargo.', 'narrator' => 'Brian', 'seconds' => 2.1])->toMediaCollection('video_audio');
     $music = $post->addMediaFromString('music')->usingFileName('m.mp3')->withCustomProperties(['music' => 'warm lo-fi', 'seconds' => 12.0])->toMediaCollection('video_audio');
     VideoDirector::fake([videoStructured(videoScript('Two')), videoStructured(videoScript('Two'))]);
-    $this->mock(VideoAudio::class, fn (MockInterface $mock) => $mock->shouldReceive('available')->andReturnTrue());
+    $this->mock(VideoAudio::class, function (MockInterface $mock): void {
+        $mock->shouldReceive('available')->andReturnTrue();
+        // A new narrator: the same line, read again, for a version that never renders.
+        $mock->shouldReceive('speak')->with('Meet Cargo.', 'Alice')->andReturn('voice-alice');
+    });
     $this->mock(VideoRenderer::class, function (MockInterface $mock): void {
         $mock->shouldReceive('stills')->once()
             ->withArgs(fn (string $composition, array $assets, array $times, array $voices): bool => array_keys($voices) === ['Meet Cargo.'])
             ->andReturn([]);
-        $mock->shouldReceive('manifest')->andReturn(['duration' => 5.0, 'voices' => [], 'narrator' => null, 'music' => null]);
+        $mock->shouldReceive('manifest')->andReturn(['duration' => 5.0, 'voices' => ['Meet Cargo.'], 'narrator' => 'Alice', 'music' => null]);
         $mock->shouldReceive('render')->twice()->andThrow(new VideoRenderFailed('Timed out'));
     });
 

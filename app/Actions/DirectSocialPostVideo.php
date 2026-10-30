@@ -84,6 +84,8 @@ class DirectSocialPostVideo
         $current = $revising ? $post->video_composition : null;
         $error = null;
         $voiced = $this->audio->available();
+        // The current version's audio: what a failed revision must leave alone, and alone.
+        $kept = $post->getMedia('video_audio')->pluck('id');
 
         foreach (range(1, self::ATTEMPTS) as $attempt) {
             $structured = (new VideoDirector(
@@ -116,6 +118,8 @@ class DirectSocialPostVideo
                 $file = $this->renderer->render($composition, $assets, $audio);
             } catch (VideoRenderFailed $e) {
                 if ($attempt === self::ATTEMPTS) {
+                    $post->media()->where('collection_name', 'video_audio')->whereNotIn('id', $kept)->get()->each->delete();
+
                     throw $e;
                 }
 

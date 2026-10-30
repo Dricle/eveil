@@ -279,6 +279,7 @@ it('serves the preview sandboxed, with no network, and the images through signed
     $response = $this->actingAs($user)->get(route('social.posts.video.preview', $post))->assertOk();
 
     expect($response->headers->get('Content-Security-Policy'))->toContain("connect-src 'none'")
+        ->and($response->headers->get('Content-Security-Policy'))->toContain('sandbox allow-scripts')
         ->and($response->getContent())->toContain("s.title('Hi')")
         ->and($response->getContent())->toContain('signature=');
 
@@ -406,6 +407,25 @@ it('films a real composition to an MP4 and to stills', function () {
     unlink($video);
 })->skip(fn (): bool => ! is_executable((string) exec('command -v '.escapeshellarg((string) config('eveil.video.chrome')))) || ! is_executable((string) exec('command -v ffmpeg')), 'Chromium and ffmpeg are not installed here.');
 
+it('never lets a composition show a file from outside its own staging directory', function () {
+    $outside = sys_get_temp_dir().'/'.uniqid('outside-', true).'.html';
+    file_put_contents($outside, '<body style="margin:0;background:#ff0000"></body>');
+
+    $still = app(VideoRenderer::class)->stills(<<<JS
+        v.scene(1, (s) => { s.title('Hello'); });
+        const frame = document.createElement('iframe');
+        frame.src = 'file://{$outside}';
+        frame.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:0;z-index:9';
+        document.body.appendChild(frame);
+        JS, [], [0.8])[0];
+    unlink($outside);
+
+    $image = imagecreatefromstring($still);
+    $pixel = imagecolorsforindex($image, (int) imagecolorat($image, 540, 300));
+
+    expect([$pixel['red'], $pixel['green'], $pixel['blue']])->not->toBe([255, 0, 0]);
+})->skip(fn (): bool => ! is_executable((string) exec('command -v '.escapeshellarg((string) config('eveil.video.chrome')))), 'Chromium is not installed here.');
+
 it('gives the video a voice and music when the instance has a key, reuses them, and drops what a new version no longer says', function () {
     [, $project] = videoSetup();
     Storage::fake();
@@ -438,6 +458,43 @@ it('gives the video a voice and music when the instance has a key, reuses them, 
     expect($post->fresh()->getMedia('video_audio')->map(fn (Media $media): ?string => $media->getCustomProperty('voice') ?? $media->getCustomProperty('music'))->sort()->values()->all())
         ->toBe(['Meet Cargo.', 'warm lo-fi']);
     VideoDirector::assertPrompted(fn (AgentPrompt $prompt): bool => str_contains((string) $prompt->agent->instructions(), 's.voice(text'));
+});
+
+it('keeps the current voice and music when a new version fails, and times the stills by them', function () {
+    [, $project] = videoSetup();
+    Storage::fake();
+    $post = SocialPost::factory()->instagram()->create(['project_id' => $project->id]);
+    videoOf($post);
+    $line = $post->addMediaFromString('voice')->usingFileName('v.mp3')->withCustomProperties(['voice' => 'Meet Cargo.', 'narrator' => 'Brian', 'seconds' => 2.1])->toMediaCollection('video_audio');
+    $music = $post->addMediaFromString('music')->usingFileName('m.mp3')->withCustomProperties(['music' => 'warm lo-fi', 'seconds' => 12.0])->toMediaCollection('video_audio');
+    VideoDirector::fake([videoStructured(videoScript('Two')), videoStructured(videoScript('Two'))]);
+    $this->mock(VideoAudio::class, fn (MockInterface $mock) => $mock->shouldReceive('available')->andReturnTrue());
+    $this->mock(VideoRenderer::class, function (MockInterface $mock): void {
+        $mock->shouldReceive('stills')->once()
+            ->withArgs(fn (string $composition, array $assets, array $times, array $voices): bool => array_keys($voices) === ['Meet Cargo.'])
+            ->andReturn([]);
+        $mock->shouldReceive('manifest')->andReturn(['duration' => 5.0, 'voices' => [], 'narrator' => null, 'music' => null]);
+        $mock->shouldReceive('render')->twice()->andThrow(new VideoRenderFailed('Timed out'));
+    });
+
+    expect(fn () => app(DirectSocialPostVideo::class)->handle($post, 'Shorter.', 2.0))->toThrow(VideoRenderFailed::class);
+
+    expect($post->fresh()->getMedia('video_audio')->pluck('id')->sort()->values()->all())->toBe([$line->id, $music->id]);
+});
+
+it('previews a version with the screenshots it films, however many were added since', function () {
+    [$user, $project] = videoSetup();
+    Storage::fake();
+    $filmed = screenshotOf($project);
+    foreach (range(1, 6) as $i) {
+        screenshotOf($project);
+    }
+    $post = SocialPost::factory()->instagram()->create(['project_id' => $project->id]);
+    videoOf($post);
+    $post->update(['video_composition' => "v.scene(3, (s) => s.screen('screen-{$filmed->id}', { shots: [{ at: 0 }] }));"]);
+
+    expect($this->actingAs($user)->get(route('social.posts.video.preview', $post))->assertOk()->getContent())
+        ->toContain("\"screen-{$filmed->id}\":");
 });
 
 it('tells the director there is no voice when the instance has no key', function () {

@@ -114,13 +114,14 @@ class VideoRenderer
      *
      * @param  array<string, Media>  $assets
      * @param  array<int, float>  $times
+     * @param  array<string, Media>  $voices  voice line => audio, so the scenes are as long as in the video
      * @return array<int, string> PNG bytes, in the order of `$times`
      *
      * @throws VideoRenderFailed
      */
-    public function stills(string $composition, array $assets, array $times): array
+    public function stills(string $composition, array $assets, array $times, array $voices = []): array
     {
-        $directory = $this->stage($composition, $assets);
+        $directory = $this->stage($composition, $assets, ['voices' => $voices]);
 
         try {
             $this->run($directory, ["{$directory}/stills", '--stills='.implode(',', array_map(fn (float $t): string => number_format($t, 2, '.', ''), $times))]);

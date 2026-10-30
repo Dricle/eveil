@@ -117,15 +117,18 @@ class Project extends Model implements HasMedia, StoresMediaInterface
     /**
      * What a video composition can show, by the name it calls it: the latest
      * screenshots as `screen-{id}`, at most `$screenshots` of them since a
-     * model reads each one, and the logo as `logo`.
+     * model reads each one, and the logo as `logo`. Given a composition, the
+     * screenshots it already films too, however many were added since.
      *
      * @return array<string, Media>
      */
-    public function videoAssets(int $screenshots = 6): array
+    public function videoAssets(int $screenshots = 6, ?string $composition = null): array
     {
-        $assets = $this->brandAssets(BrandAssetKind::Screenshot)
-            ->sortByDesc('id')
-            ->take($screenshots)
+        preg_match_all('/screen-(\d+)/', (string) $composition, $filmed);
+
+        $all = $this->brandAssets(BrandAssetKind::Screenshot)->sortByDesc('id');
+        $assets = $all->take($screenshots)
+            ->merge($all->whereIn('id', array_map('intval', $filmed[1])))
             ->keyBy(fn (Media $media): string => "screen-{$media->id}")
             ->all();
 

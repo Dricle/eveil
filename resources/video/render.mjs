@@ -24,7 +24,10 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 const [page, out, ...flags] = process.argv.slice(2)
 const stills = flags.find(flag => flag.startsWith('--stills='))?.slice(9).split(',').map(Number).filter(t => t >= 0)
 const manifestOnly = flags.includes('--manifest')
-const sounds = resolve(dirname(fileURLToPath(import.meta.url)), 'sounds')
+const runtime = dirname(fileURLToPath(import.meta.url))
+const sounds = resolve(runtime, 'sounds')
+// The only files the page may read: its own staged directory and the runtime.
+const readable = [dirname(resolve(page ?? '.')), runtime].map(dir => pathToFileURL(dir).href + '/')
 const chrome = process.env.CHROME_BINARY || 'chromium'
 const ffmpeg = process.env.FFMPEG_BINARY || 'ffmpeg'
 const timeoutMs = Number(process.env.VIDEO_TIMEOUT_MS || 600_000)
@@ -107,10 +110,12 @@ try {
     const { targetId } = await send('Target.createTarget', { url: 'about:blank' })
     const { sessionId } = await send('Target.attachToTarget', { targetId, flatten: true })
 
-    // Local files only: anything else is refused before it is sent.
+    // The staged files and the runtime only: anything else, another file on
+    // this machine included, is refused before it is read.
     listeners.push((message) => {
         if (message.method === 'Fetch.requestPaused') {
-            const local = message.params.request.url.startsWith('file:') || message.params.request.url.startsWith('data:')
+            const url = message.params.request.url
+            const local = url.startsWith('data:') || readable.some(dir => url.startsWith(dir))
             send(local ? 'Fetch.continueRequest' : 'Fetch.failRequest', local ? { requestId: message.params.requestId } : { requestId: message.params.requestId, errorReason: 'BlockedByClient' }, sessionId).catch(() => {})
         }
     })
@@ -137,6 +142,14 @@ try {
         setTimeout(() => fail(new Error('The composition never finished building.')), 15000);
     })`).catch(error => fail(`${error.message}\n${errors.join('\n')}`))
 
+    // Numbers from the page end up in ffmpeg's arguments: numbers they stay.
+    const bounded = (value, min, max) => Math.min(max, Math.max(min, Number(value) || 0))
+    manifest.duration = bounded(manifest.duration, 0, 180)
+    manifest.fps = bounded(manifest.fps, 1, 60)
+    manifest.width = bounded(manifest.width, 16, 2160)
+    manifest.height = bounded(manifest.height, 16, 3840)
+    manifest.sounds = Array.isArray(manifest.sounds) ? manifest.sounds : []
+
     if (!manifest.duration) {
         fail(`The composition has no scenes.\n${errors.join('\n')}`)
     }
@@ -160,9 +173,22 @@ try {
         }
     } else {
         const frames = Math.round(manifest.duration * manifest.fps)
-        const cues = manifest.sounds
-        // A bundled sound by name, or a file made for this video (a voice line, the music).
-        const inputs = cues.flatMap(cue => ['-i', cue.src ? fileURLToPath(cue.src) : resolve(sounds, `${cue.name}.mp3`)])
+        // The page wrote these cues, and the page runs a model's script: only
+        // a bundled sound or a file staged for this video, and plain numbers.
+        const staged = dirname(resolve(page)) + '/'
+        const cues = manifest.sounds.flatMap((cue) => {
+            const file = typeof cue.src === 'string' && cue.src.startsWith('file:')
+                ? fileURLToPath(cue.src)
+                : (/^[a-z]+$/.test(cue.name ?? '') ? resolve(sounds, `${cue.name}.mp3`) : null)
+            const inside = file && (resolve(file).startsWith(staged) || resolve(file).startsWith(sounds + '/')) && existsSync(file)
+            const at = Number(cue.at)
+            const volume = Number(cue.volume)
+
+            return inside && Number.isFinite(at) && Number.isFinite(volume)
+                ? [{ file, at: Math.max(0, at), volume: Math.min(2, Math.max(0, volume)), music: cue.music === true }]
+                : []
+        })
+        const inputs = cues.flatMap(cue => ['-i', cue.file])
         const fadeAt = Math.max(0, manifest.duration - 1.5)
         const mix = cues.length
             ? cues.map((cue, i) => cue.music

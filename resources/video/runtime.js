@@ -853,12 +853,14 @@
             const from = time
             const token = {}
             playing = token
-            video.manifest().sounds.filter(cue => cue.music || cue.at >= from).forEach((cue) => {
+            // The music and a voice line already under way pick up where the
+            // video is; a line that has ended simply has nothing left to play.
+            video.manifest().sounds.filter(cue => cue.src || cue.at >= from).forEach((cue) => {
                 const sound = new Audio(cue.src ?? `sounds/${cue.name}.mp3`)
                 sound.volume = Math.min(1, cue.volume)
                 audio.push(sound)
-                if (cue.music) {
-                    sound.currentTime = from
+                if (cue.at < from) {
+                    sound.currentTime = from - cue.at
                     sound.play().catch(() => {})
 
                     return

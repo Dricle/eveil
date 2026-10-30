@@ -18,7 +18,9 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  * reach into the editor. That is also why it loads the runtime and the
  * images from routes that need no session (`VideoRuntimeController`, and
  * signed links to `VideoAssetController`), and why its policy refuses any
- * connection: nothing it runs can send anything anywhere.
+ * connection: nothing it runs can send anything anywhere. The policy also
+ * sandboxes it itself, so a preview opened in a tab of its own runs as
+ * isolated as in the editor's frame, never under the app's origin.
  */
 class SocialPostVideoPreviewController extends Controller
 {
@@ -29,7 +31,7 @@ class SocialPostVideoPreviewController extends Controller
         abort_if($post->video_composition === null, 404);
 
         $signed = fn (Media $media): string => URL::temporarySignedRoute('video.assets.show', now()->addHours(2), ['media' => $media->id]);
-        $assets = array_map($signed, $post->project->videoAssets());
+        $assets = array_map($signed, $post->project->videoAssets(composition: $post->video_composition));
 
         // The voice lines and the music made for it, by their text and prompt.
         $audio = $post->getMedia('video_audio');
@@ -49,7 +51,7 @@ class SocialPostVideoPreviewController extends Controller
 
         return response($renderer->page($post->video_composition, $assets, $base, $audioUrls))
             ->header('Content-Type', 'text/html; charset=utf-8')
-            ->header('Content-Security-Policy', "default-src 'none'; script-src 'unsafe-inline' {$origin}; style-src 'unsafe-inline'; img-src {$origin} data:; font-src {$origin}; media-src {$origin}; connect-src 'none'; frame-ancestors 'self'")
+            ->header('Content-Security-Policy', "default-src 'none'; script-src 'unsafe-inline' {$origin}; style-src 'unsafe-inline'; img-src {$origin} data:; font-src {$origin}; media-src {$origin}; connect-src 'none'; frame-ancestors 'self'; sandbox allow-scripts")
             ->header('X-Content-Type-Options', 'nosniff');
     }
 }

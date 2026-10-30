@@ -59,14 +59,14 @@ class DirectSocialPostVideo
     {
         $project = $post->project;
 
-        $assets = $project->videoAssets(self::MAX_SCREENSHOTS);
+        $revising = $feedback !== null && $post->video_composition !== null;
+        $assets = $project->videoAssets(self::MAX_SCREENSHOTS, $revising ? $post->video_composition : null);
 
         /** @var Collection<string, Media> $screenshots */
         $screenshots = collect($assets)->except('logo');
 
-        $revising = $feedback !== null && $post->video_composition !== null;
         $stillTimes = $revising ? $this->stillTimes($at) : [];
-        $stills = $revising ? $this->stills($post->video_composition, $assets, $stillTimes) : [];
+        $stills = $revising ? $this->stills($post, $assets, $stillTimes) : [];
 
         $examples = $project->brandAssets(BrandAssetKind::Example)->sortByDesc('id')->take(self::MAX_EXAMPLES)->values();
         $stored = fn (Media $media): Image => Image::fromStorage($media->getPathRelativeToRoot(), $media->disk);
@@ -139,6 +139,8 @@ class DirectSocialPostVideo
                 'last_error' => null,
             ]);
 
+            $this->dropUnusedAudio($post, $audio);
+
             return;
         }
     }
@@ -184,10 +186,20 @@ class DirectSocialPostVideo
             return [];
         }
 
-        $used = collect($audio['voices'])->push($audio['music'])->filter()->map->id;
-        $kept->reject(fn (Media $media): bool => $used->contains($media->id))->each->delete();
-
         return $audio;
+    }
+
+    /**
+     * Once the new version is saved, and only then: a version that failed
+     * leaves the current one its voice and music.
+     *
+     * @param  array{voices?: array<string, Media>, music?: Media|null}  $audio
+     */
+    private function dropUnusedAudio(SocialPost $post, array $audio): void
+    {
+        $used = collect($audio['voices'] ?? [])->push($audio['music'] ?? null)->filter()->map->id;
+
+        $post->media()->where('collection_name', 'video_audio')->whereNotIn('id', $used)->get()->each->delete();
     }
 
     /**
@@ -246,16 +258,22 @@ class DirectSocialPostVideo
 
     /**
      * Best effort: without stills the director still has its script and
-     * the user's words.
+     * the user's words. Staged with the current voice lines, so its scenes
+     * are as long as in the video the user paused.
      *
      * @param  array<string, Media>  $assets
      * @param  array<int, float>  $times
      * @return array<int, string>
      */
-    private function stills(string $composition, array $assets, array $times): array
+    private function stills(SocialPost $post, array $assets, array $times): array
     {
+        $voices = $post->getMedia('video_audio')
+            ->filter(fn (Media $media): bool => $media->hasCustomProperty('voice'))
+            ->keyBy(fn (Media $media): string => (string) $media->getCustomProperty('voice'))
+            ->all();
+
         try {
-            return $this->renderer->stills($composition, $assets, $times);
+            return $this->renderer->stills((string) $post->video_composition, $assets, $times, $voices);
         } catch (Throwable) {
             return [];
         }

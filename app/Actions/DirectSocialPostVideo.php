@@ -169,7 +169,11 @@ class DirectSocialPostVideo
         $kept = $post->getMedia('video_audio');
         $audio = ['voices' => [], 'music' => null];
         $manifest = $this->renderer->manifest($composition, $assets);
-        $narrator = isset(VideoAudio::NARRATORS[$manifest['narrator'] ?? '']) ? (string) $manifest['narrator'] : VideoAudio::DEFAULT_NARRATOR;
+        // A script that names no narrator, or one that does not exist: the
+        // voice it already had, so its lines are not paid for again, else any.
+        $narrator = isset(VideoAudio::NARRATORS[$manifest['narrator'] ?? ''])
+            ? (string) $manifest['narrator']
+            : (string) ($kept->first(fn (Media $media): bool => $media->hasCustomProperty('narrator'))?->getCustomProperty('narrator') ?? array_rand(VideoAudio::NARRATORS));
 
         try {
             foreach ($manifest['voices'] as $text) {

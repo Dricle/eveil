@@ -39,11 +39,6 @@ class VideoAudio
         'River' => ['id' => 'SAz9YHcvj6GT2YYXdXww', 'sound' => 'neutral, calm and relaxed, American'],
     ];
 
-    /**
-     * Read by whoever the script did not name, or named wrong.
-     */
-    public const DEFAULT_NARRATOR = 'Sarah';
-
     public function __construct(private ProviderCredentials $credentials) {}
 
     public function available(): bool
@@ -57,7 +52,7 @@ class VideoAudio
     public function speak(string $text, string $narrator): string
     {
         return Audio::of($text)
-            ->voice((self::NARRATORS[$narrator] ?? self::NARRATORS[self::DEFAULT_NARRATOR])['id'])
+            ->voice((self::NARRATORS[$narrator] ?? self::NARRATORS[array_rand(self::NARRATORS)])['id'])
             ->timeout(60)
             ->generate(Lab::ElevenLabs, self::VOICE_MODEL)
             ->content();

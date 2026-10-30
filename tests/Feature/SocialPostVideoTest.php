@@ -486,6 +486,27 @@ it('keeps the current voice and music when a new version fails, and times the st
     expect($post->fresh()->getMedia('video_audio')->pluck('id')->sort()->values()->all())->toBe([$line->id, $music->id]);
 });
 
+it('keeps the voice a video already has when a new version names no narrator', function () {
+    [, $project] = videoSetup();
+    Storage::fake();
+    $post = SocialPost::factory()->instagram()->create(['project_id' => $project->id]);
+    videoOf($post);
+    $post->addMediaFromString('voice')->usingFileName('v.mp3')->withCustomProperties(['voice' => 'Meet Cargo.', 'narrator' => 'Alice', 'seconds' => 2.1])->toMediaCollection('video_audio');
+    VideoDirector::fake([videoStructured(videoScript('Two'))]);
+    $this->mock(VideoAudio::class, function (MockInterface $mock): void {
+        $mock->shouldReceive('available')->andReturnTrue();
+        $mock->shouldReceive('speak')->with('Try it free.', 'Alice')->once()->andReturn('voice-2');
+    });
+    $this->mock(VideoRenderer::class, function (MockInterface $mock): void {
+        $mock->shouldReceive('manifest')->andReturn(['duration' => 5.0, 'voices' => ['Meet Cargo.', 'Try it free.'], 'narrator' => null, 'music' => null]);
+        $mock->shouldReceive('render')->once()->andReturnUsing(fn (): string => renderedVideo());
+    });
+
+    app(DirectSocialPostVideo::class)->handle($post);
+
+    expect($post->fresh()->getMedia('video_audio')->map(fn (Media $media): string => $media->getCustomProperty('narrator'))->unique()->values()->all())->toBe(['Alice']);
+});
+
 it('previews a version with the screenshots it films, however many were added since', function () {
     [$user, $project] = videoSetup();
     Storage::fake();

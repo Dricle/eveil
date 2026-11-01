@@ -632,7 +632,7 @@ it('lengthens a scene to fit its voice lines, one after the other, so they never
 })->skip(fn (): bool => ! is_executable((string) exec('command -v '.escapeshellarg((string) config('eveil.video.chrome')))), 'Chromium is not installed here.');
 
 it('dresses the video in the brand: shows the director its logo and style examples, with their colours and the site\'s', function () {
-    [, $project] = videoSetup();
+    [$user, $project] = videoSetup();
     Storage::fake();
     $project->update(['url' => 'https://brand.test/']);
     $logo = imagecreatetruecolor(20, 20);
@@ -654,7 +654,11 @@ it('dresses the video in the brand: shows the director its logo and style exampl
         && $prompt->contains('Fonts its homepage uses: Space Grotesk')
         && $prompt->contains('1 of its own published visuals are attached after the logo')
         && $prompt->attachments->count() === 2);
-    expect($project->fresh()->brandAssets(BrandAssetKind::Logo)->sole()->getCustomProperty('colors'))->toBe(['#ee3311']);
+    // And shows the user what was read, in the visual identity settings.
+    $this->actingAs($user)->get(route('settings.project.edit', $project))
+        ->assertInertia(fn ($page) => $page->where('project.brand_style.colors', ['#00aa77'])
+            ->where('project.brand_style.fonts', ['Space Grotesk'])
+            ->where('project.brand_assets.0.colors', ['#ee3311']));
 });
 
 it('reads a homepage\'s colours and fonts, leaving generic ones out', function () {

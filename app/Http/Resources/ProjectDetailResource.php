@@ -42,8 +42,13 @@ class ProjectDetailResource extends ProjectResource
                 'id' => $asset->id,
                 'kind' => $asset->getCustomProperty('kind'),
                 'description' => $asset->getCustomProperty('description'),
+                // A logo's, once a video has read them (`BrandStyle::palette()`).
+                'colors' => $asset->getCustomProperty('colors'),
                 'url' => route('settings.brand-assets.show', ['project' => $this->slug, 'asset' => $asset->id]),
             ])->values()->all(),
+            // The colours and fonts the website analysis read from the homepage,
+            // which the videos dress in.
+            'brand_style' => $this->brand_style,
             'last_analysis' => $this->latestAnalysis === null
                 ? null
                 : ProjectAnalysisResource::make($this->latestAnalysis),

@@ -634,25 +634,27 @@ it('lengthens a scene to fit its voice lines, one after the other, so they never
 it('dresses the video in the brand: shows the director its logo and style examples, with their colours and the site\'s', function () {
     [, $project] = videoSetup();
     Storage::fake();
-    $project->update(['url' => 'https://brand.test']);
+    $project->update(['url' => 'https://brand.test/']);
     $logo = imagecreatetruecolor(20, 20);
     imagefill($logo, 0, 0, imagecolorallocate($logo, 0xEE, 0x33, 0x11));
     ob_start();
     imagepng($logo);
     $project->addMediaFromString((string) ob_get_clean())->usingFileName('logo.png')->withCustomProperties(['kind' => BrandAssetKind::Logo->value])->toMediaCollection('brand_assets');
     $project->addMediaFromString((string) file_get_contents(base_path('public/apple-touch-icon.png')))->usingFileName('ex.png')->withCustomProperties(['kind' => BrandAssetKind::Example->value])->toMediaCollection('brand_assets');
-    $this->mock(PageFetcher::class)->shouldReceive('fetch')->with('https://brand.test')->andReturn(new CrawledPage(['content' => '<meta name="theme-color" content="#0a7"><link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700">']));
-    $post = SocialPost::factory()->instagram()->create(['project_id' => $project->id]);
-    VideoDirector::fake([videoStructured(videoScript())]);
-    $this->mock(VideoRenderer::class, fn (MockInterface $mock) => $mock->shouldReceive('render')->once()->andReturn(renderedVideo()));
+    // Read once, for a project analysed before the style was kept, then kept.
+    $this->mock(PageFetcher::class)->shouldReceive('fetch')->with('https://brand.test/')->once()->andReturn(new CrawledPage(['content' => '<meta name="theme-color" content="#0a7"><link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700">']));
+    VideoDirector::fake([videoStructured(videoScript()), videoStructured(videoScript())]);
+    $this->mock(VideoRenderer::class, fn (MockInterface $mock) => $mock->shouldReceive('render')->twice()->andReturn(renderedVideo()));
 
-    app(DirectSocialPostVideo::class)->handle($post);
+    app(DirectSocialPostVideo::class)->handle(SocialPost::factory()->instagram()->create(['project_id' => $project->id]));
+    app(DirectSocialPostVideo::class)->handle(SocialPost::factory()->instagram()->create(['project_id' => $project->id]));
 
     VideoDirector::assertPrompted(fn (AgentPrompt $prompt): bool => $prompt->contains('Logo colours, most present first: #ee3311')
         && $prompt->contains('Colours its homepage uses, most used first: #00aa77')
         && $prompt->contains('Fonts its homepage uses: Space Grotesk')
         && $prompt->contains('1 of its own published visuals are attached after the logo')
         && $prompt->attachments->count() === 2);
+    expect($project->fresh()->brandAssets(BrandAssetKind::Logo)->sole()->getCustomProperty('colors'))->toBe(['#ee3311']);
 });
 
 it('reads a homepage\'s colours and fonts, leaving generic ones out', function () {

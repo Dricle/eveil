@@ -2,6 +2,10 @@
 
 namespace App\Services\Video;
 
+use App\Services\Discovery\PageFetcher;
+use App\Support\Url;
+use Throwable;
+
 /**
  * What a brand looks like, read from its own material, so its videos wear
  * its colours and type rather than a house style: the logo's dominant
@@ -11,10 +15,15 @@ namespace App\Services\Video;
  * homepage's stylesheets are not fetched, so only what its HTML carries
  * (a theme colour, inline and embedded styles, utility classes with a
  * colour in them, a web font link) is read.
+ *
+ * Read once and kept: the site's on the project when its website is
+ * analysed (`Project::$brand_style`), the logo's on the logo itself.
  */
 class BrandStyle
 {
     private const GENERIC_FONTS = ['sans-serif', 'serif', 'monospace', 'system-ui', '-apple-system', 'blinkmacsystemfont', 'ui-sans-serif', 'ui-serif', 'ui-monospace', 'inherit', 'initial', 'arial', 'helvetica', 'helvetica neue', 'segoe ui', 'roboto', 'apple color emoji', 'segoe ui emoji', 'segoe ui symbol', 'noto color emoji', 'var', 'cursive', 'fantasy'];
+
+    public function __construct(private PageFetcher $fetcher) {}
 
     /**
      * The image's most present colours, as hex, most present first. Nearly
@@ -61,6 +70,24 @@ class BrandStyle
         arsort($buckets);
 
         return array_slice(array_keys($buckets), 0, $count);
+    }
+
+    /**
+     * The colours and the fonts the homepage at this address declares, or
+     * null when it cannot be read: a hint, never a reason to fail.
+     *
+     * @return array{colors: array<int, string>, fonts: array<int, string>}|null
+     */
+    public function ofSite(string $url): ?array
+    {
+        try {
+            // Normalised as the crawl does, so the page it cached is the one found.
+            $page = $this->fetcher->fetch(Url::normalize($url) ?? $url);
+        } catch (Throwable) {
+            return null;
+        }
+
+        return $page?->content ? $this->site($page->content) : null;
     }
 
     /**

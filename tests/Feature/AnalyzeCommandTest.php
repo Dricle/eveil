@@ -11,6 +11,7 @@ use App\Models\Organization;
 use App\Models\Project;
 use App\Models\ProjectAnalysis;
 use App\Support\Settings;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 
 function knowledgeBase(): array
@@ -38,7 +39,7 @@ function fakeSite(): void
     Http::fake([
         '*/robots.txt' => Http::response('', 404),
         'https://acme.test/' => Http::response(
-            '<!doctype html><html lang="fr"><head><title>Acme</title></head>'
+            '<!doctype html><html lang="fr"><head><title>Acme</title><meta name="theme-color" content="#0a7"></head>'
             .'<body><p>Acme vend des widgets.</p><a href="/about">A propos</a></body></html>'
         ),
         'https://acme.test/about' => Http::response(
@@ -62,6 +63,16 @@ it('creates the project, builds the knowledge base and records the run', functio
         ->and($project->default_language)->toBe('fr')
         ->and(ProjectAnalysis::sole()->status)->toBe(AnalysisStatus::Succeeded)
         ->and(AgentRun::sole()->project_id)->toBe($project->id);
+});
+
+it('keeps the homepage\'s colours and fonts for the videos, from the page the crawl already read', function () {
+    fakeSite();
+    WebsiteAnalyst::fake([knowledgeBase()]);
+
+    $this->artisan('eveil:analyze', ['url' => 'https://acme.test'])->assertSuccessful();
+
+    expect(Project::sole()->brand_style)->toBe(['colors' => ['#00aa77'], 'fonts' => []])
+        ->and(Http::recorded(fn (Request $request): bool => $request->url() === 'https://acme.test/'))->toHaveCount(1);
 });
 
 it('creates the implicit organization on a fresh install', function () {
@@ -121,7 +132,7 @@ it('still builds a portrait when part of the site will not open', function () {
     Http::fake([
         '*/robots.txt' => Http::response('', 404),
         'https://acme.test/' => Http::response(
-            '<!doctype html><html lang="fr"><head><title>Acme</title></head>'
+            '<!doctype html><html lang="fr"><head><title>Acme</title><meta name="theme-color" content="#0a7"></head>'
             .'<body><p>Acme vend des widgets.</p><a href="/about">A propos</a></body></html>'
         ),
         'https://acme.test/about' => Http::response('', 404),
@@ -159,7 +170,7 @@ it('writes what it has read before the crawl is over', function () {
         }
 
         return Http::response(
-            '<!doctype html><html lang="fr"><head><title>Acme</title></head>'
+            '<!doctype html><html lang="fr"><head><title>Acme</title><meta name="theme-color" content="#0a7"></head>'
             .'<body><p>Acme vend des widgets.</p><a href="/about">A propos</a></body></html>'
         );
     });

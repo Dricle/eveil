@@ -6,7 +6,6 @@ use App\Ai\Agents\VideoDirector;
 use App\Enums\BrandAssetKind;
 use App\Models\Project;
 use App\Models\SocialPost;
-use App\Services\Discovery\PageFetcher;
 use App\Services\Video\BrandStyle;
 use App\Services\Video\VideoAudio;
 use App\Services\Video\VideoRenderer;
@@ -49,7 +48,6 @@ class DirectSocialPostVideo
         private VideoRenderer $renderer,
         private VideoAudio $audio,
         private BrandStyle $style,
-        private PageFetcher $fetcher,
     ) {}
 
     /**
@@ -226,26 +224,25 @@ class DirectSocialPostVideo
 
     /**
      * What the brand looks like, as hints beside the images: the logo's
-     * colours, and the colours and fonts its homepage declares. Best effort:
-     * a homepage that cannot be read leaves the logo and examples to speak.
+     * colours, and the colours and fonts its homepage declares. Both are read
+     * once and kept, here only for a project or a logo from before that.
      *
      * @return array{logo_colors: array<int, string>, site_colors: array<int, string>, site_fonts: array<int, string>}
      */
     private function brand(Project $project, ?Media $logo): array
     {
-        $site = ['colors' => [], 'fonts' => []];
+        if ($project->brand_style === null && ($site = $this->style->ofSite((string) $project->url)) !== null) {
+            $project->update(['brand_style' => $site]);
+        }
 
-        try {
-            $page = $this->fetcher->fetch((string) $project->url);
-            $site = $page?->content ? $this->style->site($page->content) : $site;
-        } catch (Throwable) {
-            // The homepage is a hint, never a reason not to make the video.
+        if ($logo !== null && ! $logo->hasCustomProperty('colors')) {
+            $logo->setCustomProperty('colors', $this->style->palette((string) stream_get_contents($logo->stream())))->save();
         }
 
         return [
-            'logo_colors' => $logo !== null ? $this->style->palette((string) stream_get_contents($logo->stream())) : [],
-            'site_colors' => $site['colors'],
-            'site_fonts' => $site['fonts'],
+            'logo_colors' => $logo?->getCustomProperty('colors') ?? [],
+            'site_colors' => $project->brand_style['colors'] ?? [],
+            'site_fonts' => $project->brand_style['fonts'] ?? [],
         ];
     }
 

@@ -78,5 +78,10 @@ jobs:
       - name: Generate Passport keys
         run: php artisan passport:keys
 
+      # The video tests render with the runner's Chromium, whose sandbox
+      # needs the unprivileged user namespaces Ubuntu's AppArmor turns off.
+      - name: Allow Chromium's sandbox
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
       - name: Run CI Checks
         run: composer ci:check

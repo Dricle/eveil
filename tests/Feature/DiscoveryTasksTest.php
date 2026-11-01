@@ -165,7 +165,7 @@ it('stops the whole run the moment the wallet is empty, without reporting it', f
 
     expect($run->refresh()->status)->toBe(DiscoveryRunStatus::Failed)
         ->and($run->error)->toContain('no credits left')
-        ->and(DiscoveryTask::query()->where('kind', DiscoveryTaskKind::Qualify)->pluck('status')->all())
+        ->and(DiscoveryTask::query()->where('kind', DiscoveryTaskKind::Qualify)->orderBy('id')->pluck('status')->all())
         ->toBe([DiscoveryTaskStatus::Failed, DiscoveryTaskStatus::Skipped]);
 
     Exceptions::assertNothingReported();

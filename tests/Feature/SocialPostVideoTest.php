@@ -644,7 +644,7 @@ it('dresses the video in the brand: shows the director its logo and style exampl
     // Read once, for a project analysed before the style was kept, then kept.
     $this->mock(PageFetcher::class)->shouldReceive('fetch')->with('https://brand.test/')->once()->andReturn(new CrawledPage(['content' => '<meta name="theme-color" content="#0a7"><link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700">']));
     VideoDirector::fake([videoStructured(videoScript()), videoStructured(videoScript())]);
-    $this->mock(VideoRenderer::class, fn (MockInterface $mock) => $mock->shouldReceive('render')->twice()->andReturn(renderedVideo()));
+    $this->mock(VideoRenderer::class, fn (MockInterface $mock) => $mock->shouldReceive('render')->twice()->andReturnUsing(fn (): string => renderedVideo()));
 
     app(DirectSocialPostVideo::class)->handle(SocialPost::factory()->instagram()->create(['project_id' => $project->id]));
     app(DirectSocialPostVideo::class)->handle(SocialPost::factory()->instagram()->create(['project_id' => $project->id]));

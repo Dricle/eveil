@@ -71,7 +71,7 @@ it('keeps the homepage\'s colours and fonts for the videos, from the page the cr
 
     $this->artisan('eveil:analyze', ['url' => 'https://acme.test'])->assertSuccessful();
 
-    expect(Project::sole()->brand_style)->toBe(['colors' => ['#00aa77'], 'fonts' => []])
+    expect(Project::sole()->brand_style)->toEqual(['colors' => ['#00aa77'], 'fonts' => []])
         ->and(Http::recorded(fn (Request $request): bool => $request->url() === 'https://acme.test/'))->toHaveCount(1);
 });
 

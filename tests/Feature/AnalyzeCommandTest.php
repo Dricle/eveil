@@ -11,10 +11,12 @@ use App\Models\AgentRun;
 use App\Models\Organization;
 use App\Models\Project;
 use App\Models\ProjectAnalysis;
+use App\Services\Video\SiteCapture;
 use App\Support\Settings;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Mockery\MockInterface;
 
 function knowledgeBase(): array
 {
@@ -116,6 +118,46 @@ it('adds the site\'s logo and sharing image to the visual identity, never over t
 
     expect($project->fresh()->brandAssets(BrandAssetKind::Logo)->sole()->file_name)->toBe('mine.png')
         ->and($project->fresh()->brandAssets(BrandAssetKind::Example))->toHaveCount(1);
+});
+
+it('photographs the site when the project has no screenshots, and draws an SVG-only logo', function () {
+    Storage::fake();
+    app(Settings::class)->set('crawl.delay_ms', 0);
+    Http::fake([
+        '*/robots.txt' => Http::response('', 404),
+        'https://acme.test/' => Http::response('<html lang="fr"><head><title>Acme</title><link rel="icon" href="/icon.svg" type="image/svg+xml"></head><body><p>'.str_repeat('Acme vend des widgets. ', 40).'</p></body></html>'),
+    ]);
+    $this->mock(SiteCapture::class, fn (MockInterface $mock) => $mock->shouldReceive('capture')->once()->with('https://acme.test/', 'https://acme.test/icon.svg')->andReturn([
+        'shots' => [['bytes' => pngOf(300), 'view' => 'desktop, top of the page'], ['bytes' => pngOf(300), 'view' => 'phone, top of the page']],
+        'logo' => pngOf(512),
+    ]));
+    WebsiteAnalyst::fake([knowledgeBase()]);
+
+    $this->artisan('eveil:analyze', ['url' => 'https://acme.test'])->assertSuccessful();
+
+    $project = Project::sole();
+
+    expect($project->brandAssets(BrandAssetKind::Screenshot)->map->getCustomProperty('description')->all())
+        ->toBe(['The acme.test homepage, desktop, top of the page', 'The acme.test homepage, phone, top of the page'])
+        ->and(getimagesizefromstring((string) stream_get_contents($project->brandAssets(BrandAssetKind::Logo)->sole()->stream()))[0])->toBe(512);
+});
+
+it('leaves the browser closed when the project already has its screenshots and logo', function () {
+    Storage::fake();
+    fakeSite();
+    WebsiteAnalyst::fake([knowledgeBase(), knowledgeBase()]);
+    $this->artisan('eveil:analyze', ['url' => 'https://acme.test'])->assertSuccessful();
+    $project = Project::sole();
+
+    foreach ([BrandAssetKind::Screenshot, BrandAssetKind::Logo] as $kind) {
+        $project->addMediaFromString(pngOf(100))->usingFileName("{$kind->value}.png")->withCustomProperties(['kind' => $kind->value])->toMediaCollection('brand_assets');
+    }
+
+    $this->mock(SiteCapture::class, fn (MockInterface $mock) => $mock->shouldNotReceive('capture'));
+
+    $this->artisan('eveil:analyze', ['url' => 'https://acme.test', '--fresh' => true])->assertSuccessful();
+
+    expect($project->fresh()->brandAssets(BrandAssetKind::Screenshot))->toHaveCount(1);
 });
 
 it('creates the implicit organization on a fresh install', function () {

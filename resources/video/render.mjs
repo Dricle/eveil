@@ -5,8 +5,7 @@
  *   node render.mjs <page.html> <out-dir> --stills=1.5,4,7.2
  *   node render.mjs <page.html> - --manifest
  *
- * Drives headless Chromium over --remote-debugging-pipe, so it needs no npm
- * package at all: the shipped image has Node but no node_modules. Each frame
+ * Drives headless Chromium (see chrome.mjs). Each frame
  * is a seek followed by a screenshot piped into ffmpeg, which also lays the
  * composition's sound cues over the picture.
  *
@@ -20,6 +19,7 @@ import { spawn } from 'node:child_process'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { launch } from './chrome.mjs'
 
 const [page, out, ...flags] = process.argv.slice(2)
 const stills = flags.find(flag => flag.startsWith('--stills='))?.slice(9).split(',').map(Number).filter(t => t >= 0)
@@ -37,74 +37,9 @@ if (!page || !out) {
     process.exit(2)
 }
 
-const browser = spawn(chrome, [
-    '--headless=new',
-    '--remote-debugging-pipe',
-    '--no-first-run',
-    '--no-default-browser-check',
-    '--disable-gpu',
-    '--disable-extensions',
-    '--disable-background-networking',
-    '--hide-scrollbars',
-    '--mute-audio',
-    '--allow-file-access-from-files',
-    // Chromium's own sandbox cannot start inside a container (as root, or
-    // without user namespaces): there the container is the sandbox, and the
-    // page still gets no network.
-    ...(process.getuid?.() === 0 || existsSync('/.dockerenv') ? ['--no-sandbox'] : [])
-], { stdio: ['ignore', 'ignore', 'pipe', 'pipe', 'pipe'] })
-
-let stderr = ''
-browser.stderr.on('data', chunk => (stderr = (stderr + chunk).slice(-4000)))
-const fail = (message) => {
-    console.error(message)
-    browser.kill('SIGKILL')
-    process.exit(1)
-}
-browser.on('error', error => fail(`Could not start ${chrome}: ${error.message}`))
-browser.on('exit', code => fail(`${chrome} stopped (exit ${code}):\n${stderr}`))
-browser.stdio[4].on('error', () => {})
-browser.stdio[3].on('error', () => {})
-setTimeout(() => fail(`Timed out after ${timeoutMs} ms`), timeoutMs).unref()
-
-/* The DevTools protocol over the pipe: NUL-terminated JSON both ways. */
-const pending = new Map()
-const listeners = []
-let nextId = 1
-let buffer = ''
-browser.stdio[4].on('data', (chunk) => {
-    buffer += chunk.toString()
-    let end
-    while ((end = buffer.indexOf('\0')) !== -1) {
-        const message = JSON.parse(buffer.slice(0, end))
-        buffer = buffer.slice(end + 1)
-        if (message.id && pending.has(message.id)) {
-            const { resolve: done, reject } = pending.get(message.id)
-            pending.delete(message.id)
-            message.error ? reject(new Error(message.error.message)) : done(message.result)
-        } else {
-            listeners.forEach(listener => listener(message))
-        }
-    }
-})
-
-const send = (method, params = {}, sessionId) =>
-    new Promise((done, reject) => {
-        const id = nextId++
-        pending.set(id, { resolve: done, reject })
-        browser.stdio[3].write(JSON.stringify({ id, method, params, sessionId }) + '\0')
-    })
-
-const once = method => new Promise(done => listeners.push(message => message.method === method && done(message.params)))
-
-const evaluate = async (sessionId, expression) => {
-    const { result, exceptionDetails } = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true }, sessionId)
-    if (exceptionDetails) {
-        throw new Error(exceptionDetails.exception?.description ?? exceptionDetails.text)
-    }
-
-    return result.value
-}
+// File access for the staged page and the runtime; every other request is
+// refused below, so the page still gets no network.
+const { browser, send, once, listeners, evaluate, fail, errors: chromeErrors } = launch(chrome, timeoutMs, ['--allow-file-access-from-files'])
 
 try {
     const { targetId } = await send('Target.createTarget', { url: 'about:blank' })
@@ -228,5 +163,5 @@ try {
     browser.kill()
     process.exit(0)
 } catch (error) {
-    fail(`${error.message}\n${stderr}`)
+    fail(`${error.message}\n${chromeErrors()}`)
 }

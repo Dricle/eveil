@@ -21,6 +21,7 @@ use App\Models\SocialPost;
 use App\Models\User;
 use App\Services\Discovery\PageFetcher;
 use App\Services\Video\BrandStyle;
+use App\Services\Video\SiteCapture;
 use App\Services\Video\VideoAudio;
 use App\Services\Video\VideoRenderer;
 use App\Services\Video\VideoRenderFailed;
@@ -447,6 +448,19 @@ it('films a real composition to an MP4 and to stills', function () {
 
     unlink($video);
 })->skip(fn (): bool => ! is_executable((string) exec('command -v '.escapeshellarg((string) config('eveil.video.chrome')))) || ! is_executable((string) exec('command -v ffmpeg')), 'Chromium and ffmpeg are not installed here.');
+
+it('photographs a page on a desktop and a phone, draws an SVG logo, and never opens an address on this machine\'s network', function () {
+    // The real class: the base test case swaps it for one that does nothing.
+    $capture = new SiteCapture;
+    $svg = 'data:image/svg+xml,'.rawurlencode('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10" fill="red"/></svg>');
+
+    $captured = $capture->capture('data:text/html,'.rawurlencode('<h1>Hello</h1>'), $svg);
+
+    expect(array_column($captured['shots'], 'view'))->toBe(['desktop, top of the page', 'phone, top of the page'])
+        ->and(getimagesizefromstring($captured['shots'][0]['bytes'])[0])->toBe(2880)
+        ->and(getimagesizefromstring((string) $captured['logo'])[0])->toBe(512)
+        ->and($capture->capture('http://127.0.0.1/'))->toBe(['shots' => [], 'logo' => null]);
+})->skip(fn (): bool => ! is_executable((string) exec('command -v '.escapeshellarg((string) config('eveil.video.chrome')))), 'Chromium is not installed here.');
 
 it('never lets a composition show a file from outside its own staging directory', function () {
     $outside = sys_get_temp_dir().'/'.uniqid('outside-', true).'.html';

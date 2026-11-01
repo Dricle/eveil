@@ -81,12 +81,14 @@ class BrandStyle
      * at, downloaded: the logo from an image named after it, else the icon
      * it gives phones; the sharing image from its `og:image`. Each null when
      * there is none, or none that is a PNG, JPEG or WebP that can be read.
+     * A logo only found as an SVG comes back as its address in `vector_logo`,
+     * for Chromium to draw (`SiteCapture`).
      *
-     * @return array{logo: array{bytes: string, extension: string}|null, image: array{bytes: string, extension: string}|null}
+     * @return array{logo: array{bytes: string, extension: string}|null, image: array{bytes: string, extension: string}|null, vector_logo: string|null}
      */
     public function pictures(string $url): array
     {
-        $none = ['logo' => null, 'image' => null];
+        $none = ['logo' => null, 'image' => null, 'vector_logo' => null];
         $url = Url::normalize($url) ?? $url;
 
         try {
@@ -112,9 +114,15 @@ class BrandStyle
 
         $images = [];
 
+        $vectors = [];
+
         foreach ($dom->getElementsByTagName('link') as $link) {
-            if (str_contains(strtolower($link->getAttribute('rel')), 'apple-touch-icon')) {
+            $rel = strtolower($link->getAttribute('rel'));
+
+            if (str_contains($rel, 'apple-touch-icon')) {
                 $logos[] = $link->getAttribute('href');
+            } elseif (str_contains($rel, 'icon') && (str_ends_with(strtolower($link->getAttribute('href')), '.svg') || $link->getAttribute('type') === 'image/svg+xml')) {
+                $vectors[] = $link->getAttribute('href');
             }
         }
 
@@ -124,9 +132,12 @@ class BrandStyle
             }
         }
 
+        $vectors = [...array_filter($logos, fn (string $src): bool => str_ends_with(strtolower(strtok($src, '?') ?: ''), '.svg')), ...$vectors];
+
         return [
             'logo' => $this->firstPicture($logos, $url),
             'image' => $this->firstPicture($images, $url),
+            'vector_logo' => $vectors === [] ? null : Url::resolve(reset($vectors), $url),
         ];
     }
 

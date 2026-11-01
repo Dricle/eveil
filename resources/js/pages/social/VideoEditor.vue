@@ -138,6 +138,7 @@ function submit () {
                     :key="post.video_preview_url"
                     :src="post.video_preview_url"
                     sandbox="allow-scripts"
+                    allow="autoplay"
                     title="Video preview"
                     class="size-full"
                 />

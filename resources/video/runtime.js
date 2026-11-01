@@ -848,6 +848,9 @@
             return { cue, sound }
         })
         const timers = []
+        // Said rather than swallowed: a frame not allowed to play sound would
+        // otherwise just stay silent.
+        const blocked = error => console.warn('A sound of the preview could not play:', error.message)
         const pause = () => {
             playing = null
             timers.splice(0).forEach(clearTimeout)
@@ -873,13 +876,13 @@
                 if (cue.at < from) {
                     if (cue.src) {
                         sound.currentTime = from - cue.at
-                        sound.play().catch(() => {})
+                        sound.play().catch(blocked)
                     }
 
                     return
                 }
                 sound.currentTime = 0
-                timers.push(setTimeout(() => playing === token && sound.play().catch(() => {}), (cue.at - from) * 1000))
+                timers.push(setTimeout(() => playing === token && sound.play().catch(blocked), (cue.at - from) * 1000))
             })
             const frame = () => {
                 if (playing !== token) {

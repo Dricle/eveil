@@ -23,7 +23,8 @@ class VideoRuntimeController extends Controller
                 'ttf' => 'font/ttf',
                 default => 'audio/mpeg',
             },
-            'Cache-Control' => 'public, max-age=3600',
+            // The runtime changes with the app; the fonts and sounds do not.
+            'Cache-Control' => str_ends_with($file, '.js') ? 'no-cache' : 'public, max-age=3600',
             'Access-Control-Allow-Origin' => '*',
         ]);
     }

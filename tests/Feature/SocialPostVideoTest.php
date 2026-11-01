@@ -663,6 +663,7 @@ it('reads a homepage\'s colours and fonts, leaving generic ones out', function (
         <link href="https://fonts.bunny.net/css?family=bricolage-grotesque:400,700" rel="stylesheet">
         <style>body { font-family: 'Fraunces', serif; color: #333; } a { color: #ff6600 } .b { background: #ff6600 }</style>
         <script>const notAColour = '#abcdef';</script>
+        <p>It&#039;s here, and so&#039;s this.</p>
         HTML);
 
     expect($site['colors'])->toBe(['#123456', '#ff6600', '#333333'])

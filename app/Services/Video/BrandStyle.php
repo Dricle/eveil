@@ -106,7 +106,8 @@ class BrandStyle
 
         $styles = preg_replace('~<script\b.*?</script>~is', '', $html) ?? $html;
 
-        preg_match_all('~#(?:[0-9a-f]{6}|[0-9a-f]{3})\b~i', $styles, $hexes);
+        // Not after `&`: `&#039;` is an apostrophe, not #003399.
+        preg_match_all('~(?<!&)#(?:[0-9a-f]{6}|[0-9a-f]{3})\b~i', $styles, $hexes);
 
         foreach ($hexes[0] as $hex) {
             $hex = $this->hex($hex);

@@ -69,7 +69,7 @@ function videoStructured(array $structured): StructuredTextResponse
 
 function videoScript(string $title = 'Hello'): array
 {
-    return ['composition' => "v.scene(3, (s) => s.title('{$title}'));", 'summary' => "A title saying {$title}."];
+    return ['composition' => "v.scene(3, (s) => s.title('{$title}'));", 'summary' => "A title saying {$title}.", 'concept' => "A single title, {$title}."];
 }
 
 /**
@@ -156,14 +156,31 @@ it('makes the video from the brief and the project\'s screenshots, and keeps wha
     expect($post->video_composition)->toBe(videoScript()['composition'])
         ->and($post->video->collection_name)->toBe('videos')
         ->and($post->video_revisions)->toHaveCount(1)
-        ->and($post->video_revisions[0])->toMatchArray(['feedback' => null, 'at' => null, 'summary' => 'A title saying Hello.']);
+        ->and($post->video_revisions[0])->toMatchArray(['feedback' => null, 'at' => null, 'summary' => 'A title saying Hello.', 'concept' => 'A single title, Hello.']);
 
     VideoDirector::assertPrompted(fn (AgentPrompt $prompt): bool => $prompt->contains('Show the editor.')
         && $prompt->contains("'screen-{$screenshot->id}' (40 by 20 px): The editor with a draft open")
         // A story and a look of its own, so videos do not all run the same way.
-        && $prompt->contains("## Story shape for this one\n\n")
+        && $prompt->contains("## Starting point for this one\n\n- It opens on ")
         && $prompt->contains("## Art direction for this one\n\n")
         && $prompt->attachments->count() === 1);
+});
+
+it('shows the director the concepts of the project\'s last videos, so the next one differs', function () {
+    [, $project] = videoSetup();
+    Storage::fake();
+    SocialPost::factory()->instagram()->create(['project_id' => $project->id, 'video_composition' => 'theWholeOldScript', 'video_revisions' => [
+        ['feedback' => null, 'at' => null, 'summary' => 'First.', 'concept' => 'A manifesto in slow scenes.', 'created_at' => now()->toIso8601String()],
+        ['feedback' => 'Faster.', 'at' => null, 'summary' => 'Faster.', 'concept' => 'A manifesto in fast cuts.', 'created_at' => now()->toIso8601String()],
+    ]]);
+    VideoDirector::fake([videoStructured(videoScript())]);
+    $this->mock(VideoRenderer::class, fn (MockInterface $mock) => $mock->shouldReceive('render')->once()->andReturn(renderedVideo()));
+
+    app(DirectSocialPostVideo::class)->handle(SocialPost::factory()->instagram()->create(['project_id' => $project->id]));
+
+    VideoDirector::assertPrompted(fn (AgentPrompt $prompt): bool => $prompt->contains("## This project's last videos, by their concept\n\n- A manifesto in fast cuts.")
+        && ! $prompt->contains('A manifesto in slow scenes.')
+        && ! $prompt->contains('theWholeOldScript'));
 });
 
 it('hands a script that does not build back to the director once, with the error', function () {
@@ -214,7 +231,7 @@ it('revises the video from what the user said, showing the director the moment t
     VideoDirector::assertPrompted(fn (AgentPrompt $prompt): bool => $prompt->contains('Too fast here.')
         && $prompt->contains("s.title('Hi')")
         && $prompt->contains('First cut.')
-        && ! $prompt->contains('## Story shape for this one')
+        && ! $prompt->contains('## Starting point for this one')
         && $prompt->attachments->count() === 3);
 });
 

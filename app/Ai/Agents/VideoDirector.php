@@ -32,7 +32,7 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
 {
     /**
      * @param  array<string, array{description: string, width: int, height: int}>  $screenshots  asset name => what it shows, in pixels
-     * @param  array<int, string>  $recentCompositions  this project's last scripts, newest first
+     * @param  array<int, string>  $recentConcepts  this project's last videos' concepts, newest first
      * @param  array<int, Image>  $images  the screenshots, in the order of `$screenshots`, then the stills
      * @param  array<int, float>  $stillTimes  the second each still was taken at
      * @param  array<int, array{feedback: string|null, at: float|null, summary: string}>  $revisions  earlier rounds with the user
@@ -46,7 +46,7 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
         private string $brief,
         private array $screenshots,
         private bool $hasLogo,
-        private array $recentCompositions = [],
+        private array $recentConcepts = [],
         private array $images = [],
         private ?string $currentComposition = null,
         private ?string $feedback = null,
@@ -77,19 +77,50 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
     ];
 
     /**
-     * The story a new video tells, drawn like its look: without it every
-     * video falls into the same slam, sentences, list and outro.
+     * A starting point for each new video, one option drawn per axis, for
+     * the director to invent a concept from. Left to itself a model writes
+     * the same video every time (slam, sentences, list, outro): the chance
+     * has to come from here, and axes rather than whole stories give it
+     * hundreds of combinations instead of a handful.
      *
-     * @var array<int, string>
+     * @var array<string, array<int, string>>
      */
-    private const STORIES = [
-        'Live demo: one task done from start to finish on the screenshots, almost every scene a screen with captions, a field typing where the user would type. No list, no cards, no slam.',
-        'Pain, then relief: open on the frustration the buyer knows, in their own words and big type, then show the product making it go away, and end on what they get back. No list.',
-        'Question and answer: open on the question the viewer is asking themselves, as a title, and answer it by showing, one screen or one statement per scene. No slam.',
-        'Before and after: alternate the old way and the way with the product, scene for scene, each pair on contrasting colour fields. No list, no cards.',
-        'Three moves: three numbered steps, each its own scene with a huge number as a shape or title and a screen or a field showing that step. Never as a list brick.',
-        'Manifesto: a run of short, bold statements about why the product exists, one per scene, with marquees and shapes, building to the product name. No list, no cards, no screens unless one proves a statement.',
-        'One number: the whole video builds to and away from a single real figure from the product portrait, shown with the counter. Without such a figure, a single striking fact instead. No list.',
+    private const AXES = [
+        'It opens on' => [
+            'a question the viewer is asking themselves',
+            'a bold claim, as big as the frame allows',
+            'the problem, shown or said in the buyer\'s own words',
+            'the product already working, no introduction',
+            'a single real number from the product portrait, or a striking fact',
+            'one surprising word, alone on a colour field',
+        ],
+        'It is carried by' => [
+            'the screenshots, almost every scene a screen with captions',
+            'big type alone, statements one per scene',
+            'a field typing what the user would type, and what comes back',
+            'contrast pairs: the old way, then the way with the product',
+            'numbered steps, each a scene with a huge number',
+            'shapes and colour fields as the metaphor, few words',
+        ],
+        'Its rhythm is' => [
+            'fast: six to eight short scenes, mostly cuts',
+            'slow: three or four long scenes, soft transitions',
+            'a build: slow at first, faster and faster to the end',
+            'a steady beat, colours alternating scene for scene',
+        ],
+        'It leaves out' => [
+            's.list and s.cards',
+            's.slam',
+            's.text paragraphs',
+            's.outro: it ends on a scene of its own',
+        ],
+        'It ends on' => [
+            'the product\'s name, huge',
+            'the URL typed in a field',
+            'a question back to the viewer',
+            'the result on screen, with the URL as a caption',
+            'the outro card',
+        ],
     ];
 
     public function instructions(): Stringable|string
@@ -187,8 +218,11 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
 
         HOW TO MAKE IT GOOD
 
-        - Tell the story shape you are given below, not your habit: it decides
-          how the video opens, which bricks carry it and which it leaves out.
+        - Invent this video's concept from the starting point you are given
+          below, not from habit: it decides how the video opens, what carries
+          it, its rhythm, what it leaves out and how it ends. Within that, the
+          idea is yours. Make it clearly different from the project's last
+          videos.
         - 12 to 25 seconds in all. A hook in the first two seconds. Every scene
           long enough to READ: count about 0.35 s per word on screen, plus a
           second, and never under 2.5 s except the opening slam. A screen
@@ -226,9 +260,10 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
 
         {$this->voiceSection()}
 
-        Return the whole script every time, never a diff, and a one or two
+        Return the whole script every time, never a diff, a one or two
         sentence summary for the user, without dash punctuation either: what
-        the video shows, or, when revising, what you changed.
+        the video shows, or, when revising, what you changed, and the concept
+        in one line.
         PROMPT;
     }
 
@@ -299,6 +334,9 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
             'summary' => $schema->string()
                 ->description('One or two sentences for the user: what the video shows, or what changed.')
                 ->required(),
+            'concept' => $schema->string()
+                ->description('One line naming this video\'s idea and structure, as in "a question answered by a live demo in four fast scenes, ending on the URL typed". Shown to the project\'s next videos so they differ.')
+                ->required(),
         ];
     }
 
@@ -335,12 +373,12 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
             ($this->brand['site_fonts'] ?? []) !== [] ? '- Fonts its homepage uses: '.implode(', ', $this->brand['site_fonts']) : null,
         ]) ?: ['Nothing to go on: pick a palette and fonts that suit what the product is and who it is for, never the default.']);
 
-        if ($this->recentCompositions !== []) {
-            $sections[] = "## This project's last videos, do not repeat their structure\n\n".implode("\n\n---\n\n", $this->recentCompositions);
+        if ($this->recentConcepts !== []) {
+            $sections[] = "## This project's last videos, by their concept\n\n".collect($this->recentConcepts)->map(fn (string $concept): string => "- {$concept}")->implode("\n");
         }
 
         if ($this->currentComposition === null) {
-            $sections[] = "## Story shape for this one\n\n".Arr::random(self::STORIES).' Follow it unless the brief clearly cannot be told this way.';
+            $sections[] = "## Starting point for this one\n\n".collect(self::AXES)->map(fn (array $options, string $axis): string => "- {$axis} ".Arr::random($options).'.')->implode("\n").' Follow it unless the brief clearly cannot be told this way.';
             $sections[] = "## Art direction for this one\n\n".Arr::random(self::DIRECTIONS).' Apply it within the brand: its colours always win, and its own fonts when it has them.';
         }
 

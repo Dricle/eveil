@@ -10,6 +10,7 @@ use App\Services\Video\BrandStyle;
 use App\Services\Video\VideoAudio;
 use App\Services\Video\VideoRenderer;
 use App\Services\Video\VideoRenderFailed;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Laravel\Ai\Files\Image;
@@ -96,7 +97,7 @@ class DirectSocialPostVideo
                     ...$this->size($media),
                 ])->all(),
                 isset($assets['logo']),
-                $this->recentCompositions($post),
+                $this->recentConcepts($post),
                 $images,
                 $current,
                 $feedback,
@@ -136,7 +137,7 @@ class DirectSocialPostVideo
                 'video_media_id' => $video->id,
                 'video_revisions' => [
                     ...($post->video_revisions ?? []),
-                    ['feedback' => $feedback, 'at' => $at, 'summary' => (string) ($structured['summary'] ?? ''), 'created_at' => now()->toIso8601String()],
+                    ['feedback' => $feedback, 'at' => $at, 'summary' => (string) ($structured['summary'] ?? ''), 'concept' => (string) ($structured['concept'] ?? ''), 'created_at' => now()->toIso8601String()],
                 ],
                 'last_error' => null,
             ]);
@@ -295,17 +296,24 @@ class DirectSocialPostVideo
     }
 
     /**
+     * What this project's last videos were, each by the concept its latest
+     * version named: one line apiece, which the director weighs better than
+     * whole scripts, so more of them fit.
+     *
      * @return array<int, string>
      */
-    private function recentCompositions(SocialPost $post): array
+    private function recentConcepts(SocialPost $post): array
     {
         return SocialPost::query()
             ->where('project_id', $post->project_id)
             ->whereNotNull('video_composition')
             ->whereKeyNot($post->id)
             ->latest()
-            ->limit(3)
-            ->pluck('video_composition')
+            ->limit(8)
+            ->pluck('video_revisions')
+            ->map(fn (?array $revisions): string => (string) (Arr::last($revisions ?? [])['concept'] ?? ''))
+            ->filter()
+            ->values()
             ->all();
     }
 }

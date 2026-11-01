@@ -76,6 +76,22 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
         'Minimal premium: few words very large, slow iris and blur transitions, deep dark fields with one accent shape, lots of empty space. Display Playfair Display or Sora.',
     ];
 
+    /**
+     * The story a new video tells, drawn like its look: without it every
+     * video falls into the same slam, sentences, list and outro.
+     *
+     * @var array<int, string>
+     */
+    private const STORIES = [
+        'Live demo: one task done from start to finish on the screenshots, almost every scene a screen with captions, a field typing where the user would type. No list, no cards, no slam.',
+        'Pain, then relief: open on the frustration the buyer knows, in their own words and big type, then show the product making it go away, and end on what they get back. No list.',
+        'Question and answer: open on the question the viewer is asking themselves, as a title, and answer it by showing, one screen or one statement per scene. No slam.',
+        'Before and after: alternate the old way and the way with the product, scene for scene, each pair on contrasting colour fields. No list, no cards.',
+        'Three moves: three numbered steps, each its own scene with a huge number as a shape or title and a screen or a field showing that step. Never as a list brick.',
+        'Manifesto: a run of short, bold statements about why the product exists, one per scene, with marquees and shapes, building to the product name. No list, no cards, no screens unless one proves a statement.',
+        'One number: the whole video builds to and away from a single real figure from the product portrait, shown with the counter. Without such a figure, a single striking fact instead. No list.',
+    ];
+
     public function instructions(): Stringable|string
     {
         return <<<PROMPT
@@ -124,8 +140,7 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
 
         s.slam(['Word.', 'Word.', '**Word.**'], { at, every })
           Huge words one at a time, trailer style, each held `every` seconds
-          (default 0.38). The last one stays. Best as an opening hook, two to
-          four words.
+          (default 0.38). The last one stays. Two to four words, at most once.
         s.title(text, { at, size })   headline, words arrive one by one. size
           defaults to 104 (px at 1080 on the short side). Keep it under about twelve words.
         s.text(text, { at, size })    a paragraph under the title, size 46.
@@ -172,6 +187,8 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
 
         HOW TO MAKE IT GOOD
 
+        - Tell the story shape you are given below, not your habit: it decides
+          how the video opens, which bricks carry it and which it leaves out.
         - 12 to 25 seconds in all. A hook in the first two seconds. Every scene
           long enough to READ: count about 0.35 s per word on screen, plus a
           second, and never under 2.5 s except the opening slam. A screen
@@ -179,9 +196,10 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
         - {$this->framing()}
         - Show the product working, not adjectives. The brief says what the
           video is for; the screenshots are what you can show. Without
-          screenshots, tell it with type: slam, title, field, list, cards.
+          screenshots, tell it with type, shapes and colour.
         - Few words, big. One idea per scene. Captions are four to eight words.
-        - End on the outro, with the product's name or URL as the call to action.
+        - End on the product's name or URL as the call to action, with the
+          outro or a closing scene of your own.
         - Design it like a motion designer, never as slides of text on one
           background. Most scenes get a flat colour field, and consecutive
           scenes change colour (background, accent, ink, accent2, in turns that
@@ -322,7 +340,8 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
         }
 
         if ($this->currentComposition === null) {
-            $sections[] = '## Art direction for this one\n\n'.Arr::random(self::DIRECTIONS).' Apply it within the brand: its colours always win, and its own fonts when it has them.';
+            $sections[] = "## Story shape for this one\n\n".Arr::random(self::STORIES).' Follow it unless the brief clearly cannot be told this way.';
+            $sections[] = "## Art direction for this one\n\n".Arr::random(self::DIRECTIONS).' Apply it within the brand: its colours always win, and its own fonts when it has them.';
         }
 
         if ($this->currentComposition !== null) {

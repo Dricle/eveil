@@ -160,6 +160,9 @@ it('makes the video from the brief and the project\'s screenshots, and keeps wha
 
     VideoDirector::assertPrompted(fn (AgentPrompt $prompt): bool => $prompt->contains('Show the editor.')
         && $prompt->contains("'screen-{$screenshot->id}' (40 by 20 px): The editor with a draft open")
+        // A story and a look of its own, so videos do not all run the same way.
+        && $prompt->contains("## Story shape for this one\n\n")
+        && $prompt->contains("## Art direction for this one\n\n")
         && $prompt->attachments->count() === 1);
 });
 
@@ -211,6 +214,7 @@ it('revises the video from what the user said, showing the director the moment t
     VideoDirector::assertPrompted(fn (AgentPrompt $prompt): bool => $prompt->contains('Too fast here.')
         && $prompt->contains("s.title('Hi')")
         && $prompt->contains('First cut.')
+        && ! $prompt->contains('## Story shape for this one')
         && $prompt->attachments->count() === 3);
 });
 

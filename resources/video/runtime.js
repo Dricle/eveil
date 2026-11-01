@@ -838,14 +838,28 @@
 
         let time = 0
         let playing = null
-        const audio = []
-        const stopAudio = () => audio.splice(0).forEach(sound => sound.pause())
+        // Made and loaded once, not per play: a fresh element ignores the
+        // position it is given before it has loaded, and starts late.
+        const sounds = video.manifest().sounds.map((cue) => {
+            const sound = new Audio(cue.src ?? `sounds/${cue.name}.mp3`)
+            sound.preload = 'auto'
+            sound.volume = Math.min(1, cue.volume)
+
+            return { cue, sound }
+        })
+        const timers = []
         const pause = () => {
             playing = null
-            stopAudio()
+            timers.splice(0).forEach(clearTimeout)
+            sounds.forEach(({ sound }) => sound.pause())
             post({ type: 'pause', time })
         }
         const play = () => {
+            // A second click before the first was heard back must not start
+            // every sound a second time.
+            if (playing !== null) {
+                return
+            }
             if (time >= video.duration - 0.05) {
                 time = 0
             }
@@ -855,17 +869,17 @@
             playing = token
             // The music and a voice line already under way pick up where the
             // video is; a line that has ended simply has nothing left to play.
-            video.manifest().sounds.filter(cue => cue.src || cue.at >= from).forEach((cue) => {
-                const sound = new Audio(cue.src ?? `sounds/${cue.name}.mp3`)
-                sound.volume = Math.min(1, cue.volume)
-                audio.push(sound)
+            sounds.forEach(({ cue, sound }) => {
                 if (cue.at < from) {
-                    sound.currentTime = from - cue.at
-                    sound.play().catch(() => {})
+                    if (cue.src) {
+                        sound.currentTime = from - cue.at
+                        sound.play().catch(() => {})
+                    }
 
                     return
                 }
-                setTimeout(() => playing === token && sound.play().catch(() => {}), (cue.at - from) * 1000)
+                sound.currentTime = 0
+                timers.push(setTimeout(() => playing === token && sound.play().catch(() => {}), (cue.at - from) * 1000))
             })
             const frame = () => {
                 if (playing !== token) {

@@ -133,12 +133,15 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
 
         THE LIBRARY
 
-        v.theme({ background, surface, ink, muted, accent, accent2, display, body, grid })
+        v.theme({ background, surface, ink, muted, accent, accent2, display, body, emphasis, glow, grid })
           ALWAYS call it first, with every value: the default is a plain grey
-          that belongs to no brand. Colours as CSS strings; accent and accent2
-          make the gradient on **words**. display is the headline font, body
-          the rest, from the fonts below. grid: true/false, a faint moving grid
-          behind everything.
+          that belongs to no brand. Colours as CSS strings. display is the
+          headline font, body the rest, from the fonts below. emphasis is how
+          **words** stand out: 'color' (in the accent), 'gradient' (accent to
+          accent2), 'highlight' (a marker block behind them), 'underline' or
+          'outline'; pick one that suits the brand, not always the same. glow:
+          true adds a soft coloured light behind everything, grid: true a faint
+          moving grid; both are off unless the look calls for them.
 
         Fonts installed, and nothing else:
           Grotesque and clean: 'Inter' (neutral), 'Manrope' (soft, modern),
@@ -209,6 +212,30 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
           A line of huge type scrolling across the frame at height y (a
           fraction), repeated, behind the bricks unless front. outline: true
           draws only its contour. Great as texture with a few words.
+        s.draw(markup, { front, style })   YOUR OWN VISUALS. Any HTML or inline
+          SVG, laid over the whole frame: `<svg viewBox="0 0 {$this->size()}">`
+          covers it exactly, in the frame's own px. Behind the bricks with
+          front: false. Returns the layer. Use it for what the bricks cannot
+          do: an illustration of the subject (a dice, an inbox, a calendar, a
+          phone, a chart, a character), icons, arrows, a layout of your own
+          (split screen, a grid of tiles, a fake notification, a chat bubble,
+          a mock interface), type set by hand letter by letter. Style it
+          inline; fonts as above. Give elements classes to animate them. No
+          CSS animation or transition: they would not follow the timeline.
+        s.animate(target, keyframes, { at, duration, easing, stagger, iterations, direction })
+          Moves anything in the scene: a node, or every element matching a
+          selector, `stagger` seconds apart. Keyframes as in the Web
+          Animations API: transform, opacity, clipPath, filter,
+          strokeDashoffset, d: 'path(...)', offsetDistance, colours. Timed
+          from `at` seconds into the scene. iterations: Infinity keeps it
+          looping. This is where the motion design happens:
+            an SVG drawing itself (pathLength="1" stroke-dasharray="1", then
+              strokeDashoffset 1 to 0),
+            letters or words flying in one by one (each in a span, staggered),
+            a mask or clip-path wiping text or an image in,
+            a 3D flip (perspective and rotateY), a zoom through a word into
+            the next scene, an object bouncing, spinning, orbiting, a shape
+            morphing, a counter of tiles filling up, an arrow drawing a path.
         s.outro({ tagline, cta })   the closing card: the logo (when the project
           has one), a tagline, and a button-like call to action.
         v.sound(name, atSecondsFromVideoStart, volume)
@@ -234,13 +261,21 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
         - Few words, big. One idea per scene. Captions are four to eight words.
         - End on the product's name or URL as the call to action, with the
           outro or a closing scene of your own.
+        - It must not look like slides of text. Draw: every video has at least
+          one illustration of its own about the subject (s.draw, in SVG,
+          animated with s.animate), and more when there are no screenshots.
+          Something keeps moving in every scene for its whole length, not
+          only on entry. Type is big: a short line at 140 to 200, the key word
+          even bigger, and type itself animated (per letter, masked, flipped,
+          scaled through), not only popped in.
         - Design it like a motion designer, never as slides of text on one
           background. Most scenes get a flat colour field, and consecutive
           scenes change colour (background, accent, ink, accent2, in turns that
           suit the brand). Use at least three different transitions, shapes or
           a marquee for texture in several scenes, and big type that fills the
           frame. A list or cards at most once per video, and never two text
-          scenes built the same way in a row.
+          scenes built the same way in a row. Shapes and marquees are
+          seasoning, not the dish: no drifting blobs and rings by habit.
         - Vary the structure from the project's earlier videos you are shown:
           a different opening brick, a different order, a different rhythm.
         - Dress it in the brand, never in a house style: background, ink and
@@ -265,6 +300,14 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
         the video shows, or, when revising, what you changed, and the concept
         in one line.
         PROMPT;
+    }
+
+    /**
+     * The frame as an SVG viewBox's width and height.
+     */
+    private function size(): string
+    {
+        return implode(' ', $this->platform->videoFormat()->videoSize());
     }
 
     private function frame(): string

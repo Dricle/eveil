@@ -29,7 +29,9 @@
         accent2: '#bdbdbd',
         display: 'Inter',
         body: 'Inter',
-        grid: false
+        grid: false,
+        glow: false,
+        emphasis: 'color'
     }
 
     const ease = 'cubic-bezier(.22,1,.36,1)'
@@ -114,6 +116,9 @@
             Object.assign(this.root.style, { background: c.background, color: c.ink, fontFamily: `${c.body}, Inter, sans-serif` })
             this.root.style.setProperty('--accent', c.accent)
             this.root.style.setProperty('--accent2', c.accent2)
+            this.root.style.setProperty('--on-accent', c.background)
+            // How `**words**` stand out: 'color', 'gradient', 'highlight', 'underline' or 'outline'.
+            this.root.dataset.emphasis = c.emphasis
 
             return this
         }
@@ -172,9 +177,12 @@
 
         background () {
             const c = this.colors
-            const glow = el('div', { position: 'absolute', inset: '-20%', background: `radial-gradient(40% 30% at 30% 15%, ${c.accent}2e, transparent 70%), radial-gradient(40% 30% at 75% 85%, ${c.accent2}24, transparent 70%)` }, this.root)
+            // Only when asked for: a glow on every video is a house style.
+            const glow = el('div', { position: 'absolute', inset: '-20%', background: c.glow ? `radial-gradient(40% 30% at 30% 15%, ${c.accent}2e, transparent 70%), radial-gradient(40% 30% at 75% 85%, ${c.accent2}24, transparent 70%)` : 'none' }, this.root)
             this.root.prepend(glow)
-            this.animate(glow, [{ transform: 'translate(-4%, -2%)' }, { transform: 'translate(4%, 3%)' }], 0, Math.max(1, this.duration), 'ease-in-out')
+            if (c.glow) {
+                this.animate(glow, [{ transform: 'translate(-4%, -2%)' }, { transform: 'translate(4%, 3%)' }], 0, Math.max(1, this.duration), 'ease-in-out')
+            }
             if (c.grid) {
                 const size = 72 * this.unit
                 const grid = el('div', {
@@ -321,6 +329,7 @@
             this.node.style.color = text
             this.node.style.setProperty('--accent', this.palette.accent)
             this.node.style.setProperty('--accent2', this.palette.accent2)
+            this.node.style.setProperty('--on-accent', background)
         }
 
         get unit () {
@@ -754,6 +763,40 @@
             v.animate(node, [{ transform: `translateX(${reverse ? -travel : 0}px)` }, { transform: `translateX(${reverse ? 0 : -travel}px)` }], this.start, this.duration, 'linear')
 
             return this
+        }
+
+        /**
+         * Anything the bricks do not offer, drawn by the composition itself:
+         * HTML or an SVG, laid over the whole frame (an `<svg viewBox="0 0
+         * width height">` covers it exactly). Behind the bricks unless
+         * `front`. Returns the layer, for `animate`.
+         */
+        draw (markup, { front = true, style = {} } = {}) {
+            const layer = el('div', { position: 'absolute', inset: '0', zIndex: front ? '1' : '-1', pointerEvents: 'none', ...style }, this.node)
+            layer.innerHTML = String(markup)
+
+            return layer
+        }
+
+        /**
+         * Moves anything in this scene: a node, or every element matching a
+         * CSS selector, one after the other `stagger` seconds apart. Keyframes
+         * as in the Web Animations API, timed from `at` seconds into the
+         * scene, so the preview and the render always agree. `iterations:
+         * Infinity` keeps it going for the rest of the video.
+         */
+        animate (target, keyframes, { at = 0, duration = 0.6, easing = ease, stagger = 0, iterations = 1, direction = 'normal', fill = 'both' } = {}) {
+            const nodes = typeof target === 'string' ? [...this.node.querySelectorAll(target)] : [target].filter(Boolean)
+            nodes.forEach((node, i) => node.animate(keyframes, {
+                delay: this.at(at + i * stagger) * 1000,
+                duration: Math.max(1, duration * 1000),
+                iterations,
+                direction,
+                fill,
+                easing
+            }))
+
+            return nodes.length === 1 ? nodes[0] : nodes
         }
 
         /** The closing card: logo, a line, and where to go. */

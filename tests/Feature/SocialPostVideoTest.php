@@ -437,11 +437,13 @@ it('films a real composition to an MP4 and to stills', function () {
         v.scene(1, (s) => { s.title('Hello'); });
         v.scene({ duration: 1, background: 'accent', transition: 'wipe' }, (s) => { s.shape('blob', { spin: 30 }); s.marquee('Hi', { outline: true }); s.slam(['Hi']); });
         v.scene({ duration: 1, transition: 'push' }, (s) => { s.shape('band', { drift: 20 }); });
-        JS, ImageFormat::Portrait, [], [0.5, 1.3, 2.5]);
+        v.theme({ emphasis: 'highlight', glow: true });
+        v.scene(1, (s) => { s.draw('<svg viewBox="0 0 1080 1350"><path class="p" d="M0 0L9 9" pathLength="1" stroke-dasharray="1"/></svg>'); s.animate('.p', [{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], { stagger: 0.1, iterations: Infinity }); s.title('**Drawn**'); });
+        JS, ImageFormat::Portrait, [], [0.5, 1.3, 2.5, 3.5]);
 
     expect(filesize($video))->toBeGreaterThan(1000)
-        ->and($stills)->toHaveCount(3)
-        ->and(substr($stills[2], 1, 3))->toBe('PNG');
+        ->and($stills)->toHaveCount(4)
+        ->and(substr($stills[3], 1, 3))->toBe('PNG');
 
     unlink($video);
 })->skip(fn (): bool => ! is_executable((string) exec('command -v '.escapeshellarg((string) config('eveil.video.chrome')))) || ! is_executable((string) exec('command -v ffmpeg')), 'Chromium and ffmpeg are not installed here.');

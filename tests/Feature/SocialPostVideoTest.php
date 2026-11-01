@@ -664,8 +664,9 @@ it('dresses the video in the brand: shows the director its logo and style exampl
     imagepng($logo);
     $project->addMediaFromString((string) ob_get_clean())->usingFileName('logo.png')->withCustomProperties(['kind' => BrandAssetKind::Logo->value])->toMediaCollection('brand_assets');
     $project->addMediaFromString((string) file_get_contents(base_path('public/apple-touch-icon.png')))->usingFileName('ex.png')->withCustomProperties(['kind' => BrandAssetKind::Example->value])->toMediaCollection('brand_assets');
-    // Read once, for a project analysed before the style was kept, then kept.
-    $this->mock(PageFetcher::class)->shouldReceive('fetch')->with('https://brand.test/')->once()->andReturn(new CrawledPage(['content' => '<meta name="theme-color" content="#0a7"><link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700">']));
+    // Read for the first video only, for a project analysed before the style
+    // was kept: once for the style, once for its pictures (the fetch cache's).
+    $this->mock(PageFetcher::class)->shouldReceive('fetch')->with('https://brand.test/')->twice()->andReturn(new CrawledPage(['content' => '<meta name="theme-color" content="#0a7"><link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700">']));
     VideoDirector::fake([videoStructured(videoScript()), videoStructured(videoScript())]);
     $this->mock(VideoRenderer::class, fn (MockInterface $mock) => $mock->shouldReceive('render')->twice()->andReturnUsing(fn (): string => renderedVideo()));
 

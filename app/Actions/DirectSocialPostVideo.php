@@ -49,6 +49,7 @@ class DirectSocialPostVideo
         private VideoRenderer $renderer,
         private VideoAudio $audio,
         private BrandStyle $style,
+        private AdoptSiteBrand $adoptSiteBrand,
     ) {}
 
     /**
@@ -57,6 +58,13 @@ class DirectSocialPostVideo
     public function handle(SocialPost $post, ?string $feedback = null, ?float $at = null): void
     {
         $project = $post->project;
+
+        // A project analysed before its brand was kept: read once, now, so
+        // this video already has its logo and colours.
+        if ($project->brand_style === null) {
+            $this->adoptSiteBrand->handle($project);
+            $project->unsetRelation('media');
+        }
 
         $revising = $feedback !== null && $post->video_composition !== null;
         $assets = $project->videoAssets(self::MAX_SCREENSHOTS, $revising ? $post->video_composition : null);
@@ -226,16 +234,12 @@ class DirectSocialPostVideo
     /**
      * What the brand looks like, as hints beside the images: the logo's
      * colours, and the colours and fonts its homepage declares. Both are read
-     * once and kept, here only for a project or a logo from before that.
+     * once and kept; the logo's here, for a logo from before that.
      *
      * @return array{logo_colors: array<int, string>, site_colors: array<int, string>, site_fonts: array<int, string>}
      */
     private function brand(Project $project, ?Media $logo): array
     {
-        if ($project->brand_style === null && ($site = $this->style->ofSite((string) $project->url)) !== null) {
-            $project->update(['brand_style' => $site]);
-        }
-
         if ($logo !== null && ! $logo->hasCustomProperty('colors')) {
             $logo->setCustomProperty('colors', $this->style->palette((string) stream_get_contents($logo->stream())))->save();
         }

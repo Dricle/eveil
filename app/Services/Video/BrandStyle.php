@@ -4,6 +4,8 @@ namespace App\Services\Video;
 
 use App\Services\Discovery\PageFetcher;
 use App\Support\Url;
+use DOMDocument;
+use Illuminate\Support\Facades\Http;
 use Throwable;
 
 /**
@@ -70,6 +72,95 @@ class BrandStyle
         arsort($buckets);
 
         return array_slice(array_keys($buckets), 0, $count);
+    }
+
+    private const MAX_PICTURE_BYTES = 5_000_000;
+
+    /**
+     * The logo and the sharing image the homepage at this address points
+     * at, downloaded: the logo from an image named after it, else the icon
+     * it gives phones; the sharing image from its `og:image`. Each null when
+     * there is none, or none that is a PNG, JPEG or WebP that can be read.
+     *
+     * @return array{logo: array{bytes: string, extension: string}|null, image: array{bytes: string, extension: string}|null}
+     */
+    public function pictures(string $url): array
+    {
+        $none = ['logo' => null, 'image' => null];
+        $url = Url::normalize($url) ?? $url;
+
+        try {
+            $html = (string) $this->fetcher->fetch($url)?->content;
+        } catch (Throwable) {
+            return $none;
+        }
+
+        if ($html === '') {
+            return $none;
+        }
+
+        $dom = new DOMDocument;
+        @$dom->loadHTML($html);
+
+        $logos = [];
+
+        foreach ($dom->getElementsByTagName('img') as $img) {
+            if (str_contains(strtolower($img->getAttribute('src').' '.$img->getAttribute('alt').' '.$img->getAttribute('class').' '.$img->getAttribute('id')), 'logo')) {
+                $logos[] = $img->getAttribute('src');
+            }
+        }
+
+        $images = [];
+
+        foreach ($dom->getElementsByTagName('link') as $link) {
+            if (str_contains(strtolower($link->getAttribute('rel')), 'apple-touch-icon')) {
+                $logos[] = $link->getAttribute('href');
+            }
+        }
+
+        foreach ($dom->getElementsByTagName('meta') as $meta) {
+            if (in_array(strtolower($meta->getAttribute('property') ?: $meta->getAttribute('name')), ['og:image', 'twitter:image'], true)) {
+                $images[] = $meta->getAttribute('content');
+            }
+        }
+
+        return [
+            'logo' => $this->firstPicture($logos, $url),
+            'image' => $this->firstPicture($images, $url),
+        ];
+    }
+
+    /**
+     * @param  array<int, string>  $sources
+     * @return array{bytes: string, extension: string}|null
+     */
+    private function firstPicture(array $sources, string $base): ?array
+    {
+        foreach (array_unique(array_filter($sources)) as $source) {
+            $url = Url::resolve($source, $base);
+
+            if ($url === null || ! str_starts_with($url, 'http')) {
+                continue;
+            }
+
+            try {
+                $response = Http::withHeaders(['User-Agent' => (string) config('eveil.crawl.user_agent')])
+                    ->timeout((int) config('eveil.crawl.timeout'))
+                    ->get($url);
+            } catch (Throwable) {
+                continue;
+            }
+
+            $bytes = $response->body();
+            $size = $response->successful() && strlen($bytes) <= self::MAX_PICTURE_BYTES ? @getimagesizefromstring($bytes) : false;
+
+            // Only what the visual identity accepts, and nothing a favicon's size.
+            if ($size !== false && in_array($size[2], [IMAGETYPE_PNG, IMAGETYPE_JPEG, IMAGETYPE_WEBP], true) && $size[0] >= 64) {
+                return ['bytes' => $bytes, 'extension' => image_type_to_extension($size[2], false) ?: 'png'];
+            }
+        }
+
+        return null;
     }
 
     /**

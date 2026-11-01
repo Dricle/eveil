@@ -9,7 +9,6 @@ use App\Enums\Channel;
 use App\Models\Project;
 use App\Models\ProjectAnalysis;
 use App\Services\Discovery\SiteCrawler;
-use App\Services\Video\BrandStyle;
 use App\Support\ParsedPage;
 use Illuminate\Support\Collection;
 use Throwable;
@@ -20,7 +19,7 @@ use Throwable;
  */
 class AnalyzeWebsite
 {
-    public function __construct(private SiteCrawler $crawler, private BrandStyle $style) {}
+    public function __construct(private SiteCrawler $crawler, private AdoptSiteBrand $brand) {}
 
     public function handle(Project $project, ?int $maxPages = null): ProjectAnalysis
     {
@@ -59,9 +58,8 @@ class AnalyzeWebsite
         }
 
         // Kept on the project for every video to come. The crawl just cached
-        // the homepage, so this is no second visit; and unlike the knowledge
-        // base, nothing here is the user's to have edited.
-        $project->update(['brand_style' => $this->style->ofSite($project->url) ?? $project->brand_style]);
+        // the homepage, so this is no second visit for the page itself.
+        $this->brand->handle($project);
 
         try {
             $response = (new WebsiteAnalyst($project, $pages))->analyze();

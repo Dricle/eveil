@@ -4,6 +4,7 @@ use App\Actions\AnalyzeWebsite;
 use App\Ai\Agents\WebsiteAnalyst;
 use App\Enums\AnalysisStatus;
 use App\Enums\ArticleFrequency;
+use App\Enums\BrandAssetKind;
 use App\Enums\RedditScanFrequency;
 use App\Enums\SocialPostFrequency;
 use App\Models\AgentRun;
@@ -13,6 +14,7 @@ use App\Models\ProjectAnalysis;
 use App\Support\Settings;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 
 function knowledgeBase(): array
 {
@@ -73,6 +75,47 @@ it('keeps the homepage\'s colours and fonts for the videos, from the page the cr
 
     expect(Project::sole()->brand_style)->toEqual(['colors' => ['#00aa77'], 'fonts' => []])
         ->and(Http::recorded(fn (Request $request): bool => $request->url() === 'https://acme.test/'))->toHaveCount(1);
+});
+
+function pngOf(int $size): string
+{
+    $image = imagecreatetruecolor($size, $size);
+    ob_start();
+    imagepng($image);
+
+    return (string) ob_get_clean();
+}
+
+it('adds the site\'s logo and sharing image to the visual identity, never over the user\'s own', function () {
+    Storage::fake();
+    app(Settings::class)->set('crawl.delay_ms', 0);
+    Http::fake([
+        '*/robots.txt' => Http::response('', 404),
+        'https://acme.test/' => Http::response('<html lang="fr"><head><title>Acme</title><meta property="og:image" content="https://cdn.acme.test/share.jpg"><link rel="apple-touch-icon" href="/touch.png"></head>'
+            .'<body><img src="/tiny-logo.png" alt="Acme logo"><img src="/img/brand-logo.png"><p>'.str_repeat('Acme vend des widgets. ', 40).'</p></body></html>'),
+        // Too small to be a logo: the next candidate is taken.
+        'https://acme.test/tiny-logo.png' => Http::response(pngOf(16)),
+        'https://acme.test/img/brand-logo.png' => Http::response(pngOf(200)),
+        'https://cdn.acme.test/share.jpg' => Http::response(pngOf(600)),
+    ]);
+    WebsiteAnalyst::fake([knowledgeBase(), knowledgeBase()]);
+
+    $this->artisan('eveil:analyze', ['url' => 'https://acme.test'])->assertSuccessful();
+
+    $project = Project::sole();
+    $logo = $project->brandAssets(BrandAssetKind::Logo)->sole();
+
+    expect($logo->getCustomProperty('source'))->toBe('site')
+        ->and(getimagesizefromstring((string) stream_get_contents($logo->stream()))[0])->toBe(200)
+        ->and($project->brandAssets(BrandAssetKind::Example)->sole()->getCustomProperty('description'))->toBe('Your site\'s sharing image');
+
+    $logo->delete();
+    $project->addMediaFromString(pngOf(100))->usingFileName('mine.png')->withCustomProperties(['kind' => BrandAssetKind::Logo->value])->toMediaCollection('brand_assets');
+
+    $this->artisan('eveil:analyze', ['url' => 'https://acme.test', '--fresh' => true])->assertSuccessful();
+
+    expect($project->fresh()->brandAssets(BrandAssetKind::Logo)->sole()->file_name)->toBe('mine.png')
+        ->and($project->fresh()->brandAssets(BrandAssetKind::Example))->toHaveCount(1);
 });
 
 it('creates the implicit organization on a fresh install', function () {

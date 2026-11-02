@@ -5,9 +5,11 @@ import brandAssetRoutes from '@/routes/settings/brand-assets'
 import type { ProjectDetail } from '@/types'
 
 // The project's visual identity library: the images generated for it (an
-// Instagram post's, an ad's) draw from these rather than inventing.
+// Instagram post's, an ad's) draw from these rather than inventing, and the
+// videos film its screenshots.
 const props = defineProps<{
     assets: ProjectDetail['brand_assets']
+    brandStyle: ProjectDetail['brand_style']
     slug: string
 }>()
 
@@ -15,7 +17,7 @@ const toast = useToast()
 const removing = ref<number | null>(null)
 // One per section's form, sent through a hidden input: the same explicit
 // shape the other forms here use rather than relying on the checkbox's own.
-const rights = ref<Record<string, boolean>>({ logo: false, illustration: false, example: false })
+const rights = ref<Record<string, boolean>>({ logo: false, illustration: false, example: false, screenshot: false })
 
 const SECTIONS = [
     {
@@ -35,6 +37,12 @@ const SECTIONS = [
         title: 'Style examples',
         description: 'Visuals you already published: every image follows their palette and look, without copying them.',
         placeholder: 'E.g. our launch announcement'
+    },
+    {
+        kind: 'screenshot' as const,
+        title: 'Product screenshots',
+        description: 'Screens of the product itself, filmed in the short videos that go out with a post: the camera zooms in, points and clicks. Full-size captures read best. Describe what each screen shows so the right one is picked.',
+        placeholder: 'E.g. the dashboard with a week of data, the editor with a draft open'
     }
 ]
 
@@ -65,6 +73,49 @@ function remove (id: number) {
         </template>
 
         <div class="space-y-8">
+            <section class="space-y-3">
+                <div>
+                    <h3 class="text-sm font-medium">
+                        Read from your site
+                    </h3>
+                    <p class="text-sm text-muted">
+                        The colours and fonts your homepage declares, found when
+                        the website is analysed. The videos dress in them.
+                    </p>
+                </div>
+                <p
+                    v-if="!brandStyle"
+                    class="text-sm text-muted"
+                >
+                    Not read yet: it happens at the next website analysis, or the first video.
+                </p>
+                <div
+                    v-else
+                    class="space-y-2 text-sm"
+                >
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span
+                            v-for="color in brandStyle.colors"
+                            :key="color"
+                            class="flex items-center gap-1.5 rounded-md px-2 py-1 ring ring-default"
+                        >
+                            <span
+                                class="size-4 rounded-sm ring ring-default"
+                                :style="{ backgroundColor: color }"
+                            />
+                            <span class="font-mono text-xs">{{ color }}</span>
+                        </span>
+                        <span
+                            v-if="!brandStyle.colors.length"
+                            class="text-muted"
+                        >No colour found.</span>
+                    </div>
+                    <p class="text-muted">
+                        Fonts: {{ brandStyle.fonts.length ? brandStyle.fonts.join(', ') : 'none found' }}
+                    </p>
+                </div>
+            </section>
+
             <section
                 v-for="section in SECTIONS"
                 :key="section.kind"
@@ -93,6 +144,18 @@ function remove (id: number) {
                             :alt="asset.description || section.title"
                             class="h-24 w-36 rounded-md bg-elevated object-contain p-1"
                         >
+                        <div
+                            v-if="asset.colors?.length"
+                            class="flex gap-1"
+                        >
+                            <span
+                                v-for="color in asset.colors"
+                                :key="color"
+                                class="size-4 rounded-sm ring ring-default"
+                                :style="{ backgroundColor: color }"
+                                :title="color"
+                            />
+                        </div>
                         <figcaption class="flex items-start gap-1 text-xs text-muted">
                             <span class="min-w-0 flex-1">{{ asset.description }}</span>
                             <UButton

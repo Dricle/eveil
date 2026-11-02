@@ -37,6 +37,9 @@
         <!-- Agents are faked in tests, so nothing leaves the process. The key
              only has to exist: the commands refuse to run without one. -->
         <env name="ANTHROPIC_API_KEY" value="test-key"/>
+        <!-- No voice in tests unless one says so: a key in a developer's .env
+             would otherwise switch the videos' voice over on. -->
+        <env name="ELEVENLABS_API_KEY" value=""/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <!-- Fortify registers the sign-up routes from config at boot, so the
              suite runs with them on and the closed case is covered by a test

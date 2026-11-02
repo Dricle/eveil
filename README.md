@@ -21,7 +21,8 @@ markets it for you across every channel a small team can't staff by hand:
 - **Cold email**, the core: finds the companies and the people at them, writes
   the sequence, sends it from your own mailbox and reads the replies.
 - **Social posts** on LinkedIn, X, Bluesky and Instagram, drafted from what Eveil knows
-  about your product and queued for your approval.
+  about your product and queued for your approval, with a short video of your
+  product in action when it helps.
 - **SEO articles** for your own blog, on what your buyers search for and your
   site doesn't answer yet.
 - **Reddit replies** in the threads where your buyers already ask for help.
@@ -91,6 +92,14 @@ unlimited mailboxes, unlimited leads, your data on your own machine.
 - **Posts to Instagram, image included.** Every caption comes with an image
   Eveil generates for it, published to a Business or Creator account through
   your own free Composio account, so nobody has to create a Meta app.
+- **Short videos of your product, made for the post.** When a post shows a
+  feature in action, Eveil also makes a short video: animated type and your
+  own product screenshots filmed by a camera that zooms in, points and clicks,
+  with a voice over and music if you add an ElevenLabs key. It goes out as a
+  Reel on Instagram and as a native video on LinkedIn and Bluesky, each in its
+  own shape, and is ready to download and attach on X. Pause where
+  something is off, say what to change, and get a new version: no designer, no
+  editing software. Rendered on your own instance with Chromium and ffmpeg.
 - **Finds Reddit threads worth replying to.** Live subreddits and evergreen
   "best X" threads already ranking on Google, drafted in the thread's own
   tone. Copy, post it yourself, mark it posted - no OAuth, since Reddit is
@@ -117,6 +126,24 @@ unlimited mailboxes, unlimited leads, your data on your own machine.
 - **No dark patterns.** No open-tracking pixel, no mailbox warm-up, no OAuth
   lock-in, no purchased contact database. See
   [what it deliberately does not do](#what-it-deliberately-does-not-do).
+
+### A video for the post that needs one
+
+<p align="center">
+  <a href="public/videos/social-video.mp4"><img src="public/videos/social-video.jpg" alt="A product video Eveil made for one of its Instagram posts: click to play" width="320"></a>
+</p>
+
+Made by Eveil for one of its own Instagram posts, then refined three times in
+the editor just by saying what to change ("add a voice and music", "use the
+real logo"). A director agent invents each video from the post, your brand and
+your product screens: your colours, fonts and logo read from your site, its
+own screenshots of the site when you have added none, illustrations it draws
+and animates itself, and a camera that films your screens, zooming in, pointing
+and clicking. With an ElevenLabs key it adds a voice over and music. Each
+network gets its own shape (a 9:16 Reel on Instagram and Bluesky, 4:5 on
+LinkedIn, 16:9 for X), and you pick whether a draft goes out with its image or
+its video. It renders on your own instance with Chromium and ffmpeg: no video
+API, no per-minute fee.
 
 ---
 

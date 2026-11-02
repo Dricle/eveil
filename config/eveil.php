@@ -147,4 +147,23 @@ return [
         'redirect_to' => env('OUTREACH_REDIRECT_TO'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Video rendering
+    |--------------------------------------------------------------------------
+    |
+    | The short videos that go out with a post are rendered by
+    | `resources/video/render.mjs`: Node drives a headless Chromium frame by
+    | frame and ffmpeg encodes. Where those three binaries live is a fact of
+    | the machine, nothing a screen should change.
+    |
+    */
+
+    'video' => [
+        'node' => env('VIDEO_NODE_BINARY', 'node'),
+        'chrome' => env('VIDEO_CHROME_BINARY', 'chromium'),
+        'ffmpeg' => env('VIDEO_FFMPEG_BINARY', 'ffmpeg'),
+        'timeout' => (int) env('VIDEO_RENDER_TIMEOUT', 600),
+    ],
+
 ];

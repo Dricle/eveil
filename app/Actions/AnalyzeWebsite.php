@@ -19,7 +19,7 @@ use Throwable;
  */
 class AnalyzeWebsite
 {
-    public function __construct(private SiteCrawler $crawler) {}
+    public function __construct(private SiteCrawler $crawler, private AdoptSiteBrand $brand) {}
 
     public function handle(Project $project, ?int $maxPages = null): ProjectAnalysis
     {
@@ -56,6 +56,10 @@ class AnalyzeWebsite
 
             return $analysis;
         }
+
+        // Kept on the project for every video to come. The crawl just cached
+        // the homepage, so this is no second visit for the page itself.
+        $this->brand->handle($project);
 
         try {
             $response = (new WebsiteAnalyst($project, $pages))->analyze();

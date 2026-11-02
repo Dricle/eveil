@@ -14,7 +14,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  */
 class XClient implements SocialClientInterface
 {
-    public function publish(SocialAccount $account, string $text, ?string $language = null, ?Media $image = null): ?array
+    public function publish(SocialAccount $account, string $text, ?string $language = null, ?Media $image = null, ?Media $video = null): ?array
     {
         return null;
     }

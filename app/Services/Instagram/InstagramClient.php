@@ -52,29 +52,37 @@ class InstagramClient implements SocialClientInterface
     }
 
     /**
-     * Uploads the image, creates the media container with the caption, then
-     * publishes it. The URI is Instagram's media id.
+     * Uploads the image, or the video as a Reel when the post has one,
+     * creates the media container with the caption, then publishes it. The
+     * URI is Instagram's media id.
      *
      * @return array{uri: string, url: string}
      */
-    public function publish(SocialAccount $account, string $text, ?string $language = null, ?Media $image = null): ?array
+    public function publish(SocialAccount $account, string $text, ?string $language = null, ?Media $image = null, ?Media $video = null): ?array
     {
-        if ($image === null) {
+        if ($image === null && $video === null) {
             throw new RuntimeException('An Instagram post needs an image.');
         }
 
         if ($account->publishesThroughOwnApp()) {
-            return $this->graph->publish($account, $text, $image);
+            return $video !== null
+                ? $this->graph->publishReel($account, $text, $video)
+                : $this->graph->publish($account, $text, $image);
         }
 
         $connection = $this->composioConnection($account);
 
-        $file = $this->composio->uploadFile($connection, 'INSTAGRAM_POST_IG_USER_MEDIA', $image->file_name, 'image/jpeg', (string) stream_get_contents($image->stream()));
-
+        // A video goes out as a Reel, shared to the feed too, instead of the image.
         $container = $this->composio->execute($connection, 'INSTAGRAM_POST_IG_USER_MEDIA', [
             'ig_user_id' => $account->external_id,
             'caption' => $text,
-            'image_file' => $file,
+            ...($video !== null
+                ? [
+                    'media_type' => 'REELS',
+                    'share_to_feed' => true,
+                    'video_file' => $this->composio->uploadFile($connection, 'INSTAGRAM_POST_IG_USER_MEDIA', $video->file_name, 'video/mp4', (string) stream_get_contents($video->stream())),
+                ]
+                : ['image_file' => $this->composio->uploadFile($connection, 'INSTAGRAM_POST_IG_USER_MEDIA', $image->file_name, 'image/jpeg', (string) stream_get_contents($image->stream()))]),
         ]);
 
         $media = $this->composio->execute($connection, 'INSTAGRAM_POST_IG_USER_MEDIA_PUBLISH', [

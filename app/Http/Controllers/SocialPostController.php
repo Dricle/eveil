@@ -89,6 +89,11 @@ class SocialPostController extends Controller
             return back()->withErrors(['social_post' => 'Its image is still being drawn: approve it once it shows.']);
         }
 
+        // Same for its video: it would go out with the image alone.
+        if ($progress->isDirecting($post)) {
+            return back()->withErrors(['social_post' => 'Its video is still being made: approve it once it shows.']);
+        }
+
         $account = SocialAccount::query()->where('platform', $post->platform)->findOrFail((int) $request->validated('social_account_id'));
 
         $post->sibling()->update([

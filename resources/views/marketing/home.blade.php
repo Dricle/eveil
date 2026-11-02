@@ -30,7 +30,7 @@
             'key' => 'social',
             'label' => 'LinkedIn, X, Bluesky & Instagram',
             'title' => 'Posts that sound like you',
-            'text' => 'A fact about your product, a client you just won, your latest article or relevant industry news, drafted for each network and queued for approval. Instagram posts come with an image Eveil generates. LinkedIn, Bluesky and Instagram publish for you; X you copy and post yourself.',
+            'text' => 'A fact about your product, a client you just won, your latest article or relevant industry news, drafted for each network and queued for approval. Instagram posts come with an image Eveil generates, and a post that shows a feature gets a short video of your product. LinkedIn, Bluesky and Instagram publish for you; X you copy and post yourself.',
         ],
         [
             'key' => 'seo',
@@ -50,6 +50,12 @@
             'title' => 'Ads that pay for themselves',
             'text' => 'The same knowledge base and target profiles, driving the campaigns on your ad accounts inside a monthly budget you set. Every day Eveil reviews the numbers, launches new tests, keeps what brings you users and cuts what does not. It never spends past the budget.',
         ],
+    ];
+
+    $videoPoints = [
+        ['icon' => 'sparkles', 'text' => 'In your brand: your colours, your fonts and your logo, read from your site.'],
+        ['icon' => 'megaphone', 'text' => 'A voice over and music written for the post, with an ElevenLabs key.'],
+        ['icon' => 'reply', 'text' => 'Pause where something is off, say what to change, get a new version.'],
     ];
 
     $autonomyLevels = [
@@ -361,6 +367,45 @@
                     </div>
                 @endforeach
             </div>
+        </div>
+    </section>
+
+    {{-- Videos --}}
+    <section id="videos" class="border-b border-[rgba(232,236,242,.08)]">
+        <div class="max-w-[1180px] mx-auto px-6 py-16 lg:py-20 grid grid-cols-1 lg:grid-cols-[1.1fr_.9fr] gap-10 lg:gap-16 lg:items-center">
+            <div class="reveal">
+                <div class="font-[Geist_Mono,monospace] text-[11.5px] tracking-[.1em] uppercase text-[#6fd3ec] mb-[14px]">
+                    Product videos
+                </div>
+                <h2 class="font-[Sora,sans-serif] font-semibold text-[28px] sm:text-[34px] lg:text-[40px] leading-[1.12] tracking-[-.03em] mb-[18px]">
+                    A video of your product, for the post that needs one.</h2>
+                <p class="text-[rgba(232,236,242,.62)] mb-6">When a post shows a feature, Eveil directs a short video
+                    of it: your own screenshots, filmed by a camera that zooms in, points and clicks, between scenes of
+                    animated type. No designer, no editing software, no stock footage.</p>
+                <ul class="grid gap-3 mb-6">
+                    @foreach ($videoPoints as $point)
+                        <li class="flex items-start gap-3 text-[15px] text-[rgba(232,236,242,.72)]">
+                            <span class="w-8 h-8 shrink-0 rounded-lg bg-[rgba(111,211,236,.1)] text-[#6fd3ec] flex items-center justify-center">
+                                <x-marketing.icon :name="$point['icon']" class="w-4 h-4" />
+                            </span>
+                            <span class="pt-[5px]">{{ $point['text'] }}</span>
+                        </li>
+                    @endforeach
+                </ul>
+                <div class="flex flex-wrap gap-2" aria-hidden="true">
+                    @foreach (['Instagram Reel 9:16', 'Bluesky 9:16', 'LinkedIn 4:5', 'X 16:9'] as $shape)
+                        <span class="font-[Geist_Mono,monospace] text-[11px] tracking-[.06em] uppercase text-[rgba(232,236,242,.6)] border border-[rgba(232,236,242,.14)] rounded-full px-[10px] py-[3px]">{{ $shape }}</span>
+                    @endforeach
+                </div>
+            </div>
+            <figure class="reveal flex flex-col items-center gap-4" style="--delay: .1s">
+                <video class="w-full max-w-[320px] aspect-[9/16] rounded-[28px] border border-[rgba(232,236,242,.14)] bg-[#0b0e14] shadow-[0_30px_80px_-30px_rgba(111,211,236,.35)]"
+                    src="/videos/social-video.mp4" poster="/videos/social-video.jpg" autoplay muted loop playsinline controls preload="metadata">
+                </video>
+                <figcaption class="max-w-[320px] text-center text-[13px] text-[rgba(232,236,242,.5)]">
+                    Made by Eveil for one of its own Instagram posts, then refined in the editor just by saying what to change. Turn the sound on: the voice and music are generated too.
+                </figcaption>
+            </figure>
         </div>
     </section>
 

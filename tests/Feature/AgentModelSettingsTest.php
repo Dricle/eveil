@@ -139,6 +139,14 @@ it('has nothing to fail over to when no other provider has a key stored', functi
     expect($agent->provider())->toBe(Lab::Anthropic);
 });
 
+it('never fails a writer over to a provider that only speaks', function () {
+    // An ElevenLabs key is there for the videos' voice over, and ElevenLabs
+    // writes nothing: it must not become a text agent's fallback.
+    app(ProviderCredentials::class)->add('eleven', 'xi-test');
+
+    expect((new WebsiteAnalyst(Project::factory()->create(), collect()))->provider())->toBe(Lab::Anthropic);
+});
+
 it('keeps an unknown provider as a plain string', function () {
     // An OpenAI-compatible endpoint is referenced by its config key, which no
     // enum case can cover.
@@ -179,6 +187,7 @@ it('lists every agent it finds in the code, not a hand-kept list', function () {
         'social-post-writer',
         'target-profile-deriver',
         'variant-writer',
+        'video-director',
         'website-analyst',
     ]);
 });

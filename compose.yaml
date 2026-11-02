@@ -5,7 +5,7 @@
 services:
     laravel.test:
         build:
-            context: './vendor/laravel/sail/runtimes/8.5'
+            context: './docker/sail-8.5'
             dockerfile: Dockerfile
             args:
                 WWWGROUP: '${WWWGROUP}'
@@ -33,7 +33,7 @@ services:
     # code mount. Nothing queued moves without this container running.
     horizon:
         build:
-            context: './vendor/laravel/sail/runtimes/8.5'
+            context: './docker/sail-8.5'
             dockerfile: Dockerfile
             args:
                 WWWGROUP: '${WWWGROUP}'

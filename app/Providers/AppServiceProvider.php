@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
@@ -81,6 +82,13 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        // A worker lives for days: without this, a model or a key changed in
+        // App Settings would reach its jobs only once it restarts.
+        Queue::before(function (): void {
+            $this->app->forgetInstance(Settings::class);
+            $this->app->forgetInstance(ProviderCredentials::class);
+        });
 
         // Every agent run is metered. The dispatcher matches listeners by exact
         // class (and interfaces), not parents, so the streamed variants are

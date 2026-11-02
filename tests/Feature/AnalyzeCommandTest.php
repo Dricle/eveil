@@ -4,14 +4,19 @@ use App\Actions\AnalyzeWebsite;
 use App\Ai\Agents\WebsiteAnalyst;
 use App\Enums\AnalysisStatus;
 use App\Enums\ArticleFrequency;
+use App\Enums\BrandAssetKind;
 use App\Enums\RedditScanFrequency;
 use App\Enums\SocialPostFrequency;
 use App\Models\AgentRun;
 use App\Models\Organization;
 use App\Models\Project;
 use App\Models\ProjectAnalysis;
+use App\Services\Video\SiteCapture;
 use App\Support\Settings;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
+use Mockery\MockInterface;
 
 function knowledgeBase(): array
 {
@@ -38,7 +43,7 @@ function fakeSite(): void
     Http::fake([
         '*/robots.txt' => Http::response('', 404),
         'https://acme.test/' => Http::response(
-            '<!doctype html><html lang="fr"><head><title>Acme</title></head>'
+            '<!doctype html><html lang="fr"><head><title>Acme</title><meta name="theme-color" content="#0a7"></head>'
             .'<body><p>Acme vend des widgets.</p><a href="/about">A propos</a></body></html>'
         ),
         'https://acme.test/about' => Http::response(
@@ -62,6 +67,97 @@ it('creates the project, builds the knowledge base and records the run', functio
         ->and($project->default_language)->toBe('fr')
         ->and(ProjectAnalysis::sole()->status)->toBe(AnalysisStatus::Succeeded)
         ->and(AgentRun::sole()->project_id)->toBe($project->id);
+});
+
+it('keeps the homepage\'s colours and fonts for the videos, from the page the crawl already read', function () {
+    fakeSite();
+    WebsiteAnalyst::fake([knowledgeBase()]);
+
+    $this->artisan('eveil:analyze', ['url' => 'https://acme.test'])->assertSuccessful();
+
+    expect(Project::sole()->brand_style)->toEqual(['colors' => ['#00aa77'], 'fonts' => []])
+        ->and(Http::recorded(fn (Request $request): bool => $request->url() === 'https://acme.test/'))->toHaveCount(1);
+});
+
+function pngOf(int $size): string
+{
+    $image = imagecreatetruecolor($size, $size);
+    ob_start();
+    imagepng($image);
+
+    return (string) ob_get_clean();
+}
+
+it('adds the site\'s logo and sharing image to the visual identity, never over the user\'s own', function () {
+    Storage::fake();
+    app(Settings::class)->set('crawl.delay_ms', 0);
+    Http::fake([
+        '*/robots.txt' => Http::response('', 404),
+        'https://acme.test/' => Http::response('<html lang="fr"><head><title>Acme</title><meta property="og:image" content="https://cdn.acme.test/share.jpg"><link rel="apple-touch-icon" href="/touch.png"></head>'
+            .'<body><img src="/tiny-logo.png" alt="Acme logo"><img src="/img/brand-logo.png"><p>'.str_repeat('Acme vend des widgets. ', 40).'</p></body></html>'),
+        // Too small to be a logo: the next candidate is taken.
+        'https://acme.test/tiny-logo.png' => Http::response(pngOf(16)),
+        'https://acme.test/img/brand-logo.png' => Http::response(pngOf(200)),
+        'https://cdn.acme.test/share.jpg' => Http::response(pngOf(600)),
+    ]);
+    WebsiteAnalyst::fake([knowledgeBase(), knowledgeBase()]);
+
+    $this->artisan('eveil:analyze', ['url' => 'https://acme.test'])->assertSuccessful();
+
+    $project = Project::sole();
+    $logo = $project->brandAssets(BrandAssetKind::Logo)->sole();
+
+    expect($logo->getCustomProperty('source'))->toBe('site')
+        ->and(getimagesizefromstring((string) stream_get_contents($logo->stream()))[0])->toBe(200)
+        ->and($project->brandAssets(BrandAssetKind::Example)->sole()->getCustomProperty('description'))->toBe('Your site\'s sharing image');
+
+    $logo->delete();
+    $project->addMediaFromString(pngOf(100))->usingFileName('mine.png')->withCustomProperties(['kind' => BrandAssetKind::Logo->value])->toMediaCollection('brand_assets');
+
+    $this->artisan('eveil:analyze', ['url' => 'https://acme.test', '--fresh' => true])->assertSuccessful();
+
+    expect($project->fresh()->brandAssets(BrandAssetKind::Logo)->sole()->file_name)->toBe('mine.png')
+        ->and($project->fresh()->brandAssets(BrandAssetKind::Example))->toHaveCount(1);
+});
+
+it('photographs the site when the project has no screenshots, and draws an SVG-only logo', function () {
+    Storage::fake();
+    app(Settings::class)->set('crawl.delay_ms', 0);
+    Http::fake([
+        '*/robots.txt' => Http::response('', 404),
+        'https://acme.test/' => Http::response('<html lang="fr"><head><title>Acme</title><link rel="icon" href="/icon.svg" type="image/svg+xml"></head><body><p>'.str_repeat('Acme vend des widgets. ', 40).'</p></body></html>'),
+    ]);
+    $this->mock(SiteCapture::class, fn (MockInterface $mock) => $mock->shouldReceive('capture')->once()->with('https://acme.test/', 'https://acme.test/icon.svg')->andReturn([
+        'shots' => [['bytes' => pngOf(300), 'view' => 'desktop, top of the page'], ['bytes' => pngOf(300), 'view' => 'phone, top of the page']],
+        'logo' => pngOf(512),
+    ]));
+    WebsiteAnalyst::fake([knowledgeBase()]);
+
+    $this->artisan('eveil:analyze', ['url' => 'https://acme.test'])->assertSuccessful();
+
+    $project = Project::sole();
+
+    expect($project->brandAssets(BrandAssetKind::Screenshot)->map->getCustomProperty('description')->all())
+        ->toBe(['The acme.test homepage, desktop, top of the page', 'The acme.test homepage, phone, top of the page'])
+        ->and(getimagesizefromstring((string) stream_get_contents($project->brandAssets(BrandAssetKind::Logo)->sole()->stream()))[0])->toBe(512);
+});
+
+it('leaves the browser closed when the project already has its screenshots and logo', function () {
+    Storage::fake();
+    fakeSite();
+    WebsiteAnalyst::fake([knowledgeBase(), knowledgeBase()]);
+    $this->artisan('eveil:analyze', ['url' => 'https://acme.test'])->assertSuccessful();
+    $project = Project::sole();
+
+    foreach ([BrandAssetKind::Screenshot, BrandAssetKind::Logo] as $kind) {
+        $project->addMediaFromString(pngOf(100))->usingFileName("{$kind->value}.png")->withCustomProperties(['kind' => $kind->value])->toMediaCollection('brand_assets');
+    }
+
+    $this->mock(SiteCapture::class, fn (MockInterface $mock) => $mock->shouldNotReceive('capture'));
+
+    $this->artisan('eveil:analyze', ['url' => 'https://acme.test', '--fresh' => true])->assertSuccessful();
+
+    expect($project->fresh()->brandAssets(BrandAssetKind::Screenshot))->toHaveCount(1);
 });
 
 it('creates the implicit organization on a fresh install', function () {
@@ -121,7 +217,7 @@ it('still builds a portrait when part of the site will not open', function () {
     Http::fake([
         '*/robots.txt' => Http::response('', 404),
         'https://acme.test/' => Http::response(
-            '<!doctype html><html lang="fr"><head><title>Acme</title></head>'
+            '<!doctype html><html lang="fr"><head><title>Acme</title><meta name="theme-color" content="#0a7"></head>'
             .'<body><p>Acme vend des widgets.</p><a href="/about">A propos</a></body></html>'
         ),
         'https://acme.test/about' => Http::response('', 404),
@@ -159,7 +255,7 @@ it('writes what it has read before the crawl is over', function () {
         }
 
         return Http::response(
-            '<!doctype html><html lang="fr"><head><title>Acme</title></head>'
+            '<!doctype html><html lang="fr"><head><title>Acme</title><meta name="theme-color" content="#0a7"></head>'
             .'<body><p>Acme vend des widgets.</p><a href="/about">A propos</a></body></html>'
         );
     });

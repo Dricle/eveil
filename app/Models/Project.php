@@ -28,6 +28,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -43,6 +44,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  * @property string|null $github_token
  * @property array<string, mixed>|null $knowledge_base
  * @property bool $knowledge_base_edited_by_user
+ * @property array{colors: array<int, string>, fonts: array<int, string>}|null $brand_style
  * @property string|null $default_language
  * @property string|null $prompt_instructions
  * @property string|null $linkedin_prompt_instructions
@@ -75,7 +77,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['organization_id', 'name', 'slug', 'url', 'github_token', 'knowledge_base', 'knowledge_base_edited_by_user', 'default_language', 'prompt_instructions', 'linkedin_prompt_instructions', 'email_autonomy_level', 'email_enabled', 'linkedin_autonomy_level', 'daily_lead_limit', 'lead_limit', 'linkedin_post_frequency', 'linkedin_next_post_at', 'reddit_scan_frequency', 'reddit_next_scan_at', 'article_frequency', 'article_next_at', 'x_post_frequency', 'x_next_post_at', 'bluesky_post_frequency', 'bluesky_next_post_at', 'bluesky_autonomy_level', 'ads_autonomy_level', 'ads_enabled', 'ads_monthly_budget_micros', 'ads_currency', 'x_prompt_instructions', 'bluesky_prompt_instructions', 'instagram_post_frequency', 'instagram_next_post_at', 'instagram_autonomy_level', 'instagram_prompt_instructions'])]
+#[Fillable(['organization_id', 'name', 'slug', 'url', 'github_token', 'knowledge_base', 'knowledge_base_edited_by_user', 'brand_style', 'default_language', 'prompt_instructions', 'linkedin_prompt_instructions', 'email_autonomy_level', 'email_enabled', 'linkedin_autonomy_level', 'daily_lead_limit', 'lead_limit', 'linkedin_post_frequency', 'linkedin_next_post_at', 'reddit_scan_frequency', 'reddit_next_scan_at', 'article_frequency', 'article_next_at', 'x_post_frequency', 'x_next_post_at', 'bluesky_post_frequency', 'bluesky_next_post_at', 'bluesky_autonomy_level', 'ads_autonomy_level', 'ads_enabled', 'ads_monthly_budget_micros', 'ads_currency', 'x_prompt_instructions', 'bluesky_prompt_instructions', 'instagram_post_frequency', 'instagram_next_post_at', 'instagram_autonomy_level', 'instagram_prompt_instructions'])]
 #[Hidden(['github_token'])]
 class Project extends Model implements HasMedia, StoresMediaInterface
 {
@@ -92,7 +94,8 @@ class Project extends Model implements HasMedia, StoresMediaInterface
      * user holds the rights to. Each carries its `kind` (`BrandAssetKind`)
      * and a `description` in its custom properties. The image generator gets
      * them as references, the source of truth for how the brand looks, so it
-     * reuses rather than invents.
+     * reuses rather than invents. Screenshots of the product are the
+     * exception: only the videos show them (`videoAssets()`).
      */
     public function registerMediaCollections(): void
     {
@@ -110,6 +113,32 @@ class Project extends Model implements HasMedia, StoresMediaInterface
     public function logo(): ?Media
     {
         return $this->brandAssets(BrandAssetKind::Logo)->first();
+    }
+
+    /**
+     * What a video composition can show, by the name it calls it: the latest
+     * screenshots as `screen-{id}`, at most `$screenshots` of them since a
+     * model reads each one, and the logo as `logo`. Given a composition, the
+     * screenshots it already films too, however many were added since.
+     *
+     * @return array<string, Media>
+     */
+    public function videoAssets(int $screenshots = 6, ?string $composition = null): array
+    {
+        preg_match_all('/screen-(\d+)/', (string) $composition, $filmed);
+
+        $all = $this->brandAssets(BrandAssetKind::Screenshot)->sortByDesc('id');
+        $assets = $all->take($screenshots)
+            ->merge($all->whereIn('id', array_map('intval', $filmed[1])))
+            ->keyBy(fn (Media $media): string => "screen-{$media->id}")
+            ->all();
+
+        if ($logo = $this->logo()) {
+            $assets['logo'] = $logo;
+        }
+
+        // A row whose file is gone would stop the render: the video does without it.
+        return array_filter($assets, fn (Media $media): bool => Storage::disk($media->disk)->exists($media->getPathRelativeToRoot()));
     }
 
     public function mediaOrganizationId(): int
@@ -131,7 +160,7 @@ class Project extends Model implements HasMedia, StoresMediaInterface
      *
      * @var list<string>
      */
-    private const RESERVED_SLUGS = ['projects', 'organizations', 'app-settings', 'account', 'setup', 'invitations', 'oauth'];
+    private const RESERVED_SLUGS = ['projects', 'organizations', 'app-settings', 'account', 'setup', 'invitations', 'oauth', 'video'];
 
     /**
      * What a new project starts with in its writing instructions.
@@ -577,6 +606,7 @@ class Project extends Model implements HasMedia, StoresMediaInterface
         return [
             'knowledge_base' => 'array',
             'knowledge_base_edited_by_user' => 'boolean',
+            'brand_style' => 'array',
             'email_autonomy_level' => AutonomyLevel::class,
             'email_enabled' => 'boolean',
             'linkedin_autonomy_level' => AutonomyLevel::class,

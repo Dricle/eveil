@@ -63,6 +63,20 @@ enum ImageFormat: string
     }
 
     /**
+     * The size a video in this shape is rendered at, in px: 1080 on its
+     * short side, and even on both, as the H.264 encoder needs.
+     *
+     * @return array{int, int}
+     */
+    public function videoSize(): array
+    {
+        [$width, $height] = $this->ratio();
+        $long = (int) (2 * round(1080 * max($width, $height) / min($width, $height) / 2));
+
+        return $width >= $height ? [$long, 1080] : [1080, $long];
+    }
+
+    /**
      * How the prompt names the shape.
      */
     public function describe(): string

@@ -9,6 +9,7 @@ use App\Services\Social\SocialClientInterface;
 use App\Support\LinkedinCredentials;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Sleep;
 use RuntimeException;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Throwable;
@@ -29,11 +30,12 @@ class LinkedinClient implements SocialClientInterface
     public function __construct(private LinkedinCredentials $credentials) {}
 
     /**
-     * Publishes as the connected member. The URI is the post's URN.
+     * Publishes as the connected member, with the video when the post has
+     * one. The URI is the post's URN.
      *
      * @return array{uri: string, url: string}
      */
-    public function publish(SocialAccount $account, string $text, ?string $language = null, ?Media $image = null): ?array
+    public function publish(SocialAccount $account, string $text, ?string $language = null, ?Media $image = null, ?Media $video = null): ?array
     {
         $response = Http::withToken($account->credential())
             ->withHeaders($this->headers())
@@ -48,6 +50,7 @@ class LinkedinClient implements SocialClientInterface
                 ],
                 'lifecycleState' => 'PUBLISHED',
                 'isReshareDisabledByAuthor' => false,
+                ...($video !== null ? ['content' => ['media' => ['id' => $this->uploadVideo($account, $video)]]] : []),
             ]);
 
         if (! $response->successful()) {
@@ -61,6 +64,79 @@ class LinkedinClient implements SocialClientInterface
         }
 
         return ['uri' => $urn, 'url' => "https://www.linkedin.com/feed/update/{$urn}/"];
+    }
+
+    /**
+     * Uploads a video in the parts LinkedIn asks for, then waits until it is
+     * processed: a post pointing at a video still processing is refused.
+     * Returns the video's URN.
+     */
+    private function uploadVideo(SocialAccount $account, Media $video): string
+    {
+        $bytes = (string) stream_get_contents($video->stream());
+
+        $init = Http::withToken($account->credential())
+            ->withHeaders($this->headers())
+            ->post('https://api.linkedin.com/rest/videos?action=initializeUpload', [
+                'initializeUploadRequest' => [
+                    'owner' => $account->external_id,
+                    'fileSizeBytes' => strlen($bytes),
+                    'uploadCaptions' => false,
+                    'uploadThumbnail' => false,
+                ],
+            ]);
+
+        if (! $init->successful()) {
+            throw new RuntimeException("LinkedIn refused the video: HTTP {$init->status()} {$init->body()}");
+        }
+
+        $urn = (string) $init->json('value.video');
+        $parts = [];
+
+        foreach ((array) $init->json('value.uploadInstructions', []) as $instruction) {
+            $part = Http::withBody(substr($bytes, (int) $instruction['firstByte'], (int) $instruction['lastByte'] - (int) $instruction['firstByte'] + 1), 'application/octet-stream')
+                ->timeout(120)
+                ->put((string) $instruction['uploadUrl']);
+
+            if (! $part->successful()) {
+                throw new RuntimeException("LinkedIn refused a part of the video: HTTP {$part->status()}");
+            }
+
+            $parts[] = trim((string) $part->header('ETag'), '"');
+        }
+
+        $finalize = Http::withToken($account->credential())
+            ->withHeaders($this->headers())
+            ->post('https://api.linkedin.com/rest/videos?action=finalizeUpload', [
+                'finalizeUploadRequest' => [
+                    'video' => $urn,
+                    'uploadToken' => (string) $init->json('value.uploadToken'),
+                    'uploadedPartIds' => $parts,
+                ],
+            ]);
+
+        if (! $finalize->successful()) {
+            throw new RuntimeException("LinkedIn could not finish the video upload: HTTP {$finalize->status()} {$finalize->body()}");
+        }
+
+        foreach (range(1, 60) as $attempt) {
+            $status = Http::withToken($account->credential())
+                ->withHeaders($this->headers())
+                ->get('https://api.linkedin.com/rest/videos/'.rawurlencode($urn))
+                ->json('status');
+
+            if ($status === 'AVAILABLE') {
+                return $urn;
+            }
+
+            if ($status === 'PROCESSING_FAILED') {
+                throw new RuntimeException('LinkedIn could not process the video.');
+            }
+
+            Sleep::for(2)->seconds();
+        }
+
+        throw new RuntimeException('LinkedIn was still processing the video after two minutes.');
     }
 
     /**

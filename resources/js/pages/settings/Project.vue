@@ -145,6 +145,7 @@ watch(() => props.project, (project) => {
 
         <BrandAssets
             :assets="project.brand_assets"
+            :brand-style="project.brand_style"
             :slug="project.slug"
         />
 

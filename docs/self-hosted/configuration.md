@@ -20,6 +20,7 @@ Deployment-only settings — the things an env file sets and no in-app screen sh
   - `r2`: a Cloudflare R2 bucket. Set `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` and `R2_ENDPOINT` (`https://<account id>.r2.cloudflarestorage.com`).
 
   The bucket can and should stay private: the app serves every file through its own routes, after checking who is asking. Never use `public`: it would make every draft's images readable by anyone with the link.
+- `VIDEO_NODE_BINARY`, `VIDEO_CHROME_BINARY`, `VIDEO_FFMPEG_BINARY`, `VIDEO_RENDER_TIMEOUT` — the short videos that go out with an Instagram post are rendered on the instance itself: Node drives a headless Chromium frame by frame, and ffmpeg encodes. The shipped image already has all three, so there is nothing to set; these only matter if you run Eveil outside it. They default to `node`, `chromium` and `ffmpeg` on the `PATH`, and to 600 seconds per render. Rendering needs no network: the video page is refused anything that is not a local file.
 - `MAIL_*` — the app's **own** transactional mail: password resets, member invitations, and email verification if sign-ups are open. **Not** the outreach sender — campaigns go out through the mailboxes connected in-app, over their own SMTP, configured separately (see [Sending mailboxes](#sending-mailboxes) below). The stack boots fine with this block empty, but none of the three will actually send until it's filled in:
 
   ```
@@ -73,6 +74,10 @@ and every outreach mail goes to that address instead of the lead's, with the int
 ## AI provider
 
 Self-hosted instances bring their own AI provider key; cloud instances get one supplied. Configure it from the instance/organization AI settings screen, which accepts several keys per provider (pooled rate limits, multiple accounts) — each call picks one at random. [`eveil:agent-model`](/self-hosted/commands#eveil-agent-model) lets you change which model each agent runs on from the command line.
+
+### Voice and music for videos (optional)
+
+The short videos that go out with a post can speak and carry music, made by [ElevenLabs](https://elevenlabs.io). Add your own ElevenLabs API key on the same AI provider screen (provider **eleven**), or set `ELEVENLABS_API_KEY` in `.env`. That is all: the next video asks for a voice over and music on its own. Without a key, videos still work, with their animated type and built-in sounds only. ElevenLabs bills you directly for what the voice and music use; Eveil reuses a line or a track across versions of the same video rather than paying for it twice. The key is only ever used for audio: no writing agent falls back to it.
 
 ## LinkedIn posting
 

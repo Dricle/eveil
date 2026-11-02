@@ -398,11 +398,14 @@
                     @endforeach
                 </div>
             </div>
-            <div class="reveal flex justify-center" style="--delay: .1s">
+            <figure class="reveal flex flex-col items-center gap-4" style="--delay: .1s">
                 <video class="w-full max-w-[320px] aspect-[9/16] rounded-[28px] border border-[rgba(232,236,242,.14)] bg-[#0b0e14] shadow-[0_30px_80px_-30px_rgba(111,211,236,.35)]"
                     src="/videos/social-video.mp4" poster="/videos/social-video.jpg" autoplay muted loop playsinline controls preload="metadata">
                 </video>
-            </div>
+                <figcaption class="max-w-[320px] text-center text-[13px] text-[rgba(232,236,242,.5)]">
+                    Made by Eveil for one of its own Instagram posts, from the post and the website alone. Turn the sound on: the voice and music are generated too.
+                </figcaption>
+            </figure>
         </div>
     </section>
 

@@ -24,6 +24,9 @@ const emit = defineEmits<{ rework: [] }>()
 const page = usePage()
 const toast = useToast()
 const slug = computed(() => page.props.currentProject!.slug)
+// A network that takes a video publishes it instead of the image. X is
+// posted by hand, so there the user attaches whichever they like.
+const videoWins = computed(() => !!props.post.video_url && props.post.platform !== 'x')
 
 const STATUS = {
     draft: { color: 'neutral' as const, label: 'Draft' },
@@ -322,12 +325,24 @@ function promote () {
             class="space-y-2"
         >
             <div class="flex flex-wrap items-start gap-3">
-                <img
+                <figure
                     v-if="post.image_url"
-                    :src="post.image_url"
-                    alt="The image published with this post"
-                    class="aspect-square w-full max-w-xs rounded-md object-cover"
+                    class="w-full max-w-xs space-y-1"
                 >
+                    <img
+                        :src="post.image_url"
+                        :alt="videoWins ? 'The image, not published: the video goes out instead' : 'The image published with this post'"
+                        class="aspect-square w-full rounded-md object-cover"
+                        :class="{ 'opacity-40 grayscale': videoWins }"
+                    >
+                    <figcaption
+                        v-if="post.video_url || post.making_video"
+                        class="text-xs"
+                        :class="videoWins ? 'text-dimmed' : 'text-muted'"
+                    >
+                        {{ videoWins ? (post.status === 'published' ? 'Not published: the video went out instead.' : 'Not published: the video goes out instead.') : 'Image' }}
+                    </figcaption>
+                </figure>
 
                 <!-- Its first image, still being drawn. -->
                 <div
@@ -342,17 +357,31 @@ function promote () {
                 </div>
 
                 <!-- The video, published instead of the image once there is one. -->
-                <video
+                <figure
                     v-if="post.video_url"
-                    :key="post.video_url"
-                    :src="post.video_url"
-                    controls
-                    playsinline
-                    preload="metadata"
-                    :style="{ aspectRatio: `${post.video_size[0]} / ${post.video_size[1]}` }"
-                    class="max-h-72 max-w-xs rounded-md bg-black object-cover"
-                    :class="post.video_size[0] > post.video_size[1] ? 'w-full' : 'w-40'"
-                />
+                    class="space-y-1"
+                    :class="post.video_size[0] > post.video_size[1] ? 'w-full max-w-xs' : 'w-40'"
+                >
+                    <video
+                        :key="post.video_url"
+                        :src="post.video_url"
+                        controls
+                        playsinline
+                        preload="metadata"
+                        :style="{ aspectRatio: `${post.video_size[0]} / ${post.video_size[1]}` }"
+                        class="max-h-72 w-full rounded-md bg-black object-cover"
+                    />
+                    <figcaption
+                        v-if="videoWins"
+                        class="flex items-center gap-1 text-xs font-medium text-primary"
+                    >
+                        <UIcon
+                            name="i-lucide-check"
+                            class="size-3.5"
+                        />
+                        {{ post.status === 'published' ? 'Published' : 'This is what gets published' }}{{ post.platform === 'instagram' ? ', as a Reel' : '' }}
+                    </figcaption>
+                </figure>
                 <div
                     v-else-if="post.making_video"
                     :style="{ aspectRatio: `${post.video_size[0]} / ${post.video_size[1]}` }"
@@ -368,10 +397,10 @@ function promote () {
             </div>
 
             <p
-                v-if="post.video_url && post.status === 'draft'"
+                v-if="post.video_url && post.platform === 'x' && post.status === 'draft'"
                 class="text-xs text-dimmed"
             >
-                {{ post.platform === 'instagram' ? 'The video goes out as a Reel, instead of the image.' : post.platform === 'x' ? 'Download the video and attach it when you post.' : 'The video goes out with the post.' }}
+                Download the video and attach it when you post.
             </p>
 
             <!-- Every image drawn so far, to compare and pick from before publishing. -->

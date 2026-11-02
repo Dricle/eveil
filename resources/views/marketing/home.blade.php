@@ -403,7 +403,7 @@
                     src="/videos/social-video.mp4" poster="/videos/social-video.jpg" autoplay muted loop playsinline controls preload="metadata">
                 </video>
                 <figcaption class="max-w-[320px] text-center text-[13px] text-[rgba(232,236,242,.5)]">
-                    Made by Eveil for one of its own Instagram posts, from the post and the website alone. Turn the sound on: the voice and music are generated too.
+                    Made by Eveil for one of its own Instagram posts, then refined in the editor just by saying what to change. Turn the sound on: the voice and music are generated too.
                 </figcaption>
             </figure>
         </div>

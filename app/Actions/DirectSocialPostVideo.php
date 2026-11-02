@@ -120,8 +120,10 @@ class DirectSocialPostVideo
 
             $composition = trim((string) ($structured['composition'] ?? ''));
 
+            $audioFailure = null;
+
             try {
-                $audio = $voiced ? $this->audioFor($post, $composition, $assets) : [];
+                $audio = $voiced ? $this->audioFor($post, $composition, $assets, $audioFailure) : [];
                 $file = $this->renderer->render($composition, $post->platform->videoFormat(), $assets, $audio);
             } catch (VideoRenderFailed $e) {
                 if ($attempt === self::ATTEMPTS) {
@@ -147,10 +149,12 @@ class DirectSocialPostVideo
                     ...($post->video_revisions ?? []),
                     ['feedback' => $feedback, 'at' => $at, 'summary' => (string) ($structured['summary'] ?? ''), 'concept' => (string) ($structured['concept'] ?? ''), 'created_at' => now()->toIso8601String()],
                 ],
-                'last_error' => null,
+                'last_error' => $audioFailure === null ? null : "Made without its voice and music: {$audioFailure} Ask for a new version to try again.",
             ]);
 
-            $this->dropUnusedAudio($post, $audio);
+            if ($audioFailure === null) {
+                $this->dropUnusedAudio($post, $audio);
+            }
 
             return;
         }
@@ -171,7 +175,7 @@ class DirectSocialPostVideo
      *
      * @throws VideoRenderFailed when the script does not build
      */
-    private function audioFor(SocialPost $post, string $composition, array $assets): array
+    private function audioFor(SocialPost $post, string $composition, array $assets, ?string &$failure = null): array
     {
         $kept = $post->getMedia('video_audio');
         $audio = ['voices' => [], 'music' => null];
@@ -197,7 +201,11 @@ class DirectSocialPostVideo
                         ->withCustomProperties(['music' => $manifest['music'], 'seconds' => $manifest['duration']])
                         ->toMediaCollection('video_audio');
             }
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            // The video still goes out, silent, but nobody is left to guess why.
+            report($e);
+            $failure = Str::limit($e->getMessage(), 300);
+
             return [];
         }
 

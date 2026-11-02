@@ -91,6 +91,79 @@
         return node
     }
 
+    /**
+     * Hand-drawn type (`s.draw`) set too big for the frame: each block of
+     * text that runs past the margins shrinks, then slides, back in. Measured
+     * where it ends up, every animation's transform held off meanwhile
+     * (an !important rule outranks an animation), and corrected with the
+     * `scale` and `translate` properties, which add to the animations'
+     * transforms rather than being replaced by them.
+     */
+    const fitDrawn = (video) => {
+        const hold = el('style', {}, document.head, '.measuring * { transform: none !important; translate: none !important; scale: none !important; rotate: none !important; }')
+        video.root.classList.add('measuring')
+        const frame = video.root.getBoundingClientRect()
+        const k = frame.width / video.width
+        const pad = 40 * video.unit
+        const blocks = new Set()
+        for (const layer of video.root.querySelectorAll('[data-drawn]')) {
+            const walker = document.createTreeWalker(layer, NodeFilter.SHOW_TEXT)
+            while (walker.nextNode()) {
+                let node = walker.currentNode.parentElement
+                if (!walker.currentNode.textContent.trim()) {
+                    continue
+                }
+                // In an SVG, the <text> it belongs to; elsewhere its line.
+                const svgText = node.closest('svg') ? node.closest('text') : null
+                if (node.closest('svg')) {
+                    if (svgText) {
+                        blocks.add(svgText)
+                    }
+                    continue
+                }
+                while (node !== layer && getComputedStyle(node).display.startsWith('inline')) {
+                    node = node.parentElement
+                }
+                if (node !== layer) {
+                    blocks.add(node)
+                }
+            }
+        }
+        const fixes = [...blocks].map((block) => {
+            const range = document.createRange()
+            range.selectNodeContents(block)
+            const text = range.getBoundingClientRect()
+            const left = (text.left - frame.left) / k
+            const right = (text.right - frame.left) / k
+            if (left >= pad && right <= video.width - pad) {
+                return null
+            }
+            const box = block.getBoundingClientRect()
+            const boxLeft = (box.left - frame.left) / k
+            // Shrinks towards the edge that is still inside, so left-set type
+            // stays aligned with its neighbours; towards its centre otherwise.
+            const origin = left >= pad ? left : right <= video.width - pad ? right : (boxLeft + (box.right - frame.left) / k) / 2
+            const room = left >= pad ? video.width - pad - left : right <= video.width - pad ? right - pad : video.width - 2 * pad
+            const scale = Math.min(1, room / (right - left))
+            const [l, r] = [origin + (left - origin) * scale, origin + (right - origin) * scale]
+            const shift = l < pad ? pad - l : r > video.width - pad ? video.width - pad - r : 0
+            // An SVG's units are its viewBox's, not the frame's px.
+            const unit = block instanceof SVGElement ? block.getScreenCTM().a / k : 1
+
+            return { block, scale, shift: shift / unit, origin: `${(origin - boxLeft) / unit}px 50%` }
+        })
+        video.root.classList.remove('measuring')
+        hold.remove()
+        for (const fix of fixes.filter(Boolean)) {
+            if (fix.block instanceof SVGElement) {
+                fix.block.style.transformBox = 'fill-box'
+            }
+            fix.block.style.transformOrigin = fix.origin
+            fix.block.style.scale = String(fix.scale)
+            fix.block.style.translate = `${fix.shift}px 0`
+        }
+    }
+
     class Video {
         constructor (options = {}) {
             this.width = options.width ?? 1080
@@ -773,6 +846,7 @@
          */
         draw (markup, { front = true, style = {} } = {}) {
             const layer = el('div', { position: 'absolute', inset: '0', zIndex: front ? '1' : '-1', pointerEvents: 'none', ...style }, this.node)
+            layer.dataset.drawn = ''
             layer.innerHTML = String(markup)
 
             return layer
@@ -849,6 +923,7 @@
                     node.style.fontSize = `${parseFloat(node.style.fontSize) * 0.9}px`
                 }
             }
+            fitDrawn(video)
             video.background()
             for (const animation of video.root.getAnimations({ subtree: true })) {
                 animation.pause()

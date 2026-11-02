@@ -222,6 +222,8 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
           a mock interface), type set by hand letter by letter. Style it
           inline; fonts as above. Give elements classes to animate them. No
           CSS animation or transition: they would not follow the timeline.
+          Keep everything inside the frame with a margin: type that runs past
+          it is shrunk to fit, which can leave it smaller than you meant.
         s.animate(target, keyframes, { at, duration, easing, stagger, iterations, direction })
           Moves anything in the scene: a node, or every element matching a
           selector, `stagger` seconds apart. Keyframes as in the Web
@@ -231,7 +233,9 @@ class VideoDirector extends EveilAgent implements HasStructuredOutput
           looping. This is where the motion design happens:
             an SVG drawing itself (pathLength="1" stroke-dasharray="1", then
               strokeDashoffset 1 to 0),
-            letters or words flying in one by one (each in a span, staggered),
+            letters or words flying in one by one (each in a span with
+              display: inline-block, staggered; a space as its own span with
+              white-space: pre, or words run together),
             a mask or clip-path wiping text or an image in,
             a 3D flip (perspective and rotateY), a zoom through a word into
             the next scene, an object bouncing, spinning, orbiting, a shape

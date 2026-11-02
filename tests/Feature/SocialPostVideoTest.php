@@ -28,6 +28,7 @@ use App\Services\Video\VideoRenderFailed;
 use App\Support\CurrentProject;
 use App\Support\SocialPostProgress;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
@@ -42,6 +43,7 @@ use Laravel\Ai\Responses\Data\TextUsage;
 use Laravel\Ai\Responses\StructuredTextResponse;
 use Laravel\Ai\Tools\Request as ToolRequest;
 use Mockery\MockInterface;
+use RuntimeException;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 // The director reads the project's homepage for its colours and fonts: never
@@ -462,6 +464,24 @@ it('photographs a page on a desktop and a phone, draws an SVG logo, and never op
         ->and($capture->capture('http://127.0.0.1/'))->toBe(['shots' => [], 'logo' => null]);
 })->skip(fn (): bool => ! is_executable((string) exec('command -v '.escapeshellarg((string) config('eveil.video.chrome')))), 'Chromium is not installed here.');
 
+it('shrinks hand-drawn type that runs past the frame back inside its margins, keeping its left edge', function () {
+    $still = app(VideoRenderer::class)->stills(<<<'JS'
+        v.theme({ background: '#ffffff', ink: '#000000' });
+        v.scene(1, (s) => {
+            s.draw('<div style="position:absolute;left:80px;top:300px;font:900 260px Inter;white-space:nowrap;color:#000">OVERFLOWING</div>');
+            s.draw('<svg viewBox="0 0 1080 1350" style="width:100%;height:100%"><text x="80" y="1000" font-family="Inter" font-weight="900" font-size="260">OVERFLOWING</text></svg>');
+        });
+        JS, ImageFormat::Portrait, [], [0.5])[0];
+    $image = imagecreatefromstring($still);
+    $inked = fn (int $x, int $fromY, int $toY): bool => collect(range($fromY, $toY, 4))->contains(fn (int $y): bool => (imagecolorat($image, $x, $y) & 0xFF) < 128);
+
+    // Nothing past the right margin, and both still start where they were set.
+    expect($inked(1060, 300, 560))->toBeFalse()
+        ->and($inked(1060, 760, 1020))->toBeFalse()
+        ->and(collect(range(70, 100))->contains(fn (int $x): bool => $inked($x, 300, 560)))->toBeTrue()
+        ->and(collect(range(70, 100))->contains(fn (int $x): bool => $inked($x, 760, 1020)))->toBeTrue();
+})->skip(fn (): bool => ! is_executable((string) exec('command -v '.escapeshellarg((string) config('eveil.video.chrome')))), 'Chromium is not installed here.');
+
 it('never lets a composition show a file from outside its own staging directory', function () {
     $outside = sys_get_temp_dir().'/'.uniqid('outside-', true).'.html';
     file_put_contents($outside, '<body style="margin:0;background:#ff0000"></body>');
@@ -539,6 +559,31 @@ it('keeps the current voice and music when a new version fails, and times the st
     expect(fn () => app(DirectSocialPostVideo::class)->handle($post, 'Shorter.', 2.0))->toThrow(VideoRenderFailed::class);
 
     expect($post->fresh()->getMedia('video_audio')->pluck('id')->sort()->values()->all())->toBe([$line->id, $music->id]);
+});
+
+it('still makes the video when its voice cannot be made, says why, and keeps the audio it had', function () {
+    [, $project] = videoSetup();
+    Storage::fake();
+    Exceptions::fake();
+    $post = SocialPost::factory()->instagram()->create(['project_id' => $project->id]);
+    $old = $post->addMediaFromString('old')->usingFileName('a.mp3')->withCustomProperties(['voice' => 'Before.', 'narrator' => 'Eric', 'seconds' => 1.0])->toMediaCollection('video_audio');
+    VideoDirector::fake([videoStructured(['composition' => "v.scene(3, (s) => s.voice('Hello there.'));", 'summary' => 'Hi.', 'concept' => 'Hi.'])]);
+    $this->mock(VideoAudio::class, function (MockInterface $mock): void {
+        $mock->shouldReceive('available')->andReturnTrue();
+        $mock->shouldReceive('speak')->andThrow(new RuntimeException('too_many_concurrent_requests'));
+    });
+    $this->mock(VideoRenderer::class, function (MockInterface $mock): void {
+        $mock->shouldReceive('manifest')->andReturn(['voices' => ['Hello there.'], 'narrator' => 'Alice', 'music' => null, 'duration' => 3.0]);
+        $mock->shouldReceive('render')->once()->withArgs(fn (string $composition, ImageFormat $format, array $assets, array $audio): bool => $audio === [])->andReturn(renderedVideo());
+    });
+
+    app(DirectSocialPostVideo::class)->handle($post);
+
+    expect($post->fresh())
+        ->video_media_id->not->toBeNull()
+        ->last_error->toBe('Made without its voice and music: too_many_concurrent_requests Ask for a new version to try again.')
+        ->and($old->fresh())->not->toBeNull();
+    Exceptions::assertReported(RuntimeException::class);
 });
 
 it('keeps the voice a video already has when a new version names no narrator', function () {

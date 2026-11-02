@@ -39,6 +39,8 @@ class VideoAudio
         'River' => ['id' => 'SAz9YHcvj6GT2YYXdXww', 'sound' => 'neutral, calm and relaxed, American'],
     ];
 
+    private const TRIES = 3;
+
     public function __construct(private ProviderCredentials $credentials) {}
 
     public function available(): bool
@@ -51,11 +53,13 @@ class VideoAudio
      */
     public function speak(string $text, string $narrator): string
     {
-        return Audio::of($text)
+        // Tried again on a hiccup: several videos made at once run into
+        // ElevenLabs' limit on requests in flight.
+        return retry(self::TRIES, fn (): string => Audio::of($text)
             ->voice((self::NARRATORS[$narrator] ?? self::NARRATORS[array_rand(self::NARRATORS)])['id'])
             ->timeout(60)
             ->generate(Lab::ElevenLabs, self::VOICE_MODEL)
-            ->content();
+            ->content(), fn (int $attempt): int => $attempt * 2000);
     }
 
     /**
@@ -68,6 +72,7 @@ class VideoAudio
 
         $response = Http::withHeaders(['xi-api-key' => (string) config('ai.providers.eleven.key')])
             ->timeout(180)
+            ->retry(self::TRIES, fn (int $attempt): int => $attempt * 2000, throw: false)
             ->post('https://api.elevenlabs.io/v1/music', [
                 'prompt' => "{$prompt}. Instrumental, no vocals.",
                 // Its shortest track is 10 seconds; the renderer trims and fades it.

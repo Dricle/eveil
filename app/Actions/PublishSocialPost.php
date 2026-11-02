@@ -18,8 +18,8 @@ use Throwable;
  *
  * A network that needs a picture and has none yet (its drawing failed when
  * the draft was written) gets one drawn here first, from the post itself:
- * approving again is the retry for that too. A post with a video sends it
- * as well, and the network uses it instead of the image.
+ * approving again is the retry for that too. A post whose video is the
+ * picked media sends it, and the network uses it instead of the image.
  */
 class PublishSocialPost
 {
@@ -30,9 +30,9 @@ class PublishSocialPost
         $post->update(['social_account_id' => $account->id]);
 
         try {
-            $video = $post->video;
+            $video = $post->publishedVideo();
 
-            // A video goes out instead of the image: no image to draw then.
+            // A video picked to go out replaces the image: no image to draw then.
             if ($post->platform->requiresImage() && $post->image_media_id === null && $video === null) {
                 $this->addImage->handle($post);
             }

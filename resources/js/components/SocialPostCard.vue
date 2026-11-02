@@ -24,9 +24,6 @@ const emit = defineEmits<{ rework: [] }>()
 const page = usePage()
 const toast = useToast()
 const slug = computed(() => page.props.currentProject!.slug)
-// A network that takes a video publishes it instead of the image. X is
-// posted by hand, so there the user attaches whichever they like.
-const videoWins = computed(() => !!props.post.video_url && props.post.platform !== 'x')
 
 const STATUS = {
     draft: { color: 'neutral' as const, label: 'Draft' },
@@ -174,6 +171,38 @@ function selectImage (imageId: number) {
         preserveScroll: true,
         onFinish: () => selectingImage.value = null
     })
+}
+
+const selectingVideo = ref(false)
+
+function selectVideo () {
+    selectingVideo.value = true
+    router.put(socialPostRoutes.video.update.url({ project: slug.value, social_post: props.post.id }), {}, {
+        preserveScroll: true,
+        onFinish: () => selectingVideo.value = false
+    })
+}
+
+// The pictures drawn for it, or on a post already out, only the one that went.
+const shownImages = computed(() => {
+    const images = props.post.images?.length ? props.post.images : (props.post.image_url ? [{ id: 0, url: props.post.image_url, selected: true }] : [])
+
+    return props.post.status === 'draft' ? images : images.filter(image => image.selected && !props.post.publish_video)
+})
+
+// A choice only where there is one to make: a draft with more than one
+// medium, on a network that publishes for us (X is attached by hand).
+const choosing = computed(() => props.post.status === 'draft' && props.post.platform !== 'x' && !!props.post.images?.length && shownImages.value.length + (props.post.video_url ? 1 : 0) > 1)
+const picking = computed(() => selectingImage.value !== null || selectingVideo.value)
+
+function isPicked (kind: 'image' | 'video', imageId?: number): boolean {
+    return kind === 'video'
+        ? !!props.post.publish_video
+        : !props.post.publish_video && !!shownImages.value.find(image => image.id === imageId)?.selected
+}
+
+function mediaRing (picked: boolean): string {
+    return choosing.value && picked ? 'ring-primary' : 'ring-default'
 }
 
 // The first version of the video. Made on the queue: the page rereads on
@@ -324,43 +353,68 @@ function promote () {
             v-if="post.image_url || post.platform === 'instagram' || post.video_url || post.making_video || post.status === 'draft'"
             class="space-y-2"
         >
+            <!-- Every picture drawn and the video, side by side: on a draft, the
+                 one ringed is what goes out, and a click picks another. -->
             <div class="flex flex-wrap items-start gap-3">
                 <figure
-                    v-if="post.image_url"
-                    class="w-full max-w-xs space-y-1"
+                    v-for="image in shownImages"
+                    :key="image.id"
+                    class="relative size-56 shrink-0 overflow-hidden rounded-lg ring-2 transition"
+                    :class="mediaRing(isPicked('image', image.id))"
                 >
+                    <button
+                        v-if="choosing"
+                        type="button"
+                        class="block size-full"
+                        :aria-label="isPicked('image', image.id) ? 'This image is what gets published' : 'Publish this image'"
+                        :aria-pressed="isPicked('image', image.id)"
+                        :disabled="picking"
+                        @click="isPicked('image', image.id) || selectImage(image.id)"
+                    >
+                        <img
+                            :src="image.url"
+                            alt=""
+                            class="size-full object-cover"
+                        >
+                    </button>
                     <img
-                        :src="post.image_url"
-                        :alt="videoWins ? 'The image, not published: the video goes out instead' : 'The image published with this post'"
-                        class="aspect-square w-full rounded-md object-cover"
-                        :class="{ 'opacity-40 grayscale': videoWins }"
+                        v-else
+                        :src="image.url"
+                        alt="The image published with this post"
+                        class="size-full object-cover"
                     >
-                    <figcaption
-                        v-if="post.video_url || post.making_video"
-                        class="text-xs"
-                        :class="videoWins ? 'text-dimmed' : 'text-muted'"
-                    >
-                        {{ videoWins ? (post.status === 'published' ? 'Not published: the video went out instead.' : 'Not published: the video goes out instead.') : 'Image' }}
-                    </figcaption>
+                    <UButton
+                        v-if="choosing"
+                        class="absolute top-2 left-2"
+                        size="xs"
+                        :color="isPicked('image', image.id) ? 'primary' : 'neutral'"
+                        :variant="isPicked('image', image.id) ? 'solid' : 'outline'"
+                        :icon="isPicked('image', image.id) ? 'i-lucide-check' : undefined"
+                        :label="isPicked('image', image.id) ? 'Publishing' : 'Use this'"
+                        :loading="selectingImage === image.id"
+                        :disabled="picking"
+                        :ui="{ base: isPicked('image', image.id) ? '' : 'bg-default/90' }"
+                        @click="isPicked('image', image.id) || selectImage(image.id)"
+                    />
                 </figure>
 
                 <!-- Its first image, still being drawn. -->
                 <div
-                    v-else-if="post.drawing_image"
-                    class="flex aspect-square w-full max-w-xs animate-pulse items-center justify-center gap-2 rounded-md bg-elevated text-sm text-muted"
+                    v-if="post.drawing_image"
+                    class="flex size-56 shrink-0 animate-pulse items-center justify-center gap-2 rounded-lg bg-elevated text-sm text-muted"
                 >
                     <UIcon
                         name="i-lucide-loader-circle"
                         class="size-4 animate-spin"
                     />
-                    Drawing the image…
+                    Drawing an image…
                 </div>
 
-                <!-- The video, published instead of the image once there is one. -->
                 <figure
-                    v-if="post.video_url"
-                    class="space-y-1"
-                    :class="post.video_size[0] > post.video_size[1] ? 'w-full max-w-xs' : 'w-40'"
+                    v-if="post.video_url && (choosing || post.publish_video || !shownImages.length)"
+                    class="relative h-56 shrink-0 overflow-hidden rounded-lg bg-black ring-2 transition"
+                    :class="mediaRing(isPicked('video'))"
+                    :style="{ aspectRatio: `${post.video_size[0]} / ${post.video_size[1]}` }"
                 >
                     <video
                         :key="post.video_url"
@@ -368,25 +422,26 @@ function promote () {
                         controls
                         playsinline
                         preload="metadata"
-                        :style="{ aspectRatio: `${post.video_size[0]} / ${post.video_size[1]}` }"
-                        class="max-h-72 w-full rounded-md bg-black object-cover"
+                        class="size-full object-cover"
                     />
-                    <figcaption
-                        v-if="videoWins"
-                        class="flex items-center gap-1 text-xs font-medium text-primary"
-                    >
-                        <UIcon
-                            name="i-lucide-check"
-                            class="size-3.5"
-                        />
-                        {{ post.status === 'published' ? 'Published' : 'This is what gets published' }}{{ post.platform === 'instagram' ? ', as a Reel' : '' }}
-                    </figcaption>
+                    <UButton
+                        v-if="choosing"
+                        class="absolute top-2 left-2"
+                        size="xs"
+                        :color="isPicked('video') ? 'primary' : 'neutral'"
+                        :variant="isPicked('video') ? 'solid' : 'outline'"
+                        :icon="isPicked('video') ? 'i-lucide-check' : undefined"
+                        :label="isPicked('video') ? (post.platform === 'instagram' ? 'Publishing as a Reel' : 'Publishing') : 'Use this'"
+                        :loading="selectingVideo"
+                        :disabled="picking"
+                        :ui="{ base: isPicked('video') ? '' : 'bg-default/90' }"
+                        @click="isPicked('video') || selectVideo()"
+                    />
                 </figure>
                 <div
                     v-else-if="post.making_video"
                     :style="{ aspectRatio: `${post.video_size[0]} / ${post.video_size[1]}` }"
-                    :class="post.video_size[0] > post.video_size[1] ? 'w-full max-w-xs' : 'w-40'"
-                    class="flex animate-pulse flex-col items-center justify-center gap-2 rounded-md bg-elevated p-3 text-center text-sm text-muted"
+                    class="flex h-56 shrink-0 animate-pulse flex-col items-center justify-center gap-2 rounded-lg bg-elevated p-3 text-center text-sm text-muted"
                 >
                     <UIcon
                         name="i-lucide-loader-circle"
@@ -397,35 +452,17 @@ function promote () {
             </div>
 
             <p
+                v-if="choosing"
+                class="text-xs text-dimmed"
+            >
+                Click an image or the video to choose what goes out with the post.
+            </p>
+            <p
                 v-if="post.video_url && post.platform === 'x' && post.status === 'draft'"
                 class="text-xs text-dimmed"
             >
                 Download the video and attach it when you post.
             </p>
-
-            <!-- Every image drawn so far, to compare and pick from before publishing. -->
-            <div
-                v-if="post.status === 'draft' && (post.images?.length ?? 0) > 1"
-                class="flex flex-wrap gap-2"
-            >
-                <button
-                    v-for="image in post.images"
-                    :key="image.id"
-                    type="button"
-                    class="overflow-hidden rounded-md ring-2 transition"
-                    :class="image.selected ? 'ring-primary' : 'ring-transparent opacity-70 hover:opacity-100'"
-                    :aria-label="image.selected ? 'The image this post will be published with' : 'Use this image'"
-                    :aria-pressed="image.selected"
-                    :disabled="selectingImage !== null"
-                    @click="image.selected || selectImage(image.id)"
-                >
-                    <img
-                        :src="image.url"
-                        alt=""
-                        class="size-16 object-cover"
-                    >
-                </button>
-            </div>
 
             <div class="flex flex-wrap gap-2">
                 <UButton

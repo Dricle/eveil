@@ -44,6 +44,8 @@ class SocialPostResource extends JsonResource
             // The live preview, once there is a script to play.
             'video_preview_url' => $this->video_composition === null ? null : route('social.posts.video.preview', ['project' => $this->project->slug, 'social_post' => $this->id, 'v' => $this->video_media_id]),
             'video_revisions' => $this->video_revisions ?? [],
+            // Whether the video, rather than the picked image, is what gets published.
+            'publish_video' => $this->publish_video && $this->video_media_id !== null,
             // A video queued or being made for this draft.
             'making_video' => app(SocialPostProgress::class)->isDirecting($this->resource),
             'status' => $this->status->value,

@@ -478,6 +478,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
                  */
                 Route::get('{social_post}/video', [SocialPostVideoController::class, 'show'])->name('video.show');
                 Route::post('{social_post}/video', [SocialPostVideoController::class, 'store'])->name('video.store');
+                Route::put('{social_post}/video', [SocialPostVideoController::class, 'update'])->name('video.update');
                 Route::get('{social_post}/video/file', [SocialPostVideoFileController::class, 'show'])->name('video.file');
                 Route::get('{social_post}/video/preview', [SocialPostVideoPreviewController::class, 'show'])->name('video.preview');
             });

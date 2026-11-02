@@ -220,6 +220,7 @@ it('revises the video from what the user said, showing the director the moment t
     Storage::fake();
     $post = SocialPost::factory()->instagram()->create(['project_id' => $project->id, 'video_revisions' => [['feedback' => null, 'at' => null, 'summary' => 'First cut.', 'created_at' => now()->toIso8601String()]]]);
     videoOf($post);
+    $post->update(['publish_video' => false]);
     VideoDirector::fake([videoStructured(videoScript('Slower'))]);
     $this->mock(VideoRenderer::class, function (MockInterface $mock): void {
         $mock->shouldReceive('stills')->once()->withArgs(fn (string $composition, ImageFormat $format, array $assets, array $times): bool => $times === [3.4, 4.0, 4.8])->andReturn(['png-1', 'png-2', 'png-3']);
@@ -229,7 +230,9 @@ it('revises the video from what the user said, showing the director the moment t
     app(DirectSocialPostVideo::class)->handle($post, 'Too fast here.', 4.0);
 
     expect($post->fresh()->video_revisions)->toHaveCount(2)
-        ->and($post->fresh()->video_revisions[1])->toMatchArray(['feedback' => 'Too fast here.', 'at' => 4.0, 'summary' => 'A title saying Slower.']);
+        ->and($post->fresh()->video_revisions[1])->toMatchArray(['feedback' => 'Too fast here.', 'at' => 4.0, 'summary' => 'A title saying Slower.'])
+        // Asked for again: it is what goes out again, even if the image had been picked.
+        ->and($post->fresh()->publish_video)->toBeTrue();
 
     VideoDirector::assertPrompted(fn (AgentPrompt $prompt): bool => $prompt->contains('Too fast here.')
         && $prompt->contains("s.title('Hi')")
@@ -383,6 +386,48 @@ it('publishes a draft with a video as a Reel through Composio', function () {
         && $request['arguments']['media_type'] === 'REELS'
         && $request['arguments']['video_file']['mimetype'] === 'video/mp4'
         && ! isset($request['arguments']['image_file']));
+});
+
+it('publishes the image instead when the user picks it over the video, and the video when they pick it back', function () {
+    [$user, $project] = videoSetup();
+    Storage::fake();
+    $account = SocialAccount::factory()->instagram()->create(['organization_id' => $project->organization_id, 'external_id' => '17841']);
+    $account->projects()->attach($project);
+    $post = SocialPost::factory()->instagram()->create(['project_id' => $project->id, 'body' => 'A caption.']);
+    $image = $post->addMediaFromString('jpeg')->usingFileName('a.jpg')->toMediaCollection('images');
+    $post->update(['image_media_id' => $image->id]);
+    videoOf($post);
+
+    $this->actingAs($user)->put(route('social.posts.images.update', [$post, $image->id]))->assertRedirect();
+    expect($post->fresh()->publish_video)->toBeFalse();
+    $this->actingAs($user)->put(route('social.posts.video.update', $post))->assertRedirect();
+    expect($post->fresh()->publish_video)->toBeTrue();
+    $this->actingAs($user)->put(route('social.posts.images.update', [$post, $image->id]));
+
+    Http::preventStrayRequests();
+    Http::fake([
+        'backend.composio.dev/api/v3.1/files/upload/request' => Http::response(['key' => 'uploads/a.jpg', 'new_presigned_url' => 'https://storage.composio.test/a', 'metadata' => ['storage_backend' => 's3']]),
+        'storage.composio.test/*' => Http::response(),
+        'backend.composio.dev/api/v3.1/tools/execute/INSTAGRAM_POST_IG_USER_MEDIA_PUBLISH' => Http::response(['successful' => true, 'data' => ['id' => 'media-1']]),
+        'backend.composio.dev/api/v3.1/tools/execute/INSTAGRAM_POST_IG_USER_MEDIA' => Http::response(['successful' => true, 'data' => ['id' => 'container-1']]),
+        'backend.composio.dev/api/v3.1/tools/execute/INSTAGRAM_GET_IG_MEDIA' => Http::response(['successful' => true, 'data' => ['permalink' => 'https://www.instagram.com/p/abc/']]),
+    ]);
+
+    $this->actingAs($user)->post(route('social.posts.approve', $post), ['social_account_id' => $account->id]);
+
+    expect($post->fresh()->status)->toBe(SocialPostStatus::Published);
+    Http::assertSent(fn (Request $request): bool => str_starts_with($request->url(), 'https://storage.composio.test/') && $request->body() === 'jpeg');
+    Http::assertNotSent(fn (Request $request): bool => str_ends_with($request->url(), '/INSTAGRAM_POST_IG_USER_MEDIA') && ($request['arguments']['media_type'] ?? null) === 'REELS');
+});
+
+it('refuses to pick a video a draft does not have, or on a post already out', function () {
+    [$user, $project] = videoSetup();
+    $bare = SocialPost::factory()->instagram()->create(['project_id' => $project->id]);
+    $published = SocialPost::factory()->instagram()->create(['project_id' => $project->id, 'status' => SocialPostStatus::Published]);
+    videoOf($published);
+
+    $this->actingAs($user)->put(route('social.posts.video.update', $bare))->assertNotFound();
+    $this->actingAs($user)->put(route('social.posts.video.update', $published))->assertNotFound();
 });
 
 it('publishes a draft with a video as a Reel through the Meta app', function () {

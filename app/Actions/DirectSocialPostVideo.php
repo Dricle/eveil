@@ -145,6 +145,8 @@ class DirectSocialPostVideo
             $post->update([
                 'video_composition' => $composition,
                 'video_media_id' => $video->id,
+                // The user just asked for it: it is what goes out, until they pick an image.
+                'publish_video' => true,
                 'video_revisions' => [
                     ...($post->video_revisions ?? []),
                     ['feedback' => $feedback, 'at' => $at, 'summary' => (string) ($structured['summary'] ?? ''), 'concept' => (string) ($structured['concept'] ?? ''), 'created_at' => now()->toIso8601String()],

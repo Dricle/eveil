@@ -55,7 +55,8 @@ class SocialPostImageController extends Controller
     {
         $post = SocialPost::query()->where('status', SocialPostStatus::Draft)->findOrFail($socialPost);
 
-        $post->update(['image_media_id' => $post->media()->where('collection_name', 'images')->findOrFail($image)->id]);
+        // Picking an image is picking it over the video too; the video stays, to pick back.
+        $post->update(['image_media_id' => $post->media()->where('collection_name', 'images')->findOrFail($image)->id, 'publish_video' => false]);
 
         return back();
     }

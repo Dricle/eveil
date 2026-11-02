@@ -49,4 +49,16 @@ class SocialPostVideoController extends Controller
 
         return back();
     }
+
+    /**
+     * Picks the video over the image, as what this draft publishes.
+     */
+    public function update(int $socialPost): RedirectResponse
+    {
+        $post = SocialPost::query()->where('status', SocialPostStatus::Draft)->whereNotNull('video_media_id')->findOrFail($socialPost);
+
+        $post->update(['publish_video' => true]);
+
+        return back();
+    }
 }

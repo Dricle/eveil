@@ -44,6 +44,8 @@ class GetSocialPost implements Tool
             'video' => [
                 'brief' => $post->video_brief,
                 'made' => $post->video_media_id !== null,
+                // False when the user picked the image to go out instead.
+                'published_instead_of_the_image' => $post->video_media_id !== null && $post->publish_video,
                 'revisions' => $post->video_revisions ?? [],
             ],
         ]);

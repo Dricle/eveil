@@ -53,6 +53,8 @@ export type SocialPost = {
     video_preview_url: string | null
     /** Every version so far: what the user asked, at which second, and what changed. */
     video_revisions: { feedback: string | null, at: number | null, summary: string, created_at: string }[]
+    /** Whether the video, rather than the picked image, is what gets published. */
+    publish_video: boolean
     /** A video queued or being made for this post right now. */
     making_video: boolean
     status: 'draft' | 'published' | 'rejected'

@@ -38,8 +38,9 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  * writer may also ask for a video in `video_brief`, only when moving pictures
  * genuinely help (a feature shown in action). `VideoDirector` turns it into
  * `video_composition`, a script for `resources/video/runtime.js`, and the
- * rendered file sits in the `videos` collection as `video_media_id`; it then
- * goes out instead of the image. `video_revisions` keeps every change the
+ * rendered file sits in the `videos` collection as `video_media_id`; it
+ * goes out instead of the image while `publish_video` is on, which the user
+ * turns off by picking an image. `video_revisions` keeps every change the
  * user asked for in the editor, with what was changed. Its voice lines and
  * music, when the instance can make them, sit in `video_audio`, each tagged
  * with its text or its prompt so a new version reuses what it kept.
@@ -60,6 +61,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  * @property string|null $video_brief
  * @property string|null $video_composition
  * @property int|null $video_media_id
+ * @property bool $publish_video
  * @property array<int, array{feedback: string|null, at: float|null, summary: string, created_at: string}>|null $video_revisions
  * @property SocialPostStatus $status
  * @property string|null $rejection_reason
@@ -76,7 +78,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 #[Fillable([
     'project_id', 'platform', 'social_account_id', 'agent_run_id',
     'source_type', 'source_ref', 'variant', 'evidence', 'body', 'image_brief', 'image_reference_ids', 'image_media_id',
-    'video_brief', 'video_composition', 'video_media_id', 'video_revisions',
+    'video_brief', 'video_composition', 'video_media_id', 'publish_video', 'video_revisions',
     'status', 'rejection_reason', 'external_id', 'url', 'published_at', 'last_error',
     'promoted_at', 'likes_count', 'stats_checked_at',
 ])]
@@ -121,13 +123,22 @@ class SocialPost extends Model implements HasMedia, StoresMediaInterface
     }
 
     /**
-     * The rendered video that goes out instead of the image, when there is one.
+     * The rendered video, when there is one. It goes out instead of the
+     * image while `publish_video` is on (`publishedVideo()`).
      *
      * @return BelongsTo<Media, $this>
      */
     public function video(): BelongsTo
     {
         return $this->belongsTo(Media::class, 'video_media_id');
+    }
+
+    /**
+     * The video when it is the media picked to go out, null when the image is.
+     */
+    public function publishedVideo(): ?Media
+    {
+        return $this->publish_video ? $this->video : null;
     }
 
     /**
@@ -167,6 +178,7 @@ class SocialPost extends Model implements HasMedia, StoresMediaInterface
             'status' => SocialPostStatus::class,
             'image_reference_ids' => 'array',
             'video_revisions' => 'array',
+            'publish_video' => 'boolean',
             'published_at' => 'datetime',
             'promoted_at' => 'datetime',
             'stats_checked_at' => 'datetime',

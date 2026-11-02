@@ -127,6 +127,24 @@ unlimited mailboxes, unlimited leads, your data on your own machine.
   lock-in, no purchased contact database. See
   [what it deliberately does not do](#what-it-deliberately-does-not-do).
 
+### A video for the post that needs one
+
+<p align="center">
+  <a href="public/videos/social-video.mp4"><img src="public/videos/social-video.jpg" alt="A product video Eveil made for one of its Instagram posts: click to play" width="320"></a>
+</p>
+
+Made by Eveil for one of its own Instagram posts, then refined three times in
+the editor just by saying what to change ("add a voice and music", "use the
+real logo"). A director agent invents each video from the post, your brand and
+your product screens: your colours, fonts and logo read from your site, its
+own screenshots of the site when you have added none, illustrations it draws
+and animates itself, and a camera that films your screens, zooming in, pointing
+and clicking. With an ElevenLabs key it adds a voice over and music. Each
+network gets its own shape (a 9:16 Reel on Instagram and Bluesky, 4:5 on
+LinkedIn, 16:9 for X), and you pick whether a draft goes out with its image or
+its video. It renders on your own instance with Chromium and ffmpeg: no video
+API, no per-minute fee.
+
 ---
 
 ## Self-hosted or cloud

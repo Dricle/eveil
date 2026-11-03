@@ -203,10 +203,10 @@ class SenderAuthentication
             return [];
         }
 
-        return array_values(array_map(
+        return array_map(
             fn (array $record): string => $record['txt'] ?? implode('', $record['entries'] ?? []),
             $records ?: [],
-        ));
+        );
     }
 
     /**
@@ -222,6 +222,6 @@ class SenderAuthentication
             return [];
         }
 
-        return array_values($hosts);
+        return $hosts;
     }
 }

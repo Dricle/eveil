@@ -17,6 +17,7 @@ use App\Models\Idea;
 use App\Models\Project;
 use App\Models\RedditReply;
 use App\Models\RedditReplyExample;
+use App\Models\RedditTriagedThread;
 use App\Notifications\RedditRepliesDrafted;
 use App\Services\Reddit\OpportunityCandidate;
 use App\Services\Reddit\OpportunityScanner;
@@ -83,6 +84,7 @@ class ScanRedditOpportunities implements ShouldQueue
             $byPermalink = $candidates->keyBy(fn (OpportunityCandidate $candidate): string => $candidate->permalink);
 
             $this->noteArticleIdeas($verdicts, $byPermalink);
+            $this->rememberRejected($verdicts, $byPermalink);
 
             /** @var Collection<int, array{0: OpportunityCandidate, 1: string}> $accepted */
             $accepted = $verdicts
@@ -156,6 +158,35 @@ class ScanRedditOpportunities implements ShouldQueue
         } catch (Throwable $e) {
             report($e);
         }
+    }
+
+    /**
+     * Every candidate the triage turned down, so the next scan skips it
+     * instead of paying to reject it again. Accepted ones are left out: they
+     * get a reply row once drafted, and one whose drafting failed must come
+     * back next scan. Expired rejections are pruned here, on the only write.
+     *
+     * @param  Collection<int, array{permalink?: string, is_opportunity?: bool, reason?: string, article_angle?: string}>  $verdicts
+     * @param  Collection<string, OpportunityCandidate>  $byPermalink
+     */
+    private function rememberRejected(Collection $verdicts, Collection $byPermalink): void
+    {
+        $now = now();
+
+        $rows = $verdicts
+            ->reject(fn (array $verdict): bool => $verdict['is_opportunity'] ?? false)
+            ->map(fn (array $verdict): string => trim((string) ($verdict['permalink'] ?? '')))
+            ->filter(fn (string $permalink): bool => $byPermalink->has($permalink))
+            ->unique()
+            ->map(fn (string $permalink): array => ['project_id' => $this->project->id, 'permalink' => $permalink, 'triaged_at' => $now])
+            ->values()
+            ->all();
+
+        if ($rows !== []) {
+            RedditTriagedThread::query()->upsert($rows, ['project_id', 'permalink'], ['triaged_at']);
+        }
+
+        RedditTriagedThread::query()->where('triaged_at', '<', $now->copy()->subDays(RedditTriagedThread::TTL_DAYS))->delete();
     }
 
     /**

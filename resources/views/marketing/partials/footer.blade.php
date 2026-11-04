@@ -24,6 +24,7 @@
             <a href="{{ route('home') }}#editions" class="text-[rgba(232,236,242,.7)]">Cloud vs self-hosted</a>
             <a href="{{ route('blog.index') }}" class="text-[rgba(232,236,242,.7)]">Blog</a>
             <a href="{{ route('tools.spf-dmarc') }}" class="text-[rgba(232,236,242,.7)]">SPF and DMARC checker</a>
+            <a href="{{ route('tools.email-checker') }}" class="text-[rgba(232,236,242,.7)]">Email address checker</a>
         </div>
         <div class="flex flex-col gap-[10px] text-[14px]">
             <div class="font-[Geist_Mono,monospace] text-[10.5px] tracking-[.08em] uppercase text-[rgba(232,236,242,.38)] mb-[2px]">Open source</div>

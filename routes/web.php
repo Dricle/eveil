@@ -3,6 +3,7 @@
 use App\Cloud\Http\Controllers\BlogController;
 use App\Cloud\Http\Controllers\ContactFormController;
 use App\Cloud\Http\Controllers\SitemapController;
+use App\Cloud\Http\Controllers\Tools\SpfDmarcCheckerController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -46,6 +47,15 @@ Route::get('/contact', fn () => config('eveil.edition') === 'cloud'
 Route::post('/contact', [ContactFormController::class, 'store'])
     ->middleware('throttle:5,1')
     ->name('contact.store');
+
+// Free tools: DNS reads only, nothing sent, so a per-IP limit is enough.
+Route::get('/tools/spf-dmarc-checker', fn () => config('eveil.edition') === 'cloud'
+    ? view('marketing.tools.spf-dmarc')
+    : response('', 302, ['Location' => '/app']))->name('tools.spf-dmarc');
+
+Route::post('/tools/spf-dmarc-checker', SpfDmarcCheckerController::class)
+    ->middleware('throttle:10,1')
+    ->name('tools.spf-dmarc.check');
 
 Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
 Route::get('/blog/{article}/{slug?}', [BlogController::class, 'show'])->whereNumber('article')->name('blog.show');

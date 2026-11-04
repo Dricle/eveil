@@ -92,5 +92,8 @@ it('still reads title and language, and survives junk', function () {
     expect($page->title)->toBe('Friterie')
         ->and($page->language)->toBe('fr')
         ->and(parsePage('')->isEmpty())->toBeTrue()
-        ->and(parsePage('<<<not html')->text)->toBe('');
+        // No assertion on the text: libxml2 2.14+ tokenises junk like a browser and
+        // keeps the stray "<<", older versions drop it. Both are fine.
+        ->and(parsePage('<<<not html')->links)->toBe([])
+        ->and(parsePage('<<<not html')->title)->toBeNull();
 });

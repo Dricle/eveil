@@ -4,7 +4,7 @@ namespace App\Services\Reddit;
 
 use App\Enums\RedditReplySource;
 use App\Models\Project;
-use App\Models\RedditReply;
+use App\Models\RedditTriagedThread;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Throwable;
@@ -46,7 +46,7 @@ class SeoThreadFinder
             return new Collection;
         }
 
-        $alreadyScanned = RedditReply::query()->pluck('thread_permalink');
+        $alreadyScanned = RedditTriagedThread::alreadySeen();
 
         /** @var Collection<string, array{permalink: string, query: string}> $permalinks */
         $permalinks = new Collection;

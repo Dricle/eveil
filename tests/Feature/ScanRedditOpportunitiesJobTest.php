@@ -17,6 +17,7 @@ use App\Models\Idea;
 use App\Models\Project;
 use App\Models\RedditReply;
 use App\Models\RedditReplyExample;
+use App\Models\RedditTriagedThread;
 use App\Models\TargetProfile;
 use App\Models\User;
 use App\Notifications\RedditRepliesDrafted;
@@ -208,6 +209,48 @@ it('never re-drafts a thread that already has a reply row', function () {
     // scan finds nothing left to triage at all.
     expect(AgentRun::count())->toBe(0)
         ->and(RedditReply::count())->toBe(1);
+});
+
+it('never triages a turned-down thread again until its rejection expires', function () {
+    $project = scannableProject();
+    $rejected = [[
+        'items' => [[
+            'permalink' => 'https://www.reddit.com/r/SaaS/comments/xyz789/what_do_you_use/def456/',
+            'is_opportunity' => false,
+            'reason' => 'Off topic.',
+        ]],
+    ]];
+    RedditOpportunityTriage::fake([...$rejected, ...$rejected]);
+
+    ScanRedditOpportunities::dispatchSync($project);
+    ScanRedditOpportunities::dispatchSync($project);
+
+    expect(AgentRun::where('agent', RedditOpportunityTriage::slug())->count())->toBe(1);
+
+    $this->travel(RedditTriagedThread::TTL_DAYS + 1)->days();
+    ScanRedditOpportunities::dispatchSync($project);
+
+    expect(AgentRun::where('agent', RedditOpportunityTriage::slug())->count())->toBe(2);
+});
+
+it('triages an accepted thread again when its drafting produced nothing', function () {
+    $project = scannableProject();
+    $accepted = [[
+        'items' => [[
+            'permalink' => 'https://www.reddit.com/r/SaaS/comments/xyz789/what_do_you_use/def456/',
+            'is_opportunity' => true,
+            'reason' => 'e',
+        ]],
+    ]];
+    $empty = ['body_value_comment' => '', 'body_soft_mention' => '', 'body_dm_invite' => ''];
+    RedditOpportunityTriage::fake([...$accepted, ...$accepted]);
+    RedditReplyWriter::fake([$empty, $empty]);
+
+    ScanRedditOpportunities::dispatchSync($project);
+    ScanRedditOpportunities::dispatchSync($project);
+
+    expect(AgentRun::where('agent', RedditOpportunityTriage::slug())->count())->toBe(2)
+        ->and(RedditTriagedThread::count())->toBe(0);
 });
 
 it('feeds the full product portrait, not just what_it_does, into both agent prompts', function () {

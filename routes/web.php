@@ -3,6 +3,7 @@
 use App\Cloud\Http\Controllers\BlogController;
 use App\Cloud\Http\Controllers\ContactFormController;
 use App\Cloud\Http\Controllers\SitemapController;
+use App\Cloud\Http\Controllers\Tools\EmailCheckerController;
 use App\Cloud\Http\Controllers\Tools\SpfDmarcCheckerController;
 use Illuminate\Support\Facades\Route;
 
@@ -56,6 +57,16 @@ Route::get('/tools/spf-dmarc-checker', fn () => config('eveil.edition') === 'clo
 Route::post('/tools/spf-dmarc-checker', SpfDmarcCheckerController::class)
     ->middleware('throttle:10,1')
     ->name('tools.spf-dmarc.check');
+
+// No SMTP probe behind this one either, and a Turnstile check on top: an
+// address checker is what list-cleaning scripts look for.
+Route::get('/tools/email-checker', fn () => config('eveil.edition') === 'cloud'
+    ? view('marketing.tools.email-checker')
+    : response('', 302, ['Location' => '/app']))->name('tools.email-checker');
+
+Route::post('/tools/email-checker', EmailCheckerController::class)
+    ->middleware('throttle:10,1')
+    ->name('tools.email-checker.check');
 
 Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
 Route::get('/blog/{article}/{slug?}', [BlogController::class, 'show'])->whereNumber('article')->name('blog.show');

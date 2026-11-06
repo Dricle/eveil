@@ -156,10 +156,15 @@ class Organization extends Model
      * caller to remember it: `stripe_id` is null forever there (no Stripe
      * code path ever sets it), which would otherwise read every self-hosted
      * organization as permanently on trial.
+     *
+     * Also false for the operator's own organization, which is never billed
+     * and so never pays its way out of the trial with a `stripe_id`.
      */
     public function isOnTrial(): bool
     {
-        return config('eveil.edition') === 'cloud' && $this->stripe_id === null;
+        return config('eveil.edition') === 'cloud'
+            && $this->stripe_id === null
+            && ! $this->ownedBySuperAdmin();
     }
 
     /**

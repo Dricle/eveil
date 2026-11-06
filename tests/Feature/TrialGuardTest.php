@@ -50,6 +50,20 @@ it('allows a second project once the organization has paid', function () {
     expect($organization->fresh()->projects()->count())->toBe(2);
 });
 
+it('never treats an organization owned by a super admin as a trial', function () {
+    config()->set('eveil.edition', 'cloud');
+    $organization = Organization::factory()->create();
+    $user = User::factory()->superAdmin()->create();
+    $organization->users()->attach($user, ['role' => 'owner']);
+    Project::factory()->for($organization)->create();
+
+    $this->actingAs($user)
+        ->post(route('projects.store'), ['name' => 'Second', 'url' => 'https://acme.test/'])
+        ->assertSessionHasNoErrors();
+
+    expect($organization->fresh()->projects()->where('name', 'Second')->sole()->lead_limit)->toBeNull();
+});
+
 it('never limits project count on self-hosted', function () {
     config()->set('eveil.edition', 'self');
     [$organization, $user] = trialOwner();

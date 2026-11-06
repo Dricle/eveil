@@ -11,7 +11,7 @@ Two independent sources feed the same queue:
 
 Both run on the same schedule: turn scanning on from the **Reddit** page (off by default — pick daily, weekly, every two weeks, or monthly), or hit **Scan now** for an on-demand check outside the cadence.
 
-While it reads each thread, Eveil also asks a second question: would this discussion make a good article for your blog? That's judged separately from whether it's worth a reply, so a thread can be one, the other, or both. The ones worth an article show up as ideas on the [SEO page](/product/seo). And a third: does it say something about one of your competitors? Those opinions land in the [Insights](/product/insights) feed as competitor mentions. The evergreen search also looks up each competitor's name on its own for this, not only "`<competitor>` alternative".
+While it reads each thread, Eveil also asks a second question: would this discussion make a good article for your blog? That's judged separately from whether it's worth a reply, so a thread can be one, the other, or both. The ones worth an article show up as ideas on the [SEO page](/product/seo). And a third: does it say something about one of your competitors? Those opinions land in the [Insights](/product/insights) feed as competitor mentions. And a fourth: do people there ask for something your product can't do yet? That lands in Insights too, as a missing feature with a link to the thread. The evergreen search also looks up each competitor's name on its own for this, not only "`<competitor>` alternative".
 
 ## What gets drafted
 

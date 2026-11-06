@@ -32,12 +32,13 @@ use Stringable;
  * judgment - "would replying here genuinely help, with this product as the
  * reason" - is the same question either way.
  *
- * The same pass also asks two things a researcher notices while reading,
+ * The same pass also asks three things a researcher notices while reading,
  * independently of whether a thread is worth a reply: whether it would make
- * a blog article (`article_angle`), and whether it says something about one
- * of the named competitors (`competitor`, `competitor_signal`,
- * `competitor_summary`). Both become `Insight` rows in the Insights feed, at no
- * extra model call.
+ * a blog article (`article_angle`), whether it says something about one of
+ * the named competitors (`competitor`, `competitor_signal`,
+ * `competitor_summary`), and whether people ask for a capability this
+ * product lacks (`feature_idea`, `feature_evidence`). All become `Insight`
+ * rows in the Insights feed, at no extra model call.
  */
 class RedditOpportunityTriage extends EveilAgent implements HasStructuredOutput
 {
@@ -115,6 +116,14 @@ class RedditOpportunityTriage extends EveilAgent implements HasStructuredOutput
         one sentence saying what users think of it here, specific enough to be read
         on its own. Otherwise leave competitor and competitor_summary empty and set
         competitor_signal to none.
+
+        And as the founder deciding what to build next: do the people in this item ask
+        for, or clearly miss, a capability this product does not have yet? Only a
+        concrete capability counts, named as a developer would build it ("export
+        invoices to accounting software", never "better integrations"), and only one
+        the portrait does not already list. When it does, set feature_idea to that
+        capability and feature_evidence to one sentence on what people say here that
+        shows the need. Otherwise leave both empty. Most items have none.
         PROMPT;
     }
 
@@ -132,6 +141,8 @@ class RedditOpportunityTriage extends EveilAgent implements HasStructuredOutput
                 'competitor' => $schema->string()->description('The competitor from the portrait this item gives an opinion on, spelled as the portrait spells it. Empty when none.')->required(),
                 'competitor_signal' => $schema->string()->enum(['none', ...array_column(CompetitorSignal::cases(), 'value')])->description('What the item says about that competitor. none when competitor is empty.')->required(),
                 'competitor_summary' => $schema->string()->description('One sentence: what users think of that competitor here. Empty when competitor is empty.')->required(),
+                'feature_idea' => $schema->string()->description('A capability people here ask for that this product lacks, named as a developer would build it. Empty when none.')->required(),
+                'feature_evidence' => $schema->string()->description('One sentence: what people here say that shows the need. Empty when feature_idea is empty.')->required(),
             ]))->description('One entry per item you were given, none missing.')->required(),
         ];
     }

@@ -133,8 +133,10 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
         you about. It pauses for approval first, same as StartDiscovery.
 
         Some open ideas have kind "feature": capabilities the named
-        competitors sell that this product lacks, found by FindFeatureGaps.
-        Same lifecycle, same UpdateRecommendation. FindFeatureGaps itself is
+        competitors sell that this product lacks, found by FindFeatureGaps,
+        or that people on Reddit asked for, noted by the Reddit scan (those
+        carry the thread link and no impact or effort guess). Same
+        lifecycle, same UpdateRecommendation. FindFeatureGaps itself is
         a real crawl of the competitors' sites, for when the user asks what
         competitors have that they don't; it pauses for approval first and
         only reads competitors already in the knowledge base.

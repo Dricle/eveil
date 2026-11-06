@@ -50,8 +50,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // own service provider registers this route outside `routes/app.php`
         // (no `/app` prefix), matching `config('cashier.path')`'s default.
         // Self-hosted never receives a request here at all: nothing tells
-        // Stripe this URL exists unless `eveil.edition` is cloud.
-        $middleware->preventRequestForgery(except: ['stripe/*']);
+        // Stripe this URL exists unless `eveil.edition` is cloud. The mail
+        // tester's inbound route is posted by a Cloudflare worker and checks
+        // its own signature.
+        $middleware->preventRequestForgery(except: ['stripe/*', 'tools/deliverability-tester/inbound']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // An empty wallet is the customer's state, not our bug: the spend

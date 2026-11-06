@@ -2,15 +2,14 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\VerifiesTurnstile;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\Validator;
-use Throwable;
 
 class EmailCheckRequest extends FormRequest
 {
-    public const TURNSTILE_VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
+    use VerifiesTurnstile;
 
     /**
      * Public marketing tool: anyone may use it, on the edition that has a
@@ -43,8 +42,7 @@ class EmailCheckRequest extends FormRequest
 
     /**
      * An address checker is an obvious target for list cleaning by script,
-     * so a human has to be behind each check. Fails closed: without a secret
-     * configured, nothing passes.
+     * so a human has to be behind each check.
      *
      * @return array<int, callable>
      */
@@ -59,25 +57,5 @@ class EmailCheckRequest extends FormRequest
                 $validator->errors()->add('email', 'We could not confirm you are human. Please try again.');
             },
         ];
-    }
-
-    private function passesTurnstile(): bool
-    {
-        $secret = (string) config('services.turnstile.secret_key');
-        $token = $this->string('cf-turnstile-response')->toString();
-
-        if ($secret === '' || $token === '') {
-            return false;
-        }
-
-        try {
-            return Http::asForm()->timeout(5)->post(self::TURNSTILE_VERIFY_URL, [
-                'secret' => $secret,
-                'response' => $token,
-                'remoteip' => $this->ip(),
-            ])->json('success') === true;
-        } catch (Throwable) {
-            return false;
-        }
     }
 }

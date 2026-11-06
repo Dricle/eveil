@@ -316,7 +316,9 @@ it('carries recommendations and a linked repo\'s findings through', function () 
 
     $this->artisan('eveil:analyze', ['url' => 'https://acme.test'])->assertSuccessful();
 
-    expect(Project::sole()->knowledge_base['recommendations'][0]['idea'])->toBe('A referral scheme');
+    expect(Project::sole()->recommendations()[0]['idea'])->toBe('A referral scheme')
+        // Rows of their own now, never back in the JSON column.
+        ->and(Project::sole()->knowledge_base)->not->toHaveKey('recommendations');
 });
 
 it('keeps a linked repo\'s findings across a website re-analysis', function () {

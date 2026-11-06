@@ -3,7 +3,7 @@
 use App\Enums\ArticleStatus;
 use App\Enums\CampaignStatus;
 use App\Enums\DiscoveryRunStatus;
-use App\Enums\IdeaStatus;
+use App\Enums\InsightStatus;
 use App\Enums\RedditReplyStatus;
 use App\Enums\SocialPostStatus;
 use App\Enums\TargetProfileSource;
@@ -12,7 +12,7 @@ use App\Models\Article;
 use App\Models\Campaign;
 use App\Models\Company;
 use App\Models\DiscoveryRun;
-use App\Models\Idea;
+use App\Models\Insight;
 use App\Models\Lead;
 use App\Models\Project;
 use App\Models\RedditReply;
@@ -174,7 +174,7 @@ it('edits a draft post, article or reddit reply, never a settled one', function 
 it('queues an article from an open idea and dismisses another', function () {
     Queue::fake();
     $project = Project::factory()->create();
-    [$write, $dismiss] = Idea::factory()->for($project)->count(2)->create();
+    [$write, $dismiss] = Insight::factory()->for($project)->count(2)->create();
     $token = resourceToken($project);
 
     $this->withToken($token)->postJson(route('api.articles.store', $project), ['idea_id' => $write->id])->assertAccepted();
@@ -182,7 +182,7 @@ it('queues an article from an open idea and dismisses another', function () {
     $this->withToken($token)->postJson(route('api.articles.store', $project), [])->assertUnprocessable();
 
     Queue::assertPushed(GenerateArticle::class, fn (GenerateArticle $job): bool => $job->ideaId === $write->id);
-    expect($dismiss->fresh()->status)->toBe(IdeaStatus::Dismissed);
+    expect($dismiss->fresh()->status)->toBe(InsightStatus::Dismissed);
 });
 
 it('deletes a campaign, post, article or reply of the project only', function () {
@@ -223,4 +223,23 @@ it('cancels a running discovery run and leaves a finished one alone', function (
 
     $this->withToken($token)->postJson(route('api.discovery-runs.cancel', [$project, $running->id]))->assertJsonPath('status', 'aborted');
     $this->withToken($token)->postJson(route('api.discovery-runs.cancel', [$project, $finished->id]))->assertJsonPath('status', 'succeeded');
+});
+
+it('lists the open insights and marks one, never reaching another project\'s', function () {
+    $project = Project::factory()->create();
+    $token = resourceToken($project);
+    $mention = Insight::factory()->for($project)->competitorMention()->create();
+    Insight::factory()->for($project)->create(['status' => InsightStatus::Dismissed]);
+    $foreign = Insight::factory()->competitorMention()->create();
+
+    $this->withToken($token)->getJson(route('api.insights.index', [$project, 'kind' => 'competitor_mention']))
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.details.competitor', 'Acme');
+
+    $this->withToken($token)->patchJson(route('api.insights.update', [$project, $mention->id]), ['status' => 'dismissed'])
+        ->assertJsonPath('status', 'dismissed');
+    $this->withToken($token)->patchJson(route('api.insights.update', [$project, $foreign->id]), ['read' => true])->assertNotFound();
+
+    expect($foreign->fresh()->read_at)->toBeNull();
 });

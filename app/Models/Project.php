@@ -8,6 +8,8 @@ use App\Enums\AdStatus;
 use App\Enums\ArticleFrequency;
 use App\Enums\AutonomyLevel;
 use App\Enums\BrandAssetKind;
+use App\Enums\InsightKind;
+use App\Enums\InsightStatus;
 use App\Enums\OrganizationRole;
 use App\Enums\RecommendationKind;
 use App\Enums\RecommendationStatus;
@@ -434,6 +436,16 @@ class Project extends Model implements HasMedia, StoresMediaInterface
     }
 
     /**
+     * Everything in the Insights feed, the recommendations included.
+     *
+     * @return HasMany<Insight, $this>
+     */
+    public function insights(): HasMany
+    {
+        return $this->hasMany(Insight::class);
+    }
+
+    /**
      * @return HasMany<AgentRun, $this>
      */
     public function agentRuns(): HasMany
@@ -481,31 +493,27 @@ class Project extends Model implements HasMedia, StoresMediaInterface
     }
 
     /**
-     * Every idea ever proposed, normalised: a row written before `status`
-     * existed reads as `proposed`, the same default a fresh idea gets, and one
-     * written before `kind` existed reads as an acquisition lever, the only
-     * kind there was. Identity is `key`, same as `openQuestions()`.
+     * Every recommendation ever proposed, in the shape the API, Evie's tools
+     * and the Dashboard card read: the `insights` rows of the two recommendation
+     * kinds, keyed by `key` (their `source_ref`), with the status in the
+     * recommendation vocabulary.
      *
-     * @return list<array<string, mixed>>
+     * @return list<array{key: string, idea: string, evidence: string, impact: mixed, effort: mixed, status: string, kind: string}>
      */
     public function recommendations(): array
     {
-        $recommendations = $this->knowledge_base['recommendations'] ?? [];
-
-        if (! is_array($recommendations)) {
-            return [];
-        }
-
-        return array_values(collect($recommendations)
-            ->filter(fn (mixed $r): bool => is_array($r) && isset($r['key'], $r['idea']))
-            ->map(fn (array $r): array => [
-                ...$r,
-                'status' => is_string($r['status'] ?? null) && $r['status'] !== ''
-                    ? $r['status']
-                    : RecommendationStatus::Proposed->value,
-                'kind' => is_string($r['kind'] ?? null) && $r['kind'] !== ''
-                    ? $r['kind']
-                    : RecommendationKind::Acquisition->value,
+        return array_values($this->insights()
+            ->whereIn('kind', InsightKind::recommendations())
+            ->oldest('id')
+            ->get()
+            ->map(fn (Insight $idea): array => [
+                'key' => $idea->source_ref,
+                'idea' => $idea->title,
+                'evidence' => $idea->angle,
+                'impact' => $idea->details['impact'] ?? null,
+                'effort' => $idea->details['effort'] ?? null,
+                'status' => RecommendationStatus::fromInsightStatus($idea->status)->value,
+                'kind' => $idea->kind->value,
             ])
             ->all());
     }
@@ -526,41 +534,44 @@ class Project extends Model implements HasMedia, StoresMediaInterface
     }
 
     /**
-     * A fresh reading's own acquisition levers, minus any the user has
-     * already decided on: a `done` or `archived` idea is never rewritten or
-     * repeated by a later analysis, and stays even when this reading does
-     * not propose it again (ADR-032's "archived never comes back"). Shared
-     * by the full website analysis and a targeted recommendations-only
-     * re-read (`App\Actions\RefreshAcquisitionIdeas`) - both hand it
-     * whatever the agent just proposed and write back only what this
-     * returns, never the rest of the knowledge base.
-     *
-     * Scoped to one `kind`: a website re-read only replaces the open
-     * acquisition levers, and leaves the open feature gaps
-     * `App\Actions\FindFeatureGaps` proposed alone, and the reverse.
-     *
-     * @return list<array<string, mixed>>
+     * A fresh reading's own recommendations of one kind replace the open ones
+     * of that kind. A `done` or `archived` one is never rewritten or proposed
+     * again (ADR-032's "archived never comes back"). An open one the reading
+     * proposes again keeps its row, so it stays read if it was. Shared by the
+     * full website analysis, the recommendations-only re-read
+     * (`App\Actions\RefreshAcquisitionIdeas`) and the feature-gap pass
+     * (`App\Actions\FindFeatureGaps`): each touches only its own kind.
      */
-    public function mergeRecommendations(mixed $recommendations, RecommendationKind $kind = RecommendationKind::Acquisition): array
+    public function replaceOpenRecommendations(mixed $recommendations, RecommendationKind $kind): void
     {
-        $kept = collect($this->recommendations())
-            ->reject(fn (array $r): bool => $r['status'] === RecommendationStatus::Proposed->value && $r['kind'] === $kind->value)
-            ->keyBy('key');
+        $existing = $this->insights()->where('kind', $kind->toInsightKind())->get()->keyBy('source_ref');
 
         $fresh = collect(is_array($recommendations) ? $recommendations : [])
             ->filter(fn (mixed $r): bool => is_array($r) && isset($r['key'], $r['idea'], $r['evidence'], $r['impact'], $r['effort']))
-            ->map(fn (array $r): array => [
-                'key' => (string) $r['key'],
-                'idea' => (string) $r['idea'],
-                'evidence' => (string) $r['evidence'],
-                'impact' => (string) $r['impact'],
-                'effort' => (string) $r['effort'],
-                'status' => RecommendationStatus::Proposed->value,
-                'kind' => $kind->value,
-            ])
-            ->keyBy('key');
+            ->keyBy(fn (array $r): string => (string) $r['key']);
 
-        return array_values($kept->union($fresh)->all());
+        foreach ($fresh as $key => $r) {
+            /** @var Insight|null $idea */
+            $idea = $existing->get($key);
+
+            if ($idea !== null && $idea->status !== InsightStatus::Open) {
+                continue;
+            }
+
+            $this->insights()->updateOrCreate(['kind' => $kind->toInsightKind(), 'source_ref' => (string) $key], [
+                'source' => $kind === RecommendationKind::Feature ? 'competitors' : 'website',
+                'title' => (string) $r['idea'],
+                'angle' => (string) $r['evidence'],
+                'details' => ['impact' => (string) $r['impact'], 'effort' => (string) $r['effort']],
+                'status' => InsightStatus::Open,
+            ]);
+        }
+
+        $this->insights()
+            ->where('kind', $kind->toInsightKind())
+            ->where('status', InsightStatus::Open)
+            ->whereNotIn('source_ref', $fresh->keys()->map(fn (int|string $key): string => (string) $key)->all())
+            ->delete();
     }
 
     /**

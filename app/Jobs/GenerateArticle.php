@@ -7,13 +7,13 @@ use App\Enums\AgentRunStatus;
 use App\Enums\AnalysisType;
 use App\Enums\ArticleSourceType;
 use App\Enums\ArticleStatus;
-use App\Enums\IdeaKind;
-use App\Enums\IdeaStatus;
+use App\Enums\InsightKind;
+use App\Enums\InsightStatus;
 use App\Enums\OutreachStatus;
 use App\Models\AgentRun;
 use App\Models\Article;
 use App\Models\Company;
-use App\Models\Idea;
+use App\Models\Insight;
 use App\Models\Project;
 use App\Notifications\ArticleDrafted;
 use App\Services\Linkedin\NewsSearch;
@@ -50,7 +50,7 @@ class GenerateArticle implements ShouldQueue
     public function handle(NewsSearch $newsSearch, CurrentProject $currentProject): void
     {
         $currentProject->run($this->project, function () use ($newsSearch): void {
-            $idea = $this->ideaId === null ? null : Idea::query()->where('status', IdeaStatus::Open)->find($this->ideaId);
+            $idea = $this->ideaId === null ? null : Insight::query()->where('status', InsightStatus::Open)->find($this->ideaId);
 
             if ($this->ideaId !== null && $idea === null) {
                 return;
@@ -112,11 +112,11 @@ class GenerateArticle implements ShouldQueue
             ]);
 
             if ($sourceType === ArticleSourceType::RedditThread && $sourceRef !== null) {
-                Idea::query()
-                    ->where('kind', IdeaKind::Article)
+                Insight::query()
+                    ->where('kind', InsightKind::Article)
                     ->where('source_ref', $sourceRef)
-                    ->where('status', IdeaStatus::Open)
-                    ->update(['status' => IdeaStatus::Used, 'article_id' => $article->id]);
+                    ->where('status', InsightStatus::Open)
+                    ->update(['status' => InsightStatus::Used, 'article_id' => $article->id]);
             }
 
             // Only the cadence emails: a brief or a clicked idea means the
@@ -154,13 +154,13 @@ class GenerateArticle implements ShouldQueue
      */
     private function openIdeas(): Collection
     {
-        return Idea::query()
-            ->where('kind', IdeaKind::Article)
-            ->where('status', IdeaStatus::Open)
+        return Insight::query()
+            ->where('kind', InsightKind::Article)
+            ->where('status', InsightStatus::Open)
             ->latest('id')
             ->limit(self::IDEA_LIMIT)
             ->get()
-            ->map(fn (Idea $idea): array => [
+            ->map(fn (Insight $idea): array => [
                 'title' => $idea->title,
                 'permalink' => $idea->source_ref,
                 'angle' => $idea->angle,

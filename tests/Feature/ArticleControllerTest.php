@@ -2,11 +2,11 @@
 
 use App\Enums\ArticleFrequency;
 use App\Enums\ArticleStatus;
-use App\Enums\IdeaStatus;
+use App\Enums\InsightStatus;
 use App\Jobs\FetchPublishedArticle;
 use App\Jobs\GenerateArticle;
 use App\Models\Article;
-use App\Models\Idea;
+use App\Models\Insight;
 use App\Models\Organization;
 use App\Models\Project;
 use App\Models\User;
@@ -161,9 +161,9 @@ it('queues an article on demand', function () {
 
 it('shows only the open article ideas', function () {
     [$user, $project] = articleSetup();
-    Idea::factory()->create(['project_id' => $project->id]);
-    Idea::factory()->create(['project_id' => $project->id, 'status' => IdeaStatus::Dismissed]);
-    Idea::factory()->create();
+    Insight::factory()->create(['project_id' => $project->id]);
+    Insight::factory()->create(['project_id' => $project->id, 'status' => InsightStatus::Dismissed]);
+    Insight::factory()->create();
 
     $this->actingAs($user)
         ->get(route('seo.index'))
@@ -173,7 +173,7 @@ it('shows only the open article ideas', function () {
 it('writes an idea on demand', function () {
     Queue::fake();
     [$user, $project] = articleSetup();
-    $idea = Idea::factory()->create(['project_id' => $project->id]);
+    $idea = Insight::factory()->create(['project_id' => $project->id]);
 
     $this->actingAs($user)->post(route('seo.ideas.write', $idea))->assertRedirect();
 
@@ -182,29 +182,29 @@ it('writes an idea on demand', function () {
 
 it('dismisses an idea for good', function () {
     [$user, $project] = articleSetup();
-    $idea = Idea::factory()->create(['project_id' => $project->id]);
+    $idea = Insight::factory()->create(['project_id' => $project->id]);
 
     $this->actingAs($user)->post(route('seo.ideas.dismiss', $idea));
 
-    expect($idea->fresh()->status)->toBe(IdeaStatus::Dismissed);
+    expect($idea->fresh()->status)->toBe(InsightStatus::Dismissed);
 });
 
 it('dismisses every open article idea of the project at once', function () {
     [$user, $project] = articleSetup();
-    $ideas = Idea::factory()->count(2)->create(['project_id' => $project->id]);
-    $foreign = Idea::factory()->create();
+    $ideas = Insight::factory()->count(2)->create(['project_id' => $project->id]);
+    $foreign = Insight::factory()->create();
 
     $this->actingAs($user)->post(route('seo.ideas.dismiss-all'))->assertRedirect();
 
-    expect($ideas->map->fresh()->pluck('status')->unique()->all())->toBe([IdeaStatus::Dismissed])
-        ->and($foreign->fresh()->status)->toBe(IdeaStatus::Open);
+    expect($ideas->map->fresh()->pluck('status')->unique()->all())->toBe([InsightStatus::Dismissed])
+        ->and($foreign->fresh()->status)->toBe(InsightStatus::Open);
 });
 
 it('cannot reach another project\'s idea by id', function () {
     [$user] = articleSetup();
-    $foreign = Idea::factory()->create();
+    $foreign = Insight::factory()->create();
 
     $this->actingAs($user)->post(route('seo.ideas.dismiss', $foreign))->assertNotFound();
 
-    expect($foreign->fresh()->status)->toBe(IdeaStatus::Open);
+    expect($foreign->fresh()->status)->toBe(InsightStatus::Open);
 });

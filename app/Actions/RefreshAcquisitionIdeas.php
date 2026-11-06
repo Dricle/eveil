@@ -4,12 +4,13 @@ namespace App\Actions;
 
 use App\Ai\Agents\WebsiteAnalyst;
 use App\Enums\AgentRunStatus;
+use App\Enums\RecommendationKind;
 use App\Models\AgentRun;
 use App\Models\Project;
 use App\Services\Discovery\SiteCrawler;
 
 /**
- * A fresh site read that only ever writes `knowledge_base.recommendations` -
+ * A fresh site read that only ever writes the acquisition recommendations -
  * never `AnalyzeWebsite`'s full portrait. Deliberately does not check or set
  * `knowledge_base_edited_by_user`: that flag protects the portrait fields
  * from a re-analysis overwriting a hand correction (the user's own, or
@@ -45,11 +46,6 @@ class RefreshAcquisitionIdeas
 
         $response = $agent->analyze();
 
-        $project->update([
-            'knowledge_base' => [
-                ...$project->knowledge_base ?? [],
-                'recommendations' => $project->mergeRecommendations($response->structured['recommendations'] ?? []),
-            ],
-        ]);
+        $project->replaceOpenRecommendations($response->structured['recommendations'] ?? [], RecommendationKind::Acquisition);
     }
 }

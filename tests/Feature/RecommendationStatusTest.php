@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Insight;
 use App\Models\Organization;
 use App\Models\Project;
 use App\Models\User;
@@ -12,13 +13,8 @@ function recommender(): array
     $user = User::factory()->create();
     Organization::factory()->create()->users()->attach($user, ['role' => 'owner']);
 
-    $project = Project::factory()->for($user->organizations()->sole())->create([
-        'knowledge_base' => [
-            'recommendations' => [
-                ['key' => 'referral_program', 'idea' => 'Referral program', 'evidence' => 'No referral flow.', 'impact' => 'high', 'effort' => 'medium'],
-            ],
-        ],
-    ]);
+    $project = Project::factory()->for($user->organizations()->sole())->create();
+    Insight::factory()->for($project)->recommendation('referral_program')->create();
 
     forProject($project);
 
@@ -65,13 +61,8 @@ it('404s on an unknown key', function () {
 
 it('never updates a recommendation on another project', function () {
     [$user] = recommender();
-    $someoneElses = Project::factory()->create([
-        'knowledge_base' => [
-            'recommendations' => [
-                ['key' => 'referral_program', 'idea' => 'Referral program', 'evidence' => 'No referral flow.', 'impact' => 'high', 'effort' => 'medium'],
-            ],
-        ],
-    ]);
+    $someoneElses = Project::factory()->create();
+    Insight::factory()->for($someoneElses)->recommendation('referral_program')->create();
 
     // `actingAs()` resets `URL::defaults` to a project this user can see
     // (`tests/TestCase.php`), so the target project is named explicitly here

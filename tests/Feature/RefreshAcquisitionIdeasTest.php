@@ -3,7 +3,10 @@
 use App\Actions\RefreshAcquisitionIdeas;
 use App\Ai\Agents\WebsiteAnalyst;
 use App\Enums\AgentRunStatus;
+use App\Enums\InsightKind;
+use App\Enums\InsightStatus;
 use App\Models\AgentRun;
+use App\Models\Insight;
 use App\Models\Organization;
 use App\Models\Project;
 use App\Services\Discovery\SiteCrawler;
@@ -22,15 +25,14 @@ function projectPendingRefresh(): array
         'knowledge_base' => [
             'what_it_does' => 'Schedules deliveries for regional wholesalers.',
             'key_features' => ['Route planning'],
-            'recommendations' => [
-                ['key' => 'referral_program', 'idea' => 'Referral program', 'evidence' => 'No referral flow.', 'impact' => 'high', 'effort' => 'medium', 'status' => 'done'],
-                ['key' => 'feature_driver_app', 'idea' => 'Driver app', 'evidence' => 'RouteCo sells one.', 'impact' => 'high', 'effort' => 'high', 'kind' => 'feature'],
-            ],
         ],
         // Set even though nothing here should read it: proves the merge
         // isn't gated on it the way a full `AnalyzeWebsite` re-analysis is.
         'knowledge_base_edited_by_user' => true,
     ]);
+
+    Insight::factory()->for($project)->recommendation('referral_program', 'Referral program', InsightStatus::Used)->create();
+    Insight::factory()->for($project)->recommendation('feature_driver_app', 'Driver app', InsightStatus::Open, InsightKind::Feature)->create();
 
     $run = AgentRun::create(['project_id' => $project->id, 'agent' => WebsiteAnalyst::slug(), 'status' => AgentRunStatus::Pending]);
 

@@ -4,6 +4,8 @@ namespace App\Actions;
 
 use App\Ai\Agents\CompetitorAnalyst;
 use App\Enums\AgentRunStatus;
+use App\Enums\InsightKind;
+use App\Enums\InsightStatus;
 use App\Enums\RecommendationKind;
 use App\Models\AgentRun;
 use App\Models\Project;
@@ -11,11 +13,11 @@ use App\Services\Discovery\SiteCrawler;
 use App\Services\Discovery\WebsiteFinder;
 
 /**
- * Reads the sites of the competitors the knowledge base names and writes the
- * capabilities they have and this product lacks into
- * `knowledge_base.recommendations`, as `feature` rows. Same merge as
- * `RefreshAcquisitionIdeas`: a decided gap is never rewritten or proposed
- * again (ADR-032), and nothing else in the knowledge base is touched.
+ * Reads the sites of the competitors the knowledge base names, plus what
+ * Redditors said about them (the competitor mentions the Reddit scan noted),
+ * and writes the capabilities they have and this product lacks as `feature`
+ * recommendations. Same replace as `RefreshAcquisitionIdeas`: a decided gap
+ * is never rewritten or proposed again (ADR-032).
  */
 class FindFeatureGaps
 {
@@ -26,6 +28,12 @@ class FindFeatureGaps
     private const MAX_COMPETITORS = 3;
 
     private const PAGES_PER_COMPETITOR = 5;
+
+    /**
+     * Latest Reddit mentions handed over, all competitors together: one line
+     * each, so a few dozen cost little and say plenty.
+     */
+    private const MAX_MENTIONS = 40;
 
     public function __construct(private WebsiteFinder $websiteFinder, private SiteCrawler $crawler) {}
 
@@ -49,7 +57,14 @@ class FindFeatureGaps
             }
         }
 
-        if ($pagesByCompetitor === []) {
+        $mentions = $project->insights()
+            ->where('kind', InsightKind::CompetitorMention)
+            ->where('status', '!=', InsightStatus::Dismissed)
+            ->latest('id')
+            ->limit(self::MAX_MENTIONS)
+            ->get();
+
+        if ($pagesByCompetitor === [] && $mentions->isEmpty()) {
             $run?->update([
                 'status' => AgentRunStatus::Failed,
                 'error' => 'No competitor site could be found or read. Name competitors in the knowledge base first.',
@@ -58,7 +73,7 @@ class FindFeatureGaps
             return;
         }
 
-        $agent = new CompetitorAnalyst($project, $pagesByCompetitor);
+        $agent = new CompetitorAnalyst($project, $pagesByCompetitor, $mentions);
 
         if ($run !== null) {
             $agent->recordInto($run);
@@ -66,11 +81,6 @@ class FindFeatureGaps
 
         $response = $agent->analyze();
 
-        $project->refresh()->update([
-            'knowledge_base' => [
-                ...$project->knowledge_base ?? [],
-                'recommendations' => $project->mergeRecommendations($response->structured['recommendations'] ?? [], RecommendationKind::Feature),
-            ],
-        ]);
+        $project->replaceOpenRecommendations($response->structured['recommendations'] ?? [], RecommendationKind::Feature);
     }
 }

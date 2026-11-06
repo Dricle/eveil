@@ -12,6 +12,7 @@ import { dashboard, inbox, logout } from '@/routes'
 import adRoutes from '@/routes/ads'
 import campaigns from '@/routes/campaigns'
 import companies from '@/routes/companies'
+import insightRoutes from '@/routes/insights'
 import redditReplies from '@/routes/reddit/replies'
 import seo from '@/routes/seo'
 import socialPosts from '@/routes/social/posts'
@@ -99,6 +100,15 @@ const items = computed<NavigationMenuItem[]>(() => {
             icon: 'i-lucide-house',
             to: relativeUrl(dashboard.url({ project: project.slug })),
             active: page.url === relativeUrl(dashboard.url({ project: project.slug }))
+        },
+        {
+            label: 'Insights',
+            icon: 'i-lucide-radar',
+            to: relativeUrl(insightRoutes.index.url({ project: project.slug })),
+            active: isCurrent(insightRoutes.index.url({ project: project.slug })),
+            badge: navCounts.value?.insights
+                ? { label: navCounts.value.insights, color: 'primary', variant: 'solid' }
+                : undefined
         },
         {
             label: 'Email',

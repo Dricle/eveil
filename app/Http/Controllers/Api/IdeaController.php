@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Enums\IdeaKind;
-use App\Enums\IdeaStatus;
+use App\Enums\InsightKind;
+use App\Enums\InsightStatus;
 use App\Http\Controllers\Controller;
-use App\Http\Resources\IdeaResource;
-use App\Models\Idea;
+use App\Http\Resources\InsightResource;
+use App\Models\Insight;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 
@@ -19,15 +19,15 @@ class IdeaController extends Controller
 {
     public function index(): JsonResponse
     {
-        return response()->json(['data' => IdeaResource::collection(
-            Idea::query()->where('kind', IdeaKind::Article)->where('status', IdeaStatus::Open)->latest('id')->get()
+        return response()->json(['data' => InsightResource::collection(
+            Insight::query()->where('kind', InsightKind::Article)->where('status', InsightStatus::Open)->latest('id')->get()
         )]);
     }
 
     public function destroy(int $idea): Response
     {
-        Idea::query()->where('kind', IdeaKind::Article)->where('status', IdeaStatus::Open)->findOrFail($idea)
-            ->update(['status' => IdeaStatus::Dismissed]);
+        Insight::query()->where('kind', InsightKind::Article)->where('status', InsightStatus::Open)->findOrFail($idea)
+            ->update(['status' => InsightStatus::Dismissed]);
 
         return response()->noContent();
     }

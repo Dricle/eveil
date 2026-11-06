@@ -2,9 +2,9 @@
 
 namespace App\Ai\Tools;
 
-use App\Enums\IdeaStatus;
+use App\Enums\InsightStatus;
 use App\Jobs\GenerateArticle;
-use App\Models\Idea;
+use App\Models\Insight;
 use App\Models\Project;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\Tool;
@@ -39,9 +39,9 @@ class DraftArticle implements Tool
         $ideaId = $request->integer('idea_id') ?: null;
 
         if ($ideaId !== null) {
-            $idea = Idea::query()
+            $idea = Insight::query()
                 ->where('project_id', $this->project->id)
-                ->where('status', IdeaStatus::Open)
+                ->where('status', InsightStatus::Open)
                 ->find($ideaId);
 
             if ($idea === null) {

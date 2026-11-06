@@ -3,19 +3,17 @@
 use App\Ai\Tools\GetKnowledgeBase;
 use App\Ai\Tools\ProposeRecommendation;
 use App\Ai\Tools\UpdateRecommendation;
+use App\Models\Insight;
 use App\Models\Organization;
 use App\Models\Project;
 use Laravel\Ai\Tools\Request;
 
 function projectWithRecommendation(): Project
 {
-    return Project::factory()->for(Organization::factory())->create([
-        'knowledge_base' => [
-            'recommendations' => [
-                ['key' => 'referral_program', 'idea' => 'Referral program', 'evidence' => 'No referral flow.', 'impact' => 'high', 'effort' => 'medium'],
-            ],
-        ],
-    ]);
+    $project = Project::factory()->for(Organization::factory())->create(['knowledge_base' => ['what_it_does' => 'Schedules deliveries.']]);
+    Insight::factory()->for($project)->recommendation('referral_program')->create();
+
+    return $project;
 }
 
 it('adds a new recommendation with a generated key', function () {

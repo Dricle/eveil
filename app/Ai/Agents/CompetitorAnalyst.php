@@ -2,6 +2,7 @@
 
 namespace App\Ai\Agents;
 
+use App\Models\Insight;
 use App\Models\Project;
 use App\Support\ParsedPage;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -11,11 +12,12 @@ use Laravel\Ai\Responses\StructuredAgentResponse;
 use Stringable;
 
 /**
- * Reads the sites of the competitors the knowledge base names and lists the
- * capabilities they sell that this product does not. Same proposed/done/
- * archived lifecycle as the Website agent's acquisition ideas (ADR-032),
- * and the same "evidence or nothing" rule: a gap is only written when a
- * competitor's own page says they have it.
+ * Reads the sites of the competitors the knowledge base names, and what
+ * Redditors say about them, and lists the capabilities they sell that this
+ * product does not. Same proposed/done/archived lifecycle as the Website
+ * agent's acquisition ideas (ADR-032), and the same "evidence or nothing"
+ * rule: a gap is only written when a competitor's own page says they have
+ * it, or users on Reddit plainly do.
  */
 class CompetitorAnalyst extends EveilAgent implements HasStructuredOutput
 {
@@ -29,8 +31,9 @@ class CompetitorAnalyst extends EveilAgent implements HasStructuredOutput
     /**
      * @param  array<string, Collection<int, ParsedPage>>  $pagesByCompetitor  Already-crawled pages,
      *                                                                         keyed by competitor name.
+     * @param  Collection<int, Insight>  $mentions  Competitor mentions the Reddit scan noted.
      */
-    public function __construct(Project $project, private array $pagesByCompetitor)
+    public function __construct(Project $project, private array $pagesByCompetitor, private Collection $mentions = new Collection)
     {
         parent::__construct($project);
     }
@@ -46,8 +49,12 @@ class CompetitorAnalyst extends EveilAgent implements HasStructuredOutput
         The product:
         {$this->productPortrait()}
 
-        You are given the text of a few pages from each competitor's website. Work only
-        from that text and the portrait above. A gap is only a gap when a competitor's
+        You are given the text of a few pages from each competitor's website and, when
+        there are any, short summaries of Reddit threads where users talk about those
+        competitors. Work only from that and the portrait above. What users complain
+        about, or praise, tells you which gaps actually cost deals: let it raise or
+        lower a gap's impact, and quote it in the evidence. A capability users clearly
+        ask for counts as a gap even when no competitor page names it. A gap is only a gap when a competitor's
         page names the capability AND nothing in the portrait or the repository digest
         says this product already has it. When unsure whether the product has it,
         leave it out: proposing something it already does makes the whole list look
@@ -81,7 +88,7 @@ class CompetitorAnalyst extends EveilAgent implements HasStructuredOutput
                         ->description('The missing capability, named as a developer would build it.')
                         ->required(),
                     'evidence' => $schema->string()
-                        ->description('Which competitors offer it and what their page says. Never left empty or generic.')
+                        ->description('Which competitors offer it and what their page, or Reddit users, say. Never left empty or generic.')
                         ->required(),
                     'impact' => $schema->string()->enum(['high', 'medium', 'low'])
                         ->description('How much its absence plausibly costs in deals, given who this product is for.')
@@ -136,7 +143,22 @@ class CompetitorAnalyst extends EveilAgent implements HasStructuredOutput
             $sections[] = "## Competitor: {$competitor}\n\n".implode("\n\n", $pageSections);
         }
 
-        return implode("\n\n---\n\n", $sections).$this->repoDigest();
+        return implode("\n\n---\n\n", $sections).$this->mentionDigest().$this->repoDigest();
+    }
+
+    private function mentionDigest(): string
+    {
+        $lines = $this->mentions
+            ->map(fn (Insight $mention): string => sprintf(
+                '- %s (%s, r/%s): %s',
+                $mention->details['competitor'] ?? '?',
+                $mention->details['signal'] ?? '?',
+                $mention->details['subreddit'] ?? '?',
+                $mention->angle,
+            ))
+            ->implode("\n");
+
+        return $lines === '' ? '' : "\n\n---\n\n## What users say about these competitors on Reddit\n\n{$lines}";
     }
 
     /**

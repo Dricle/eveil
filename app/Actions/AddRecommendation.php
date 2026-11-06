@@ -2,17 +2,17 @@
 
 namespace App\Actions;
 
+use App\Enums\InsightKind;
+use App\Enums\InsightStatus;
 use App\Enums\RecommendationKind;
-use App\Enums\RecommendationStatus;
 use App\Models\Project;
 use Illuminate\Support\Str;
 
 /**
  * Adds one acquisition or feature idea to the project's recommendations,
  * proposed: from Evie (`App\Ai\Tools\ProposeRecommendation`) or the API.
- * `UpdateRecommendation`'s sibling, so neither caller writes the JSON column
- * itself. The key is the idea slugged, made unique, and is what every later
- * update names it by.
+ * `UpdateRecommendation`'s sibling. The key is the idea slugged, made
+ * unique, and is what every later update names it by.
  */
 class AddRecommendation
 {
@@ -22,7 +22,7 @@ class AddRecommendation
      */
     public function handle(Project $project, array $fields): string
     {
-        $existingKeys = collect($project->recommendations())->pluck('key')->all();
+        $existingKeys = $project->insights()->whereIn('kind', InsightKind::recommendations())->pluck('source_ref')->all();
         $base = Str::slug($fields['idea'], '_') ?: 'idea';
         $key = $base;
 
@@ -30,19 +30,16 @@ class AddRecommendation
             $key = "{$base}_{$suffix}";
         }
 
-        $project->update([
-            'knowledge_base' => [...$project->knowledge_base ?? [], 'recommendations' => [
-                ...$project->recommendations(),
-                [
-                    'key' => $key,
-                    'idea' => $fields['idea'],
-                    'evidence' => $fields['evidence'],
-                    'impact' => $fields['impact'],
-                    'effort' => $fields['effort'],
-                    'status' => RecommendationStatus::Proposed->value,
-                    'kind' => $fields['kind'] ?? RecommendationKind::Acquisition->value,
-                ],
-            ]],
+        $kind = RecommendationKind::tryFrom((string) ($fields['kind'] ?? '')) ?? RecommendationKind::Acquisition;
+
+        $project->insights()->create([
+            'kind' => $kind->toInsightKind(),
+            'source' => 'evie',
+            'source_ref' => $key,
+            'title' => $fields['idea'],
+            'angle' => $fields['evidence'],
+            'details' => ['impact' => $fields['impact'], 'effort' => $fields['effort']],
+            'status' => InsightStatus::Open,
         ]);
 
         return $key;

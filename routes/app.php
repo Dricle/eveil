@@ -70,6 +70,8 @@ use App\Http\Controllers\EmailInstructionsController;
 use App\Http\Controllers\EvieChatController;
 use App\Http\Controllers\IdeaController;
 use App\Http\Controllers\InboxController;
+use App\Http\Controllers\InsightController;
+use App\Http\Controllers\InsightReadController;
 use App\Http\Controllers\InstagramConnectionController;
 use App\Http\Controllers\InstagramOAuthController;
 use App\Http\Controllers\KnownClientController;
@@ -195,6 +197,15 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
          */
         Route::put('recommendations/{key}/status', [RecommendationStatusController::class, 'update'])
             ->name('recommendations.status');
+
+        /*
+         * Everything Eveil noticed while reading, in one feed: competitor
+         * mentions on Reddit, missing features, acquisition levers, article
+         * ideas. Read, act on, or turn down.
+         */
+        Route::get('insights', [InsightController::class, 'index'])->name('insights.index');
+        Route::post('insights/read', [InsightReadController::class, 'store'])->name('insights.read');
+        Route::put('insights/{insight}', [InsightController::class, 'update'])->name('insights.update');
 
         /*
          * The first ten minutes. Somebody who has just given the address of

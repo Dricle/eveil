@@ -87,3 +87,8 @@ Schedule::command('eveil:ads-sync')->hourly();
 // each review is a full model call reading every account. Placed after a
 // sync, so the agent reads the night's numbers.
 Schedule::command('eveil:ads-review')->dailyAt('06:30');
+
+// Weekly: competitors change their sites slowly, and each pass is a crawl of
+// up to three sites plus a model call. It also reads the competitor mentions
+// the daily Reddit scans collected in between.
+Schedule::command('eveil:feature-gaps')->weeklyOn(1, '05:00');

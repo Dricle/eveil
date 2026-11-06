@@ -2,6 +2,7 @@
 
 namespace App\Ai\Agents;
 
+use App\Enums\CompetitorSignal;
 use App\Models\Project;
 use App\Services\Reddit\OpportunityCandidate;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -31,9 +32,12 @@ use Stringable;
  * judgment - "would replying here genuinely help, with this product as the
  * reason" - is the same question either way.
  *
- * The same pass also asks the second thing a researcher notices while
- * reading: whether a thread would make a blog article (`article_angle`),
- * independently of whether it is worth a reply. Those become `Idea` rows.
+ * The same pass also asks two things a researcher notices while reading,
+ * independently of whether a thread is worth a reply: whether it would make
+ * a blog article (`article_angle`), and whether it says something about one
+ * of the named competitors (`competitor`, `competitor_signal`,
+ * `competitor_summary`). Both become `Insight` rows in the Insights feed, at no
+ * extra model call.
  */
 class RedditOpportunityTriage extends EveilAgent implements HasStructuredOutput
 {
@@ -101,6 +105,16 @@ class RedditOpportunityTriage extends EveilAgent implements HasStructuredOutput
         what the article would answer or argue, framed for this product's readers,
         not a summary of the thread. Otherwise leave article_angle empty. Most items
         are worth neither.
+
+        Finally, as someone watching the market: does the item say something about
+        one of the competitors named in the product portrait? Only an actual opinion
+        or experience counts: a complaint about it, a comparison with another tool,
+        someone leaving it or looking to, or praise. A bare name in a list is not.
+        When it does, set competitor to that competitor's name exactly as the
+        portrait spells it, competitor_signal to what it is, and competitor_summary to
+        one sentence saying what users think of it here, specific enough to be read
+        on its own. Otherwise leave competitor and competitor_summary empty and set
+        competitor_signal to none.
         PROMPT;
     }
 
@@ -115,6 +129,9 @@ class RedditOpportunityTriage extends EveilAgent implements HasStructuredOutput
                 'is_opportunity' => $schema->boolean()->description('True only when replying here would genuinely help, with this product as the reason.')->required(),
                 'reason' => $schema->string()->description('One sentence, specific to this item, usable as the draft\'s evidence.')->required(),
                 'article_angle' => $schema->string()->description('The blog article this discussion would make, in one sentence. Empty when it would not make one.')->required(),
+                'competitor' => $schema->string()->description('The competitor from the portrait this item gives an opinion on, spelled as the portrait spells it. Empty when none.')->required(),
+                'competitor_signal' => $schema->string()->enum(['none', ...array_column(CompetitorSignal::cases(), 'value')])->description('What the item says about that competitor. none when competitor is empty.')->required(),
+                'competitor_summary' => $schema->string()->description('One sentence: what users think of that competitor here. Empty when competitor is empty.')->required(),
             ]))->description('One entry per item you were given, none missing.')->required(),
         ];
     }

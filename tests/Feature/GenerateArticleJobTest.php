@@ -7,11 +7,11 @@ use App\Enums\AnalysisType;
 use App\Enums\ArticleFrequency;
 use App\Enums\ArticleSourceType;
 use App\Enums\ArticleStatus;
-use App\Enums\IdeaStatus;
+use App\Enums\InsightStatus;
 use App\Jobs\GenerateArticle;
 use App\Models\AgentRun;
 use App\Models\Article;
-use App\Models\Idea;
+use App\Models\Insight;
 use App\Models\Project;
 use App\Models\ProjectAnalysis;
 use App\Models\User;
@@ -64,8 +64,8 @@ it('shows the writer what the site and past articles already cover, and the open
         'raw' => ['max_pages' => 5, 'pages' => [['url' => 'https://acme.test/pricing', 'title' => 'Pricing', 'chars' => 100]]],
     ]);
     Article::factory()->published()->create(['project_id' => $project->id, 'title' => 'Widgets explained']);
-    Idea::factory()->create(['project_id' => $project->id, 'title' => 'Best tool for widgets?', 'angle' => 'Choosing a widget tool in 2026.']);
-    Idea::factory()->create(['project_id' => $project->id, 'title' => 'Dismissed thread', 'status' => IdeaStatus::Dismissed]);
+    Insight::factory()->create(['project_id' => $project->id, 'title' => 'Best tool for widgets?', 'angle' => 'Choosing a widget tool in 2026.']);
+    Insight::factory()->create(['project_id' => $project->id, 'title' => 'Dismissed thread', 'status' => InsightStatus::Dismissed]);
     ArticleWriter::fake([fakeArticleResponse([])]);
 
     GenerateArticle::dispatchSync($project);
@@ -80,7 +80,7 @@ it('shows the writer what the site and past articles already cover, and the open
 
 it('writes the idea the user clicked, and marks it used', function () {
     $project = Project::factory()->has(User::factory())->create();
-    $idea = Idea::factory()->create(['project_id' => $project->id, 'angle' => 'Choosing a widget tool in 2026.']);
+    $idea = Insight::factory()->create(['project_id' => $project->id, 'angle' => 'Choosing a widget tool in 2026.']);
     Notification::fake();
     ArticleWriter::fake([fakeArticleResponse(['source_type' => 'feature'])]);
 
@@ -92,14 +92,14 @@ it('writes the idea the user clicked, and marks it used', function () {
     expect($article->source_type)->toBe(ArticleSourceType::RedditThread)
         ->and($article->source_ref)->toBe($idea->source_ref)
         ->and(AgentRun::sole()->input['prompt'])->toContain('Choosing a widget tool in 2026.')
-        ->and($idea->fresh()->status)->toBe(IdeaStatus::Used)
+        ->and($idea->fresh()->status)->toBe(InsightStatus::Used)
         ->and($idea->fresh()->article_id)->toBe($article->id);
     Notification::assertNothingSent();
 });
 
 it('writes nothing for an idea dismissed before the job ran', function () {
     $project = Project::factory()->create();
-    $idea = Idea::factory()->create(['project_id' => $project->id, 'status' => IdeaStatus::Dismissed]);
+    $idea = Insight::factory()->create(['project_id' => $project->id, 'status' => InsightStatus::Dismissed]);
     ArticleWriter::fake([fakeArticleResponse([])]);
 
     GenerateArticle::dispatchSync($project, null, $idea->id);

@@ -21,6 +21,8 @@ export type Insight = {
         competitor?: string
         signal?: CompetitorSignal
         subreddit?: string | null
+        /** A feature idea's thread, whose own title is the idea. */
+        thread_title?: string | null
     }
     read_at: string | null
     created_at: string | null

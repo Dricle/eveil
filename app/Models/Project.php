@@ -540,10 +540,13 @@ class Project extends Model implements HasMedia, StoresMediaInterface
      * proposes again keeps its row, so it stays read if it was. Shared by the
      * full website analysis, the recommendations-only re-read
      * (`App\Actions\RefreshAcquisitionIdeas`) and the feature-gap pass
-     * (`App\Actions\FindFeatureGaps`): each touches only its own kind.
+     * (`App\Actions\FindFeatureGaps`): each touches only its own kind, and
+     * only what that writer itself proposed. A feature idea the Reddit scan
+     * noted, or one Evie added, is not a re-analysis's to drop.
      */
     public function replaceOpenRecommendations(mixed $recommendations, RecommendationKind $kind): void
     {
+        $source = $kind === RecommendationKind::Feature ? 'competitors' : 'website';
         $existing = $this->insights()->where('kind', $kind->toInsightKind())->get()->keyBy('source_ref');
 
         $fresh = collect(is_array($recommendations) ? $recommendations : [])
@@ -559,7 +562,7 @@ class Project extends Model implements HasMedia, StoresMediaInterface
             }
 
             $this->insights()->updateOrCreate(['kind' => $kind->toInsightKind(), 'source_ref' => (string) $key], [
-                'source' => $kind === RecommendationKind::Feature ? 'competitors' : 'website',
+                'source' => $source,
                 'title' => (string) $r['idea'],
                 'angle' => (string) $r['evidence'],
                 'details' => ['impact' => (string) $r['impact'], 'effort' => (string) $r['effort']],
@@ -569,6 +572,7 @@ class Project extends Model implements HasMedia, StoresMediaInterface
 
         $this->insights()
             ->where('kind', $kind->toInsightKind())
+            ->where('source', $source)
             ->where('status', InsightStatus::Open)
             ->whereNotIn('source_ref', $fresh->keys()->map(fn (int|string $key): string => (string) $key)->all())
             ->delete();

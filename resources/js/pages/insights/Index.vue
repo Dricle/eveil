@@ -232,7 +232,7 @@ function markAllRead () {
                         rel="noopener"
                         class="text-xs text-primary"
                         @click="open(insight)"
-                    >{{ insight.details.subreddit ? `r/${insight.details.subreddit}: ` : '' }}{{ insight.title }} ↗</a>
+                    >{{ insight.details.subreddit ? `r/${insight.details.subreddit}: ` : '' }}{{ insight.details.thread_title ?? insight.title }} ↗</a>
                 </div>
 
                 <div class="flex shrink-0 gap-1.5">

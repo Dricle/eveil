@@ -86,6 +86,7 @@ class ScanRedditOpportunities implements ShouldQueue
 
             $this->noteArticleIdeas($verdicts, $byPermalink);
             $this->noteCompetitorMentions($verdicts, $byPermalink);
+            $this->noteFeatureIdeas($verdicts, $byPermalink);
             $this->rememberRejected($verdicts, $byPermalink);
 
             /** @var Collection<int, array{0: OpportunityCandidate, 1: string}> $accepted */
@@ -168,7 +169,7 @@ class ScanRedditOpportunities implements ShouldQueue
      * get a reply row once drafted, and one whose drafting failed must come
      * back next scan. Expired rejections are pruned here, on the only write.
      *
-     * @param  Collection<int, array{permalink?: string, is_opportunity?: bool, reason?: string, article_angle?: string, competitor?: string, competitor_signal?: string, competitor_summary?: string}>  $verdicts
+     * @param  Collection<int, array{permalink?: string, is_opportunity?: bool, reason?: string, article_angle?: string, competitor?: string, competitor_signal?: string, competitor_summary?: string, feature_idea?: string, feature_evidence?: string}>  $verdicts
      * @param  Collection<string, OpportunityCandidate>  $byPermalink
      */
     private function rememberRejected(Collection $verdicts, Collection $byPermalink): void
@@ -196,7 +197,7 @@ class ScanRedditOpportunities implements ShouldQueue
      * A thread already noted (open, used or dismissed) is left alone: the
      * user's "no" sticks, and one thread is one idea.
      *
-     * @param  Collection<int, array{permalink?: string, is_opportunity?: bool, reason?: string, article_angle?: string, competitor?: string, competitor_signal?: string, competitor_summary?: string}>  $verdicts
+     * @param  Collection<int, array{permalink?: string, is_opportunity?: bool, reason?: string, article_angle?: string, competitor?: string, competitor_signal?: string, competitor_summary?: string, feature_idea?: string, feature_evidence?: string}>  $verdicts
      * @param  Collection<string, OpportunityCandidate>  $byPermalink
      */
     private function noteArticleIdeas(Collection $verdicts, Collection $byPermalink): void
@@ -223,13 +224,48 @@ class ScanRedditOpportunities implements ShouldQueue
     }
 
     /**
+     * Capabilities people on a thread ask for and this product lacks, noted
+     * as `feature` recommendations next to the competitor gaps: same list,
+     * same done/dismissed lifecycle, and a dismissed one never comes back.
+     * One thread is one idea, the first reading wins. No impact or effort
+     * guess: one thread says a need exists, not how big it is.
+     *
+     * @param  Collection<int, array{permalink?: string, is_opportunity?: bool, reason?: string, article_angle?: string, competitor?: string, competitor_signal?: string, competitor_summary?: string, feature_idea?: string, feature_evidence?: string}>  $verdicts
+     * @param  Collection<string, OpportunityCandidate>  $byPermalink
+     */
+    private function noteFeatureIdeas(Collection $verdicts, Collection $byPermalink): void
+    {
+        foreach ($verdicts as $verdict) {
+            $idea = trim((string) ($verdict['feature_idea'] ?? ''));
+            $evidence = trim((string) ($verdict['feature_evidence'] ?? ''));
+            $candidate = $byPermalink->get(trim((string) ($verdict['permalink'] ?? '')));
+
+            if ($idea === '' || $evidence === '' || $candidate === null) {
+                continue;
+            }
+
+            Insight::query()->firstOrCreate(
+                ['project_id' => $this->project->id, 'kind' => InsightKind::Feature, 'source_ref' => $candidate->permalink],
+                [
+                    'source' => 'reddit',
+                    'title' => $idea,
+                    'angle' => $evidence,
+                    'url' => $candidate->permalink,
+                    'details' => ['subreddit' => $candidate->subreddit, 'thread_title' => $candidate->threadTitle],
+                    'status' => InsightStatus::Open,
+                ],
+            );
+        }
+    }
+
+    /**
      * Threads the triage read as an opinion on a named competitor, for the
      * Insights feed and the feature-gap pass. Only a competitor the knowledge
      * base actually names is kept, under its knowledge-base spelling, so the
      * feed's competitor filter never grows a name nobody chose. One thread is
      * one mention, the first reading wins.
      *
-     * @param  Collection<int, array{permalink?: string, is_opportunity?: bool, reason?: string, article_angle?: string, competitor?: string, competitor_signal?: string, competitor_summary?: string}>  $verdicts
+     * @param  Collection<int, array{permalink?: string, is_opportunity?: bool, reason?: string, article_angle?: string, competitor?: string, competitor_signal?: string, competitor_summary?: string, feature_idea?: string, feature_evidence?: string}>  $verdicts
      * @param  Collection<string, OpportunityCandidate>  $byPermalink
      */
     private function noteCompetitorMentions(Collection $verdicts, Collection $byPermalink): void
@@ -264,7 +300,7 @@ class ScanRedditOpportunities implements ShouldQueue
 
     /**
      * @param  Collection<int, OpportunityCandidate>  $candidates
-     * @return Collection<int, array{permalink?: string, is_opportunity?: bool, reason?: string, article_angle?: string, competitor?: string, competitor_signal?: string, competitor_summary?: string}>
+     * @return Collection<int, array{permalink?: string, is_opportunity?: bool, reason?: string, article_angle?: string, competitor?: string, competitor_signal?: string, competitor_summary?: string, feature_idea?: string, feature_evidence?: string}>
      */
     private function triage(Collection $candidates): Collection
     {

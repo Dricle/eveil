@@ -434,6 +434,38 @@ it('notes a competitor mention under the knowledge base spelling', function () {
         ->and($mention->read_at)->toBeNull();
 });
 
+it('notes a feature people ask for as a feature recommendation, once per thread', function () {
+    $project = scannableProject();
+
+    $verdict = [[
+        'items' => [[
+            'permalink' => 'https://www.reddit.com/r/SaaS/comments/xyz789/what_do_you_use/def456/',
+            'is_opportunity' => false,
+            'reason' => 'x',
+            'article_angle' => '',
+            'competitor' => '',
+            'competitor_signal' => 'none',
+            'competitor_summary' => '',
+            'feature_idea' => 'Export invoices to accounting software',
+            'feature_evidence' => 'Several people say they retype every invoice into their accounting tool.',
+        ]],
+    ]];
+
+    RedditOpportunityTriage::fake([...$verdict, ...$verdict]);
+
+    ScanRedditOpportunities::dispatchSync($project);
+    RedditTriagedThread::query()->delete();
+    ScanRedditOpportunities::dispatchSync($project);
+
+    $idea = Insight::sole();
+
+    expect($idea->kind)->toBe(InsightKind::Feature)
+        ->and($idea->source)->toBe('reddit')
+        ->and($idea->title)->toBe('Export invoices to accounting software')
+        ->and($idea->url)->toBe('https://www.reddit.com/r/SaaS/comments/xyz789/what_do_you_use/def456/')
+        ->and($project->openRecommendations()[0])->toMatchArray(['kind' => 'feature', 'impact' => null]);
+});
+
 it('notes no mention of a competitor the knowledge base does not name', function () {
     $project = scannableProject();
     $project->update(['knowledge_base' => ['competitors' => ['RouteCo']]]);

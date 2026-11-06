@@ -84,6 +84,9 @@ class SeoThreadFinder
         foreach ($competitors as $competitor) {
             if (is_string($competitor) && trim($competitor) !== '') {
                 $queries->push(trim($competitor).' alternative');
+                // The name alone: complaints and comparisons rarely say
+                // "alternative", and they feed the competitor mentions.
+                $queries->push(trim($competitor));
             }
         }
 

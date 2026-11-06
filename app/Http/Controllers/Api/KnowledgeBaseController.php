@@ -11,8 +11,9 @@ use Illuminate\Support\Arr;
 /**
  * What the project knows about the product, the portrait every agent reads.
  * Written with the app's rules, and marked hand-edited the same way, so the
- * next site analysis does not overwrite the correction. Open questions and
- * recommendations live elsewhere in the same column and are left out.
+ * next site analysis does not overwrite the correction. Open questions live
+ * elsewhere in the same column and are left out; recommendations have their
+ * own endpoint.
  */
 class KnowledgeBaseController extends Controller
 {

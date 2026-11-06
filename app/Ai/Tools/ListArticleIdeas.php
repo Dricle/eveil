@@ -2,9 +2,9 @@
 
 namespace App\Ai\Tools;
 
-use App\Enums\IdeaKind;
-use App\Enums\IdeaStatus;
-use App\Models\Idea;
+use App\Enums\InsightKind;
+use App\Enums\InsightStatus;
+use App\Models\Insight;
 use App\Models\Project;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\Tool;
@@ -26,14 +26,14 @@ class ListArticleIdeas implements Tool
 
     public function handle(Request $request): Stringable|string
     {
-        $ideas = Idea::query()
+        $ideas = Insight::query()
             ->where('project_id', $this->project->id)
-            ->where('kind', IdeaKind::Article)
-            ->where('status', IdeaStatus::Open)
+            ->where('kind', InsightKind::Article)
+            ->where('status', InsightStatus::Open)
             ->latest('id')
             ->limit(20)
             ->get()
-            ->map(fn (Idea $idea): array => [
+            ->map(fn (Insight $idea): array => [
                 'id' => $idea->id,
                 'angle' => $idea->angle,
                 'thread_title' => $idea->title,

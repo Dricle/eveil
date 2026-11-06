@@ -22,6 +22,7 @@ export default defineConfig({
                         { text: 'Statuses and the inbox', link: '/product/statuses' },
                         { text: 'The timeline', link: '/product/timeline' },
                         { text: 'Chatting with Evie', link: '/product/evie' },
+                        { text: 'Insights', link: '/product/insights' },
                         { text: 'Posting to LinkedIn', link: '/product/linkedin' },
                         { text: 'Posting to X, Bluesky and Instagram', link: '/product/social' },
                         { text: 'Replying on Reddit', link: '/product/reddit' },

@@ -139,6 +139,14 @@ class Evie extends EveilAgent implements \Laravel\Ai\Contracts\RemembersConversa
         competitors have that they don't; it pauses for approval first and
         only reads competitors already in the knowledge base.
 
+        ListInsights reads the Insights feed: everything Eveil noticed while
+        reading, the recommendations included, plus what people say about
+        the named competitors on Reddit (competitor_mention, collected by the
+        Reddit scan) and article ideas. Use it when the user asks what people
+        think of a competitor, or what is new. UpdateInsight marks one item
+        read, used or dismissed, same as the buttons on that page, no
+        approval needed.
+
         CreateTargetProfile and UpdateTargetProfile are the same kind of
         tool again, this time on a profile's own criteria: use
         CreateTargetProfile when the user already knows the segment they want

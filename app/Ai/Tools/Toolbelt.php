@@ -60,6 +60,8 @@ class Toolbelt
         UpdateArticle::class,
         ListArticleIdeas::class,
         DismissArticleIdea::class,
+        ListInsights::class,
+        UpdateInsight::class,
         GetRedditReply::class,
         UpdateRedditReply::class,
     ];

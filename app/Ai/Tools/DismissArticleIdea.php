@@ -2,8 +2,8 @@
 
 namespace App\Ai\Tools;
 
-use App\Enums\IdeaStatus;
-use App\Models\Idea;
+use App\Enums\InsightStatus;
+use App\Models\Insight;
 use App\Models\Project;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\Tool;
@@ -25,16 +25,16 @@ class DismissArticleIdea implements Tool
 
     public function handle(Request $request): Stringable|string
     {
-        $idea = Idea::query()
+        $idea = Insight::query()
             ->where('project_id', $this->project->id)
-            ->where('status', IdeaStatus::Open)
+            ->where('status', InsightStatus::Open)
             ->find($request->integer('idea_id'));
 
         if ($idea === null) {
             return 'No open article idea with that id on this project. Call ListArticleIdeas first.';
         }
 
-        $idea->update(['status' => IdeaStatus::Dismissed]);
+        $idea->update(['status' => InsightStatus::Dismissed]);
 
         return "Idea #{$idea->id} dismissed.";
     }

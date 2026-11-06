@@ -4,9 +4,12 @@ use App\Actions\AnalyzeWebsite;
 use App\Actions\FindFeatureGaps;
 use App\Ai\Agents\CompetitorAnalyst;
 use App\Enums\AgentRunStatus;
+use App\Enums\InsightKind;
+use App\Enums\InsightStatus;
 use App\Jobs\AnalyzeProject;
 use App\Jobs\FindFeatureGaps as FindFeatureGapsJob;
 use App\Models\AgentRun;
+use App\Models\Insight;
 use App\Models\Organization;
 use App\Models\Project;
 use App\Models\ProjectAnalysis;
@@ -14,6 +17,7 @@ use App\Services\Discovery\SiteCrawler;
 use App\Services\Discovery\WebsiteFinder;
 use App\Support\ParsedPage;
 use Illuminate\Support\Facades\Queue;
+use Laravel\Ai\Prompts\AgentPrompt;
 use Laravel\Ai\Responses\Data\Meta;
 use Laravel\Ai\Responses\Data\TextUsage;
 use Laravel\Ai\Responses\StructuredTextResponse;
@@ -28,13 +32,11 @@ function projectWithCompetitors(): array
             'what_it_does' => 'Schedules deliveries for regional wholesalers.',
             'product_category' => 'delivery scheduling software',
             'competitors' => ['RouteCo'],
-            'recommendations' => [
-                ['key' => 'referral_program', 'idea' => 'Referral program', 'evidence' => 'No referral flow.', 'impact' => 'high', 'effort' => 'medium'],
-                ['key' => 'feature_csv_import', 'idea' => 'CSV import', 'evidence' => 'RouteCo has it.', 'impact' => 'low', 'effort' => 'low', 'status' => 'archived', 'kind' => 'feature'],
-                ['key' => 'feature_old_gap', 'idea' => 'Old gap', 'evidence' => 'RouteCo had it.', 'impact' => 'low', 'effort' => 'low', 'kind' => 'feature'],
-            ],
         ],
     ]);
+    Insight::factory()->for($project)->recommendation('referral_program')->create();
+    Insight::factory()->for($project)->recommendation('feature_csv_import', 'CSV import', InsightStatus::Dismissed, InsightKind::Feature)->create();
+    Insight::factory()->for($project)->recommendation('feature_old_gap', 'Old gap', InsightStatus::Open, InsightKind::Feature)->create();
 
     $run = AgentRun::create(['project_id' => $project->id, 'agent' => CompetitorAnalyst::slug(), 'status' => AgentRunStatus::Pending]);
 
@@ -85,6 +87,33 @@ it('fails the run and writes nothing when no competitor site is found', function
         ->status->toBe(AgentRunStatus::Failed)
         ->error->not->toBeNull()
         ->and($project->fresh()->recommendations())->toHaveCount(3);
+});
+
+it('reads what Redditors say about the competitors, even when no competitor site can be read', function () {
+    [$project, $run] = projectWithCompetitors();
+    Insight::factory()->for($project)->competitorMention('RouteCo')->create(['angle' => 'Users say RouteCo has no offline mode for drivers.']);
+    Insight::factory()->for($project)->competitorMention('RouteCo')->create(['angle' => 'A dismissed thread.', 'status' => InsightStatus::Dismissed]);
+
+    $this->mock(WebsiteFinder::class, fn ($mock) => $mock->shouldReceive('find')->once()->andReturn(null));
+    CompetitorAnalyst::fake([
+        new StructuredTextResponse(
+            ['recommendations' => [
+                ['key' => 'feature_offline_mode', 'idea' => 'Offline mode', 'evidence' => 'RouteCo users on Reddit ask for it.', 'impact' => 'high', 'effort' => 'medium'],
+            ]],
+            '{}',
+            new TextUsage(inputTokens: 10, outputTokens: 5),
+            new Meta('anthropic', 'claude-opus-5'),
+        ),
+    ]);
+
+    app(FindFeatureGaps::class)->handle($project, $run);
+
+    CompetitorAnalyst::assertPrompted(fn (AgentPrompt $prompt): bool => $prompt->contains('Users say RouteCo has no offline mode for drivers.')
+        && ! $prompt->contains('A dismissed thread.'));
+
+    expect(collect($project->recommendations())->pluck('key'))->toContain('feature_offline_mode')
+        // The open gap this pass did not propose again is replaced.
+        ->not->toContain('feature_old_gap');
 });
 
 it('queues the feature-gap pass once an analysis has named competitors, and only then', function (array $competitors, bool $queued) {

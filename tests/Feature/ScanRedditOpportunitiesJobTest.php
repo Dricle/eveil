@@ -4,8 +4,8 @@ use App\Actions\HarvestRedditReplyExamples;
 use App\Ai\Agents\RedditExampleTriage;
 use App\Ai\Agents\RedditOpportunityTriage;
 use App\Ai\Agents\RedditReplyWriter;
-use App\Enums\IdeaKind;
-use App\Enums\IdeaStatus;
+use App\Enums\InsightKind;
+use App\Enums\InsightStatus;
 use App\Enums\OrganizationRole;
 use App\Enums\RedditReplyAngle;
 use App\Enums\RedditReplyExampleSource;
@@ -13,7 +13,7 @@ use App\Enums\RedditReplySource;
 use App\Enums\RedditReplyStatus;
 use App\Jobs\ScanRedditOpportunities;
 use App\Models\AgentRun;
-use App\Models\Idea;
+use App\Models\Insight;
 use App\Models\Project;
 use App\Models\RedditReply;
 use App\Models\RedditReplyExample;
@@ -375,11 +375,11 @@ it('notes a thread worth an article even when it is no reply opportunity, once',
     ScanRedditOpportunities::dispatchSync($project);
     ScanRedditOpportunities::dispatchSync($project);
 
-    $idea = Idea::sole();
+    $idea = Insight::sole();
 
     expect($idea->project_id)->toBe($project->id)
-        ->and($idea->kind)->toBe(IdeaKind::Article)
-        ->and($idea->status)->toBe(IdeaStatus::Open)
+        ->and($idea->kind)->toBe(InsightKind::Article)
+        ->and($idea->status)->toBe(InsightStatus::Open)
         ->and($idea->source_ref)->toBe('https://www.reddit.com/r/SaaS/comments/xyz789/what_do_you_use/def456/')
         ->and($idea->angle)->toBe('Why every tool in this space ends up too expensive, and what to look for instead.')
         ->and(RedditReply::count())->toBe(0);
@@ -387,10 +387,10 @@ it('notes a thread worth an article even when it is no reply opportunity, once',
 
 it('never reopens an idea the user dismissed', function () {
     $project = scannableProject();
-    Idea::factory()->create([
+    Insight::factory()->create([
         'project_id' => $project->id,
         'source_ref' => 'https://www.reddit.com/r/SaaS/comments/xyz789/what_do_you_use/def456/',
-        'status' => IdeaStatus::Dismissed,
+        'status' => InsightStatus::Dismissed,
     ]);
 
     RedditOpportunityTriage::fake([[
@@ -404,7 +404,55 @@ it('never reopens an idea the user dismissed', function () {
 
     ScanRedditOpportunities::dispatchSync($project);
 
-    expect(Idea::sole()->status)->toBe(IdeaStatus::Dismissed);
+    expect(Insight::sole()->status)->toBe(InsightStatus::Dismissed);
+});
+
+it('notes a competitor mention under the knowledge base spelling', function () {
+    $project = scannableProject();
+    $project->update(['knowledge_base' => ['competitors' => ['RouteCo']]]);
+
+    RedditOpportunityTriage::fake([[
+        'items' => [[
+            'permalink' => 'https://www.reddit.com/r/SaaS/comments/xyz789/what_do_you_use/def456/',
+            'is_opportunity' => false,
+            'reason' => 'Nobody here needs this product.',
+            'article_angle' => '',
+            'competitor' => 'routeco',
+            'competitor_signal' => 'complaint',
+            'competitor_summary' => 'Users find RouteCo too expensive once they pass ten drivers.',
+        ]],
+    ]]);
+
+    ScanRedditOpportunities::dispatchSync($project);
+
+    $mention = Insight::sole();
+
+    expect($mention->kind)->toBe(InsightKind::CompetitorMention)
+        ->and($mention->angle)->toBe('Users find RouteCo too expensive once they pass ten drivers.')
+        ->and($mention->url)->toBe('https://www.reddit.com/r/SaaS/comments/xyz789/what_do_you_use/def456/')
+        ->and($mention->details)->toMatchArray(['competitor' => 'RouteCo', 'signal' => 'complaint', 'subreddit' => 'SaaS'])
+        ->and($mention->read_at)->toBeNull();
+});
+
+it('notes no mention of a competitor the knowledge base does not name', function () {
+    $project = scannableProject();
+    $project->update(['knowledge_base' => ['competitors' => ['RouteCo']]]);
+
+    RedditOpportunityTriage::fake([[
+        'items' => [[
+            'permalink' => 'https://www.reddit.com/r/SaaS/comments/xyz789/what_do_you_use/def456/',
+            'is_opportunity' => false,
+            'reason' => 'x',
+            'article_angle' => '',
+            'competitor' => 'SomeoneElse',
+            'competitor_signal' => 'praise',
+            'competitor_summary' => 'People like SomeoneElse.',
+        ]],
+    ]]);
+
+    ScanRedditOpportunities::dispatchSync($project);
+
+    expect(Insight::count())->toBe(0);
 });
 
 it('keeps a high-scoring product mention off a thread it was already reading', function () {

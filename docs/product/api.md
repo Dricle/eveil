@@ -247,9 +247,10 @@ The rest of what you can do in the app, and what [Evie](/product/evie) can do fo
 | `GET /articles`, `GET /articles/{id}`, `PATCH /articles/{id}`, `DELETE /articles/{id}` | The blog articles of the SEO page, a draft's `title`, `meta_description` or `body`, and deleting one. |
 | `POST /articles` | Ask for one, about a `brief` or an open idea (`idea_id`). Answers `202`; the draft appears a few minutes later. |
 | `GET /article-ideas`, `DELETE /article-ideas/{id}` | The open article ideas, and dismissing one for good. |
+| `GET /insights`, `PATCH /insights/{id}` | The open items of the Insights feed, newest first (`?kind=competitor_mention`, `feature`, `acquisition` or `article`; `?unread=1`), and marking one: `read` `true` or `false`, or `status` `used` or `dismissed`. |
 | `GET /reddit-replies`, `GET /reddit-replies/{id}`, `PATCH /reddit-replies/{id}`, `DELETE /reddit-replies/{id}` | The Reddit replies drafted for you, a draft's `body`, and deleting one. Posting stays in the app. |
 
-Lists of things that grow (runs, posts, articles, replies) are paginated like the others; the short ones (profiles, recommendations, ideas) come whole. A post, article or reply that is no longer a draft answers `409` to an edit. Publishing, approving and activating stay in the app, where you see what will go out.
+Lists of things that grow (runs, posts, articles, replies, insights) are paginated like the others; the short ones (profiles, recommendations, ideas) come whole. A post, article or reply that is no longer a draft answers `409` to an edit. Publishing, approving and activating stay in the app, where you see what will go out.
 
 ## MCP
 

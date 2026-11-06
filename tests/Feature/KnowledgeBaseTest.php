@@ -3,6 +3,8 @@
 use App\Actions\AnalyzeWebsite;
 use App\Enums\AnalysisStatus;
 use App\Enums\AnalysisType;
+use App\Enums\InsightStatus;
+use App\Models\Insight;
 use App\Models\Organization;
 use App\Models\Project;
 use App\Models\ProjectAnalysis;
@@ -291,14 +293,8 @@ it('keeps an answered question the site now covers', function () {
 
 it('keeps a decided recommendation through a re-reading that repeats its key', function () {
     $user = owner();
-    $project = Project::factory()->for($user->organizations()->sole())->create([
-        'knowledge_base' => [
-            ...portrait(),
-            'recommendations' => [
-                ['key' => 'referral_program', 'idea' => 'Referral program', 'evidence' => 'No referral flow anywhere on the site.', 'impact' => 'high', 'effort' => 'medium', 'status' => 'archived'],
-            ],
-        ],
-    ]);
+    $project = Project::factory()->for($user->organizations()->sole())->create(['knowledge_base' => portrait()]);
+    Insight::factory()->for($project)->recommendation('referral_program', 'Referral program', InsightStatus::Dismissed)->create();
 
     $method = new ReflectionMethod(AnalyzeWebsite::class, 'applyToProject');
     $method->invoke(app(AnalyzeWebsite::class), $project, [
@@ -318,14 +314,8 @@ it('keeps a decided recommendation through a re-reading that repeats its key', f
 
 it('keeps a decided recommendation the re-reading no longer proposes', function () {
     $user = owner();
-    $project = Project::factory()->for($user->organizations()->sole())->create([
-        'knowledge_base' => [
-            ...portrait(),
-            'recommendations' => [
-                ['key' => 'sector_case_studies', 'idea' => 'Sector case studies', 'evidence' => 'No case studies published.', 'impact' => 'medium', 'effort' => 'low', 'status' => 'done'],
-            ],
-        ],
-    ]);
+    $project = Project::factory()->for($user->organizations()->sole())->create(['knowledge_base' => portrait()]);
+    Insight::factory()->for($project)->recommendation('sector_case_studies', 'Sector case studies', InsightStatus::Used)->create();
 
     $method = new ReflectionMethod(AnalyzeWebsite::class, 'applyToProject');
     $method->invoke(app(AnalyzeWebsite::class), $project, [...portrait(), 'recommendations' => []], collect());

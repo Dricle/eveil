@@ -7,13 +7,14 @@ use App\Ai\Agents\RedditOpportunityTriage;
 use App\Ai\Agents\RedditReplyWriter;
 use App\Ai\OutOfCredit;
 use App\Enums\AgentRunStatus;
-use App\Enums\IdeaKind;
-use App\Enums\IdeaStatus;
+use App\Enums\CompetitorSignal;
+use App\Enums\InsightKind;
+use App\Enums\InsightStatus;
 use App\Enums\RedditReplyAngle;
 use App\Enums\RedditReplySource;
 use App\Enums\RedditReplyStatus;
 use App\Models\AgentRun;
-use App\Models\Idea;
+use App\Models\Insight;
 use App\Models\Project;
 use App\Models\RedditReply;
 use App\Models\RedditReplyExample;
@@ -84,6 +85,7 @@ class ScanRedditOpportunities implements ShouldQueue
             $byPermalink = $candidates->keyBy(fn (OpportunityCandidate $candidate): string => $candidate->permalink);
 
             $this->noteArticleIdeas($verdicts, $byPermalink);
+            $this->noteCompetitorMentions($verdicts, $byPermalink);
             $this->rememberRejected($verdicts, $byPermalink);
 
             /** @var Collection<int, array{0: OpportunityCandidate, 1: string}> $accepted */
@@ -166,7 +168,7 @@ class ScanRedditOpportunities implements ShouldQueue
      * get a reply row once drafted, and one whose drafting failed must come
      * back next scan. Expired rejections are pruned here, on the only write.
      *
-     * @param  Collection<int, array{permalink?: string, is_opportunity?: bool, reason?: string, article_angle?: string}>  $verdicts
+     * @param  Collection<int, array{permalink?: string, is_opportunity?: bool, reason?: string, article_angle?: string, competitor?: string, competitor_signal?: string, competitor_summary?: string}>  $verdicts
      * @param  Collection<string, OpportunityCandidate>  $byPermalink
      */
     private function rememberRejected(Collection $verdicts, Collection $byPermalink): void
@@ -194,7 +196,7 @@ class ScanRedditOpportunities implements ShouldQueue
      * A thread already noted (open, used or dismissed) is left alone: the
      * user's "no" sticks, and one thread is one idea.
      *
-     * @param  Collection<int, array{permalink?: string, is_opportunity?: bool, reason?: string, article_angle?: string}>  $verdicts
+     * @param  Collection<int, array{permalink?: string, is_opportunity?: bool, reason?: string, article_angle?: string, competitor?: string, competitor_signal?: string, competitor_summary?: string}>  $verdicts
      * @param  Collection<string, OpportunityCandidate>  $byPermalink
      */
     private function noteArticleIdeas(Collection $verdicts, Collection $byPermalink): void
@@ -207,13 +209,54 @@ class ScanRedditOpportunities implements ShouldQueue
                 continue;
             }
 
-            Idea::query()->firstOrCreate(
-                ['project_id' => $this->project->id, 'kind' => IdeaKind::Article, 'source_ref' => $candidate->permalink],
+            Insight::query()->firstOrCreate(
+                ['project_id' => $this->project->id, 'kind' => InsightKind::Article, 'source_ref' => $candidate->permalink],
                 [
                     'source' => 'reddit',
                     'title' => $candidate->threadTitle ?? Str::limit($candidate->text, 120),
                     'angle' => $angle,
-                    'status' => IdeaStatus::Open,
+                    'url' => $candidate->permalink,
+                    'status' => InsightStatus::Open,
+                ],
+            );
+        }
+    }
+
+    /**
+     * Threads the triage read as an opinion on a named competitor, for the
+     * Insights feed and the feature-gap pass. Only a competitor the knowledge
+     * base actually names is kept, under its knowledge-base spelling, so the
+     * feed's competitor filter never grows a name nobody chose. One thread is
+     * one mention, the first reading wins.
+     *
+     * @param  Collection<int, array{permalink?: string, is_opportunity?: bool, reason?: string, article_angle?: string, competitor?: string, competitor_signal?: string, competitor_summary?: string}>  $verdicts
+     * @param  Collection<string, OpportunityCandidate>  $byPermalink
+     */
+    private function noteCompetitorMentions(Collection $verdicts, Collection $byPermalink): void
+    {
+        $competitors = collect(is_array($this->project->knowledge_base['competitors'] ?? null) ? $this->project->knowledge_base['competitors'] : [])
+            ->filter(fn (mixed $name): bool => is_string($name) && trim($name) !== '')
+            ->mapWithKeys(fn (string $name): array => [mb_strtolower(trim($name)) => trim($name)]);
+
+        foreach ($verdicts as $verdict) {
+            $competitor = $competitors->get(mb_strtolower(trim((string) ($verdict['competitor'] ?? ''))));
+            $signal = CompetitorSignal::tryFrom((string) ($verdict['competitor_signal'] ?? ''));
+            $summary = trim((string) ($verdict['competitor_summary'] ?? ''));
+            $candidate = $byPermalink->get(trim((string) ($verdict['permalink'] ?? '')));
+
+            if ($competitor === null || $signal === null || $summary === '' || $candidate === null) {
+                continue;
+            }
+
+            Insight::query()->firstOrCreate(
+                ['project_id' => $this->project->id, 'kind' => InsightKind::CompetitorMention, 'source_ref' => $candidate->permalink],
+                [
+                    'source' => 'reddit',
+                    'title' => $candidate->threadTitle ?? Str::limit($candidate->text, 120),
+                    'angle' => $summary,
+                    'url' => $candidate->permalink,
+                    'details' => ['competitor' => $competitor, 'signal' => $signal->value, 'subreddit' => $candidate->subreddit],
+                    'status' => InsightStatus::Open,
                 ],
             );
         }
@@ -221,7 +264,7 @@ class ScanRedditOpportunities implements ShouldQueue
 
     /**
      * @param  Collection<int, OpportunityCandidate>  $candidates
-     * @return Collection<int, array{permalink?: string, is_opportunity?: bool, reason?: string, article_angle?: string}>
+     * @return Collection<int, array{permalink?: string, is_opportunity?: bool, reason?: string, article_angle?: string, competitor?: string, competitor_signal?: string, competitor_summary?: string}>
      */
     private function triage(Collection $candidates): Collection
     {

@@ -6,6 +6,7 @@ use App\Ai\Agents\WebsiteAnalyst;
 use App\Enums\AnalysisStatus;
 use App\Enums\AnalysisType;
 use App\Enums\Channel;
+use App\Enums\RecommendationKind;
 use App\Models\Project;
 use App\Models\ProjectAnalysis;
 use App\Services\Discovery\SiteCrawler;
@@ -123,18 +124,20 @@ class AnalyzeWebsite
 
         $project->update([
             'knowledge_base' => [
-                ...$summary,
+                // The recommendations are `insights` rows, written below.
+                ...collect($summary)->except('recommendations')->all(),
                 // Not this run's to know about: repos are read on their own
                 // schedule (`ExploreRepo`), and a website re-analysis that
                 // dropped them would silently undo that work.
                 'repositories' => $project->knowledge_base['repositories'] ?? [],
                 'gaps' => $this->mergeOpenQuestions($project, $summary['gaps'] ?? []),
-                'recommendations' => $project->mergeRecommendations($summary['recommendations'] ?? []),
             ],
             'default_language' => is_string($summary['language'] ?? null) && $summary['language'] !== ''
                 ? mb_substr($summary['language'], 0, 2)
                 : $pages->first()?->language,
         ]);
+
+        $project->replaceOpenRecommendations($summary['recommendations'] ?? [], RecommendationKind::Acquisition);
     }
 
     /**

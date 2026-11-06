@@ -8,6 +8,7 @@ use App\Enums\AdDecisionStatus;
 use App\Enums\ArticleStatus;
 use App\Enums\DiscoveryRunStatus;
 use App\Enums\EmailAccountStatus;
+use App\Enums\InsightStatus;
 use App\Enums\RedditReplyStatus;
 use App\Enums\SocialPlatform;
 use App\Enums\SocialPostStatus;
@@ -18,6 +19,7 @@ use App\Models\Article;
 use App\Models\Company;
 use App\Models\DiscoveryRun;
 use App\Models\EmailAccount;
+use App\Models\Insight;
 use App\Models\Project;
 use App\Models\RedditReply;
 use App\Models\SocialPost;
@@ -149,9 +151,9 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * @return array{targets: int, leads: int, inbox: int, reddit: int, seo: int, linkedin: int, x: int, bluesky: int, ads: int}|null
-     *                                                                                                                                null while no project is selected, so the sidebar shows no
-     *                                                                                                                                badge rather than one for the wrong project
+     * @return array{insights: int, targets: int, leads: int, inbox: int, reddit: int, seo: int, linkedin: int, x: int, bluesky: int, ads: int}|null
+     *                                                                                                                                               null while no project is selected, so the sidebar shows no
+     *                                                                                                                                               badge rather than one for the wrong project
      */
     private function navCounts(?User $user): ?array
     {
@@ -178,6 +180,8 @@ class HandleInertiaRequests extends Middleware
             ->count();
 
         return app(CurrentProject::class)->run($project, fn (): array => [
+            // Unread, same reasoning as inbox: what is waiting to be looked at.
+            'insights' => Insight::query()->where('status', InsightStatus::Open)->whereNull('read_at')->count(),
             'targets' => TargetProfile::query()->count(),
             'leads' => Company::query()->contactable()->count(),
             // Todos, not a running total of everyone who ever replied: the

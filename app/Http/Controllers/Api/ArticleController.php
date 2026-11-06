@@ -3,15 +3,15 @@
 namespace App\Http\Controllers\Api;
 
 use App\Enums\ArticleStatus;
-use App\Enums\IdeaKind;
-use App\Enums\IdeaStatus;
+use App\Enums\InsightKind;
+use App\Enums\InsightStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\ArticleStoreRequest;
 use App\Http\Requests\Api\ArticleUpdateRequest;
 use App\Http\Resources\ArticleResource;
 use App\Jobs\GenerateArticle;
 use App\Models\Article;
-use App\Models\Idea;
+use App\Models\Insight;
 use App\Support\CurrentProject;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -40,7 +40,7 @@ class ArticleController extends Controller
             $currentProject->getOrFail(),
             $request->validated('brief'),
             $request->filled('idea_id')
-                ? Idea::query()->where('kind', IdeaKind::Article)->where('status', IdeaStatus::Open)->findOrFail($request->integer('idea_id'))->id
+                ? Insight::query()->where('kind', InsightKind::Article)->where('status', InsightStatus::Open)->findOrFail($request->integer('idea_id'))->id
                 : null,
         );
 

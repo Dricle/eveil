@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\ContactNoteController;
 use App\Http\Controllers\Api\DiscoveryRunController;
 use App\Http\Controllers\Api\IdeaController;
+use App\Http\Controllers\Api\InsightController;
 use App\Http\Controllers\Api\KnowledgeBaseController;
 use App\Http\Controllers\Api\KnownClientController;
 use App\Http\Controllers\Api\ProjectController;
@@ -95,6 +96,9 @@ Route::prefix('v1')
 
                 Route::get('article-ideas', [IdeaController::class, 'index'])->name('article-ideas.index');
                 Route::delete('article-ideas/{idea}', [IdeaController::class, 'destroy'])->name('article-ideas.destroy');
+
+                Route::get('insights', [InsightController::class, 'index'])->name('insights.index');
+                Route::patch('insights/{insight}', [InsightController::class, 'update'])->name('insights.update');
 
                 Route::get('reddit-replies', [RedditReplyController::class, 'index'])->name('reddit-replies.index');
                 Route::get('reddit-replies/{reddit_reply}', [RedditReplyController::class, 'show'])->name('reddit-replies.show');

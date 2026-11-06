@@ -3,17 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ArticleStatus;
-use App\Enums\IdeaKind;
-use App\Enums\IdeaStatus;
+use App\Enums\InsightKind;
+use App\Enums\InsightStatus;
 use App\Http\Requests\ArticlePublishRequest;
 use App\Http\Requests\ArticleRejectRequest;
 use App\Http\Requests\ArticleRequest;
 use App\Http\Resources\ArticleResource;
-use App\Http\Resources\IdeaResource;
+use App\Http\Resources\InsightResource;
 use App\Jobs\FetchPublishedArticle;
 use App\Jobs\GenerateArticle;
 use App\Models\Article;
-use App\Models\Idea;
+use App\Models\Insight;
 use App\Support\CurrentProject;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -34,8 +34,8 @@ class ArticleController extends Controller
     {
         return Inertia::render('seo/Index', [
             'articles' => ArticleResource::collection(Article::query()->latest()->get()),
-            'ideas' => IdeaResource::collection(
-                Idea::query()->where('kind', IdeaKind::Article)->where('status', IdeaStatus::Open)->latest()->get()
+            'ideas' => InsightResource::collection(
+                Insight::query()->where('kind', InsightKind::Article)->where('status', InsightStatus::Open)->latest()->get()
             ),
             'frequency' => $currentProject->getOrFail()->article_frequency->value,
         ]);

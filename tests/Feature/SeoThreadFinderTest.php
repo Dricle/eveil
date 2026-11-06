@@ -17,7 +17,9 @@ it('derives queries from the product category and each named competitor', functi
     expect(app(SeoThreadFinder::class)->queries($project)->all())->toBe([
         'best invoicing software',
         'Acme alternative',
+        'Acme',
         'Beta Corp alternative',
+        'Beta Corp',
     ]);
 });
 

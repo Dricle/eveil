@@ -15,7 +15,7 @@ use Stringable;
  * Drafts one SEO article for the project's own blog per call, picking its
  * topic from what Eveil already found: a feature the site never explains,
  * a competitor worth a comparison, a Reddit discussion the scan noted as
- * worth an article (`Idea`), a client win, industry news. Same editorial-judgment shape as
+ * worth an article (`Insight`), a client win, industry news. Same editorial-judgment shape as
  * `SocialPostWriter`: the caller gathers every signal, the agent decides
  * which is worth an article.
  *

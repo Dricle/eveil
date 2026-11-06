@@ -5,10 +5,10 @@ use App\Ai\Tools\DraftArticle;
 use App\Ai\Tools\GetArticle;
 use App\Ai\Tools\ListArticleIdeas;
 use App\Ai\Tools\UpdateArticle;
-use App\Enums\IdeaStatus;
+use App\Enums\InsightStatus;
 use App\Jobs\GenerateArticle;
 use App\Models\Article;
-use App\Models\Idea;
+use App\Models\Insight;
 use App\Models\Project;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Ai\Tools\Request;
@@ -54,9 +54,9 @@ it('never reads another project\'s article', function () {
 
 it('lists only this project\'s open article ideas', function () {
     $project = Project::factory()->create();
-    Idea::factory()->create(['project_id' => $project->id, 'angle' => 'Open angle']);
-    Idea::factory()->create(['project_id' => $project->id, 'angle' => 'Dismissed angle', 'status' => IdeaStatus::Dismissed]);
-    Idea::factory()->create(['angle' => 'Foreign angle']);
+    Insight::factory()->create(['project_id' => $project->id, 'angle' => 'Open angle']);
+    Insight::factory()->create(['project_id' => $project->id, 'angle' => 'Dismissed angle', 'status' => InsightStatus::Dismissed]);
+    Insight::factory()->create(['angle' => 'Foreign angle']);
 
     $result = (string) (new ListArticleIdeas($project))->handle(new Request([]));
 
@@ -68,7 +68,7 @@ it('lists only this project\'s open article ideas', function () {
 it('writes an open idea when given its id', function () {
     Queue::fake();
     $project = Project::factory()->create();
-    $idea = Idea::factory()->create(['project_id' => $project->id]);
+    $idea = Insight::factory()->create(['project_id' => $project->id]);
 
     (new DraftArticle($project))->handle(new Request(['idea_id' => $idea->id]));
 
@@ -78,7 +78,7 @@ it('writes an open idea when given its id', function () {
 it('refuses to write another project\'s idea', function () {
     Queue::fake();
     $project = Project::factory()->create();
-    $foreign = Idea::factory()->create();
+    $foreign = Insight::factory()->create();
 
     $result = (new DraftArticle($project))->handle(new Request(['idea_id' => $foreign->id]));
 
@@ -88,9 +88,9 @@ it('refuses to write another project\'s idea', function () {
 
 it('dismisses an idea for good', function () {
     $project = Project::factory()->create();
-    $idea = Idea::factory()->create(['project_id' => $project->id]);
+    $idea = Insight::factory()->create(['project_id' => $project->id]);
 
     (new DismissArticleIdea($project))->handle(new Request(['idea_id' => $idea->id]));
 
-    expect($idea->fresh()->status)->toBe(IdeaStatus::Dismissed);
+    expect($idea->fresh()->status)->toBe(InsightStatus::Dismissed);
 });

@@ -14,6 +14,7 @@ import { inbox, onboarding as onboardingRoute } from '@/routes'
 import campaignRoutes from '@/routes/campaigns'
 import companies from '@/routes/companies'
 import discoveryRuns from '@/routes/discovery-runs'
+import insightRoutes from '@/routes/insights'
 import recommendationRoutes from '@/routes/recommendations'
 import organizationBilling from '@/routes/settings/organization/billing'
 import mailboxSettings from '@/routes/settings/mailboxes'
@@ -502,14 +503,24 @@ const topupPercent = computed(() => {
                             <h3 class="text-sm font-semibold">
                                 Ideas
                             </h3>
-                            <UButton
-                                icon="i-lucide-sparkles"
-                                color="neutral"
-                                variant="ghost"
-                                size="xs"
-                                label="Discuss with Evie"
-                                @click="discussRecommendations"
-                            />
+                            <div class="flex gap-1">
+                                <UButton
+                                    icon="i-lucide-sparkles"
+                                    color="neutral"
+                                    variant="ghost"
+                                    size="xs"
+                                    label="Discuss with Evie"
+                                    @click="discussRecommendations"
+                                />
+                                <UButton
+                                    icon="i-lucide-radar"
+                                    color="neutral"
+                                    variant="ghost"
+                                    size="xs"
+                                    label="All insights"
+                                    :to="relativeUrl(insightRoutes.index.url({ project: page.props.currentProject!.slug }))"
+                                />
+                            </div>
                         </div>
                     </template>
 

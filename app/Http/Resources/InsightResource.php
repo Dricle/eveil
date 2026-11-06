@@ -2,14 +2,14 @@
 
 namespace App\Http\Resources;
 
-use App\Models\Idea;
+use App\Models\Insight;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * @mixin Idea
+ * @mixin Insight
  */
-class IdeaResource extends JsonResource
+class InsightResource extends JsonResource
 {
     /**
      * @return array<string, mixed>
@@ -18,10 +18,15 @@ class IdeaResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'kind' => $this->kind->value,
+            'status' => $this->status->value,
             'source' => $this->source,
             'source_ref' => $this->source_ref,
             'title' => $this->title,
             'angle' => $this->angle,
+            'url' => $this->url,
+            'details' => $this->details ?? (object) [],
+            'read_at' => $this->read_at?->toIso8601String(),
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }

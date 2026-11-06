@@ -6,7 +6,7 @@ namespace App\Enums;
  * `Used` once something was made from it, `Dismissed` when the user said no:
  * neither comes back as a suggestion.
  */
-enum IdeaStatus: string
+enum InsightStatus: string
 {
     case Open = 'open';
     case Used = 'used';

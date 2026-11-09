@@ -41,6 +41,9 @@ class CampaignResource extends JsonResource
             'leads_count' => (int) ($this->campaign_leads_count ?? 0),
             'sent_count' => (int) ($this->sent_leads_count ?? 0),
             'replies_count' => (int) ($this->replied_leads_count ?? 0),
+            'discussion_count' => (int) ($this->discussion_leads_count ?? 0),
+            'won_count' => (int) ($this->won_leads_count ?? 0),
+            'days_to_close' => isset($this->days_to_close) ? (int) round((float) $this->days_to_close) : null,
             'next_action_at' => AggregateDate::parse($this->next_action_at ?? null),
             'updated_at' => $this->updated_at,
         ];

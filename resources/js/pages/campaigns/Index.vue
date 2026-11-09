@@ -21,6 +21,9 @@ type Campaign = {
     live_leads_count: number
     sent_count: number
     replies_count: number
+    discussion_count: number
+    won_count: number
+    days_to_close: number | null
     next_action_at: string | null
     updated_at: string
     target_profile: { id: number | null, name: string | null, type: string | null } | null
@@ -348,6 +351,14 @@ function timing (campaign: Campaign): string | null {
                             <span class="text-muted"><span class="font-mono text-toned">{{ campaign.sent_count }}</span> sent</span>
                             <span class="text-dimmed opacity-40">·</span>
                             <span class="text-muted"><span class="font-mono text-toned">{{ campaign.replies_count }}</span> replies</span>
+                            <span class="text-dimmed opacity-40">·</span>
+                            <span class="text-muted"><span class="font-mono text-toned">{{ campaign.discussion_count }}</span> in discussion</span>
+                            <span class="text-dimmed opacity-40">·</span>
+                            <span :class="campaign.won_count ? 'text-success' : 'text-muted'"><span class="font-mono">{{ campaign.won_count }}</span> won</span>
+                            <template v-if="campaign.days_to_close !== null">
+                                <span class="text-dimmed opacity-40">·</span>
+                                <span class="text-muted"><span class="font-mono text-toned">{{ campaign.days_to_close }}</span>d to close</span>
+                            </template>
                         </template>
 
                         <span class="ml-auto flex flex-wrap items-center gap-2">

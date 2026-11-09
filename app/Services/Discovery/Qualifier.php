@@ -18,7 +18,7 @@ use App\Support\ParsedPage;
  */
 class Qualifier
 {
-    public function __construct(private PageFetcher $fetcher, private HtmlText $html) {}
+    public function __construct(private PageFetcher $fetcher, private HtmlText $html, private JobBoards $jobBoards) {}
 
     /**
      * Whether the candidate turned out to be a prospect and was stored.
@@ -53,6 +53,20 @@ class Qualifier
 
             if ($parsed->isEmpty()) {
                 return null;
+            }
+
+            // Read before the verdict, so the qualifier can weigh a hiring
+            // signal and the personaliser can open on it.
+            $roles = $this->jobBoards->openRoles($parsed->links);
+
+            if ($roles !== []) {
+                $candidate = new Candidate(
+                    $candidate->name,
+                    $candidate->website,
+                    $candidate->source,
+                    $candidate->sourceUrl,
+                    [...$candidate->facts, 'open_roles' => $roles],
+                );
             }
         }
 

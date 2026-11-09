@@ -132,6 +132,10 @@ Detaching a mailbox from a project mid-sequence is also undecided. Pause the aff
 
 Send failures are sorted by what the caller must do, via `SendFailure::kind`: `recipient` (5xx on the address) → suppress and stop that lead; `auth` → put the MAILBOX in error, never punish the address; `transient` (4xx) → retry in an hour, decide nothing. Getting these confused either burns a domain or throws away good leads.
 
+After personalisation, `PreSendCheck` reads the written mail in code (no model): empty subject or body, an unfilled placeholder (`{{first_name}}`, `[Company]`), an `http(s)://` or `www.` link to any domain other than the sender's or the project's, a body over 400 words. A failure PAUSES the `campaign_lead` with `pause_reason = "blocked: ..."` and sends nothing. Held, never retried: a placeholder in the template itself would fail every hour and spend a personalisation each time. The signature is appended later by `Sender`, so it is never judged.
+
+The send window is evaluated per lead on the RECIPIENT's clock when `RecipientTimezone` can place them (company `location` in any of en/fr/de/nl/es/it/pt, then a ccTLD), and on the instance clock otherwise. A multi-zone country resolves only from a zone city name in the location or when its zones sit within an hour of each other; anything vaguer stays on the instance window. `DispatchDueSends::due()` scans the 50 oldest due rows per mailbox per tick for one inside its window.
+
 `Sender` builds a Symfony transport per mailbox and never uses the `Mail` facade: each mail goes through the mailbox the sequence pinned, not the configured mailer. Plain text only, and the `Message-ID` is anchored on the SENDER's domain.
 
 ## OUTREACH_REDIRECT_TO diverts the recipient, nothing else

@@ -68,6 +68,36 @@ class RepoReader
     }
 
     /**
+     * The newest published release: GitHub's `latest` already leaves out
+     * drafts and prereleases. Null when the repo has none or cannot be read.
+     *
+     * @return array{id: int, name: string, notes: string, url: string}|null
+     */
+    public function latestRelease(string $url, ?string $token = null): ?array
+    {
+        $parsed = CodeRepository::parseGithubUrl($url);
+
+        if ($parsed === null) {
+            return null;
+        }
+
+        [$owner, $repo] = $parsed;
+
+        $release = $this->fetchJson("https://api.github.com/repos/{$owner}/{$repo}/releases/latest", $token);
+
+        if (! is_int($release['id'] ?? null)) {
+            return null;
+        }
+
+        return [
+            'id' => $release['id'],
+            'name' => (string) (($release['name'] ?? null) ?: ($release['tag_name'] ?? '')),
+            'notes' => (string) ($release['body'] ?? ''),
+            'url' => (string) ($release['html_url'] ?? ''),
+        ];
+    }
+
+    /**
      * One file's text, fetched on demand for the explorer's read tool.
      * Null covers missing, binary-rejected and over-budget alike: the tool
      * only needs to tell the model "could not read this", not why.

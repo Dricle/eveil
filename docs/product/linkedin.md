@@ -16,6 +16,7 @@ Every draft has to trace to something real — never a generic "5 tips" post. On
 - **A knowledge base fact** — a feature, a proof point, your value proposition — the steady fallback when nothing more timely exists.
 - **A client you just won** — when a company's status changes to Won, two versions get drafted: one naming the client, one that doesn't ("a new client in logistics"). You choose which goes out; approving one automatically rejects the other.
 - **Relevant industry news** — a recent headline connected to your sector or a named competitor, when there's a genuine angle worth commenting on. Skipped entirely when nothing relevant turns up that cycle.
+- **A new release on GitHub**: when a repository linked to the project publishes a release, a draft about what changed is written from its release notes, once per release. It always waits for you.
 - **Whatever you tell Evie about** — "we just shipped X, write a LinkedIn post about it" has the same writer draft it from that brief, into the same queue. A post asked for this way always waits for you, whatever the autonomy setting.
 
 The same writer drafts for [X, Bluesky and Instagram](/product/social), each with its own queue, cadence and tone box.

@@ -56,6 +56,7 @@ Every draft traces to something real. The writer looks at everything available a
 - **A client you just won**: two versions get drafted, one naming the client and one that doesn't ("a new client in logistics"). You choose which goes out; the other is rejected. Autonomous Bluesky only ever publishes the anonymous one.
 - **Relevant industry news**, when there is a genuine angle for your product.
 - **A knowledge base fact**: a feature, a proof point, your value proposition.
+- **A new release on GitHub**: when one of the repositories linked to the project publishes a release, a draft about what changed is written from its release notes, once per release, on every network you post on. It waits for you, and you can ask for a video on it like any other draft. The release that was already out when you linked the repository is not announced.
 - **Whatever you tell Evie about**: "write a Bluesky post about the new pricing" has the writer draft it from that brief. It always waits for you, whatever the autonomy setting.
 
 Every post includes your product's link (or the article's), since a post nobody can click through from does little. Instagram is the exception: links in a caption are not clickable there, so the caption names your product instead. The queue shows a counter against each network's limit: 280 characters on X, where any link counts as 23, 300 on Bluesky, and 2200 for an Instagram caption.

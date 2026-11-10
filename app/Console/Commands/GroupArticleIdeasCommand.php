@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Actions\NoteArticleIdeas;
+use App\Ai\OutOfCredit;
 use App\Enums\InsightKind;
 use App\Enums\InsightStatus;
 use App\Models\Insight;
@@ -10,6 +11,7 @@ use App\Models\Project;
 use App\Support\CurrentProject;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Throwable;
 
 /**
  * Article ideas used to be one row per Reddit thread, so a project could pile
@@ -41,11 +43,24 @@ class GroupArticleIdeasCommand extends Command
                 ))->values();
 
                 // Deleted first so the action sees them as new; rolled back if
-                // the model call fails, so nothing is lost.
-                DB::transaction(function () use ($ideas, $project, $noteArticleIdeas, $threads): void {
-                    Insight::query()->whereKey($ideas->modelKeys())->delete();
-                    $noteArticleIdeas->handle($project, $threads);
-                });
+                // the model call fails, so nothing is lost. One project out of
+                // credit or failing keeps its ideas as they were and never
+                // stops the others.
+                try {
+                    DB::transaction(function () use ($ideas, $project, $noteArticleIdeas, $threads): void {
+                        Insight::query()->whereKey($ideas->modelKeys())->delete();
+                        $noteArticleIdeas->handle($project, $threads);
+                    });
+                } catch (OutOfCredit) {
+                    $this->warn("{$project->name}: skipped, out of credit. Its ideas are left as they were.");
+
+                    return;
+                } catch (Throwable $e) {
+                    report($e);
+                    $this->error("{$project->name}: failed ({$e->getMessage()}). Its ideas are left as they were.");
+
+                    return;
+                }
 
                 $left = Insight::query()->where('kind', InsightKind::Article)->where('status', InsightStatus::Open)->count();
                 $this->info("{$project->name}: {$ideas->count()} ideas, {$left} topics.");

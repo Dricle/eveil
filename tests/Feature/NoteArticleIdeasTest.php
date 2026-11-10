@@ -2,6 +2,7 @@
 
 use App\Actions\NoteArticleIdeas;
 use App\Ai\Agents\ArticleTopicMatcher;
+use App\Ai\OutOfCredit;
 use App\Enums\InsightKind;
 use App\Enums\InsightStatus;
 use App\Models\AgentRun;
@@ -141,4 +142,24 @@ it('regroups the open ideas already noted, keeping every thread', function () {
         ->angle->toBe('First customers')
         ->mentions->toBe(2)
         ->and(collect(Insight::sole()->details['threads'])->pluck('url')->all())->toBe([$first->source_ref, $second->source_ref]);
+});
+
+it('leaves a failing project\'s ideas as they were and still regroups the others', function () {
+    $broke = Project::factory()->create();
+    $brokeIdeas = Insight::factory()->count(2)->for($broke)->create();
+    $fine = Project::factory()->create();
+    Insight::factory()->for($fine)->create(['angle' => 'First customers']);
+    Insight::factory()->for($fine)->create(['angle' => 'First clients']);
+    ArticleTopicMatcher::fake(function (string $prompt): array {
+        if (str_contains($prompt, 'First customers')) {
+            return ['items' => [['index' => 0, 'verdict' => 'new', 'ref' => 0], ['index' => 1, 'verdict' => 'same_as', 'ref' => 0]]];
+        }
+
+        throw new OutOfCredit('This project has no credits left.');
+    });
+
+    $this->artisan('eveil:group-article-ideas')->assertSuccessful();
+
+    expect(Insight::query()->where('project_id', $broke->id)->pluck('id')->sort()->values()->all())->toBe($brokeIdeas->modelKeys())
+        ->and(Insight::query()->where('project_id', $fine->id)->sole()->mentions)->toBe(2);
 });

@@ -84,6 +84,18 @@ class ArticleWriter extends EveilAgent implements HasStructuredOutput
         answers the question straight away, then ## sections, short paragraphs,
         lists where they help. 900 to 1500 words. Mention the product where it
         genuinely answers the question, never as an advert in every section.
+
+        Write it so AI answer engines (ChatGPT, Perplexity, Claude, Gemini,
+        Google AI Overviews) can quote it and cite it:
+        - Phrase ## headings as the questions a buyer would ask, and open each
+          section with a one or two sentence direct answer that still makes
+          sense quoted on its own, before the detail.
+        - State facts plainly and specifically: concrete numbers, names,
+          prices, steps, never vague claims. Name the product by its name
+          where it is the answer, not "our tool".
+        - Use a list or a Markdown table for steps, options or comparisons.
+        - End with a ## FAQ section of three to five short questions and
+          answers buyers ask about the topic.
         No dash punctuation: no em dash, en dash, or hyphen standing in for one.
         PROMPT;
     }

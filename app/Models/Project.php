@@ -554,6 +554,47 @@ class Project extends Model implements HasMedia, StoresMediaInterface
     }
 
     /**
+     * Brings the knowledge base's key features up to date with the missing
+     * features marked done. Nothing to do before the first reading.
+     */
+    public function syncBuiltFeatures(): void
+    {
+        if ($this->knowledge_base === null) {
+            return;
+        }
+
+        $this->update(['knowledge_base' => [
+            ...$this->knowledge_base,
+            'key_features' => $this->withBuiltFeatures($this->knowledge_base['key_features'] ?? []),
+        ]]);
+    }
+
+    /**
+     * The key features, plus every missing feature the user marked done: it
+     * is built now, and the writers and the Reddit triage read the portrait
+     * to know what the product does. Applied when a feature is marked done
+     * and again on every re-reading of the site, which rewrites the list
+     * from the site alone and would otherwise drop it.
+     *
+     * @param  array<int, mixed>  $keyFeatures
+     * @return list<string>
+     */
+    public function withBuiltFeatures(array $keyFeatures): array
+    {
+        $features = array_values(array_filter($keyFeatures, fn (mixed $feature): bool => is_string($feature) && trim($feature) !== ''));
+        $known = array_map(mb_strtolower(...), $features);
+
+        foreach ($this->insights()->where('kind', InsightKind::Feature)->where('status', InsightStatus::Used)->oldest('updated_at')->pluck('title') as $built) {
+            if (! in_array(mb_strtolower($built), $known, true)) {
+                $features[] = $built;
+                $known[] = mb_strtolower($built);
+            }
+        }
+
+        return $features;
+    }
+
+    /**
      * A fresh reading's own recommendations of one kind replace the open ones
      * of that kind. A `done` or `archived` one is never rewritten or proposed
      * again (ADR-032's "archived never comes back"). An open one the reading

@@ -126,6 +126,8 @@ class AnalyzeWebsite
             'knowledge_base' => [
                 // The recommendations are `insights` rows, written below.
                 ...collect($summary)->except('recommendations')->all(),
+                // The site may not say so yet: what the user marked done is built.
+                'key_features' => $project->withBuiltFeatures(is_array($summary['key_features'] ?? null) ? $summary['key_features'] : []),
                 // Not this run's to know about: repos are read on their own
                 // schedule (`ExploreRepo`), and a website re-analysis that
                 // dropped them would silently undo that work.

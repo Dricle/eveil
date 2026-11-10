@@ -25,14 +25,15 @@ const KINDS = [
     { label: 'Competitor mentions', value: 'competitor_mention' },
     { label: 'Missing features', value: 'feature' },
     { label: 'Acquisition ideas', value: 'acquisition' },
-    { label: 'Article ideas', value: 'article' }
+    { label: 'Popular article topics', value: 'article' }
 ]
 
-const KIND_BADGE: Record<InsightKind, { label: string, icon: string }> = {
-    competitor_mention: { label: 'Competitor', icon: 'i-lucide-message-square-quote' },
-    feature: { label: 'Missing feature', icon: 'i-lucide-puzzle' },
-    acquisition: { label: 'Acquisition', icon: 'i-lucide-trending-up' },
-    article: { label: 'Article idea', icon: 'i-lucide-lightbulb' }
+// Full class strings so Tailwind's scanner sees each border color.
+const KIND_BADGE: Record<InsightKind, { label: string, icon: string, color: 'info' | 'warning' | 'success' | 'secondary', border: string }> = {
+    competitor_mention: { label: 'Competitor', icon: 'i-lucide-message-square-quote', color: 'info', border: 'border-l-info' },
+    feature: { label: 'Missing feature', icon: 'i-lucide-puzzle', color: 'warning', border: 'border-l-warning' },
+    acquisition: { label: 'Acquisition', icon: 'i-lucide-trending-up', color: 'success', border: 'border-l-success' },
+    article: { label: 'Article idea', icon: 'i-lucide-lightbulb', color: 'secondary', border: 'border-l-secondary' }
 }
 
 const SIGNAL_COLOR = {
@@ -112,7 +113,8 @@ function markAllRead () {
                 <p class="text-sm text-muted">
                     What Eveil noticed while reading: what people say about your
                     competitors on Reddit, features they have and you lack, ways to
-                    bring more people to your site, and articles worth writing.
+                    bring more people to your site, and article topics people keep
+                    asking about. Every other article idea waits on the SEO page.
                 </p>
             </div>
 
@@ -162,8 +164,8 @@ function markAllRead () {
             <div
                 v-for="insight in insights.data"
                 :key="insight.id"
-                class="flex flex-wrap items-start gap-3 px-4 py-3"
-                :class="insight.read_at ? '' : 'bg-elevated/50'"
+                class="flex flex-wrap items-start gap-3 border-l-4 px-4 py-3 first:rounded-tl-lg last:rounded-bl-lg"
+                :class="[KIND_BADGE[insight.kind].border, insight.read_at ? '' : 'bg-elevated/50']"
             >
                 <span
                     class="mt-1.5 size-2 shrink-0 rounded-full"
@@ -175,8 +177,15 @@ function markAllRead () {
                         <UBadge
                             :icon="KIND_BADGE[insight.kind].icon"
                             :label="KIND_BADGE[insight.kind].label"
-                            color="neutral"
+                            :color="KIND_BADGE[insight.kind].color"
                             variant="subtle"
+                            size="sm"
+                        />
+                        <UBadge
+                            v-if="insight.kind === 'article' && insight.mentions > 1"
+                            :label="`Asked in ${insight.mentions} threads`"
+                            color="neutral"
+                            variant="outline"
                             size="sm"
                         />
                         <UBadge

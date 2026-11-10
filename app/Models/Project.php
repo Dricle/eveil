@@ -585,16 +585,25 @@ class Project extends Model implements HasMedia, StoresMediaInterface
                 'source' => $source,
                 'title' => (string) $r['idea'],
                 'angle' => (string) $r['evidence'],
-                'details' => ['impact' => (string) $r['impact'], 'effort' => (string) $r['effort']],
+                // Reddit threads asking for the same feature joined it
+                // (`NoteFeatureIdeas`): a re-reading keeps them.
+                'details' => array_filter([
+                    'impact' => (string) $r['impact'],
+                    'effort' => (string) $r['effort'],
+                    'threads' => $idea?->details['threads'] ?? null,
+                ]),
                 'status' => InsightStatus::Open,
             ]);
         }
 
+        // Nor does a re-reading that no longer proposes a feature drop it
+        // while people on Reddit still ask for it.
         $this->insights()
             ->where('kind', $kind->toInsightKind())
             ->where('source', $source)
             ->where('status', InsightStatus::Open)
             ->whereNotIn('source_ref', $fresh->keys()->map(fn (int|string $key): string => (string) $key)->all())
+            ->whereNull('details->threads')
             ->delete();
     }
 

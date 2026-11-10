@@ -140,8 +140,10 @@ class RedditOpportunityTriage extends EveilAgent implements HasStructuredOutput
         concrete capability counts, named as a developer would build it ("export
         invoices to accounting software", never "better integrations"), and only one
         the portrait does not already list. When it does, set feature_idea to that
-        capability and feature_evidence to one sentence on what people say here that
-        shows the need. Otherwise leave both empty. Most items have none.
+        capability and feature_evidence to a short brief a developer can decide from:
+        who asks, the problem behind it, how they cope today, and what they would
+        expect the feature to do, quoting the item when a few words say it best.
+        Otherwise leave both empty. Most items have none.
         PROMPT;
     }
 
@@ -160,7 +162,7 @@ class RedditOpportunityTriage extends EveilAgent implements HasStructuredOutput
                 'competitor_signal' => $schema->string()->enum(['none', ...array_column(CompetitorSignal::cases(), 'value')])->description('What the item says about that competitor. none when competitor is empty.')->required(),
                 'competitor_summary' => $schema->string()->description('One sentence: what users think of that competitor here. Empty when competitor is empty.')->required(),
                 'feature_idea' => $schema->string()->description('A capability people here ask for that this product lacks, named as a developer would build it. Empty when none.')->required(),
-                'feature_evidence' => $schema->string()->description('One sentence: what people here say that shows the need. Empty when feature_idea is empty.')->required(),
+                'feature_evidence' => $schema->string()->description('Two to four sentences: who asks, the problem, how they cope today, what they expect it to do. Empty when feature_idea is empty.')->required(),
             ]))->description('One entry per item you were given, none missing.')->required(),
         ];
     }

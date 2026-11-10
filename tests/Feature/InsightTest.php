@@ -42,6 +42,7 @@ it('lists this project\'s open insights, newest first, with the unread count', f
             ->has('insights.data', 3)
             ->where('insights.data.0.id', Insight::query()->where('project_id', $project->id)->where('status', InsightStatus::Open)->max('id'))
             ->where('unreadCount', 2)
+            ->where('counts', ['acquisition' => 1, 'article' => 1, 'competitor_mention' => 1])
             ->where('competitors', ['RouteCo', 'Fleetly']));
 
     $this->actingAs($user)
@@ -169,4 +170,31 @@ it('lets Evie read the feed by competitor and dismiss an item', function () {
     (new UpdateInsight($project))->handle(new Request(['insight_id' => $mention->id, 'status' => 'dismissed']));
 
     expect($mention->fresh()->status)->toBe(InsightStatus::Dismissed);
+});
+
+it('lets an agent read one insight by id, past the feed, and nothing of another project', function () {
+    [, $project] = insightSetup();
+    $quietTopic = Insight::factory()->for($project)->create(['angle' => 'A topic one thread asked for']);
+    Insight::factory()->for($project)->count(2)->create();
+    $foreign = Insight::factory()->create();
+
+    $listed = json_decode((string) (new ListInsights($project))->handle(new Request(['insight_id' => $quietTopic->id])), true);
+
+    expect($listed)->toHaveCount(1)
+        ->and($listed[0]['summary'])->toBe('A topic one thread asked for')
+        ->and((string) (new ListInsights($project))->handle(new Request(['insight_id' => $foreign->id])))->toBe('Nothing in the Insights feed matches.');
+});
+
+it('ranks the missing features by how many threads ask, newest first otherwise', function () {
+    [$user, $project] = insightSetup();
+    $asked = Insight::factory()->for($project)->featureRequest()->create(['mentions' => 3]);
+    $newer = Insight::factory()->for($project)->featureRequest()->create();
+
+    $this->actingAs($user)
+        ->get(route('insights.index', ['kind' => 'feature']))
+        ->assertInertia(fn ($page) => $page->where('insights.data.0.id', $asked->id)->where('insights.data.1.id', $newer->id));
+
+    $this->actingAs($user)
+        ->get(route('insights.index'))
+        ->assertInertia(fn ($page) => $page->where('insights.data.0.id', $newer->id));
 });

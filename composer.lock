@@ -62,16 +62,16 @@
         },
         {
             "name": "aws/aws-sdk-php",
-            "version": "3.402.5",
+            "version": "3.403.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/aws/aws-sdk-php.git",
-                "reference": "ffff4dbeda1c386f66e7e819afbd55406aa9799b"
+                "reference": "20e883c6952986c3de686515a99b63caeb8dfafe"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/ffff4dbeda1c386f66e7e819afbd55406aa9799b",
-                "reference": "ffff4dbeda1c386f66e7e819afbd55406aa9799b",
+                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/20e883c6952986c3de686515a99b63caeb8dfafe",
+                "reference": "20e883c6952986c3de686515a99b63caeb8dfafe",
                 "shasum": ""
             },
             "require": {
@@ -153,9 +153,9 @@
             "support": {
                 "forum": "https://github.com/aws/aws-sdk-php/discussions",
                 "issues": "https://github.com/aws/aws-sdk-php/issues",
-                "source": "https://github.com/aws/aws-sdk-php/tree/3.402.5"
+                "source": "https://github.com/aws/aws-sdk-php/tree/3.403.2"
             },
-            "time": "2026-10-30T18:04:02+00:00"
+            "time": "2026-11-09T19:36:28+00:00"
         },
         {
             "name": "bacon/bacon-qr-code",
@@ -4700,16 +4700,16 @@
         },
         {
             "name": "paragonie/constant_time_encoding",
-            "version": "v3.1.3",
+            "version": "v3.1.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/paragonie/constant_time_encoding.git",
-                "reference": "d5b01a39b3415c2cd581d3bd3a3575c1ebbd8e77"
+                "reference": "5efef6e6cb43e088ccab7d0c1e2f2ab25b9e8b54"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/paragonie/constant_time_encoding/zipball/d5b01a39b3415c2cd581d3bd3a3575c1ebbd8e77",
-                "reference": "d5b01a39b3415c2cd581d3bd3a3575c1ebbd8e77",
+                "url": "https://api.github.com/repos/paragonie/constant_time_encoding/zipball/5efef6e6cb43e088ccab7d0c1e2f2ab25b9e8b54",
+                "reference": "5efef6e6cb43e088ccab7d0c1e2f2ab25b9e8b54",
                 "shasum": ""
             },
             "require": {
@@ -4765,7 +4765,7 @@
                 "issues": "https://github.com/paragonie/constant_time_encoding/issues",
                 "source": "https://github.com/paragonie/constant_time_encoding"
             },
-            "time": "2025-09-24T15:06:41+00:00"
+            "time": "2026-11-06T20:31:19+00:00"
         },
         {
             "name": "paragonie/random_compat",
@@ -5207,16 +5207,16 @@
         },
         {
             "name": "phpoffice/phpspreadsheet",
-            "version": "5.10.0",
+            "version": "5.11.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/PHPOffice/PhpSpreadsheet.git",
-                "reference": "eb18727acf6b1f4cc67145a52ab04f9fd4c28d53"
+                "reference": "3aa1f0d0f3c658b803c18050ac49244d07d96907"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/PHPOffice/PhpSpreadsheet/zipball/eb18727acf6b1f4cc67145a52ab04f9fd4c28d53",
-                "reference": "eb18727acf6b1f4cc67145a52ab04f9fd4c28d53",
+                "url": "https://api.github.com/repos/PHPOffice/PhpSpreadsheet/zipball/3aa1f0d0f3c658b803c18050ac49244d07d96907",
+                "reference": "3aa1f0d0f3c658b803c18050ac49244d07d96907",
                 "shasum": ""
             },
             "require": {
@@ -5239,9 +5239,11 @@
                 "markbaker/complex": "^3.0",
                 "markbaker/matrix": "^3.0",
                 "php": "^8.2",
+                "phpoffice/wmf": "^0.2.1",
                 "psr/simple-cache": "^1.0 || ^2.0 || ^3.0"
             },
             "require-dev": {
+                "cyclonedx/cyclonedx-php-composer": "^6.2",
                 "dealerdirect/phpcodesniffer-composer-installer": "dev-main",
                 "dompdf/dompdf": "^2.0 || ^3.0",
                 "ext-intl": "*",
@@ -5312,9 +5314,61 @@
             ],
             "support": {
                 "issues": "https://github.com/PHPOffice/PhpSpreadsheet/issues",
-                "source": "https://github.com/PHPOffice/PhpSpreadsheet/tree/5.10.0"
+                "source": "https://github.com/PHPOffice/PhpSpreadsheet/tree/5.11.0"
             },
-            "time": "2026-09-17T03:54:50+00:00"
+            "time": "2026-11-08T06:29:49+00:00"
+        },
+        {
+            "name": "phpoffice/wmf",
+            "version": "0.2.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/PHPOffice/WMF.git",
+                "reference": "d1eafbab74509ee2adfcdda3888737cd8d349820"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/PHPOffice/WMF/zipball/d1eafbab74509ee2adfcdda3888737cd8d349820",
+                "reference": "d1eafbab74509ee2adfcdda3888737cd8d349820",
+                "shasum": ""
+            },
+            "require": {
+                "ext-gd": "*",
+                "php": "^7.1|^8.0"
+            },
+            "require-dev": {
+                "phpstan/phpstan": "^0.12.88 || ^1.0.0",
+                "phpunit/phpunit": "^7.0 || ^8.0 || ^9.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "PhpOffice\\WMF\\": "src/WMF/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Progi1984",
+                    "homepage": "https://lefevre.dev"
+                }
+            ],
+            "description": "WMF - Manipulate WMF Images",
+            "homepage": "https://phpoffice.github.io/WMF/",
+            "keywords": [
+                "emf",
+                "image",
+                "php",
+                "wmf"
+            ],
+            "support": {
+                "issues": "https://github.com/PHPOffice/WMF/issues",
+                "source": "https://github.com/PHPOffice/WMF/tree/0.2.1"
+            },
+            "time": "2026-10-08T19:34:28+00:00"
         },
         {
             "name": "phpoption/phpoption",
@@ -7548,16 +7602,16 @@
         },
         {
             "name": "symfony/filesystem",
-            "version": "v8.1.9",
+            "version": "v8.1.11",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/filesystem.git",
-                "reference": "43d109c803d22c00bb820ed45df250b6a8792ca2"
+                "reference": "58f57b6a33e3495f7f41e01258f1ae5ef76cccd2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/filesystem/zipball/43d109c803d22c00bb820ed45df250b6a8792ca2",
-                "reference": "43d109c803d22c00bb820ed45df250b6a8792ca2",
+                "url": "https://api.github.com/repos/symfony/filesystem/zipball/58f57b6a33e3495f7f41e01258f1ae5ef76cccd2",
+                "reference": "58f57b6a33e3495f7f41e01258f1ae5ef76cccd2",
                 "shasum": ""
             },
             "require": {
@@ -7595,7 +7649,7 @@
             "description": "Provides basic utilities for the filesystem",
             "homepage": "https://symfony.com",
             "support": {
-                "source": "https://github.com/symfony/filesystem/tree/v8.1.9"
+                "source": "https://github.com/symfony/filesystem/tree/v8.1.11"
             },
             "funding": [
                 {
@@ -7615,7 +7669,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-10-06T20:05:50+00:00"
+            "time": "2026-11-04T08:39:20+00:00"
         },
         {
             "name": "symfony/finder",
@@ -9612,16 +9666,16 @@
         },
         {
             "name": "symfony/property-access",
-            "version": "v8.1.10",
+            "version": "v8.1.11",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/property-access.git",
-                "reference": "38ce2d539230c1d0e3c42198289c4bae5e931727"
+                "reference": "d080c2afa37114d46e4f950ed8593667f01f7cab"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/property-access/zipball/38ce2d539230c1d0e3c42198289c4bae5e931727",
-                "reference": "38ce2d539230c1d0e3c42198289c4bae5e931727",
+                "url": "https://api.github.com/repos/symfony/property-access/zipball/d080c2afa37114d46e4f950ed8593667f01f7cab",
+                "reference": "d080c2afa37114d46e4f950ed8593667f01f7cab",
                 "shasum": ""
             },
             "require": {
@@ -9669,7 +9723,7 @@
                 "reflection"
             ],
             "support": {
-                "source": "https://github.com/symfony/property-access/tree/v8.1.10"
+                "source": "https://github.com/symfony/property-access/tree/v8.1.11"
             },
             "funding": [
                 {
@@ -9689,20 +9743,20 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-10-26T21:55:04+00:00"
+            "time": "2026-11-01T19:30:44+00:00"
         },
         {
             "name": "symfony/property-info",
-            "version": "v8.1.10",
+            "version": "v8.1.11",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/property-info.git",
-                "reference": "cb5bfc9fbc9da75fdb1b8860a29d9c4fefb2b924"
+                "reference": "b5afa379a5b54f15a594c1d45ceaa19969d38a16"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/property-info/zipball/cb5bfc9fbc9da75fdb1b8860a29d9c4fefb2b924",
-                "reference": "cb5bfc9fbc9da75fdb1b8860a29d9c4fefb2b924",
+                "url": "https://api.github.com/repos/symfony/property-info/zipball/b5afa379a5b54f15a594c1d45ceaa19969d38a16",
+                "reference": "b5afa379a5b54f15a594c1d45ceaa19969d38a16",
                 "shasum": ""
             },
             "require": {
@@ -9755,7 +9809,7 @@
                 "validator"
             ],
             "support": {
-                "source": "https://github.com/symfony/property-info/tree/v8.1.10"
+                "source": "https://github.com/symfony/property-info/tree/v8.1.11"
             },
             "funding": [
                 {
@@ -9775,7 +9829,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-10-25T14:40:25+00:00"
+            "time": "2026-11-02T10:58:30+00:00"
         },
         {
             "name": "symfony/psr-http-message-bridge",
@@ -9946,16 +10000,16 @@
         },
         {
             "name": "symfony/serializer",
-            "version": "v8.1.10",
+            "version": "v8.1.11",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/serializer.git",
-                "reference": "b9b8831cd84a5304e43f2bb92cb0e88290ba2082"
+                "reference": "05624c94507c3acf065b6486bb626f0d741af459"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/serializer/zipball/b9b8831cd84a5304e43f2bb92cb0e88290ba2082",
-                "reference": "b9b8831cd84a5304e43f2bb92cb0e88290ba2082",
+                "url": "https://api.github.com/repos/symfony/serializer/zipball/05624c94507c3acf065b6486bb626f0d741af459",
+                "reference": "05624c94507c3acf065b6486bb626f0d741af459",
                 "shasum": ""
             },
             "require": {
@@ -10021,7 +10075,7 @@
             "description": "Handles serializing and deserializing data structures, including object graphs, into array structures or other formats like XML and JSON.",
             "homepage": "https://symfony.com",
             "support": {
-                "source": "https://github.com/symfony/serializer/tree/v8.1.10"
+                "source": "https://github.com/symfony/serializer/tree/v8.1.11"
             },
             "funding": [
                 {
@@ -10041,7 +10095,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-10-25T14:40:25+00:00"
+            "time": "2026-11-04T08:39:20+00:00"
         },
         {
             "name": "symfony/service-contracts",
@@ -10397,16 +10451,16 @@
         },
         {
             "name": "symfony/type-info",
-            "version": "v8.1.10",
+            "version": "v8.1.11",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/type-info.git",
-                "reference": "2083d4516f9041b8ac550d9029afb08fcf09d0ad"
+                "reference": "9fd1414061c4bbf953bcfc183b133cbfa0a73c73"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/type-info/zipball/2083d4516f9041b8ac550d9029afb08fcf09d0ad",
-                "reference": "2083d4516f9041b8ac550d9029afb08fcf09d0ad",
+                "url": "https://api.github.com/repos/symfony/type-info/zipball/9fd1414061c4bbf953bcfc183b133cbfa0a73c73",
+                "reference": "9fd1414061c4bbf953bcfc183b133cbfa0a73c73",
                 "shasum": ""
             },
             "require": {
@@ -10455,7 +10509,7 @@
                 "type"
             ],
             "support": {
-                "source": "https://github.com/symfony/type-info/tree/v8.1.10"
+                "source": "https://github.com/symfony/type-info/tree/v8.1.11"
             },
             "funding": [
                 {
@@ -10475,7 +10529,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-10-25T14:40:25+00:00"
+            "time": "2026-11-02T10:58:30+00:00"
         },
         {
             "name": "symfony/uid",
@@ -10644,16 +10698,16 @@
         },
         {
             "name": "symfony/yaml",
-            "version": "v8.1.10",
+            "version": "v8.1.11",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/yaml.git",
-                "reference": "9de4ff9874dd18b738b9f248398c3e36ef15a1d2"
+                "reference": "e8266f55160f674f290a5f567cb55e11e21f921b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/yaml/zipball/9de4ff9874dd18b738b9f248398c3e36ef15a1d2",
-                "reference": "9de4ff9874dd18b738b9f248398c3e36ef15a1d2",
+                "url": "https://api.github.com/repos/symfony/yaml/zipball/e8266f55160f674f290a5f567cb55e11e21f921b",
+                "reference": "e8266f55160f674f290a5f567cb55e11e21f921b",
                 "shasum": ""
             },
             "require": {
@@ -10696,7 +10750,7 @@
             "description": "Loads and dumps YAML files",
             "homepage": "https://symfony.com",
             "support": {
-                "source": "https://github.com/symfony/yaml/tree/v8.1.10"
+                "source": "https://github.com/symfony/yaml/tree/v8.1.11"
             },
             "funding": [
                 {
@@ -10716,7 +10770,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-10-18T14:56:39+00:00"
+            "time": "2026-11-04T08:39:20+00:00"
         },
         {
             "name": "tijsverkoyen/css-to-inline-styles",
@@ -11160,16 +11214,16 @@
         },
         {
             "name": "zbateson/mail-mime-parser",
-            "version": "4.0.8",
+            "version": "4.0.9",
             "source": {
                 "type": "git",
                 "url": "https://github.com/zbateson/mail-mime-parser.git",
-                "reference": "21a8a6ff886f6ab19c065655f84f5a9ac4f86266"
+                "reference": "19fe2c11fd257856bc8042bf056eab2525fdb34e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/zbateson/mail-mime-parser/zipball/21a8a6ff886f6ab19c065655f84f5a9ac4f86266",
-                "reference": "21a8a6ff886f6ab19c065655f84f5a9ac4f86266",
+                "url": "https://api.github.com/repos/zbateson/mail-mime-parser/zipball/19fe2c11fd257856bc8042bf056eab2525fdb34e",
+                "reference": "19fe2c11fd257856bc8042bf056eab2525fdb34e",
                 "shasum": ""
             },
             "require": {
@@ -11232,7 +11286,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-10-27T16:17:50+00:00"
+            "time": "2026-11-09T21:44:36+00:00"
         },
         {
             "name": "zbateson/mb-wrapper",
@@ -11588,16 +11642,16 @@
         },
         {
             "name": "filp/whoops",
-            "version": "2.19.2",
+            "version": "2.19.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/filp/whoops.git",
-                "reference": "84e33631273138ac103d045dc02b0fb7e5485582"
+                "reference": "d5480d53f10069dc4620a39f87e38e8945d47322"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/filp/whoops/zipball/84e33631273138ac103d045dc02b0fb7e5485582",
-                "reference": "84e33631273138ac103d045dc02b0fb7e5485582",
+                "url": "https://api.github.com/repos/filp/whoops/zipball/d5480d53f10069dc4620a39f87e38e8945d47322",
+                "reference": "d5480d53f10069dc4620a39f87e38e8945d47322",
                 "shasum": ""
             },
             "require": {
@@ -11647,7 +11701,7 @@
             ],
             "support": {
                 "issues": "https://github.com/filp/whoops/issues",
-                "source": "https://github.com/filp/whoops/tree/2.19.2"
+                "source": "https://github.com/filp/whoops/tree/2.19.3"
             },
             "funding": [
                 {
@@ -11655,7 +11709,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-11-03T23:38:01+00:00"
+            "time": "2026-11-09T23:30:17+00:00"
         },
         {
             "name": "hamcrest/hamcrest-php",
@@ -13293,16 +13347,16 @@
         },
         {
             "name": "phpunit/php-code-coverage",
-            "version": "14.5.1",
+            "version": "14.5.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/php-code-coverage.git",
-                "reference": "4063552c678ce3beb4b7f131a5b7354a19ff3e2a"
+                "reference": "2f122b9b48af71ad9b4448368febc26af86534c9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/4063552c678ce3beb4b7f131a5b7354a19ff3e2a",
-                "reference": "4063552c678ce3beb4b7f131a5b7354a19ff3e2a",
+                "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/2f122b9b48af71ad9b4448368febc26af86534c9",
+                "reference": "2f122b9b48af71ad9b4448368febc26af86534c9",
                 "shasum": ""
             },
             "require": {
@@ -13320,7 +13374,7 @@
                 "sebastian/version": "^7.0.1"
             },
             "require-dev": {
-                "phpunit/phpunit": "^13.4.5"
+                "phpunit/phpunit": "^13.4.6"
             },
             "suggest": {
                 "ext-pcov": "PHP extension that provides line coverage",
@@ -13358,7 +13412,7 @@
             "support": {
                 "issues": "https://github.com/sebastianbergmann/php-code-coverage/issues",
                 "security": "https://github.com/sebastianbergmann/php-code-coverage/security/policy",
-                "source": "https://github.com/sebastianbergmann/php-code-coverage/tree/14.5.1"
+                "source": "https://github.com/sebastianbergmann/php-code-coverage/tree/14.5.2"
             },
             "funding": [
                 {
@@ -13378,7 +13432,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-11-02T11:47:37+00:00"
+            "time": "2026-11-09T05:24:08+00:00"
         },
         {
             "name": "phpunit/php-file-iterator",
@@ -14807,16 +14861,16 @@
         },
         {
             "name": "sebastian/version",
-            "version": "7.0.1",
+            "version": "7.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/version.git",
-                "reference": "f1598cf1d8d1ca4c0f194a52f2fe72a559a7b0b1"
+                "reference": "08e41d0c7e146bfc8cef7e63989b1294453a6d6a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/version/zipball/f1598cf1d8d1ca4c0f194a52f2fe72a559a7b0b1",
-                "reference": "f1598cf1d8d1ca4c0f194a52f2fe72a559a7b0b1",
+                "url": "https://api.github.com/repos/sebastianbergmann/version/zipball/08e41d0c7e146bfc8cef7e63989b1294453a6d6a",
+                "reference": "08e41d0c7e146bfc8cef7e63989b1294453a6d6a",
                 "shasum": ""
             },
             "require": {
@@ -14825,7 +14879,7 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-main": "7.0-dev"
+                    "dev-main": "7.1-dev"
                 }
             },
             "autoload": {
@@ -14849,7 +14903,7 @@
             "support": {
                 "issues": "https://github.com/sebastianbergmann/version/issues",
                 "security": "https://github.com/sebastianbergmann/version/security/policy",
-                "source": "https://github.com/sebastianbergmann/version/tree/7.0.1"
+                "source": "https://github.com/sebastianbergmann/version/tree/7.1.0"
             },
             "funding": [
                 {
@@ -14869,7 +14923,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-10-04T05:51:14+00:00"
+            "time": "2026-11-09T06:31:27+00:00"
         },
         {
             "name": "staabm/side-effects-detector",

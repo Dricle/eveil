@@ -78,6 +78,15 @@ php artisan eveil:group-article-ideas 4     # one project
 
 Merges the open article ideas that ask the same question into one topic, and drops those an existing article already answers. New ideas are grouped as they come in; run this once after upgrading, to group the ones noted before. Safe to run again.
 
+### `eveil:group-feature-ideas`
+
+```bash
+php artisan eveil:group-feature-ideas       # every project with open missing features from Reddit
+php artisan eveil:group-feature-ideas 4     # one project
+```
+
+Merges the open missing features from Reddit that ask for the same capability into one, each thread counted, and drops those you already marked done or dismissed. Features found on competitor sites stay as they are, and a Reddit thread can join one. New requests are grouped as they come in; run this once after upgrading. Safe to run again.
+
 ### `eveil:agent-model`
 
 ```bash

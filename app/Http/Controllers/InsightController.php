@@ -34,6 +34,9 @@ class InsightController extends Controller
             ->when($kind, fn ($query, InsightKind $kind) => $query->where('kind', $kind))
             ->when($competitor !== '' && $competitor !== 'all', fn ($query) => $query->where('details->competitor', $competitor))
             ->when($unread, fn ($query) => $query->whereNull('read_at'))
+            // A kind counted by how many threads ask ranks by that count on
+            // its own tab; the mixed feed stays newest first.
+            ->when(in_array($kind, [InsightKind::Feature, InsightKind::Article], true), fn ($query) => $query->orderByDesc('mentions'))
             ->latest('id')
             ->paginate(50)
             ->withQueryString();
@@ -48,6 +51,11 @@ class InsightController extends Controller
                 fn (mixed $name): bool => is_string($name) && trim($name) !== '',
             )),
             'unreadCount' => Insight::query()->where('status', InsightStatus::Open)->inFeed()->whereNull('read_at')->count(),
+            // One tab per kind, each with its size, so 26 missing features
+            // never hide 3 acquisition ideas further down the feed.
+            'counts' => Insight::query()->where('status', InsightStatus::Open)->inFeed()
+                ->toBase()->selectRaw('kind, count(*) as total')->groupBy('kind')->pluck('total', 'kind')
+                ->map(fn (mixed $total): int => (int) $total),
         ]);
     }
 

@@ -20,6 +20,7 @@ Missing features are refreshed every week: Eveil reads a few pages of up to thre
 - Following an item's link marks it read. The envelope button marks it read or unread by hand, and **Mark all read** clears the badge.
 - **Dismiss** takes an item off the feed for good. A dismissed missing feature or acquisition idea is never proposed again by a later analysis.
 - **Done** on a missing feature or acquisition idea says you're doing it or already did. It leaves the feed and is never proposed again either.
+- **Prompt** on a missing feature copies a prompt for your coding agent (Claude Code, Cursor, Codex...). The full prompt carries everything Eveil knows, so any agent can check whether your code already does it, judge whether it's worth building, and build it. The Eveil MCP prompt is shorter: an agent connected to [Eveil's MCP server](/product/api) fetches the item itself, builds it, and marks it done, or dismisses it if it decides it isn't worth it.
 - **Write it** on an article idea writes that article straight away; the draft appears on the SEO page a few minutes later.
 
 Filter by kind, by competitor, or to unread items only. The open acquisition and feature ideas still show on the Dashboard under "Ideas", with a link to the full feed.

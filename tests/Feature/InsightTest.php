@@ -170,3 +170,16 @@ it('lets Evie read the feed by competitor and dismiss an item', function () {
 
     expect($mention->fresh()->status)->toBe(InsightStatus::Dismissed);
 });
+
+it('lets an agent read one insight by id, past the feed, and nothing of another project', function () {
+    [, $project] = insightSetup();
+    $quietTopic = Insight::factory()->for($project)->create(['angle' => 'A topic one thread asked for']);
+    Insight::factory()->for($project)->count(2)->create();
+    $foreign = Insight::factory()->create();
+
+    $listed = json_decode((string) (new ListInsights($project))->handle(new Request(['insight_id' => $quietTopic->id])), true);
+
+    expect($listed)->toHaveCount(1)
+        ->and($listed[0]['summary'])->toBe('A topic one thread asked for')
+        ->and((string) (new ListInsights($project))->handle(new Request(['insight_id' => $foreign->id])))->toBe('Nothing in the Insights feed matches.');
+});

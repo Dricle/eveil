@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { Head, router, usePage } from '@inertiajs/vue3'
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import AppLayout from '@/layouts/AppLayout.vue'
+import { featurePrompt } from '@/lib/featurePrompt'
 import { relativeUrl } from '@/lib/utils'
 import insightRoutes from '@/routes/insights'
 import ideaRoutes from '@/routes/seo/ideas'
@@ -64,6 +65,11 @@ watch([kind, competitor, unread], () => reload())
 // request is still in flight.
 const busy = ref<number | null>(null)
 
+// The idea only turns used once the article is drafted, minutes later, and
+// this page does not poll: hide it as soon as the write is queued.
+const writing = ref<number[]>([])
+const shown = computed(() => props.insights.data.filter(insight => !writing.value.includes(insight.id)))
+
 function update (insight: Insight, data: { read?: boolean, status?: 'used' | 'dismissed' }, toastTitle?: string) {
     busy.value = insight.id
     router.put(insightRoutes.update.url({ project: page.props.currentProject!.slug, insight: insight.id }), data, {
@@ -84,9 +90,28 @@ function writeArticle (insight: Insight) {
     busy.value = insight.id
     router.post(ideaRoutes.write.url({ project: page.props.currentProject!.slug, idea: insight.id }), {}, {
         preserveScroll: true,
-        onSuccess: () => toast.add({ title: 'Writing that article', description: 'It will appear in the SEO drafts in a few minutes.', color: 'success' }),
+        onSuccess: () => {
+            writing.value.push(insight.id)
+            toast.add({ title: 'Writing that article', description: 'It will appear in the SEO drafts in a few minutes.', color: 'success' })
+        },
         onFinish: () => busy.value = null
     })
+}
+
+async function copyPrompt (insight: Insight, mode: 'standalone' | 'mcp') {
+    try {
+        await navigator.clipboard.writeText(featurePrompt(insight, page.props.currentProject!, mode))
+        toast.add({ title: 'Prompt copied', description: 'Paste it to your coding agent.', color: 'success' })
+    } catch {
+        toast.add({ title: 'Could not copy the prompt', color: 'error' })
+    }
+}
+
+function promptOptions (insight: Insight) {
+    return [[
+        { label: 'Full prompt', description: 'Every detail, for any agent', icon: 'i-lucide-file-text', onSelect: () => copyPrompt(insight, 'standalone') },
+        { label: 'Eveil MCP prompt', description: 'Fetches it, builds it, closes it', icon: 'i-lucide-plug', onSelect: () => copyPrompt(insight, 'mcp') }
+    ]]
 }
 
 const markingAll = ref(false)
@@ -158,11 +183,11 @@ function markAllRead () {
         />
 
         <div
-            v-if="insights.data.length"
+            v-if="shown.length"
             class="divide-y divide-default rounded-lg ring ring-default"
         >
             <div
-                v-for="insight in insights.data"
+                v-for="insight in shown"
                 :key="insight.id"
                 class="flex flex-wrap items-start gap-3 border-l-4 px-4 py-3 first:rounded-tl-lg last:rounded-bl-lg"
                 :class="[KIND_BADGE[insight.kind].border, insight.read_at ? '' : 'bg-elevated/50']"
@@ -262,6 +287,18 @@ function markAllRead () {
                         :loading="busy === insight.id"
                         @click="update(insight, { status: 'dismissed' }, 'Dismissed')"
                     />
+                    <UDropdownMenu
+                        v-if="insight.kind === 'feature'"
+                        :items="promptOptions(insight)"
+                    >
+                        <UButton
+                            icon="i-lucide-bot"
+                            color="neutral"
+                            variant="outline"
+                            size="xs"
+                            label="Prompt"
+                        />
+                    </UDropdownMenu>
                     <UButton
                         v-if="insight.kind === 'acquisition' || insight.kind === 'feature'"
                         icon="i-lucide-check"

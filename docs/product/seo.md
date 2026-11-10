@@ -8,7 +8,7 @@ Every article starts from something Eveil already found, and says which one besi
 
 - **A feature your site never explains.** Eveil compares the knowledge base against the pages it read on your site and the articles already written.
 - **A competitor worth a comparison.** From the competitors in your knowledge base: an honest "X vs Y", never a hit piece.
-- **A Reddit discussion worth an article.** While the [Reddit scan](/product/reddit) looks for threads to reply to, it also notes the ones that would make a good article, whether or not they're worth a reply.
+- **A question people keep asking on Reddit.** While the [Reddit scan](/product/reddit) looks for threads to reply to, it also notes the ones that would make a good article, whether or not they're worth a reply.
 - **A client you just won**, as a case study.
 - **Industry news** with a real angle for your product.
 - **Picked by Eveil**, when none of the above is strong enough: a topic your buyers search for that your site doesn't cover.
@@ -17,7 +17,11 @@ It never writes an article on something your site or a past article already cove
 
 ## Article ideas
 
-The discussions the Reddit scan noted show up at the top of the SEO page as ideas, each with the angle the article would take and a link to the thread. **Write it** writes that one straight away. **Dismiss** removes it for good: the scan won't suggest the same thread again. Ideas you leave alone are also what the scheduled articles pick from.
+The questions the Reddit scan noted show up at the top of the SEO page as ideas, each with the angle the article would take. Threads asking the same question are grouped into one idea, and the ideas asked in the most threads come first, with every thread one click away.
+
+A thread is never turned into an idea when an article or a page of your site already answers the same question. An idea only one thread asked about is forgotten after a month, and comes back if people start asking again.
+
+**Write it** writes that one straight away. **Dismiss** removes it for good: the scan won't suggest the same threads again. A question people keep asking in new threads can come back. Scheduled articles start from the top of the list: the idea asked in the most threads.
 
 ## How often
 

@@ -24,6 +24,7 @@ class InsightController extends Controller
     {
         return InsightResource::collection(Insight::query()
             ->where('status', InsightStatus::Open)
+            ->inFeed()
             ->when(InsightKind::tryFrom($request->string('kind')->value()), fn ($query, InsightKind $kind) => $query->where('kind', $kind))
             ->when($request->boolean('unread'), fn ($query) => $query->whereNull('read_at'))
             ->latest('id')

@@ -1,3 +1,5 @@
+import type { ArticleThread } from './insight'
+
 /**
  * One SEO article, as the SEO page sees it. Published by hand: the user
  * pastes it into their CMS and gives the URL back.
@@ -22,15 +24,19 @@ export type Article = {
 }
 
 /**
- * A discussion the Reddit scan noted as worth an article, not written yet.
+ * An article topic Reddit threads asked for, not written yet.
  */
 export type ArticleIdea = {
     id: number
     source: 'reddit'
-    /** The thread permalink. */
+    /** The first thread's permalink. */
     source_ref: string
+    /** The first thread's title. */
     title: string
     /** What the article would answer or argue. */
     angle: string
+    details: { threads?: ArticleThread[] }
+    /** How many threads asked. */
+    mentions: number
     created_at: string | null
 }

@@ -69,6 +69,15 @@ php artisan eveil:refresh-disposable
 
 Refreshes the disposable-email-domain blocklist used during address verification.
 
+### `eveil:group-article-ideas`
+
+```bash
+php artisan eveil:group-article-ideas       # every project with open article ideas
+php artisan eveil:group-article-ideas 4     # one project
+```
+
+Merges the open article ideas that ask the same question into one topic, and drops those an existing article already answers. New ideas are grouped as they come in; run this once after upgrading, to group the ones noted before. Safe to run again.
+
 ### `eveil:agent-model`
 
 ```bash

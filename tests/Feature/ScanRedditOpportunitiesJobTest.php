@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\HarvestRedditReplyExamples;
+use App\Actions\NoteArticleIdeas;
 use App\Ai\Agents\RedditExampleTriage;
 use App\Ai\Agents\RedditOpportunityTriage;
 use App\Ai\Agents\RedditReplyWriter;
@@ -659,5 +660,31 @@ it('still announces its drafts when the harvest fails', function () {
     ScanRedditOpportunities::dispatchSync($project);
 
     Notification::assertSentTo($project->users, RedditRepliesDrafted::class);
+    Exceptions::assertReported(RuntimeException::class);
+});
+
+it('still drafts its replies when grouping the article ideas fails', function () {
+    $project = scannableProject();
+    Exceptions::fake();
+
+    $this->mock(NoteArticleIdeas::class, fn ($mock) => $mock->shouldReceive('handle')->andThrow(new RuntimeException('provider timed out')));
+
+    RedditOpportunityTriage::fake([[
+        'items' => [[
+            'permalink' => 'https://www.reddit.com/r/SaaS/comments/xyz789/what_do_you_use/def456/',
+            'is_opportunity' => true,
+            'reason' => 'e',
+            'article_angle' => 'An article worth writing.',
+        ]],
+    ]]);
+    RedditReplyWriter::fake([[
+        'body_value_comment' => 'A reply.',
+        'body_soft_mention' => '',
+        'body_dm_invite' => '',
+    ]]);
+
+    ScanRedditOpportunities::dispatchSync($project);
+
+    expect(RedditReply::count())->toBe(1);
     Exceptions::assertReported(RuntimeException::class);
 });

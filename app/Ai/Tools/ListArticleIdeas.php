@@ -12,8 +12,8 @@ use Laravel\Ai\Tools\Request;
 use Stringable;
 
 /**
- * The open article ideas the Reddit scan noted, what the SEO page lists at
- * its top.
+ * The open article topics the Reddit scan noted, the most asked first: what
+ * the SEO page lists at its top.
  */
 class ListArticleIdeas implements Tool
 {
@@ -21,7 +21,7 @@ class ListArticleIdeas implements Tool
 
     public function description(): Stringable|string
     {
-        return 'Lists the open article ideas: Reddit discussions the scan noted as worth a blog article, with their id, angle and thread link. Used and dismissed ideas are not listed.';
+        return 'Lists the open article ideas, the most asked first: topics Reddit threads asked for, each with its id, angle, how many threads asked (mentions) and those threads. Used and dismissed ideas are not listed.';
     }
 
     public function handle(Request $request): Stringable|string
@@ -30,14 +30,15 @@ class ListArticleIdeas implements Tool
             ->where('project_id', $this->project->id)
             ->where('kind', InsightKind::Article)
             ->where('status', InsightStatus::Open)
+            ->orderByDesc('mentions')
             ->latest('id')
             ->limit(20)
             ->get()
             ->map(fn (Insight $idea): array => [
                 'id' => $idea->id,
                 'angle' => $idea->angle,
-                'thread_title' => $idea->title,
-                'thread_url' => $idea->source_ref,
+                'mentions' => $idea->mentions,
+                'threads' => $idea->threads(),
             ]);
 
         if ($ideas->isEmpty()) {

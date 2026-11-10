@@ -22,7 +22,7 @@ class ListInsights implements Tool
     {
         return 'Lists the open items of the Insights feed, newest first: what people say about the competitors on Reddit '
             .'(competitor_mention), features competitors have and this product lacks (feature), acquisition levers '
-            .'missing from the site (acquisition), and article ideas (article). Use it to answer "what do people think '
+            .'missing from the site (acquisition), and article topics many threads keep asking for (article; the full list is ListArticleIdeas). Use it to answer "what do people think '
             .'of competitor X" or "what is new". Dismissed and acted-on items are not listed.';
     }
 
@@ -34,6 +34,7 @@ class ListInsights implements Tool
         $insights = Insight::query()
             ->where('project_id', $this->project->id)
             ->where('status', InsightStatus::Open)
+            ->inFeed()
             ->when($kind, fn ($query, InsightKind $kind) => $query->where('kind', $kind))
             ->when($competitor !== '', fn ($query) => $query->whereRaw("lower(details->>'competitor') = ?", [mb_strtolower($competitor)]))
             ->when($request->boolean('unread_only'), fn ($query) => $query->whereNull('read_at'))

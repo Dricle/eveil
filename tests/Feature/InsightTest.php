@@ -31,7 +31,7 @@ it('lists this project\'s open insights, newest first, with the unread count', f
     Insight::factory()->for($project)->recommendation('referral_program')->create();
     $mention = Insight::factory()->for($project)->competitorMention('RouteCo')->create();
     Insight::factory()->for($project)->create(['status' => InsightStatus::Dismissed]);
-    Insight::factory()->for($project)->create(['read_at' => now()]);
+    Insight::factory()->for($project)->create(['read_at' => now(), 'mentions' => Insight::FEED_MENTIONS]);
     Insight::factory()->competitorMention()->create();
 
     $this->actingAs($user)
@@ -47,6 +47,20 @@ it('lists this project\'s open insights, newest first, with the unread count', f
     $this->actingAs($user)
         ->get(route('insights.index', ['kind' => 'competitor_mention', 'competitor' => 'RouteCo']))
         ->assertInertia(fn ($page) => $page->has('insights.data', 1)->where('insights.data.0.id', $mention->id));
+});
+
+it('keeps a quiet article topic off the feed until enough threads ask for it', function () {
+    [$user, $project] = insightSetup();
+    Insight::factory()->for($project)->create(['mentions' => Insight::FEED_MENTIONS - 1]);
+    $popular = Insight::factory()->for($project)->create(['mentions' => Insight::FEED_MENTIONS]);
+
+    $this->actingAs($user)
+        ->get(route('insights.index'))
+        ->assertInertia(fn ($page) => $page
+            ->has('insights.data', 1)
+            ->where('insights.data.0.id', $popular->id)
+            ->where('insights.data.0.mentions', Insight::FEED_MENTIONS)
+            ->where('unreadCount', 1));
 });
 
 it('marks one insight read and unread, and dismisses it', function () {

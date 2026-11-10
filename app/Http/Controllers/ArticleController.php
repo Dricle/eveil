@@ -35,7 +35,7 @@ class ArticleController extends Controller
         return Inertia::render('seo/Index', [
             'articles' => ArticleResource::collection(Article::query()->latest()->get()),
             'ideas' => InsightResource::collection(
-                Insight::query()->where('kind', InsightKind::Article)->where('status', InsightStatus::Open)->latest()->get()
+                Insight::query()->where('kind', InsightKind::Article)->where('status', InsightStatus::Open)->orderByDesc('mentions')->latest('id')->get()
             ),
             'frequency' => $currentProject->getOrFail()->article_frequency->value,
         ]);

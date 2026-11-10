@@ -13,7 +13,7 @@ class InsightReadController extends Controller
 {
     public function store(): RedirectResponse
     {
-        Insight::query()->where('status', InsightStatus::Open)->whereNull('read_at')->update(['read_at' => now()]);
+        Insight::query()->where('status', InsightStatus::Open)->inFeed()->whereNull('read_at')->update(['read_at' => now()]);
 
         return back()->with('status', 'Everything marked as read.');
     }

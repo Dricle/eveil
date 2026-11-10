@@ -4,7 +4,6 @@ namespace App\Jobs;
 
 use App\Ai\Agents\ArticleWriter;
 use App\Enums\AgentRunStatus;
-use App\Enums\AnalysisType;
 use App\Enums\ArticleSourceType;
 use App\Enums\ArticleStatus;
 use App\Enums\InsightKind;
@@ -38,6 +37,9 @@ class GenerateArticle implements ShouldQueue
 
     private const IDEA_LIMIT = 10;
 
+    /** Enough threads to write from, without a popular topic filling the prompt. */
+    private const THREADS_PER_IDEA = 5;
+
     /**
      * @param  int|null  $ideaId  the one idea to write, when the user clicked
      *                            "Write it" on it: it then becomes the brief.
@@ -58,7 +60,9 @@ class GenerateArticle implements ShouldQueue
 
             $brief = $idea === null
                 ? $this->brief
-                : "Write the article this Reddit discussion suggests.\nThread: {$idea->title} ({$idea->source_ref})\nAngle: {$idea->angle}";
+                : "Write the article these Reddit discussions ask for.\nAngle: {$idea->angle}\nThreads:\n".collect($idea->threads())
+                    ->map(fn (array $thread): string => "- {$thread['title']} ({$thread['url']})")
+                    ->implode("\n");
 
             $clientWon = $this->pendingClientWin();
 
@@ -70,7 +74,7 @@ class GenerateArticle implements ShouldQueue
 
             $agent = new ArticleWriter(
                 $this->project,
-                $this->sitePages(),
+                $this->project->sitePages(),
                 Article::query()->where('status', '!=', ArticleStatus::Rejected)->latest('id')->limit(50)->get(['title']),
                 Article::query()->where('status', ArticleStatus::Rejected)->latest('updated_at')->limit(5)->get(['title', 'rejection_reason']),
                 $brief === null ? $this->openIdeas() : new Collection,
@@ -114,8 +118,10 @@ class GenerateArticle implements ShouldQueue
             if ($sourceType === ArticleSourceType::RedditThread && $sourceRef !== null) {
                 Insight::query()
                     ->where('kind', InsightKind::Article)
-                    ->where('source_ref', $sourceRef)
                     ->where('status', InsightStatus::Open)
+                    ->where(fn ($query) => $query
+                        ->where('source_ref', $sourceRef)
+                        ->orWhereJsonContains('details->threads', [['url' => $sourceRef]]))
                     ->update(['status' => InsightStatus::Used, 'article_id' => $article->id]);
             }
 
@@ -128,42 +134,25 @@ class GenerateArticle implements ShouldQueue
     }
 
     /**
-     * What the site already covers, from the latest website reading: the
-     * writer must not draft an article the site already has.
+     * The open article topics, the most asked first: what the cadence picks
+     * from. A topic many threads ask about answers real demand, and gives the
+     * writer more than one discussion to draw on.
      *
-     * @return Collection<int, array{url: string, title: string}>
-     */
-    private function sitePages(): Collection
-    {
-        $raw = $this->project->analyses()
-            ->where('type', AnalysisType::Website)
-            ->latest('id')
-            ->value('raw');
-
-        return collect(is_array($raw['pages'] ?? null) ? $raw['pages'] : [])
-            ->filter(fn (mixed $page): bool => is_array($page) && isset($page['url']))
-            ->map(fn (array $page): array => ['url' => (string) $page['url'], 'title' => (string) ($page['title'] ?? '')])
-            ->values();
-    }
-
-    /**
-     * Discussions the Reddit scan noted as worth an article and nobody has
-     * used or dismissed yet.
-     *
-     * @return Collection<int, array{title: string, permalink: string, angle: string}>
+     * @return Collection<int, array{angle: string, mentions: int, threads: list<array{title: string, url: string, subreddit: string|null}>}>
      */
     private function openIdeas(): Collection
     {
         return Insight::query()
             ->where('kind', InsightKind::Article)
             ->where('status', InsightStatus::Open)
+            ->orderByDesc('mentions')
             ->latest('id')
             ->limit(self::IDEA_LIMIT)
             ->get()
             ->map(fn (Insight $idea): array => [
-                'title' => $idea->title,
-                'permalink' => $idea->source_ref,
                 'angle' => $idea->angle,
+                'mentions' => $idea->mentions,
+                'threads' => array_slice($idea->threads(), 0, self::THREADS_PER_IDEA),
             ]);
     }
 

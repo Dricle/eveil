@@ -78,6 +78,30 @@ it('shows the writer what the site and past articles already cover, and the open
         ->not->toContain('Dismissed thread');
 });
 
+it('hands the writer the most asked topics first, and marks the one it wrote from any of its threads', function () {
+    $project = Project::factory()->create();
+    Insight::factory()->create(['project_id' => $project->id, 'angle' => 'A lone question.']);
+    $popular = Insight::factory()->create([
+        'project_id' => $project->id,
+        'angle' => 'The question everyone asks.',
+        'mentions' => 2,
+        'details' => ['threads' => [
+            ['title' => 'First asker', 'url' => 'https://www.reddit.com/r/a/comments/1/'],
+            ['title' => 'Second asker', 'url' => 'https://www.reddit.com/r/a/comments/2/'],
+        ]],
+    ]);
+    ArticleWriter::fake([fakeArticleResponse(['source_type' => 'reddit_thread', 'source_ref' => 'https://www.reddit.com/r/a/comments/2/'])]);
+
+    GenerateArticle::dispatchSync($project);
+
+    $prompt = AgentRun::sole()->input['prompt'];
+
+    expect(strpos($prompt, 'The question everyone asks. (asked in 2 threads)'))->toBeLessThan(strpos($prompt, 'A lone question.'))
+        ->and($prompt)->toContain('Second asker (https://www.reddit.com/r/a/comments/2/)')
+        ->and($popular->fresh()->status)->toBe(InsightStatus::Used)
+        ->and($popular->fresh()->article_id)->toBe(Article::sole()->id);
+});
+
 it('writes the idea the user clicked, and marks it used', function () {
     $project = Project::factory()->has(User::factory())->create();
     $idea = Insight::factory()->create(['project_id' => $project->id, 'angle' => 'Choosing a widget tool in 2026.']);

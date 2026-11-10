@@ -144,9 +144,9 @@ function generate () {
             :description="String(page.props.status)"
         />
 
-        <!-- Noted by the Reddit scan while it looks for threads to reply to:
-             a discussion worth an article, whether or not it is worth a
-             reply. The cadence picks from these too. -->
+        <!-- Noted by the Reddit scan while it looks for threads to reply to,
+             grouped by question and ranked by how many threads asked. The
+             cadence picks from the top. -->
         <UCard
             v-if="ideas.length"
             variant="subtle"
@@ -159,7 +159,8 @@ function generate () {
                             Article ideas from Reddit
                         </h3>
                         <p class="mt-0.5 text-xs text-muted">
-                            Discussions worth an article on your blog, noticed while scanning Reddit.
+                            Questions people ask on Reddit, the most asked first. Threads asking the
+                            same thing are grouped, and the scheduled articles start from the top.
                         </p>
                     </div>
                     <UButton
@@ -182,17 +183,53 @@ function generate () {
                     name="i-lucide-lightbulb"
                     class="mt-0.5 size-4 shrink-0 text-muted"
                 />
-                <div class="min-w-0 flex-1">
+                <div class="min-w-0 flex-1 space-y-1">
                     <p class="text-sm font-medium text-highlighted">
                         {{ idea.angle }}
                     </p>
                     <a
+                        v-if="idea.mentions === 1"
                         :href="idea.source_ref"
                         target="_blank"
                         rel="noopener"
                         class="text-xs text-primary"
                     >{{ idea.title }} ↗</a>
+                    <!-- Native disclosure: a popular topic lists every thread
+                         that asked without crowding the list. -->
+                    <details
+                        v-else
+                        class="group text-xs"
+                    >
+                        <summary class="cursor-pointer list-none text-muted hover:text-highlighted">
+                            <UIcon
+                                name="i-lucide-chevron-right"
+                                class="size-3 align-middle transition-transform group-open:rotate-90"
+                            />
+                            Asked in {{ idea.mentions }} threads
+                        </summary>
+                        <ul class="mt-1 space-y-0.5 pl-4">
+                            <li
+                                v-for="thread in idea.details.threads ?? []"
+                                :key="thread.url"
+                            >
+                                <a
+                                    :href="thread.url"
+                                    target="_blank"
+                                    rel="noopener"
+                                    class="text-primary"
+                                >{{ thread.subreddit ? `r/${thread.subreddit}: ` : '' }}{{ thread.title }} ↗</a>
+                            </li>
+                        </ul>
+                    </details>
                 </div>
+                <UBadge
+                    v-if="idea.mentions > 1"
+                    :label="`${idea.mentions}×`"
+                    color="primary"
+                    variant="subtle"
+                    size="sm"
+                    class="shrink-0"
+                />
                 <div class="flex shrink-0 gap-1.5">
                     <UButton
                         color="neutral"

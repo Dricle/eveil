@@ -72,6 +72,11 @@ class ArticleTopicMatcher extends EveilAgent implements HasStructuredOutput
         the same question. "How to warm up a mailbox" and "How to keep bounce rates
         low" are not: one article would not answer both.
 
+        Before each verdict, write in reason the one question both ask, in a few
+        words, or why nothing matches. Then check every earlier angle in this list
+        and every idea already noted for that same question: two people asking it in
+        different words is the whole point of this list.
+
         Prefer article over topic, and topic over same_as, when several match.
         PROMPT;
     }
@@ -84,6 +89,7 @@ class ArticleTopicMatcher extends EveilAgent implements HasStructuredOutput
         return [
             'items' => $schema->array()->items($schema->object([
                 'index' => $schema->integer()->description('The new angle\'s index, exactly as given.')->required(),
+                'reason' => $schema->string()->description('A few words: the question both ask, or why nothing matches. Written before the verdict.')->required(),
                 'verdict' => $schema->string()->enum(['new', 'topic', 'same_as', 'article'])->required(),
                 'ref' => $schema->integer()->description('The idea id for topic, the earlier index for same_as, the article id (0 for a site page) for article, 0 for new.')->required(),
             ]))->description('One entry per new angle, none missing.')->required(),

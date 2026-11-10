@@ -29,6 +29,8 @@ class NoteFeatureIdeas
     /** Open ones first: those are what a thread is most likely to join. */
     private const FEATURE_LIMIT = 200;
 
+    private const BATCH = 15;
+
     /**
      * @param  Collection<int, array{idea: string, evidence: string, title: string, url: string, subreddit: string|null}>  $threads
      */
@@ -39,10 +41,18 @@ class NoteFeatureIdeas
             ->reject(fn (array $thread): bool => $this->alreadyNoted($thread['url']))
             ->values();
 
-        if ($threads->isEmpty()) {
-            return;
+        // Same reason as `NoteArticleIdeas`: in batches, each one matches
+        // against the features the previous ones opened.
+        foreach ($threads->chunk(self::BATCH) as $batch) {
+            $this->note($project, $batch->values());
         }
+    }
 
+    /**
+     * @param  Collection<int, array{idea: string, evidence: string, title: string, url: string, subreddit: string|null}>  $threads
+     */
+    private function note(Project $project, Collection $threads): void
+    {
         $features = Insight::query()
             ->where('kind', InsightKind::Feature)
             ->orderByRaw('case when status = ? then 0 else 1 end', [InsightStatus::Open->value])

@@ -163,3 +163,24 @@ it('leaves a failing project\'s ideas as they were and still regroups the others
     expect(Insight::query()->where('project_id', $broke->id)->pluck('id')->sort()->values()->all())->toBe($brokeIdeas->modelKeys())
         ->and(Insight::query()->where('project_id', $fine->id)->sole()->mentions)->toBe(2);
 });
+
+it('matches a long list in batches, each against the topics the previous ones opened', function () {
+    $project = Project::factory()->create();
+    ArticleTopicMatcher::fake(function (string $prompt): array {
+        if (! str_contains($prompt, 'Angle 15')) {
+            return ['items' => collect(range(0, 14))->map(fn (int $i): array => ['index' => $i, 'verdict' => 'new', 'ref' => 0])->all()];
+        }
+
+        $first = Insight::query()->where('angle', 'Angle 0')->sole();
+
+        expect($prompt)->toContain("[{$first->id}] Angle 0");
+
+        return ['items' => [['index' => 0, 'verdict' => 'topic', 'ref' => $first->id]]];
+    });
+
+    noteIdeas($project, collect(range(0, 15))->map(fn (int $i): string => "Angle {$i}")->all());
+
+    expect(Insight::count())->toBe(15)
+        ->and(Insight::query()->where('angle', 'Angle 0')->sole()->mentions)->toBe(2)
+        ->and(AgentRun::count())->toBe(2);
+});

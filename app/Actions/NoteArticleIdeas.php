@@ -38,6 +38,8 @@ class NoteArticleIdeas
 
     private const ARTICLE_LIMIT = 100;
 
+    private const BATCH = 15;
+
     /**
      * @param  Collection<int, array{angle: string, title: string, url: string, subreddit: string|null}>  $threads
      */
@@ -48,8 +50,12 @@ class NoteArticleIdeas
             ->reject(fn (array $thread): bool => $this->alreadyNoted($thread['url']))
             ->values();
 
-        if ($threads->isNotEmpty()) {
-            $this->note($project, $threads);
+        // A long list asks the model to link angles among themselves, which
+        // it does poorly; in batches, each one sees the topics the previous
+        // ones opened and matches against real ids instead. A scan rarely
+        // fills one batch: only a regrouping pays for several calls.
+        foreach ($threads->chunk(self::BATCH) as $batch) {
+            $this->note($project, $batch->values());
         }
 
         Insight::query()

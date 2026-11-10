@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\InsightKind;
 use App\Models\Insight;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -27,6 +28,8 @@ class InsightResource extends JsonResource
             'url' => $this->url,
             'details' => $this->details ?? (object) [],
             'mentions' => $this->mentions,
+            // A quiet article topic sits in its tab but never counts as unread.
+            'in_feed' => $this->kind !== InsightKind::Article || $this->mentions >= Insight::FEED_MENTIONS,
             'read_at' => $this->read_at?->toIso8601String(),
             'created_at' => $this->created_at?->toIso8601String(),
         ];

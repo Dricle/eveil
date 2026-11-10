@@ -159,7 +159,7 @@ it('queues an article on demand', function () {
     Queue::assertPushed(GenerateArticle::class, fn (GenerateArticle $job): bool => $job->project->is($project) && $job->brief === null);
 });
 
-it('shows only the open article ideas', function () {
+it('counts only the open article ideas, which Insights lists', function () {
     [$user, $project] = articleSetup();
     Insight::factory()->create(['project_id' => $project->id]);
     Insight::factory()->create(['project_id' => $project->id, 'status' => InsightStatus::Dismissed]);
@@ -167,7 +167,7 @@ it('shows only the open article ideas', function () {
 
     $this->actingAs($user)
         ->get(route('seo.index'))
-        ->assertInertia(fn ($page) => $page->has('ideas', 1));
+        ->assertInertia(fn ($page) => $page->where('ideaCount', 1)->missing('ideas'));
 });
 
 it('writes an idea on demand', function () {

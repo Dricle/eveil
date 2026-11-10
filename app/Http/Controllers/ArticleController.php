@@ -9,7 +9,6 @@ use App\Http\Requests\ArticlePublishRequest;
 use App\Http\Requests\ArticleRejectRequest;
 use App\Http\Requests\ArticleRequest;
 use App\Http\Resources\ArticleResource;
-use App\Http\Resources\InsightResource;
 use App\Jobs\FetchPublishedArticle;
 use App\Jobs\GenerateArticle;
 use App\Models\Article;
@@ -34,9 +33,8 @@ class ArticleController extends Controller
     {
         return Inertia::render('seo/Index', [
             'articles' => ArticleResource::collection(Article::query()->latest()->get()),
-            'ideas' => InsightResource::collection(
-                Insight::query()->where('kind', InsightKind::Article)->where('status', InsightStatus::Open)->orderByDesc('mentions')->latest('id')->get()
-            ),
+            // The ideas themselves live in Insights; this page only points there.
+            'ideaCount' => Insight::query()->where('kind', InsightKind::Article)->where('status', InsightStatus::Open)->count(),
             'frequency' => $currentProject->getOrFail()->article_frequency->value,
         ]);
     }

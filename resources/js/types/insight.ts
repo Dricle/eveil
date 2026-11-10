@@ -36,6 +36,8 @@ export type Insight = {
     }
     /** How many threads asked for an article topic or a missing feature. 1 for everything else. */
     mentions: number
+    /** Whether it shows in the mixed feed and counts as unread: a quiet article topic does not. */
+    in_feed: boolean
     read_at: string | null
     created_at: string | null
 }

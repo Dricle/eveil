@@ -30,7 +30,9 @@ class InsightController extends Controller
 
         $insights = Insight::query()
             ->where('status', InsightStatus::Open)
-            ->inFeed()
+            // Their own tab lists every article topic, the quiet ones too:
+            // the SEO page no longer does. The mixed feed keeps the popular.
+            ->when($kind !== InsightKind::Article, fn ($query) => $query->inFeed())
             ->when($kind, fn ($query, InsightKind $kind) => $query->where('kind', $kind))
             ->when($competitor !== '' && $competitor !== 'all', fn ($query) => $query->where('details->competitor', $competitor))
             ->when($unread, fn ($query) => $query->whereNull('read_at'))
@@ -51,11 +53,12 @@ class InsightController extends Controller
                 fn (mixed $name): bool => is_string($name) && trim($name) !== '',
             )),
             'unreadCount' => Insight::query()->where('status', InsightStatus::Open)->inFeed()->whereNull('read_at')->count(),
-            // One tab per kind, each with its size, so 26 missing features
-            // never hide 3 acquisition ideas further down the feed.
-            'counts' => Insight::query()->where('status', InsightStatus::Open)->inFeed()
+            // One tab per kind, each with what it lists, so 26 missing
+            // features never hide 3 acquisition ideas further down the feed.
+            'counts' => Insight::query()->where('status', InsightStatus::Open)
                 ->toBase()->selectRaw('kind, count(*) as total')->groupBy('kind')->pluck('total', 'kind')
                 ->map(fn (mixed $total): int => (int) $total),
+            'feedCount' => Insight::query()->where('status', InsightStatus::Open)->inFeed()->count(),
         ]);
     }
 

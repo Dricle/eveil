@@ -17,6 +17,7 @@ const props = defineProps<{
     competitors: string[]
     unreadCount: number
     counts: Partial<Record<InsightKind, number>>
+    feedCount: number
 }>()
 
 const page = usePage()
@@ -58,8 +59,8 @@ const KINDS: Record<InsightKind, { label: string, tab: string, icon: string, tex
         icon: 'i-lucide-lightbulb',
         text: 'text-secondary',
         border: 'border-l-secondary',
-        about: 'Questions many Reddit threads keep asking. Every other article idea waits on the SEO page.',
-        empty: 'No topic is popular enough yet. The others wait on the SEO page.'
+        about: 'Questions people keep asking on Reddit, the most asked first. The scheduled articles start from the top; only topics five threads asked make it into Everything.',
+        empty: 'No article topics yet. They appear as Eveil scans Reddit.'
     }
 }
 
@@ -76,10 +77,8 @@ const kind = ref<InsightKind | 'all'>(props.filters.kind)
 const competitor = ref(props.filters.competitor)
 const unread = ref(props.filters.unread)
 
-const total = computed(() => Object.values(props.counts).reduce((sum, count) => sum + (count ?? 0), 0))
-
 const tabs = computed(() => [
-    { label: 'Everything', value: 'all', badge: total.value || undefined },
+    { label: 'Everything', value: 'all', badge: props.feedCount || undefined },
     ...(Object.keys(KINDS) as InsightKind[]).map(value => ({ label: KINDS[value].tab, value, icon: KINDS[value].icon, badge: props.counts[value] || undefined }))
 ].map(tab => ({ ...tab, badge: tab.badge === undefined ? undefined : { label: String(tab.badge), color: 'neutral' as const, variant: 'subtle' as const } })))
 
@@ -102,6 +101,11 @@ const busy = ref<number | null>(null)
 // this page does not poll: hide it as soon as the write is queued.
 const writing = ref<number[]>([])
 const shown = computed(() => props.insights.data.filter(insight => !writing.value.includes(insight.id)))
+
+// A quiet article topic waits in its tab without asking to be read.
+function unreadInFeed (insight: Insight): boolean {
+    return !insight.read_at && insight.in_feed
+}
 
 function headline (insight: Insight): string {
     return insight.kind === 'acquisition' || insight.kind === 'feature' ? insight.title : insight.angle
@@ -189,6 +193,19 @@ function promptOptions (insight: Insight) {
     ]]
 }
 
+const dismissingAll = ref(false)
+
+// The topics pile up far faster than a weekly cadence writes them, so the
+// whole list can be cleared in one go.
+function dismissAllTopics () {
+    dismissingAll.value = true
+    router.post(ideaRoutes.dismissAll.url({ project: page.props.currentProject!.slug }), {}, {
+        preserveScroll: true,
+        onSuccess: () => toast.add({ title: 'All article topics dismissed', color: 'neutral' }),
+        onFinish: () => dismissingAll.value = false
+    })
+}
+
 const markingAll = ref(false)
 
 function markAllRead () {
@@ -248,6 +265,15 @@ function markAllRead () {
                     size="sm"
                     class="w-48"
                 />
+                <UButton
+                    v-if="kind === 'article' && counts.article"
+                    color="neutral"
+                    variant="ghost"
+                    size="sm"
+                    :label="`Dismiss all (${counts.article})`"
+                    :loading="dismissingAll"
+                    @click="dismissAllTopics"
+                />
                 <USwitch
                     v-model="unread"
                     label="Unread only"
@@ -273,13 +299,13 @@ function markAllRead () {
                 v-for="insight in shown"
                 :key="insight.id"
                 class="group flex flex-col gap-3 border-l-4 px-4 py-3.5 first:rounded-tl-lg last:rounded-bl-lg sm:flex-row sm:items-start"
-                :class="[KINDS[insight.kind].border, insight.read_at ? '' : 'bg-elevated/40']"
+                :class="[KINDS[insight.kind].border, unreadInFeed(insight) ? 'bg-elevated/40' : '']"
             >
                 <div class="flex min-w-0 flex-1 gap-3">
                     <span
                         class="mt-2 size-1.5 shrink-0 rounded-full"
-                        :class="insight.read_at ? 'bg-transparent' : 'bg-primary'"
-                        :aria-label="insight.read_at ? undefined : 'Unread'"
+                        :class="unreadInFeed(insight) ? 'bg-primary' : 'bg-transparent'"
+                        :aria-label="unreadInFeed(insight) ? 'Unread' : undefined"
                     />
 
                     <div class="min-w-0 flex-1 space-y-1.5">
@@ -316,7 +342,7 @@ function markAllRead () {
 
                         <p
                             class="text-sm text-highlighted"
-                            :class="insight.read_at ? '' : 'font-medium'"
+                            :class="unreadInFeed(insight) ? 'font-medium' : ''"
                         >
                             {{ headline(insight) }}
                         </p>

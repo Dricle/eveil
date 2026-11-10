@@ -17,11 +17,9 @@ It never writes an article on something your site or a past article already cove
 
 ## Article ideas
 
-The questions the Reddit scan noted show up at the top of the SEO page as ideas, each with the angle the article would take. Threads asking the same question are grouped into one idea, and the ideas asked in the most threads come first, with every thread one click away.
+The questions the Reddit scan notes live in [Insights](/product/insights), on the Article topics tab: threads asking the same question are grouped into one topic, the most asked first, each with **Write it** and **Dismiss**. The SEO page shows how many are waiting, with a link there.
 
-A thread is never turned into an idea when an article or a page of your site already answers the same question. An idea only one thread asked about is forgotten after a month, and comes back if people start asking again.
-
-**Write it** writes that one straight away. **Dismiss** removes it for good: the scan won't suggest the same threads again. A question people keep asking in new threads can come back. Scheduled articles start from the top of the list: the idea asked in the most threads.
+A thread is never turned into a topic when an article or a page of your site already answers the same question. A topic only one thread asked about is forgotten after a month, and comes back if people start asking again. Scheduled articles start from the top of the list: the topic asked in the most threads.
 
 ## How often
 

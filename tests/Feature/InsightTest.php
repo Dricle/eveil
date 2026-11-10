@@ -61,6 +61,24 @@ it('keeps a quiet article topic off the feed until enough threads ask for it', f
             ->has('insights.data', 1)
             ->where('insights.data.0.id', $popular->id)
             ->where('insights.data.0.mentions', Insight::FEED_MENTIONS)
+            ->where('unreadCount', 1)
+            ->where('feedCount', 1));
+});
+
+it('lists every article topic on its own tab, the most asked first, the quiet ones never unread', function () {
+    [$user, $project] = insightSetup();
+    $quiet = Insight::factory()->for($project)->create(['mentions' => 1]);
+    $popular = Insight::factory()->for($project)->create(['mentions' => Insight::FEED_MENTIONS]);
+
+    $this->actingAs($user)
+        ->get(route('insights.index', ['kind' => 'article']))
+        ->assertInertia(fn ($page) => $page
+            ->has('insights.data', 2)
+            ->where('insights.data.0.id', $popular->id)
+            ->where('insights.data.0.in_feed', true)
+            ->where('insights.data.1.id', $quiet->id)
+            ->where('insights.data.1.in_feed', false)
+            ->where('counts.article', 2)
             ->where('unreadCount', 1));
 });
 

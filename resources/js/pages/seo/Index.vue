@@ -4,24 +4,24 @@ import { computed, ref, watch } from 'vue'
 import ArticleCard from '@/components/ArticleCard.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import articleRoutes from '@/routes/seo/articles'
-import ideaRoutes from '@/routes/seo/ideas'
-import type { Article, ArticleIdea } from '@/types'
+import insightRoutes from '@/routes/insights'
+import { relativeUrl } from '@/lib/utils'
+import type { Article } from '@/types'
 
 defineOptions({ layout: AppLayout })
 
 const props = defineProps<{
     articles: Article[]
-    ideas: ArticleIdea[]
+    ideaCount: number
     frequency: 'off' | 'daily' | 'weekly' | 'biweekly' | 'monthly'
 }>()
 
 const page = usePage()
-const toast = useToast()
 
 // Articles appear on their own schedule (the cadence, "Write one now", or
 // Evie), so this screen rereads rather than sitting still, same as the
 // LinkedIn and Reddit queues.
-usePoll(15000, { only: ['articles', 'ideas'] })
+usePoll(15000, { only: ['articles', 'ideaCount'] })
 
 const cadence = ref(props.frequency)
 watch(() => props.frequency, value => cadence.value = value, { immediate: true })
@@ -42,39 +42,6 @@ const TABS = [
 
 const activeTab = ref('draft')
 const filtered = computed(() => props.articles.filter(article => article.status === activeTab.value))
-
-// Held per idea: several can be clicked in a row while the first one's
-// request is still in flight.
-const writingIdea = ref<number | null>(null)
-const dismissingIdea = ref<number | null>(null)
-
-function writeIdea (idea: ArticleIdea) {
-    writingIdea.value = idea.id
-    router.post(ideaRoutes.write.url({ project: page.props.currentProject!.slug, idea: idea.id }), {}, {
-        preserveScroll: true,
-        onFinish: () => writingIdea.value = null
-    })
-}
-
-function dismissIdea (idea: ArticleIdea) {
-    dismissingIdea.value = idea.id
-    router.post(ideaRoutes.dismiss.url({ project: page.props.currentProject!.slug, idea: idea.id }), {}, {
-        preserveScroll: true,
-        onSuccess: () => toast.add({ title: 'Idea dismissed', color: 'neutral' }),
-        onFinish: () => dismissingIdea.value = null
-    })
-}
-
-const dismissingAll = ref(false)
-
-function dismissAllIdeas () {
-    dismissingAll.value = true
-    router.post(ideaRoutes.dismissAll.url({ project: page.props.currentProject!.slug }), {}, {
-        preserveScroll: true,
-        onSuccess: () => toast.add({ title: 'All ideas dismissed', color: 'neutral' }),
-        onFinish: () => dismissingAll.value = false
-    })
-}
 
 const generating = ref(false)
 
@@ -144,113 +111,18 @@ function generate () {
             :description="String(page.props.status)"
         />
 
-        <!-- Noted by the Reddit scan while it looks for threads to reply to,
-             grouped by question and ranked by how many threads asked. The
-             cadence picks from the top. -->
-        <UCard
-            v-if="ideas.length"
+        <!-- The ideas themselves are triaged in Insights, next to the rest
+             of what the Reddit scan notices; the cadence still picks from
+             the most asked. -->
+        <UAlert
+            v-if="ideaCount"
+            color="neutral"
             variant="subtle"
-            :ui="{ body: 'p-1.5 sm:p-1.5' }"
-        >
-            <template #header>
-                <div class="flex items-start justify-between gap-3">
-                    <div>
-                        <h3 class="text-sm font-semibold">
-                            Article ideas from Reddit
-                        </h3>
-                        <p class="mt-0.5 text-xs text-muted">
-                            Questions people ask on Reddit, the most asked first. Threads asking the
-                            same thing are grouped, and the scheduled articles start from the top.
-                        </p>
-                    </div>
-                    <UButton
-                        color="neutral"
-                        variant="ghost"
-                        size="xs"
-                        :label="`Dismiss all (${ideas.length})`"
-                        :loading="dismissingAll"
-                        @click="dismissAllIdeas"
-                    />
-                </div>
-            </template>
-
-            <div
-                v-for="idea in ideas"
-                :key="idea.id"
-                class="flex flex-wrap items-start gap-3 rounded-lg px-2.5 py-2"
-            >
-                <UIcon
-                    name="i-lucide-lightbulb"
-                    class="mt-0.5 size-4 shrink-0 text-muted"
-                />
-                <div class="min-w-0 flex-1 space-y-1">
-                    <p class="text-sm font-medium text-highlighted">
-                        {{ idea.angle }}
-                    </p>
-                    <a
-                        v-if="idea.mentions === 1"
-                        :href="idea.source_ref"
-                        target="_blank"
-                        rel="noopener"
-                        class="text-xs text-primary"
-                    >{{ idea.title }} ↗</a>
-                    <!-- Native disclosure: a popular topic lists every thread
-                         that asked without crowding the list. -->
-                    <details
-                        v-else
-                        class="group text-xs"
-                    >
-                        <summary class="cursor-pointer list-none text-muted hover:text-highlighted">
-                            <UIcon
-                                name="i-lucide-chevron-right"
-                                class="size-3 align-middle transition-transform group-open:rotate-90"
-                            />
-                            Asked in {{ idea.mentions }} threads
-                        </summary>
-                        <ul class="mt-1 space-y-0.5 pl-4">
-                            <li
-                                v-for="thread in idea.details.threads ?? []"
-                                :key="thread.url"
-                            >
-                                <a
-                                    :href="thread.url"
-                                    target="_blank"
-                                    rel="noopener"
-                                    class="text-primary"
-                                >{{ thread.subreddit ? `r/${thread.subreddit}: ` : '' }}{{ thread.title }} ↗</a>
-                            </li>
-                        </ul>
-                    </details>
-                </div>
-                <UBadge
-                    v-if="idea.mentions > 1"
-                    :label="`${idea.mentions}×`"
-                    color="primary"
-                    variant="subtle"
-                    size="sm"
-                    class="shrink-0"
-                />
-                <div class="flex shrink-0 gap-1.5">
-                    <UButton
-                        color="neutral"
-                        variant="ghost"
-                        size="xs"
-                        label="Dismiss"
-                        :loading="dismissingIdea === idea.id"
-                        @click="dismissIdea(idea)"
-                    />
-                    <UButton
-                        icon="i-lucide-pen-line"
-                        color="primary"
-                        variant="subtle"
-                        size="xs"
-                        label="Write it"
-                        :loading="writingIdea === idea.id"
-                        @click="writeIdea(idea)"
-                    />
-                </div>
-            </div>
-        </UCard>
+            icon="i-lucide-lightbulb"
+            :title="`${ideaCount} article ${ideaCount === 1 ? 'topic' : 'topics'} from Reddit`"
+            description="Questions people keep asking, grouped and ranked by how many threads asked. The scheduled articles start from the most asked; you can also pick one to write now."
+            :actions="[{ label: 'Open in Insights', color: 'neutral', variant: 'outline', trailingIcon: 'i-lucide-arrow-right', to: relativeUrl(insightRoutes.index.url({ project: page.props.currentProject!.slug }, { query: { kind: 'article' } })) }]"
+        />
 
         <UTabs
             v-model="activeTab"

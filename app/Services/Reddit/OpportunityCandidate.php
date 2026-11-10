@@ -15,6 +15,7 @@ readonly class OpportunityCandidate
 {
     /**
      * @param  array<int, TopComment>  $topComments  already fetched for a `seo_thread` candidate (needed to judge it at triage time); empty for `subreddit_scan`, fetched later only if accepted
+     * @param  string|null  $parentPost  for a comment, the title and body of the post it sits under: without it, a comment reads as the thread itself and a reply answers a question nobody asked
      */
     public function __construct(
         public string $permalink,
@@ -26,5 +27,6 @@ readonly class OpportunityCandidate
         public ?string $threadTitle,
         public string $postId,
         public array $topComments = [],
+        public ?string $parentPost = null,
     ) {}
 }

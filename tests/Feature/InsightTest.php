@@ -184,3 +184,17 @@ it('lets an agent read one insight by id, past the feed, and nothing of another 
         ->and($listed[0]['summary'])->toBe('A topic one thread asked for')
         ->and((string) (new ListInsights($project))->handle(new Request(['insight_id' => $foreign->id])))->toBe('Nothing in the Insights feed matches.');
 });
+
+it('ranks the missing features by how many threads ask, newest first otherwise', function () {
+    [$user, $project] = insightSetup();
+    $asked = Insight::factory()->for($project)->featureRequest()->create(['mentions' => 3]);
+    $newer = Insight::factory()->for($project)->featureRequest()->create();
+
+    $this->actingAs($user)
+        ->get(route('insights.index', ['kind' => 'feature']))
+        ->assertInertia(fn ($page) => $page->where('insights.data.0.id', $asked->id)->where('insights.data.1.id', $newer->id));
+
+    $this->actingAs($user)
+        ->get(route('insights.index'))
+        ->assertInertia(fn ($page) => $page->where('insights.data.0.id', $newer->id));
+});

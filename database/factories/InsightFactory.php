@@ -50,6 +50,19 @@ class InsightFactory extends Factory
     }
 
     /**
+     * A missing feature one Reddit thread asked for, as `NoteFeatureIdeas`
+     * notes it.
+     */
+    public function featureRequest(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'kind' => InsightKind::Feature,
+            'url' => $attributes['source_ref'],
+            'details' => ['threads' => [['title' => 'A thread', 'url' => $attributes['source_ref'], 'subreddit' => 'SaaS', 'evidence' => $attributes['angle']]]],
+        ]);
+    }
+
+    /**
      * A Reddit thread naming a competitor.
      */
     public function competitorMention(string $competitor = 'Acme'): static

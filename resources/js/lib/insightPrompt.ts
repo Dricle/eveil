@@ -22,17 +22,20 @@ export function insightPrompt (insight: Insight, project: Project, mode: 'standa
         ].join('\n\n')
     }
 
+    const threads = insight.details.threads ?? []
     const source = !feature
         ? 'It noticed the site does not use it yet.'
         : insight.source === 'reddit'
-            ? `People asked for it on Reddit${insight.details.subreddit ? ` (r/${insight.details.subreddit})` : ''}.`
-            : 'A competitor offers it and this product does not.'
+            ? threads.length > 1 ? `${threads.length} Reddit threads asked for it.` : `People asked for it on Reddit${insight.details.subreddit ? ` (r/${insight.details.subreddit})` : ''}.`
+            : `A competitor offers it and this product does not.${threads.length ? ` ${threads.length} Reddit ${threads.length > 1 ? 'threads' : 'thread'} asked for it too.` : ''}`
 
     return [
         `I work on ${project.name} (${project.url}). Eveil, the tool that does its marketing, noted a ${what}. ${source}`,
         `${feature ? 'Feature' : 'Idea'}: ${insight.title}`,
         `Why: ${insight.angle}`,
-        insight.url ? `Source: ${insight.url}` : null,
+        threads.length
+            ? `Threads asking:\n${threads.map(thread => `- ${thread.title} (${thread.url})${thread.evidence ? `\n  ${thread.evidence}` : ''}`).join('\n')}`
+            : insight.url ? `Source: ${insight.url}` : null,
         insight.details.impact || insight.details.effort ? `Eveil's guess: ${insight.details.impact ?? 'unknown'} impact, ${insight.details.effort ?? 'unknown'} effort.` : null,
         judge,
         'If it is worth it, plan it, build it with tests, and tell me what you changed.'

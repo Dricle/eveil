@@ -9,6 +9,8 @@ export type ArticleThread = {
     title: string
     url: string
     subreddit?: string | null
+    /** A missing feature's thread: what people there say, in Eveil's words. */
+    evidence?: string
 }
 
 export type Insight = {
@@ -29,10 +31,10 @@ export type Insight = {
         subreddit?: string | null
         /** A feature idea's thread, whose own title is the idea. */
         thread_title?: string | null
-        /** An article topic's threads, every one that asked for it. */
+        /** An article topic's or a missing feature's threads, every one that asked for it. */
         threads?: ArticleThread[]
     }
-    /** How many threads asked for an article topic. 1 for everything else. */
+    /** How many threads asked for an article topic or a missing feature. 1 for everything else. */
     mentions: number
     read_at: string | null
     created_at: string | null

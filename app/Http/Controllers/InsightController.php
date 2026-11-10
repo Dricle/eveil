@@ -34,6 +34,9 @@ class InsightController extends Controller
             ->when($kind, fn ($query, InsightKind $kind) => $query->where('kind', $kind))
             ->when($competitor !== '' && $competitor !== 'all', fn ($query) => $query->where('details->competitor', $competitor))
             ->when($unread, fn ($query) => $query->whereNull('read_at'))
+            // A kind counted by how many threads ask ranks by that count on
+            // its own tab; the mixed feed stays newest first.
+            ->when(in_array($kind, [InsightKind::Feature, InsightKind::Article], true), fn ($query) => $query->orderByDesc('mentions'))
             ->latest('id')
             ->paginate(50)
             ->withQueryString();

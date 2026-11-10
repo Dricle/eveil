@@ -112,11 +112,36 @@ function body (insight: Insight): string | null {
 }
 
 function source (insight: Insight): string | null {
-    if (insight.details.subreddit) {
-        return `r/${insight.details.subreddit}`
+    const subreddit = insight.details.subreddit ?? insight.details.threads?.[0]?.subreddit
+
+    if (insight.source === 'competitors') {
+        return 'From competitor sites'
     }
 
-    return insight.source === 'competitors' ? 'From competitor sites' : null
+    return subreddit && (insight.details.threads?.length ?? 0) < 2 ? `r/${subreddit}` : null
+}
+
+// The one place to read more: the thread, or the page a competitor feature
+// came from. Several threads get a list instead.
+function link (insight: Insight): { url: string, label: string } | null {
+    const threads = insight.details.threads ?? []
+
+    if (threads.length > 1) {
+        return null
+    }
+
+    if (threads.length === 1) {
+        return { url: threads[0].url, label: threads[0].title || 'Read the thread' }
+    }
+
+    if (!insight.url) {
+        return null
+    }
+
+    return {
+        url: insight.url,
+        label: insight.details.thread_title ?? (insight.kind === 'competitor_mention' ? insight.title : insight.details.subreddit ? 'Read the thread' : 'Open the source')
+    }
 }
 
 function update (insight: Insight, data: { read?: boolean, status?: 'used' | 'dismissed' }, toastTitle?: string) {
@@ -279,7 +304,7 @@ function markAllRead () {
                                 />
                                 {{ SIGNAL[insight.details.signal].label }}
                             </span>
-                            <span v-if="insight.kind === 'article'">Asked in {{ insight.mentions }} threads</span>
+                            <span v-if="insight.kind === 'article' || (insight.details.threads?.length ?? 0) > 1">Asked in {{ insight.mentions }} threads</span>
                             <span v-if="insight.details.impact">{{ LEVEL[insight.details.impact] }} impact</span>
                             <span v-if="insight.details.effort">{{ LEVEL[insight.details.effort] }} effort</span>
                             <span v-if="source(insight)">{{ source(insight) }}</span>
@@ -305,27 +330,27 @@ function markAllRead () {
 
                         <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
                             <a
-                                v-if="insight.url && insight.kind !== 'article'"
-                                :href="insight.url"
+                                v-if="link(insight) && insight.kind !== 'article'"
+                                :href="link(insight)!.url"
                                 target="_blank"
                                 rel="noopener"
                                 class="inline-flex min-w-0 items-center gap-1 text-primary hover:underline"
                                 @click="markRead(insight)"
                             >
-                                <span class="truncate">{{ insight.details.thread_title ?? (insight.kind === 'competitor_mention' ? insight.title : insight.details.subreddit ? 'Read the thread' : 'Open the source') }}</span>
+                                <span class="truncate">{{ link(insight)!.label }}</span>
                                 <UIcon
                                     name="i-lucide-arrow-up-right"
                                     class="size-3 shrink-0"
                                 />
                             </a>
                             <details
-                                v-if="insight.kind === 'article' && insight.details.threads?.length"
+                                v-if="insight.kind === 'article' ? insight.details.threads?.length : (insight.details.threads?.length ?? 0) > 1"
                                 class="w-full"
                             >
                                 <summary class="cursor-pointer text-muted hover:text-highlighted">
                                     The threads asking
                                 </summary>
-                                <ul class="mt-1.5 space-y-1">
+                                <ul class="mt-1.5 space-y-2">
                                     <li
                                         v-for="thread in insight.details.threads"
                                         :key="thread.url"
@@ -337,6 +362,12 @@ function markAllRead () {
                                             class="text-primary hover:underline"
                                             @click="markRead(insight)"
                                         >{{ thread.subreddit ? `r/${thread.subreddit}: ` : '' }}{{ thread.title }}</a>
+                                        <p
+                                            v-if="thread.evidence"
+                                            class="mt-0.5 text-muted"
+                                        >
+                                            {{ thread.evidence }}
+                                        </p>
                                     </li>
                                 </ul>
                             </details>

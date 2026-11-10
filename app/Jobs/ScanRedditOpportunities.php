@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Actions\HarvestRedditReplyExamples;
 use App\Actions\NoteArticleIdeas;
+use App\Actions\NoteFeatureIdeas;
 use App\Ai\Agents\RedditOpportunityTriage;
 use App\Ai\Agents\RedditReplyWriter;
 use App\Ai\OutOfCredit;
@@ -68,9 +69,10 @@ class ScanRedditOpportunities implements ShouldQueue
         TopComments $topComments,
         HarvestRedditReplyExamples $harvester,
         NoteArticleIdeas $noteArticleIdeas,
+        NoteFeatureIdeas $noteFeatureIdeas,
         CurrentProject $currentProject,
     ): void {
-        $currentProject->run($this->project, function () use ($scanner, $seoThreadFinder, $topComments, $harvester, $noteArticleIdeas): void {
+        $currentProject->run($this->project, function () use ($scanner, $seoThreadFinder, $topComments, $harvester, $noteArticleIdeas, $noteFeatureIdeas): void {
             $candidates = $scanner->find($this->project)
                 ->merge($seoThreadFinder->find($this->project))
                 ->unique(fn (OpportunityCandidate $candidate): string => $candidate->permalink)
@@ -89,7 +91,7 @@ class ScanRedditOpportunities implements ShouldQueue
 
             $this->noteArticleIdeas($noteArticleIdeas, $verdicts, $byPermalink);
             $this->noteCompetitorMentions($verdicts, $byPermalink);
-            $this->noteFeatureIdeas($verdicts, $byPermalink);
+            $this->noteFeatureIdeas($noteFeatureIdeas, $verdicts, $byPermalink);
             $this->rememberRejected($verdicts, $byPermalink);
 
             /** @var Collection<int, array{0: OpportunityCandidate, 1: string}> $accepted */
@@ -233,35 +235,39 @@ class ScanRedditOpportunities implements ShouldQueue
     /**
      * Capabilities people on a thread ask for and this product lacks, noted
      * as `feature` recommendations next to the competitor gaps: same list,
-     * same done/dismissed lifecycle, and a dismissed one never comes back.
-     * One thread is one idea, the first reading wins. No impact or effort
-     * guess: one thread says a need exists, not how big it is.
+     * same done/dismissed lifecycle. Handed to `NoteFeatureIdeas`, which
+     * files each under the feature already asking for it. No impact or
+     * effort guess: a thread says a need exists, not how big it is.
      *
      * @param  Collection<int, array{permalink?: string, is_opportunity?: bool, reason?: string, article_angle?: string, competitor?: string, competitor_signal?: string, competitor_summary?: string, feature_idea?: string, feature_evidence?: string}>  $verdicts
      * @param  Collection<string, OpportunityCandidate>  $byPermalink
      */
-    private function noteFeatureIdeas(Collection $verdicts, Collection $byPermalink): void
+    private function noteFeatureIdeas(NoteFeatureIdeas $noteFeatureIdeas, Collection $verdicts, Collection $byPermalink): void
     {
-        foreach ($verdicts as $verdict) {
-            $idea = trim((string) ($verdict['feature_idea'] ?? ''));
-            $evidence = trim((string) ($verdict['feature_evidence'] ?? ''));
-            $candidate = $byPermalink->get(trim((string) ($verdict['permalink'] ?? '')));
+        $threads = $verdicts
+            ->map(function (array $verdict) use ($byPermalink): ?array {
+                $idea = trim((string) ($verdict['feature_idea'] ?? ''));
+                $evidence = trim((string) ($verdict['feature_evidence'] ?? ''));
+                $candidate = $byPermalink->get(trim((string) ($verdict['permalink'] ?? '')));
 
-            if ($idea === '' || $evidence === '' || $candidate === null) {
-                continue;
-            }
-
-            Insight::query()->firstOrCreate(
-                ['project_id' => $this->project->id, 'kind' => InsightKind::Feature, 'source_ref' => $candidate->permalink],
-                [
-                    'source' => 'reddit',
-                    'title' => $idea,
-                    'angle' => $evidence,
+                return $idea === '' || $evidence === '' || $candidate === null ? null : [
+                    'idea' => $idea,
+                    'evidence' => $evidence,
+                    'title' => $candidate->threadTitle ?? Str::limit($candidate->text, 120),
                     'url' => $candidate->permalink,
-                    'details' => ['subreddit' => $candidate->subreddit, 'thread_title' => $candidate->threadTitle],
-                    'status' => InsightStatus::Open,
-                ],
-            );
+                    'subreddit' => $candidate->subreddit,
+                ];
+            })
+            ->filter()
+            ->values();
+
+        // Same as the article ideas: never a reason to lose the drafts.
+        try {
+            $noteFeatureIdeas->handle($this->project, $threads);
+        } catch (OutOfCredit) {
+            // Not a failure: the spend guard already told the owners.
+        } catch (Throwable $e) {
+            report($e);
         }
     }
 

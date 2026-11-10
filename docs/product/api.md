@@ -82,7 +82,7 @@ Every other path in this page sits under one project, by its `slug`: `GET /compa
 
 ## Contacts
 
-`GET /contacts` lists the people found or added, `GET /contacts/{id}` returns one. Someone who asked to be forgotten is never returned.
+`GET /contacts` lists the people found or added (`?email=` finds one by address, whatever the case), `GET /contacts/{id}` returns one. Someone who asked to be forgotten is never returned.
 
 ```json
 {
@@ -158,6 +158,16 @@ Up to 500 entries. Someone Eveil doesn't have yet is added already marked, so a 
 ```
 
 This is how a CRM keeps its customers out of your campaigns: see [Webhooks and CRM sync](/product/webhooks#recipe-your-crm-to-eveil).
+
+### Deal outcomes
+
+`PUT /contacts/{id}/status` and `PUT /companies/{id}/status` do what the status menu does in the app, for a CRM that knows how a conversation ended, even months later:
+
+```json
+{ "status": "won" }
+```
+
+Any status is accepted (`in_discussion`, `won`, `lost`, `client`, `rejected`...). A person's status travels to their company, a company's to everyone at it. A `won` is dated, and every campaign that person was in counts it among its wins, with the days it took from its first mail. It answers `204`, and sends `status.changed` to your webhooks like any other change.
 
 ## Campaigns
 

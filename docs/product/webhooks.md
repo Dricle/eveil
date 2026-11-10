@@ -99,7 +99,7 @@ Two workflows are ready to import, for HubSpot. In n8n, create a workflow, open 
 | Workflow | Link to import |
 | --- | --- |
 | Interested replies become HubSpot contacts | `https://docs.eveil.cloud/n8n/eveil-to-hubspot.json` |
-| New HubSpot contacts go to Eveil, customers kept out of campaigns | `https://docs.eveil.cloud/n8n/hubspot-to-eveil.json` |
+| New HubSpot contacts go to Eveil, customers kept out of campaigns, closed deals sent back | `https://docs.eveil.cloud/n8n/hubspot-to-eveil.json` |
 
 Using another CRM? Import one anyway and swap the HubSpot node for yours: n8n has nodes for Pipedrive, Salesforce, Zoho, Odoo, Notion, Airtable and many more. The rest of the workflow stays as it is.
 
@@ -128,7 +128,9 @@ The other direction: send Eveil the people your CRM already knows. Prospects Eve
 2. **Split customers and prospects** sorts them on HubSpot's lifecycle stage. A customer is sent by email address, or by website when it has none.
 3. **Customers** go to [`POST /known-clients`](/product/api#existing-clients): Eveil marks them as existing clients and never writes to them, even if a later search finds them again. Never send customers to `/contacts` instead: there they would be prospects like anyone else.
 4. **Prospects** go to [`POST /contacts`](/product/api#adding-contacts), all in one request. Someone Eveil already has is left as is, and an address that asked not to be contacted is refused, so sending the same person twice is harmless.
-5. In both HTTP Request nodes, replace `YOUR-PROJECT-SLUG` (and `eveil.cloud` if you self-host), and pick a **Bearer Auth** credential holding the Eveil token.
+5. **Closed HubSpot deals**, in the same hourly run, asks for the deals at *Closed won* or *Closed lost* that changed in the last 65 minutes, up to 100. The credential also needs `crm.objects.deals.read`. A custom pipeline names its stages differently: change `closedwon` and `closedlost` in that node and in **One item per deal**.
+6. For each person on those deals, **Find in Eveil** looks them up by email ([`GET /contacts?email=`](/product/api#contacts)), and **Set deal outcome** sends `won` or `lost` to [`PUT /contacts/{id}/status`](/product/api#deal-outcomes). Someone Eveil never had is skipped. A won deal is dated, so the campaigns that person was in count it among their wins, however long it took. Sending the same outcome twice changes nothing.
+7. In every Eveil HTTP Request node, replace `YOUR-PROJECT-SLUG` (and `eveil.cloud` if you self-host), and pick a **Bearer Auth** credential holding the Eveil token.
 
 To put new prospects straight into a running campaign, add an HTTP Request after **Add prospects**: `POST .../campaigns/<campaign-id>/enrolments`. Unless the project is [Autonomous](/product/autonomy), a new company still waits for your approval in Eveil before its people are written to.
 

@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Actions\HarvestRedditReplyExamples;
+use App\Actions\NoteArticleIdeas;
 use App\Ai\Agents\RedditOpportunityTriage;
 use App\Ai\Agents\RedditReplyWriter;
 use App\Ai\OutOfCredit;
@@ -65,9 +66,10 @@ class ScanRedditOpportunities implements ShouldQueue
         SeoThreadFinder $seoThreadFinder,
         TopComments $topComments,
         HarvestRedditReplyExamples $harvester,
+        NoteArticleIdeas $noteArticleIdeas,
         CurrentProject $currentProject,
     ): void {
-        $currentProject->run($this->project, function () use ($scanner, $seoThreadFinder, $topComments, $harvester): void {
+        $currentProject->run($this->project, function () use ($scanner, $seoThreadFinder, $topComments, $harvester, $noteArticleIdeas): void {
             $candidates = $scanner->find($this->project)
                 ->merge($seoThreadFinder->find($this->project))
                 ->unique(fn (OpportunityCandidate $candidate): string => $candidate->permalink)
@@ -84,7 +86,7 @@ class ScanRedditOpportunities implements ShouldQueue
             /** @var Collection<string, OpportunityCandidate> $byPermalink */
             $byPermalink = $candidates->keyBy(fn (OpportunityCandidate $candidate): string => $candidate->permalink);
 
-            $this->noteArticleIdeas($verdicts, $byPermalink);
+            $this->noteArticleIdeas($noteArticleIdeas, $verdicts, $byPermalink);
             $this->noteCompetitorMentions($verdicts, $byPermalink);
             $this->noteFeatureIdeas($verdicts, $byPermalink);
             $this->rememberRejected($verdicts, $byPermalink);
@@ -193,33 +195,37 @@ class ScanRedditOpportunities implements ShouldQueue
     }
 
     /**
-     * Threads the triage judged worth an article, reply opportunity or not.
-     * A thread already noted (open, used or dismissed) is left alone: the
-     * user's "no" sticks, and one thread is one idea.
+     * Threads the triage judged worth an article, reply opportunity or not,
+     * handed to `NoteArticleIdeas` to group into topics.
      *
      * @param  Collection<int, array{permalink?: string, is_opportunity?: bool, reason?: string, article_angle?: string, competitor?: string, competitor_signal?: string, competitor_summary?: string, feature_idea?: string, feature_evidence?: string}>  $verdicts
      * @param  Collection<string, OpportunityCandidate>  $byPermalink
      */
-    private function noteArticleIdeas(Collection $verdicts, Collection $byPermalink): void
+    private function noteArticleIdeas(NoteArticleIdeas $noteArticleIdeas, Collection $verdicts, Collection $byPermalink): void
     {
-        foreach ($verdicts as $verdict) {
-            $angle = trim((string) ($verdict['article_angle'] ?? ''));
-            $candidate = $byPermalink->get(trim((string) ($verdict['permalink'] ?? '')));
+        $threads = $verdicts
+            ->map(function (array $verdict) use ($byPermalink): ?array {
+                $angle = trim((string) ($verdict['article_angle'] ?? ''));
+                $candidate = $byPermalink->get(trim((string) ($verdict['permalink'] ?? '')));
 
-            if ($angle === '' || $candidate === null) {
-                continue;
-            }
-
-            Insight::query()->firstOrCreate(
-                ['project_id' => $this->project->id, 'kind' => InsightKind::Article, 'source_ref' => $candidate->permalink],
-                [
-                    'source' => 'reddit',
-                    'title' => $candidate->threadTitle ?? Str::limit($candidate->text, 120),
+                return $angle === '' || $candidate === null ? null : [
                     'angle' => $angle,
+                    'title' => $candidate->threadTitle ?? Str::limit($candidate->text, 120),
                     'url' => $candidate->permalink,
-                    'status' => InsightStatus::Open,
-                ],
-            );
+                    'subreddit' => $candidate->subreddit,
+                ];
+            })
+            ->filter()
+            ->values();
+
+        // A side benefit of the scan, like the harvest: never a reason to
+        // lose the reply drafts still to come.
+        try {
+            $noteArticleIdeas->handle($this->project, $threads);
+        } catch (OutOfCredit) {
+            // Not a failure: the spend guard already told the owners.
+        } catch (Throwable $e) {
+            report($e);
         }
     }
 

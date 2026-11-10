@@ -26,6 +26,7 @@ class InsightResource extends JsonResource
             'angle' => $this->angle,
             'url' => $this->url,
             'details' => $this->details ?? (object) [],
+            'mentions' => $this->mentions,
             'read_at' => $this->read_at?->toIso8601String(),
             'created_at' => $this->created_at?->toIso8601String(),
         ];

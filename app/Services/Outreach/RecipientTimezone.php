@@ -56,9 +56,9 @@ class RecipientTimezone
         $offsets = collect($zones)->mapWithKeys(fn (string $zone): array => [$zone => (new DateTimeZone($zone))->getOffset(now())]);
 
         if ($offsets->max() - $offsets->min() <= 3600) {
-            $common = $offsets->countBy()->sortDesc()->keys()->first();
+            $common = $offsets->mode()[0] ?? null;
 
-            return (string) $offsets->search($common);
+            return (string) $offsets->filter(fn (int $offset): bool => $offset === $common)->keys()->first();
         }
 
         // ponytail: zone city names and the one-hour rule only, so "Austin,
@@ -106,7 +106,11 @@ class RecipientTimezone
         }
 
         $codes = collect(DateTimeZone::listIdentifiers())
-            ->map(fn (string $zone): string => (string) (new DateTimeZone($zone))->getLocation()['country_code'])
+            ->map(function (string $zone): string {
+                $location = (new DateTimeZone($zone))->getLocation();
+
+                return $location === false ? '' : $location['country_code'];
+            })
             ->filter(fn (string $code): bool => strlen($code) === 2)
             ->unique();
 

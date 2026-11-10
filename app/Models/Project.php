@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Casts\EncryptedCredential;
 use App\Enums\AdAccountStatus;
 use App\Enums\AdStatus;
+use App\Enums\AnalysisType;
 use App\Enums\ArticleFrequency;
 use App\Enums\AutonomyLevel;
 use App\Enums\BrandAssetKind;
@@ -272,6 +273,25 @@ class Project extends Model implements HasMedia, StoresMediaInterface
     public function analyses(): HasMany
     {
         return $this->hasMany(ProjectAnalysis::class);
+    }
+
+    /**
+     * What the site already covers, from the latest website reading: what
+     * an article must not repeat.
+     *
+     * @return Collection<int, array{url: string, title: string}>
+     */
+    public function sitePages(): Collection
+    {
+        $raw = $this->analyses()
+            ->where('type', AnalysisType::Website)
+            ->latest('id')
+            ->value('raw');
+
+        return collect(is_array($raw['pages'] ?? null) ? $raw['pages'] : [])
+            ->filter(fn (mixed $page): bool => is_array($page) && isset($page['url']))
+            ->map(fn (array $page): array => ['url' => (string) $page['url'], 'title' => (string) ($page['title'] ?? '')])
+            ->values();
     }
 
     /**

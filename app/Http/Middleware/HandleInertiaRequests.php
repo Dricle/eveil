@@ -181,7 +181,7 @@ class HandleInertiaRequests extends Middleware
 
         return app(CurrentProject::class)->run($project, fn (): array => [
             // Unread, same reasoning as inbox: what is waiting to be looked at.
-            'insights' => Insight::query()->where('status', InsightStatus::Open)->whereNull('read_at')->count(),
+            'insights' => Insight::query()->where('status', InsightStatus::Open)->inFeed()->whereNull('read_at')->count(),
             'targets' => TargetProfile::query()->count(),
             'leads' => Company::query()->contactable()->count(),
             // Todos, not a running total of everyone who ever replied: the

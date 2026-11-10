@@ -30,6 +30,7 @@ class InsightController extends Controller
 
         $insights = Insight::query()
             ->where('status', InsightStatus::Open)
+            ->inFeed()
             ->when($kind, fn ($query, InsightKind $kind) => $query->where('kind', $kind))
             ->when($competitor !== '' && $competitor !== 'all', fn ($query) => $query->where('details->competitor', $competitor))
             ->when($unread, fn ($query) => $query->whereNull('read_at'))
@@ -46,7 +47,7 @@ class InsightController extends Controller
                 is_array($knowledgeBase['competitors'] ?? null) ? $knowledgeBase['competitors'] : [],
                 fn (mixed $name): bool => is_string($name) && trim($name) !== '',
             )),
-            'unreadCount' => Insight::query()->where('status', InsightStatus::Open)->whereNull('read_at')->count(),
+            'unreadCount' => Insight::query()->where('status', InsightStatus::Open)->inFeed()->whereNull('read_at')->count(),
         ]);
     }
 

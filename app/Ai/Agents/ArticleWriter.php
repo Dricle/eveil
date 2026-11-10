@@ -15,7 +15,7 @@ use Stringable;
  * Drafts one SEO article for the project's own blog per call, picking its
  * topic from what Eveil already found: a feature the site never explains,
  * a competitor worth a comparison, a Reddit discussion the scan noted as
- * worth an article (`Insight`), a client win, industry news. Same editorial-judgment shape as
+ * worth an article (an `Insight` topic, most asked first), a client win, industry news. Same editorial-judgment shape as
  * `SocialPostWriter`: the caller gathers every signal, the agent decides
  * which is worth an article.
  *
@@ -28,7 +28,7 @@ class ArticleWriter extends EveilAgent implements HasStructuredOutput
      * @param  Collection<int, array{url: string, title: string}>  $sitePages  what the site already covers
      * @param  Collection<int, Article>  $existing  articles already drafted or published, never repeat one
      * @param  Collection<int, Article>  $rejected  recently rejected, with reasons
-     * @param  Collection<int, array{title: string, permalink: string, angle: string}>  $ideas  Reddit discussions the scan noted as worth an article
+     * @param  Collection<int, array{angle: string, mentions: int, threads: list<array{title: string, url: string, subreddit: string|null}>}>  $ideas  article topics Reddit threads asked for, most asked first
      * @param  Collection<int, array{title: string, url: string, snippet: string}>  $news
      */
     public function __construct(
@@ -57,9 +57,11 @@ class ArticleWriter extends EveilAgent implements HasStructuredOutput
 
         - A USER BRIEF, when one is given: that is the topic, full stop. Set
           source_type to manual.
-        - A REDDIT DISCUSSION already noted as worth an article, with its angle.
-          Write that article, for this product's readers, not a recap of the
-          thread. source_type reddit_thread, source_ref the thread permalink.
+        - A REDDIT TOPIC already noted as worth an article, with its angle and
+          the threads that asked for it. Prefer the topic asked in the most
+          threads: that is the demand. Write that article, for this product's
+          readers, drawing on what the threads say, not a recap of them.
+          source_type reddit_thread, source_ref one of its thread permalinks.
         - A FEATURE from the knowledge base that none of the site's pages or
           existing articles explains in depth. source_type feature.
         - A COMPETITOR from the knowledge base: an honest comparison ("X vs Y",
@@ -156,8 +158,10 @@ class ArticleWriter extends EveilAgent implements HasStructuredOutput
         }
 
         if ($this->ideas->isNotEmpty()) {
-            $sections[] = "## Reddit discussions worth an article, with the angle\n\n".$this->ideas
-                ->map(fn (array $idea): string => "- {$idea['title']} ({$idea['permalink']}): {$idea['angle']}")
+            $sections[] = "## Article topics Reddit threads asked for, most asked first\n\n".$this->ideas
+                ->map(fn (array $idea): string => "- {$idea['angle']} (asked in {$idea['mentions']} threads)\n".collect($idea['threads'])
+                    ->map(fn (array $thread): string => "  - {$thread['title']} ({$thread['url']})")
+                    ->implode("\n"))
                 ->implode("\n");
         }
 

@@ -5,6 +5,12 @@ export type CompetitorSignal = 'complaint' | 'comparison' | 'switching' | 'prais
 /**
  * One item of the Insights feed: something Eveil noticed while reading.
  */
+export type ArticleThread = {
+    title: string
+    url: string
+    subreddit?: string | null
+}
+
 export type Insight = {
     id: number
     kind: InsightKind
@@ -23,7 +29,11 @@ export type Insight = {
         subreddit?: string | null
         /** A feature idea's thread, whose own title is the idea. */
         thread_title?: string | null
+        /** An article topic's threads, every one that asked for it. */
+        threads?: ArticleThread[]
     }
+    /** How many threads asked for an article topic. 1 for everything else. */
+    mentions: number
     read_at: string | null
     created_at: string | null
 }

@@ -10,15 +10,15 @@ export function insightPrompt (insight: Insight, project: Project, mode: 'standa
     const feature = insight.kind === 'feature'
     const what = feature ? 'feature request' : 'acquisition idea (a way to bring more people to the site)'
     const judge = feature
-        ? `Before writing any code, check whether the codebase already does this, then judge whether it is worth building for ${project.name}: does it fit what the product is for, how many users would it serve, and how much work is it. If it is not worth it, say why and stop.`
-        : `Before writing any code, check whether the site already does this, then judge whether it is worth doing for ${project.name}: would it bring the right visitors, and how much work is it. If it is not worth it, say why and stop. Some of it may need me rather than code (an account to open, a partner to contact): say which part.`
+        ? `Before writing any code, check whether the codebase already does this. If it does, say where and stop: it counts as done. Otherwise judge whether it is worth building for ${project.name}: does it fit what the product is for, how many users would it serve, and how much work is it. If it is not worth it, say why and stop.`
+        : `Before writing any code, check whether the site already does this. If it does, say where and stop: it counts as done. Otherwise judge whether it is worth doing for ${project.name}: would it bring the right visitors, and how much work is it. If it is not worth it, say why and stop. Some of it may need me rather than code (an account to open, a partner to contact): say which part.`
 
     if (mode === 'mcp') {
         return [
             `Use the Eveil MCP server (${window.location.origin}/mcp) to read the ${what} #${insight.id} of the project "${project.slug}": call list-insights with project "${project.slug}" and insight_id ${insight.id}. Read the page it links to if there is one.`,
             judge,
             'If it is worth it, plan it, build it with tests, and tell me what you changed.',
-            `Then close it in Eveil with update-insight (project "${project.slug}", insight_id ${insight.id}): status "used" once done, or "dismissed" if you decided it is not worth it.`
+            `Then close it in Eveil with update-insight (project "${project.slug}", insight_id ${insight.id}): status "used" once done or if it already existed (a done item is added to the knowledge base), "dismissed" only if you decided it is not worth building.`
         ].join('\n\n')
     }
 

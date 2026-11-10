@@ -6,7 +6,7 @@ Eveil finds Reddit threads worth replying to and drafts what to say — but post
 
 Two independent sources feed the same queue:
 
-- **Live subreddits.** Whatever subreddits your target profiles have resolved (the same ones discovery already tracks) get scanned for recent posts and comments where someone describes a real problem this product solves.
+- **Live subreddits.** Whatever subreddits your target profiles have resolved (the same ones discovery already tracks) get scanned for recent posts and comments where someone describes a real problem this product solves. A comment is always read under its own post: when the comment is the better place to reply (a follow up question, someone with the same problem), the drafts answer that comment, in the context of the post.
 - **Evergreen "best X" threads.** Reddit threads that already rank on Google for buyer-intent searches — "best `<your category>`", "`<a named competitor>` alternative" — get found and read too. These threads keep getting read long after they go quiet, so a genuinely useful, honest answer there is often a better opportunity than a live discussion, with none of the self-promotion tension since the thread exists specifically to ask "what should I use."
 
 Both run on the same schedule: turn scanning on from the **Reddit** page (off by default — pick daily, weekly, every two weeks, or monthly), or hit **Scan now** for an on-demand check outside the cadence.

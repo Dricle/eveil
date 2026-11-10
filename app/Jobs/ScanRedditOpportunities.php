@@ -51,8 +51,9 @@ class ScanRedditOpportunities implements ShouldQueue
     private const TONE_SAMPLE_LIMIT = 5;
 
     /**
-     * ~1500 chars per candidate (3000 for SEO threads) keeps a batch of 40
-     * well under 50k tokens, a quarter of the 200k context window.
+     * ~1500 chars per candidate (2500 for a comment with its post, 3000 for
+     * SEO threads) keeps a batch of 40 well under 50k tokens, a quarter of
+     * the 200k context window.
      */
     private const TRIAGE_BATCH_SIZE = 40;
 
@@ -345,6 +346,8 @@ class ScanRedditOpportunities implements ShouldQueue
             $candidate->subreddit,
             (string) $candidate->threadTitle,
             $candidate->text,
+            $candidate->parentPost,
+            $candidate->author,
             $candidate->source,
             $candidate->searchQuery,
             $toneSample,

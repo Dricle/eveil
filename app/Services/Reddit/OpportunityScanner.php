@@ -22,6 +22,12 @@ use Throwable;
  * COMMENTS are real (14/15) - posts alone would starve this scanner, so
  * both are fetched. `sort=new` 400s ("`sort` must be one of asc, desc");
  * `sort=desc&sort_type=created_utc` is the confirmed-working equivalent.
+ *
+ * A comment never travels alone: the post it sits under is fetched with it
+ * (one `posts/ids` call per subreddit) and carried as `parentPost`. Read
+ * without it, a comment that gives advice looks like the thread's question,
+ * and the triage and the writer both answer something nobody asked. A
+ * comment whose post cannot be read is dropped; it comes back next scan.
  */
 class OpportunityScanner
 {
@@ -48,8 +54,11 @@ class OpportunityScanner
                 $candidates->push($this->fromPost($item));
             }
 
-            foreach ($this->fetchComments($subreddit) as $item) {
-                $candidates->push($this->fromComment($item));
+            $comments = $this->fetchComments($subreddit);
+            $parentPosts = $this->fetchParentPosts($comments);
+
+            foreach ($comments as $item) {
+                $candidates->push($this->fromComment($item, $parentPosts));
             }
         }
 
@@ -104,6 +113,50 @@ class OpportunityScanner
     private function fetchComments(string $subreddit): array
     {
         return $this->fetch('comments', $subreddit);
+    }
+
+    /**
+     * The posts these comments sit under, in one call, keyed by post id.
+     *
+     * @param  array<int, array<string, mixed>>  $comments
+     * @return array<string, array{title: string, selftext: string}>
+     */
+    private function fetchParentPosts(array $comments): array
+    {
+        $ids = (new Collection($comments))
+            ->map(fn (array $item): string => is_string($item['link_id'] ?? null) ? str_replace('t3_', '', $item['link_id']) : '')
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($ids->isEmpty()) {
+            return [];
+        }
+
+        try {
+            $response = Http::timeout((int) config('eveil.sources.reddit.timeout'))
+                ->withHeaders(['User-Agent' => (string) config('eveil.crawl.user_agent')])
+                ->get(rtrim((string) config('eveil.sources.reddit.url'), '/').'/api/posts/ids', [
+                    'ids' => $ids->implode(','),
+                ]);
+        } catch (Throwable) {
+            return [];
+        }
+
+        if (! $response->successful()) {
+            return [];
+        }
+
+        /** @var array<int, array<string, mixed>> $posts */
+        $posts = $response->json('data') ?? [];
+
+        return (new Collection($posts))
+            ->filter(fn (array $post): bool => is_string($post['id'] ?? null))
+            ->mapWithKeys(fn (array $post): array => [(string) $post['id'] => [
+                'title' => is_string($post['title'] ?? null) ? trim($post['title']) : '',
+                'selftext' => is_string($post['selftext'] ?? null) && ! $this->isRemoved(trim($post['selftext'])) ? trim($post['selftext']) : '',
+            ]])
+            ->all();
     }
 
     /**
@@ -166,8 +219,9 @@ class OpportunityScanner
 
     /**
      * @param  array<string, mixed>  $item
+     * @param  array<string, array{title: string, selftext: string}>  $parentPosts
      */
-    private function fromComment(array $item): ?OpportunityCandidate
+    private function fromComment(array $item, array $parentPosts): ?OpportunityCandidate
     {
         $body = is_string($item['body'] ?? null) ? trim($item['body']) : '';
         $author = (string) ($item['author'] ?? '');
@@ -179,7 +233,9 @@ class OpportunityScanner
         $permalink = $this->permalink($item);
         $linkId = is_string($item['link_id'] ?? null) ? str_replace('t3_', '', $item['link_id']) : '';
 
-        if ($permalink === '' || $linkId === '') {
+        $parent = $parentPosts[$linkId] ?? null;
+
+        if ($permalink === '' || $linkId === '' || $parent === null || $parent['title'] === '') {
             return null;
         }
 
@@ -190,8 +246,9 @@ class OpportunityScanner
             searchQuery: null,
             author: $author,
             text: mb_substr($body, 0, 1500),
-            threadTitle: null,
+            threadTitle: $parent['title'],
             postId: $linkId,
+            parentPost: mb_substr(trim("{$parent['title']}\n\n{$parent['selftext']}"), 0, 1000),
         );
     }
 

@@ -18,6 +18,7 @@ use App\Models\User;
 use App\Notifications\ArticleDrafted;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
+use Laravel\Ai\Prompts\AgentPrompt;
 use Laravel\Ai\Responses\Data\Meta;
 use Laravel\Ai\Responses\Data\TextUsage;
 use Laravel\Ai\Responses\StructuredTextResponse;
@@ -165,4 +166,14 @@ it('queues only the projects whose article cadence is due, and moves them on', f
 
     Queue::assertPushed(GenerateArticle::class, fn (GenerateArticle $job): bool => $job->project->is($due));
     expect($due->fresh()->article_next_at->isAfter(now()->addDays(6)))->toBeTrue();
+});
+
+it('tells the writer to shape the article so AI answer engines can cite it', function () {
+    $project = Project::factory()->create();
+    ArticleWriter::fake([fakeArticleResponse([])]);
+
+    GenerateArticle::dispatchSync($project);
+
+    ArticleWriter::assertPrompted(fn (AgentPrompt $prompt): bool => str_contains((string) $prompt->agent->instructions(), 'AI answer engines')
+        && str_contains((string) $prompt->agent->instructions(), '## FAQ'));
 });

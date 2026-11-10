@@ -75,12 +75,11 @@ class JobBoards
 
         $postings = $path === null ? $response->json() : $response->json($path);
 
-        return collect(is_array($postings) ? $postings : [])
+        return array_values(collect(is_array($postings) ? $postings : [])
             ->map(fn (mixed $posting): string => mb_trim((string) (is_array($posting) ? ($posting[$titleKey] ?? '') : '')))
             ->filter()
             ->unique()
             ->take(self::MAX_ROLES)
-            ->values()
-            ->all();
+            ->all());
     }
 }

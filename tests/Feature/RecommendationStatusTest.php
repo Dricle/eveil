@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\InsightKind;
 use App\Models\Insight;
 use App\Models\Organization;
 use App\Models\Project;
@@ -73,4 +74,14 @@ it('never updates a recommendation on another project', function () {
         ->assertNotFound();
 
     expect($someoneElses->fresh()->recommendations()[0]['status'])->toBe('proposed');
+});
+
+it('adds a feature marked done from the dashboard to the key features', function () {
+    [$user, $project] = recommender();
+    $project->update(['knowledge_base' => ['key_features' => []]]);
+    Insight::factory()->for($project)->recommendation('crm_sync', 'Two-way CRM sync', kind: InsightKind::Feature)->create();
+
+    $this->actingAs($user)->put(route('recommendations.status', 'crm_sync'), ['status' => 'done'])->assertRedirect();
+
+    expect($project->fresh()->knowledge_base['key_features'])->toBe(['Two-way CRM sync']);
 });

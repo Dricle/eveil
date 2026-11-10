@@ -216,3 +216,17 @@ it('ranks the missing features by how many threads ask, newest first otherwise',
         ->get(route('insights.index'))
         ->assertInertia(fn ($page) => $page->where('insights.data.0.id', $newer->id));
 });
+
+it('adds a missing feature marked done to the key features, once, and never an acquisition idea', function () {
+    [$user, $project] = insightSetup();
+    $project->update(['knowledge_base' => ['key_features' => ['CSV import']]]);
+    $feature = Insight::factory()->for($project)->featureRequest()->create(['title' => 'Export invoices to accounting software']);
+    $duplicate = Insight::factory()->for($project)->featureRequest()->create(['title' => 'csv import']);
+    $acquisition = Insight::factory()->for($project)->recommendation('referral_program')->create();
+
+    foreach ([$feature, $duplicate, $acquisition] as $insight) {
+        $this->actingAs($user)->put(route('insights.update', $insight), ['status' => 'used'])->assertRedirect();
+    }
+
+    expect($project->fresh()->knowledge_base)->toBe(['key_features' => ['CSV import', 'Export invoices to accounting software']]);
+});

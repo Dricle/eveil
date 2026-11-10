@@ -13,7 +13,8 @@ use App\Models\Project;
  * the user's behalf (`App\Ai\Tools\UpdateRecommendation`). Same "one writer"
  * shape as `SetOutreachStatus`: both callers hand it a key and whichever
  * fields changed, in the recommendation vocabulary, and this translates
- * them onto the `insights` row.
+ * them onto the `insights` row. A feature marked done joins the key
+ * features (`Project::syncBuiltFeatures()`).
  */
 class UpdateRecommendation
 {
@@ -47,6 +48,10 @@ class UpdateRecommendation
             // Deciding on one means it was read.
             'read_at' => $status !== null && $status !== RecommendationStatus::Proposed ? ($idea->read_at ?? now()) : null,
         ], fn (mixed $value): bool => $value !== null));
+
+        if ($status === RecommendationStatus::Done && $idea->kind === InsightKind::Feature) {
+            $project->syncBuiltFeatures();
+        }
 
         return true;
     }

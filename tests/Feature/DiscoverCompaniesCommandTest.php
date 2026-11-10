@@ -366,9 +366,15 @@ it('diagnoses a quiet run as saturated, not wrong, once the profile has proven i
 
 it('diagnoses a wrong source rather than a wrong profile when nothing is found', function () {
     activeTargetProfile();
-    DiscoveryPlanner::fake([plan(overpass: [overpassProbe()])]);
+    // An empty first wave pivots to a second plan (`mayPivotSource()`). Left
+    // unscripted, the fake would invent one with random queries that reach the
+    // real network and sometimes find a candidate, so it is scripted empty too.
+    DiscoveryPlanner::fake([plan(overpass: [overpassProbe()]), plan()]);
 
-    Http::fake(['*/api/interpreter' => Http::response(['elements' => []])]);
+    Http::fake([
+        '*/api/interpreter' => Http::response(['elements' => []]),
+        '*' => Http::response('', 404),
+    ]);
 
     $this->artisan('eveil:discover-companies')
         ->expectsOutputToContain('sources were wrong')

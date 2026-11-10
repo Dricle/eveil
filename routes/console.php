@@ -48,6 +48,10 @@ Schedule::command('eveil:promote-proven-emails')->daily();
 // not due yet, same reasoning as the command above.
 Schedule::command('eveil:social-generate-due')->daily();
 
+// A release is news once, and a day late is still news. The first check of
+// a repo only records its latest release, so linking one never posts old news.
+Schedule::command('eveil:announce-releases')->daily();
+
 // A post's engagement settles quickly, so daily is enough to catch it. Cheap
 // either way: Bluesky's counts are free and public, a LinkedIn account that
 // never connected the separate Community Management app is skipped outright

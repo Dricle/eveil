@@ -1,10 +1,10 @@
 {
-  "name": "Eveil: HubSpot contacts to Eveil",
+  "name": "Eveil: HubSpot contacts and deals to Eveil",
   "nodes": [
     {
       "parameters": {
-        "content": "## HubSpot → Eveil\nEvery hour, the contacts created in HubSpot since the last run go to Eveil: **customers** are marked as existing clients (never emailed), everyone else is added as a prospect.\n\n1. **New HubSpot contacts**: pick a **HubSpot App Token** credential (private app with `crm.objects.contacts.read`).\n2. **Mark existing clients** and **Add prospects**: replace `YOUR-PROJECT-SLUG` (and the domain if you self-host), and pick a **Bearer Auth** credential holding an Eveil API token (**Settings → API**).\n3. Activate.\n\nUp to 100 new contacts an hour. Docs: https://docs.eveil.cloud/product/webhooks",
-        "height": 360,
+        "content": "## HubSpot → Eveil\nEvery hour, the contacts created in HubSpot since the last run go to Eveil: **customers** are marked as existing clients (never emailed), everyone else is added as a prospect. Deals closed since the last run go back too: the people on a **won** or **lost** deal get that status in Eveil, so its campaigns count their wins.\n\n1. Every HubSpot node: pick a **HubSpot App Token** credential (private app with `crm.objects.contacts.read` and `crm.objects.deals.read`).\n2. Every Eveil node (**Mark existing clients**, **Add prospects**, **Find in Eveil**, **Set deal outcome**): replace `YOUR-PROJECT-SLUG` (and the domain if you self-host), and pick a **Bearer Auth** credential holding an Eveil API token (**Settings → API**).\n3. Custom deal pipeline? Change `closedwon` and `closedlost` in **Closed HubSpot deals** and **One item per deal**.\n4. Activate.\n\nUp to 100 new contacts and 100 closed deals an hour. Docs: https://docs.eveil.cloud/product/webhooks",
+        "height": 480,
         "width": 440
       },
       "id": "7b8c9d0e-1f2a-4b3c-8d4e-5f6a7b8c9d0e",
@@ -141,6 +141,167 @@
         880,
         100
       ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.hubapi.com/crm/v3/objects/deals/search",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ filterGroups: [{ filters: [{ propertyName: 'hs_lastmodifieddate', operator: 'GTE', value: String($now.minus({ minutes: 65 }).toMillis()) }, { propertyName: 'dealstage', operator: 'IN', values: ['closedwon', 'closedlost'] }] }], properties: ['dealstage'], limit: 100 }) }}",
+        "options": {}
+      },
+      "id": "5d6e7f8a-9b0c-4d1e-8f2a-3b4c5d6e7f81",
+      "name": "Closed HubSpot deals",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// A won deal is `won` in Eveil, a lost one `lost`. Custom pipelines name\n// their stages differently: change both here and in Closed HubSpot deals.\nreturn ($input.first().json.results ?? []).map(deal => ({\n  json: { id: deal.id, status: deal.properties.dealstage === 'closedwon' ? 'won' : 'lost' },\n}));"
+      },
+      "id": "6e7f8a9b-0c1d-4e2f-9a3b-4c5d6e7f8a92",
+      "name": "One item per deal",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.hubapi.com/crm/v4/objects/deals/{{ $json.id }}/associations/contacts",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
+        "options": {}
+      },
+      "id": "7f8a9b0c-1d2e-4f3a-8b4c-5d6e7f8a9ba3",
+      "name": "Deal contacts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Every person on the deal gets its outcome.\nconst deals = $('One item per deal').all();\nreturn $input.all().flatMap((item, i) => (item.json.results ?? []).map(contact => ({\n  json: { id: contact.toObjectId, status: deals[i].json.status },\n})));"
+      },
+      "id": "8a9b0c1d-2e3f-4a4b-9c5d-6e7f8a9b0cb4",
+      "name": "One item per contact",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.hubapi.com/crm/v3/objects/contacts/{{ $json.id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "properties",
+              "value": "email"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9b0c1d2e-3f4a-4b5c-8d6e-7f8a9b0c1dc5",
+      "name": "Contact email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Eveil knows people by address. Someone without one is skipped: an empty\n// filter would match everyone.\nconst contacts = $('One item per contact').all();\nreturn $input.all()\n  .map((item, i) => ({ json: { email: item.json.properties?.email, status: contacts[i].json.status } }))\n  .filter(item => item.json.email);"
+      },
+      "id": "0c1d2e3f-4a5b-4c6d-9e7f-8a9b0c1d2ed6",
+      "name": "Email and outcome",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://eveil.cloud/api/v1/projects/YOUR-PROJECT-SLUG/contacts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "email",
+              "value": "={{ $json.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1d2e3f4a-5b6c-4d7e-8f8a-9b0c1d2e3fe7",
+      "name": "Find in Eveil",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Only people Eveil wrote to, or found: a deal with anyone else is not its own.\nconst outcomes = $('Email and outcome').all();\nreturn $input.all().flatMap((item, i) => {\n  const contact = item.json.data?.[0];\n  return contact ? [{ json: { id: contact.id, status: outcomes[i].json.status } }] : [];\n});"
+      },
+      "id": "2e3f4a5b-6c7d-4e8f-9a9b-0c1d2e3f4af8",
+      "name": "Known to Eveil?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://eveil.cloud/api/v1/projects/YOUR-PROJECT-SLUG/contacts/{{ $json.id }}/status",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ status: $json.status }) }}",
+        "options": {}
+      },
+      "id": "3f4a5b6c-7d8e-4f9a-8bac-1d2e3f4a5b09",
+      "name": "Set deal outcome",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1980,
+        360
+      ]
     }
   ],
   "connections": {
@@ -149,6 +310,11 @@
         [
           {
             "node": "New HubSpot contacts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Closed HubSpot deals",
             "type": "main",
             "index": 0
           }
@@ -189,6 +355,94 @@
         [
           {
             "node": "Add prospects",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Closed HubSpot deals": {
+      "main": [
+        [
+          {
+            "node": "One item per deal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One item per deal": {
+      "main": [
+        [
+          {
+            "node": "Deal contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deal contacts": {
+      "main": [
+        [
+          {
+            "node": "One item per contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One item per contact": {
+      "main": [
+        [
+          {
+            "node": "Contact email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contact email": {
+      "main": [
+        [
+          {
+            "node": "Email and outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email and outcome": {
+      "main": [
+        [
+          {
+            "node": "Find in Eveil",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find in Eveil": {
+      "main": [
+        [
+          {
+            "node": "Known to Eveil?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Known to Eveil?": {
+      "main": [
+        [
+          {
+            "node": "Set deal outcome",
             "type": "main",
             "index": 0
           }

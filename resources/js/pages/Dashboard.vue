@@ -19,6 +19,7 @@ import recommendationRoutes from '@/routes/recommendations'
 import organizationBilling from '@/routes/settings/organization/billing'
 import mailboxSettings from '@/routes/settings/mailboxes'
 import autonomySettings from '@/routes/settings/autonomy'
+import knowledgeBaseSettings from '@/routes/settings/knowledge-base'
 import targets from '@/routes/targets'
 import type { Article, Conversation, DashboardCampaign, DashboardDiscoveryRun, DashboardReply, DashboardStats, Mailbox, Recommendation, RedditReply, SocialAccount, SocialPost } from '@/types'
 import { CLASSIFICATIONS } from '@/types/inbox'
@@ -27,6 +28,7 @@ defineOptions({ layout: AppLayout })
 
 const props = defineProps<{
     onboarding: boolean
+    hasCodeRepository: boolean
     greeting: { name: string | null, days_running: number }
     stats: DashboardStats
     autonomy: {
@@ -52,6 +54,28 @@ const props = defineProps<{
 
 const page = usePage()
 const toast = useToast()
+
+// Dismissing the "link your repo" banner is a per-viewer convenience, so it
+// lives in the browser, per project; it comes back if storage is unavailable.
+const repoBannerKey = `eveil:repo-banner-dismissed:${page.props.currentProject!.slug}`
+const repoBannerDismissed = ref(readFlag(repoBannerKey))
+
+function readFlag (key: string): boolean {
+    try {
+        return localStorage.getItem(key) === '1'
+    } catch {
+        return false
+    }
+}
+
+function dismissRepoBanner () {
+    repoBannerDismissed.value = true
+    try {
+        localStorage.setItem(repoBannerKey, '1')
+    } catch {
+        // Hidden for this visit only.
+    }
+}
 
 // Everything waiting on a person, whatever the channel. Each row opens the
 // SAME component the channel's own page renders, so reviewing here and there
@@ -239,6 +263,19 @@ const topupPercent = computed(() => {
             title="Finish setting up"
             description="Your site has been read, or is being read. Agree with what it understood and the search starts. That is the whole setup."
             :actions="[{ label: 'Continue', to: relativeUrl(onboardingRoute.url({ project: page.props.currentProject!.slug })), color: 'primary', variant: 'solid' }]"
+        />
+
+        <UAlert
+            v-if="!onboarding && !hasCodeRepository && !repoBannerDismissed"
+            class="mb-4"
+            color="neutral"
+            variant="subtle"
+            icon="i-lucide-github"
+            title="Link your GitHub repository"
+            description="Eveil then reads your code to learn every feature your product really has, and drafts a post each time you publish a release."
+            :actions="[{ label: 'Link a repository', to: relativeUrl(knowledgeBaseSettings.edit.url({ project: page.props.currentProject!.slug })), color: 'neutral', variant: 'solid' }]"
+            close
+            @update:open="dismissRepoBanner"
         />
 
         <div class="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">

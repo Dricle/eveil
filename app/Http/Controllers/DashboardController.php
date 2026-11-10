@@ -21,6 +21,7 @@ use App\Http\Resources\SocialPostResource;
 use App\Models\Article;
 use App\Models\Campaign;
 use App\Models\CampaignLead;
+use App\Models\CodeRepository;
 use App\Models\DiscoveryRun;
 use App\Models\Lead;
 use App\Models\Message;
@@ -57,6 +58,9 @@ class DashboardController extends Controller
             // the end of setup.
             'onboarding' => DiscoveryRun::query()->doesntExist()
                 && ($this->currentProject->getOrFail()->email_enabled || TargetProfile::query()->doesntExist()),
+            // A project without its code is described from its site alone and
+            // never announces a release: worth a nudge, dismissable.
+            'hasCodeRepository' => CodeRepository::query()->exists(),
             'greeting' => [
                 'name' => explode(' ', (string) $request->user()?->name)[0],
                 'days_running' => (int) $this->currentProject->get()?->created_at?->diffInDays(now()),

@@ -11,6 +11,7 @@ use App\Models\AgentRun;
 use App\Models\Article;
 use App\Models\Campaign;
 use App\Models\CampaignLead;
+use App\Models\CodeRepository;
 use App\Models\Company;
 use App\Models\DiscoveryRun;
 use App\Models\DiscoveryTask;
@@ -208,4 +209,17 @@ it('lists every draft and unanswered reply waiting on a person, this project onl
             ->has('review.conversations', 1)
             ->has('review.articles', 1)
             ->where('review.conversations.0.id', $todo->id));
+});
+
+it('says whether this project has linked its code, ignoring other projects', function () {
+    [, $project, $user] = dashboardUser();
+    CodeRepository::factory()->create();
+
+    $this->actingAs($user)->get(route('dashboard'))
+        ->assertInertia(fn ($page) => $page->where('hasCodeRepository', false));
+
+    CodeRepository::factory()->for($project)->create();
+
+    $this->actingAs($user)->get(route('dashboard'))
+        ->assertInertia(fn ($page) => $page->where('hasCodeRepository', true));
 });

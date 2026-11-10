@@ -42,6 +42,7 @@ it('lists this project\'s open insights, newest first, with the unread count', f
             ->has('insights.data', 3)
             ->where('insights.data.0.id', Insight::query()->where('project_id', $project->id)->where('status', InsightStatus::Open)->max('id'))
             ->where('unreadCount', 2)
+            ->where('counts', ['acquisition' => 1, 'article' => 1, 'competitor_mention' => 1])
             ->where('competitors', ['RouteCo', 'Fleetly']));
 
     $this->actingAs($user)

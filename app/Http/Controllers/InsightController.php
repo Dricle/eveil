@@ -48,6 +48,11 @@ class InsightController extends Controller
                 fn (mixed $name): bool => is_string($name) && trim($name) !== '',
             )),
             'unreadCount' => Insight::query()->where('status', InsightStatus::Open)->inFeed()->whereNull('read_at')->count(),
+            // One tab per kind, each with its size, so 26 missing features
+            // never hide 3 acquisition ideas further down the feed.
+            'counts' => Insight::query()->where('status', InsightStatus::Open)->inFeed()
+                ->toBase()->selectRaw('kind, count(*) as total')->groupBy('kind')->pluck('total', 'kind')
+                ->map(fn (mixed $total): int => (int) $total),
         ]);
     }
 

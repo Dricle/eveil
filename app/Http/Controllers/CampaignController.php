@@ -19,6 +19,7 @@ use App\Http\Resources\TargetProfileSummaryResource;
 use App\Models\AgentRun;
 use App\Models\Campaign;
 use App\Models\CampaignLead;
+use App\Models\Lead;
 use App\Models\Message;
 use App\Models\TargetProfile;
 use App\Support\CurrentProject;
@@ -86,6 +87,23 @@ class CampaignController extends Controller
                     ->where('pause_reason', 'awaiting_human')
                     ->count(),
             ],
+            // Where the people who answer come from: an import, or which
+            // discovery source found their company. Counted per person
+            // written to, so the rates compare; an out-of-office is no reply.
+            'bySource' => Lead::query()
+                ->whereHas('messages', fn ($messages) => $messages->where('direction', MessageDirection::Outbound)->whereNotNull('sent_at'))
+                ->selectRaw("coalesce(source, 'unknown') as source, count(*) as contacted")
+                ->selectRaw('count(*) filter (where exists (select 1 from messages where messages.lead_id = leads.id and direction = ? and coalesce(classification, \'\') != ?)) as replied', [MessageDirection::Inbound->value, ReplyClassification::AutoReply->value])
+                ->selectRaw('count(*) filter (where exists (select 1 from messages where messages.lead_id = leads.id and direction = ? and classification = ?)) as interested', [MessageDirection::Inbound->value, ReplyClassification::Interested->value])
+                ->groupByRaw("coalesce(source, 'unknown')")
+                ->orderByDesc('contacted')
+                ->get()
+                ->map(fn (Lead $row): array => [
+                    'source' => $row->source,
+                    'contacted' => (int) $row->getAttribute('contacted'),
+                    'replied' => (int) $row->getAttribute('replied'),
+                    'interested' => (int) $row->getAttribute('interested'),
+                ]),
             // `eveil:enrol-due` skips a supervised project on purpose: the
             // manual "add people now" button only earns a place on the page
             // for that one autonomy level, everyone else already gets it for

@@ -11,6 +11,7 @@ use App\Enums\EmailStatus;
 use App\Enums\MessageDirection;
 use App\Enums\MessageStatus;
 use App\Enums\OutreachStatus;
+use App\Enums\ReplyClassification;
 use App\Enums\SuppressionLayer;
 use App\Jobs\SendCampaignStep;
 use App\Models\Campaign;
@@ -1203,4 +1204,34 @@ it('says nothing at all when the sequence actually filled', function () {
         ->assertSessionMissing('status');
 
     expect(CampaignLead::query()->count())->toBe(1);
+});
+
+it('compares reply rates by where the people written to came from', function () {
+    [$user, $project] = sender();
+
+    $write = function (string $source, ?ReplyClassification $reply = null) use ($project): void {
+        $lead = Lead::factory()->create(['project_id' => $project->id, 'source' => $source]);
+        Message::factory()->create(['lead_id' => $lead->id]);
+
+        if ($reply !== null) {
+            Message::factory()->create(['lead_id' => $lead->id, 'direction' => MessageDirection::Inbound, 'classification' => $reply]);
+        }
+    };
+
+    $write('import', ReplyClassification::Interested);
+    $write('import');
+    $write('overpass', ReplyClassification::AutoReply);
+    $write('overpass', ReplyClassification::NotInterested);
+    $write('overpass');
+    // Found, never written to: not part of any rate.
+    Lead::factory()->create(['project_id' => $project->id, 'source' => 'registry']);
+
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->get(route('campaigns.index'))
+        ->assertInertia(fn ($page) => $page
+            ->where('bySource', [
+                ['source' => 'overpass', 'contacted' => 3, 'replied' => 1, 'interested' => 0],
+                ['source' => 'import', 'contacted' => 2, 'replied' => 1, 'interested' => 1],
+            ]));
 });

@@ -45,7 +45,7 @@ it('lists the marketing pages and every published article', function () {
 
     expect($response->headers->get('Content-Type'))->toContain('xml');
 
-    foreach (['home', 'pricing', 'blog.index', 'contact', 'tools.spf-dmarc', 'tools.email-checker', 'privacy', 'terms', 'data-retention'] as $name) {
+    foreach (['home', 'pricing', 'blog.index', 'contact', 'tools.spf-dmarc', 'tools.email-checker', 'tools.deliverability', 'privacy', 'terms', 'data-retention'] as $name) {
         $response->assertSee('<loc>'.route($name).'</loc>', escape: false);
     }
 

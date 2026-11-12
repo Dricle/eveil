@@ -3,6 +3,7 @@
 use App\Cloud\Http\Controllers\BlogController;
 use App\Cloud\Http\Controllers\ContactFormController;
 use App\Cloud\Http\Controllers\SitemapController;
+use App\Cloud\Http\Controllers\Tools\DeliverabilityTesterController;
 use App\Cloud\Http\Controllers\Tools\EmailCheckerController;
 use App\Cloud\Http\Controllers\Tools\SpfDmarcCheckerController;
 use Illuminate\Support\Facades\Route;
@@ -67,6 +68,23 @@ Route::get('/tools/email-checker', fn () => config('eveil.edition') === 'cloud'
 Route::post('/tools/email-checker', EmailCheckerController::class)
     ->middleware('throttle:10,1')
     ->name('tools.email-checker.check');
+
+// Hands out a one-mail test address, behind Turnstile. The inbound route is
+// called by the Email Routing worker, signed with a shared secret.
+Route::get('/tools/deliverability-tester', fn () => config('eveil.edition') === 'cloud'
+    ? view('marketing.tools.deliverability-tester')
+    : response('', 302, ['Location' => '/app']))->name('tools.deliverability');
+
+Route::post('/tools/deliverability-tester', [DeliverabilityTesterController::class, 'store'])
+    ->middleware('throttle:5,60')
+    ->name('tools.deliverability.store');
+
+Route::post('/tools/deliverability-tester/inbound', [DeliverabilityTesterController::class, 'inbound'])
+    ->name('tools.deliverability.inbound');
+
+Route::get('/tools/deliverability-tester/{token}', [DeliverabilityTesterController::class, 'show'])
+    ->where('token', '[a-z0-9]{16}')
+    ->name('tools.deliverability.show');
 
 Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
 Route::get('/blog/{article}/{slug?}', [BlogController::class, 'show'])->whereNumber('article')->name('blog.show');

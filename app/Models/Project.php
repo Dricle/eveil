@@ -119,6 +119,29 @@ class Project extends Model implements HasMedia, StoresMediaInterface
     }
 
     /**
+     * What `ImageGenerator` draws from: the logo, the latest style examples,
+     * and the illustrations picked for this image. At most `$perKind`
+     * examples and illustrations each: with the logo, seven references,
+     * within what every image provider takes.
+     *
+     * @param  array<int, int>  $illustrationIds
+     * @return array<int, Media>
+     */
+    public function imageReferences(array $illustrationIds = [], int $perKind = 3): array
+    {
+        $illustrations = $this->brandAssets(BrandAssetKind::Illustration)
+            ->filter(fn (Media $media): bool => in_array($media->id, $illustrationIds, true))
+            ->take($perKind);
+
+        return collect([$this->logo()])
+            ->filter()
+            ->concat($this->brandAssets(BrandAssetKind::Example)->sortByDesc('id')->take($perKind))
+            ->concat($illustrations)
+            ->values()
+            ->all();
+    }
+
+    /**
      * What a video composition can show, by the name it calls it: the latest
      * screenshots as `screen-{id}`, at most `$screenshots` of them since a
      * model reads each one, and the logo as `logo`. Given a composition, the

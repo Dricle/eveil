@@ -56,6 +56,14 @@ function toggle (account: AdAccount, enabled: boolean) {
     })
 }
 
+function pickIdentity (account: AdAccount, identityId: string) {
+    toggling.value = account.id
+    router.put(adRoutes.accounts.update.url({ project: slug.value, adAccount: account.id }), { identity_id: identityId }, {
+        preserveScroll: true,
+        onFinish: () => toggling.value = null
+    })
+}
+
 const reasons = ref<Record<number, string>>({})
 const deciding = ref<number | null>(null)
 
@@ -311,6 +319,12 @@ const STATUS_COLOR = {
                                 :key="ad.id"
                                 class="space-y-1 rounded-md p-3 text-sm ring ring-default"
                             >
+                                <img
+                                    v-if="ad.image_url"
+                                    :src="ad.image_url"
+                                    :alt="ad.angle"
+                                    class="mb-2 aspect-square w-full max-w-64 rounded-md object-cover"
+                                >
                                 <p class="text-xs text-dimmed">
                                     {{ ad.angle }}
                                 </p>
@@ -398,6 +412,34 @@ const STATUS_COLOR = {
                         size="xs"
                         @click="disconnect(account)"
                     />
+                </div>
+
+                <div
+                    v-if="account.identity_label"
+                    class="flex flex-wrap items-center gap-2 text-sm"
+                >
+                    <span class="text-muted">Ads posted as</span>
+                    <USelect
+                        v-if="account.identities.length"
+                        :model-value="account.identity_id ?? undefined"
+                        :items="account.identities.map(identity => ({ label: identity.name, value: identity.id }))"
+                        :placeholder="`Pick a ${account.identity_label}`"
+                        :loading="toggling === account.id"
+                        class="w-64"
+                        @update:model-value="pickIdentity(account, $event)"
+                    />
+                    <span
+                        v-else
+                        class="text-error"
+                    >
+                        no {{ account.identity_label }} reachable. Create one, then connect the account again.
+                    </span>
+                    <span
+                        v-if="account.identities.length && !account.identity_id"
+                        class="text-warning"
+                    >
+                        Pick one before switching the account on.
+                    </span>
                 </div>
 
                 <p
@@ -496,12 +538,22 @@ const STATUS_COLOR = {
                                     class="border-t border-default"
                                 >
                                     <td class="py-2 pr-3">
-                                        <p class="font-medium">
-                                            {{ ad.headlines[0] }}
-                                        </p>
-                                        <p class="text-xs text-muted">
-                                            {{ ad.angle }}
-                                        </p>
+                                        <div class="flex items-center gap-3">
+                                            <img
+                                                v-if="ad.image_url"
+                                                :src="ad.image_url"
+                                                :alt="ad.angle"
+                                                class="size-10 shrink-0 rounded object-cover"
+                                            >
+                                            <div>
+                                                <p class="font-medium">
+                                                    {{ ad.headlines[0] }}
+                                                </p>
+                                                <p class="text-xs text-muted">
+                                                    {{ ad.angle }}
+                                                </p>
+                                            </div>
+                                        </div>
                                     </td>
                                     <td class="py-2 pr-3">
                                         <UBadge

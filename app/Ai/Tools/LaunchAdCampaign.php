@@ -70,6 +70,7 @@ class LaunchAdCampaign implements Tool
                 'angle' => $schema->string()->description('The idea this ad tests, in one sentence.'),
                 'headlines' => $schema->array()->items($schema->string()),
                 'descriptions' => $schema->array()->items($schema->string()),
+                'image_brief' => $schema->string()->description('What the picture shows, when the account\'s copy limits say ads carry one.'),
                 'final_url' => $schema->string()->description('A page on the product site. Defaults to its home page.'),
             ]))->required(),
             'reasoning' => $schema->string()->description('Why, citing the numbers or the gap that calls for it.')->required(),

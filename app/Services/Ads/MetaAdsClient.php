@@ -29,7 +29,12 @@ class MetaAdsClient implements AdClientInterface
 {
     private const API = 'https://graph.facebook.com/v23.0';
 
-    private const SCOPES = 'ads_management,ads_read,business_management,pages_show_list,pages_manage_ads';
+    /**
+     * What the "Create & manage ads with Marketing API" use case grants.
+     * Posting an ad as a Page needs no Page permission of its own: the
+     * person's advertiser role on the Page is enough, with ads_management.
+     */
+    private const SCOPES = 'ads_management,ads_read,business_management,pages_show_list';
 
     /**
      * Currencies Meta counts in whole units; every other one in hundredths.

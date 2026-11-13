@@ -30,6 +30,18 @@ enum AdPlatform: string
     }
 
     /**
+     * The guide to setting up this network's app, in the public docs.
+     */
+    public function docsUrl(): string
+    {
+        return 'https://docs.eveil.cloud/product/ads#'.match ($this) {
+            self::GoogleAds => 'google-ads-getting-a-client-id-and-secret',
+            self::MicrosoftAds => 'microsoft-advertising-getting-a-client-id-secret-and-developer-token',
+            self::MetaAds => 'meta-ads-getting-an-app-id-and-secret',
+        };
+    }
+
+    /**
      * Which `platform_apps` row this network connects through.
      */
     public function appKind(): PlatformAppKind

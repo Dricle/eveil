@@ -25,7 +25,9 @@ class PlatformAppController extends Controller
 
     public function index(): Response
     {
+        $project = $this->currentProject->getOrFail();
         $organization = $this->currentProject->organization();
+        $connected = $project->adAccounts()->toBase()->selectRaw('platform, count(*) as total')->groupBy('platform')->pluck('total', 'platform');
         $own = $organization->platformApps()->get()->keyBy(fn (PlatformApp $app): string => $app->platform->value);
         $instance = PlatformApp::query()->whereNull('organization_id')->pluck('platform')->map(fn (PlatformAppKind $platform): string => $platform->value);
 
@@ -38,6 +40,10 @@ class PlatformAppController extends Controller
                 'has_instance_app' => $instance->contains($platform->value),
                 'redirect_uri' => $platform->appKind()->redirectUri(),
                 'needs_developer_token' => $platform->appKind()->needsDeveloperToken(),
+                // This project's accounts on it, so the screen says what is
+                // already running and what is left to connect.
+                'connected_accounts' => (int) $connected->get($platform->value, 0),
+                'docs_url' => $platform->docsUrl(),
             ], AdPlatform::cases()),
         ]);
     }

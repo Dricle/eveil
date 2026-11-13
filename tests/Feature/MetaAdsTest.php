@@ -7,16 +7,21 @@ use App\Enums\PlatformAppKind;
 use App\Models\Ad;
 use App\Models\AdAccount;
 use App\Models\AdCampaign;
+use App\Models\AdCreative;
 use App\Models\AdMetric;
 use App\Models\Organization;
 use App\Models\PlatformApp;
 use App\Models\Project;
 use App\Models\User;
 use App\Services\Ads\AdPlatformException;
+use App\Services\Ads\AdProposals;
 use App\Services\Ads\AdTokens;
 use App\Services\Ads\MetaAdsClient;
+use App\Support\CurrentProject;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
+use Laravel\Ai\Image;
 
 const META_GRAPH = 'graph.facebook.com/v23.0';
 
@@ -37,6 +42,59 @@ function metaAccount(array $attributes = []): AdAccount
         ...$attributes,
     ]);
 }
+
+/**
+ * A tiny PNG, the way an image provider hands one back.
+ */
+function metaPng(): string
+{
+    $image = imagecreatetruecolor(8, 8);
+    ob_start();
+    imagepng($image);
+
+    return base64_encode((string) ob_get_clean());
+}
+
+/**
+ * @param  array<string, mixed>  $ad
+ */
+function proposeMetaLaunch(AdAccount $account, array $ad): string
+{
+    app(CurrentProject::class)->set($account->project);
+
+    return app(AdProposals::class)->launchCampaign(
+        $account->project, null, $account->id, 'Founders FR', 'French founders scroll past cold email pain.', null, 10,
+        ['countries' => ['FR']],
+        [['angle' => 'Inbox dread', 'headlines' => ['Clients without cold calls'], 'descriptions' => ['Paste your URL, Eveil finds who buys it.'], ...$ad]],
+        'Meta has no data yet.',
+    );
+}
+
+it('draws the picture of a new Meta ad when it is proposed, from the agent\'s brief', function () {
+    Storage::fake();
+    $account = metaAccount(['project_id' => Project::factory()->withAdsBudget()->create(['url' => 'https://acme.test'])->id]);
+    Image::fake([metaPng()]);
+
+    $answer = proposeMetaLaunch($account, ['image_brief' => 'A founder closing a laptop full of unread replies.']);
+
+    $creative = AdCreative::query()->sole();
+    expect($answer)->toContain('Proposed as decision')
+        ->and($creative->image_brief)->toBe('A founder closing a laptop full of unread replies.')
+        ->and($creative->hasMedia('image'))->toBeTrue();
+    Image::assertGenerated(fn ($prompt): bool => str_contains($prompt->prompt, 'A founder closing a laptop'));
+});
+
+it('refuses a Meta ad without a picture, before anything is stored', function (bool $reused, string $message) {
+    $account = metaAccount(['project_id' => Project::factory()->withAdsBudget()->create(['url' => 'https://acme.test'])->id]);
+    Image::fake()->preventStrayImages();
+    $ad = $reused ? ['creative_id' => AdCreative::factory()->create(['project_id' => $account->project_id, 'headlines' => ['One'], 'descriptions' => ['Two']])->id] : [];
+
+    expect(proposeMetaLaunch($account, $ad))->toContain($message)
+        ->and(AdCampaign::query()->exists())->toBeFalse();
+})->with([
+    'no brief' => [false, 'Ads on Meta Ads carry a picture: describe it in image_brief.'],
+    'a reused creative with no picture' => [true, 'Ads on Meta Ads carry a picture and this creative has none.'],
+]);
 
 it('connects every Meta ad account, picking the Page when there is only one', function () {
     Http::preventStrayRequests();
@@ -113,7 +171,7 @@ it('lets a person pick the Page an account posts as, and refuses to switch it on
     expect($account->fresh())->identity_id->toBe('43')->enabled->toBeTrue();
 });
 
-it('launches a Meta campaign paused, its budget in cents, its countries on one ad set, one ad per draft', function () {
+it('launches a Meta campaign paused, its budget in cents, its countries on one ad set, one ad per draft with its picture', function () {
     Http::preventStrayRequests();
     $account = metaAccount();
     $campaign = AdCampaign::factory()->create([
@@ -123,9 +181,13 @@ it('launches a Meta campaign paused, its budget in cents, its countries on one a
     ]);
     $ads = Ad::factory()->count(2)->create(['ad_campaign_id' => $campaign->id]);
 
+    Storage::fake();
+    $ads[0]->creative->addMediaFromString('jpeg bytes')->usingFileName('a.jpg')->toMediaCollection('image');
+
     Http::fake([
         META_GRAPH.'/act_149/campaigns' => Http::response(['id' => '555']),
         META_GRAPH.'/act_149/adsets' => Http::response(['id' => '666']),
+        META_GRAPH.'/act_149/adimages' => Http::response(['images' => ['a.jpg' => ['hash' => 'h1']]]),
         META_GRAPH.'/act_149/adcreatives' => Http::sequence()->push(['id' => 'c1'])->push(['id' => 'c2']),
         META_GRAPH.'/act_149/ads' => Http::sequence()->push(['id' => '111'])->push(['id' => '112']),
     ]);
@@ -145,7 +207,10 @@ it('launches a Meta campaign paused, its budget in cents, its countries on one a
         && $request['dsa_beneficiary'] === $campaign->project->name);
     Http::assertSent(fn (Request $request): bool => str_ends_with($request->url(), '/adcreatives')
         && $request['object_story_spec']['page_id'] === '42'
-        && $request['object_story_spec']['link_data']['name'] === $ads[0]->creative->headlines[0]);
+        && $request['object_story_spec']['link_data']['name'] === $ads[0]->creative->headlines[0]
+        && ($request['object_story_spec']['link_data']['image_hash'] ?? null) === 'h1');
+    Http::assertSent(fn (Request $request): bool => str_ends_with($request->url(), '/adimages')
+        && $request['bytes'] === base64_encode('jpeg bytes'));
 });
 
 it('deletes a half-built Meta campaign when an ad is refused', function () {
@@ -217,4 +282,19 @@ it('reads Meta insights as link clicks, spend in micros and sign-ups, keeping on
     expect($account->fresh())
         ->has_conversion_tracking->toBeTrue()
         ->last_error->toBeNull();
+});
+
+it('shows a creative\'s picture on the Ads page, to its own project only', function () {
+    Storage::fake();
+    $user = User::factory()->create();
+    $organization = Organization::factory()->create();
+    $organization->users()->attach($user, ['role' => 'owner']);
+    $project = Project::factory()->for($organization)->create();
+    $creative = AdCreative::factory()->create(['project_id' => $project->id]);
+    $creative->addMediaFromString(base64_decode(metaPng()))->usingFileName('a.png')->toMediaCollection('image');
+    $stranger = AdCreative::factory()->create();
+    $stranger->addMediaFromString(base64_decode(metaPng()))->usingFileName('b.png')->toMediaCollection('image');
+
+    $this->actingAs($user)->get(route('ads.creatives.image', ['project' => $project, 'adCreative' => $creative->id]))->assertOk();
+    $this->actingAs($user)->get(route('ads.creatives.image', ['project' => $project, 'adCreative' => $stranger->id]))->assertNotFound();
 });

@@ -319,6 +319,12 @@ const STATUS_COLOR = {
                                 :key="ad.id"
                                 class="space-y-1 rounded-md p-3 text-sm ring ring-default"
                             >
+                                <img
+                                    v-if="ad.image_url"
+                                    :src="ad.image_url"
+                                    :alt="ad.angle"
+                                    class="mb-2 aspect-square w-full max-w-64 rounded-md object-cover"
+                                >
                                 <p class="text-xs text-dimmed">
                                     {{ ad.angle }}
                                 </p>
@@ -532,12 +538,22 @@ const STATUS_COLOR = {
                                     class="border-t border-default"
                                 >
                                     <td class="py-2 pr-3">
-                                        <p class="font-medium">
-                                            {{ ad.headlines[0] }}
-                                        </p>
-                                        <p class="text-xs text-muted">
-                                            {{ ad.angle }}
-                                        </p>
+                                        <div class="flex items-center gap-3">
+                                            <img
+                                                v-if="ad.image_url"
+                                                :src="ad.image_url"
+                                                :alt="ad.angle"
+                                                class="size-10 shrink-0 rounded object-cover"
+                                            >
+                                            <div>
+                                                <p class="font-medium">
+                                                    {{ ad.headlines[0] }}
+                                                </p>
+                                                <p class="text-xs text-muted">
+                                                    {{ ad.angle }}
+                                                </p>
+                                            </div>
+                                        </div>
                                     </td>
                                     <td class="py-2 pr-3">
                                         <UBadge

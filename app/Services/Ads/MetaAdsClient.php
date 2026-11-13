@@ -3,6 +3,7 @@
 namespace App\Services\Ads;
 
 use App\Enums\AdStatus;
+use App\Enums\ImageFormat;
 use App\Models\Ad;
 use App\Models\AdAccount;
 use App\Models\AdCampaign;
@@ -18,8 +19,8 @@ use Illuminate\Support\Facades\Http;
  *
  * A campaign is a traffic campaign with its budget on the campaign, one ad
  * set holding the countries, and link ads posted as the Facebook Page picked
- * on the account (`identity_id`). Meta builds the picture from the landing
- * page's own preview image.
+ * on the account (`identity_id`), each with the square picture drawn for its
+ * creative. Square because it fits both the Facebook and Instagram feeds.
  *
  * Meta has no atomic batch: a launch refused halfway deletes the campaign,
  * which takes its ad set and ads with it.
@@ -57,6 +58,7 @@ class MetaAdsClient implements AdClientInterface
             descriptionMaxLength: 125,
             targeting: ['countries'],
             identity: 'Facebook Page',
+            image: ImageFormat::Square,
         );
     }
 
@@ -244,7 +246,7 @@ class MetaAdsClient implements AdClientInterface
     }
 
     /**
-     * A creative, then the ad wearing it. Returns the ad's id.
+     * The picture, a creative wearing it, then the ad. Returns the ad's id.
      */
     private function postAd(AdAccount $account, string $adSet, Ad $ad): string
     {
@@ -252,12 +254,16 @@ class MetaAdsClient implements AdClientInterface
             'name' => "Eveil ad #{$ad->id}",
             'object_story_spec' => [
                 'page_id' => $account->identity_id,
-                'link_data' => [
+                'link_data' => array_filter([
                     'link' => $ad->creative->final_url,
                     'name' => $ad->creative->headlines[0],
                     'message' => $ad->creative->descriptions[0],
+                    // ponytail: without a picture Meta falls back to the
+                    // page's own preview image, Facebook only. Every creative
+                    // proposed for Meta has one (`AdProposals`).
+                    'image_hash' => $this->uploadImage($account, $ad),
                     'call_to_action' => ['type' => 'LEARN_MORE'],
-                ],
+                ]),
             ],
         ]);
 
@@ -267,6 +273,27 @@ class MetaAdsClient implements AdClientInterface
             'creative' => ['creative_id' => $creative],
             'status' => 'ACTIVE',
         ]);
+    }
+
+    /**
+     * Sends the creative's picture to the account's image library. Returns
+     * the hash a creative points at, or null when it has no picture.
+     */
+    private function uploadImage(AdAccount $account, Ad $ad): ?string
+    {
+        $image = $ad->creative->getFirstMedia('image');
+
+        if ($image === null) {
+            return null;
+        }
+
+        $response = $this->request($account)->post(self::API."/act_{$account->external_id}/adimages", [
+            'bytes' => base64_encode((string) stream_get_contents($image->stream())),
+        ]);
+        $this->throwUnless($response);
+
+        // Keyed by a file name Meta makes up: the one entry is ours.
+        return (string) collect((array) $response->json('images'))->first()['hash'];
     }
 
     /**

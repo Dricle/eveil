@@ -2,7 +2,7 @@
 
 Eveil can run your paid ads for you, inside one monthly budget you set for the project. You do not split it between networks: Eveil does, and keeps moving it toward whatever brings you users for less. Once a day it reviews every campaign's numbers, launches new tests, keeps what brings you users, cuts what does not, and tries what works on other networks. You decide how much it does on its own with the [Ads autonomy setting](/product/autonomy#ads). It never spends past the monthly budget, whatever that setting says.
 
-Three networks are supported: **Google Ads**, **Microsoft Advertising** (Bing, and Microsoft's other search results) and **Meta Ads** (Facebook and Instagram). Google and Microsoft run the same kind of campaign, search ads with responsive text ads, so a creative that works on one can be tried on the other. Meta shows link ads in people's feeds: one headline and one short text per ad, with the picture taken from your landing page's preview image. A creative written for search is rewritten to fit before it goes to Meta.
+Three networks are supported: **Google Ads**, **Microsoft Advertising** (Bing, and Microsoft's other search results) and **Meta Ads** (Facebook and Instagram). Google and Microsoft run the same kind of campaign, search ads with responsive text ads, so a creative that works on one can be tried on the other. Meta shows link ads in people's feeds, on Facebook and Instagram: one headline, one short text and a square picture per ad. Eveil draws each picture when it proposes the ad, so in Supervised mode you see it before approving. A creative written for search is rewritten to fit before it goes to Meta.
 
 ## How it works
 
@@ -171,6 +171,7 @@ The app secret is stored encrypted and never shown again. To change it, paste a 
 
 ### Good to know
 
+- **Every ad gets its own picture.** Eveil describes what the picture should show and draws it in your product's style, from the logo and style examples under **Settings → Project → Visual identity** (see [Your visual identity](/product/social#your-visual-identity)): the more you give it, the more the ads look like yours. It often tests two pictures against each other with the same text, since on a feed the picture is what people notice first. On the hosted edition each picture costs credits, like the images of your social posts.
 - **Only people with a role on the app can connect.** That is what Development mode means: you, and anyone you add under **App roles** in the app dashboard. Someone else who manages the ad account must be added there before they can connect it.
 - **Meta's connection lasts 60 days.** Eveil renews it on its own while it still works. If nobody touches the account for that long, or you change your Facebook password, the account shows **Reconnect needed**: connect it again.
 - **Development mode is slower.** Meta allows an app in Development mode far fewer calls than an approved one. One account's daily review and hourly sync fit, but if Meta pauses the app for a few minutes, that sync is skipped and the next one reads the same days again.

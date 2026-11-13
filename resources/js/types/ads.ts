@@ -39,6 +39,8 @@ export type Ad = {
     angle: string
     headlines: string[]
     descriptions: string[]
+    /** The picture the ad carries, on networks whose ads have one. */
+    image_url: string | null
     final_url: string
     impressions: number
     clicks: number

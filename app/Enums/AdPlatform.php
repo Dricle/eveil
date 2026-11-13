@@ -4,6 +4,7 @@ namespace App\Enums;
 
 use App\Services\Ads\AdClientInterface;
 use App\Services\Ads\GoogleAdsClient;
+use App\Services\Ads\MetaAdsClient;
 use App\Services\Ads\MicrosoftAdsClient;
 
 /**
@@ -17,12 +18,14 @@ enum AdPlatform: string
 {
     case GoogleAds = 'google_ads';
     case MicrosoftAds = 'microsoft_ads';
+    case MetaAds = 'meta_ads';
 
     public function label(): string
     {
         return match ($this) {
             self::GoogleAds => 'Google Ads',
             self::MicrosoftAds => 'Microsoft Advertising',
+            self::MetaAds => 'Meta Ads',
         };
     }
 
@@ -34,6 +37,7 @@ enum AdPlatform: string
         return match ($this) {
             self::GoogleAds => PlatformAppKind::GoogleAds,
             self::MicrosoftAds => PlatformAppKind::MicrosoftAds,
+            self::MetaAds => PlatformAppKind::MetaAds,
         };
     }
 
@@ -42,6 +46,7 @@ enum AdPlatform: string
         return app(match ($this) {
             self::GoogleAds => GoogleAdsClient::class,
             self::MicrosoftAds => MicrosoftAdsClient::class,
+            self::MetaAds => MetaAdsClient::class,
         });
     }
 }

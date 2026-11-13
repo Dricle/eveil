@@ -12,6 +12,7 @@ enum PlatformAppKind: string
 {
     case GoogleAds = 'google_ads';
     case MicrosoftAds = 'microsoft_ads';
+    case MetaAds = 'meta_ads';
     case Instagram = 'instagram';
 
     public function label(): string
@@ -19,6 +20,7 @@ enum PlatformAppKind: string
         return match ($this) {
             self::GoogleAds => 'Google Ads',
             self::MicrosoftAds => 'Microsoft Advertising',
+            self::MetaAds => 'Meta Ads',
             self::Instagram => 'Meta (Instagram)',
         };
     }
@@ -31,6 +33,7 @@ enum PlatformAppKind: string
         return match ($this) {
             self::GoogleAds => route('oauth.ads.callback', AdPlatform::GoogleAds),
             self::MicrosoftAds => route('oauth.ads.callback', AdPlatform::MicrosoftAds),
+            self::MetaAds => route('oauth.ads.callback', AdPlatform::MetaAds),
             self::Instagram => route('oauth.instagram.callback'),
         };
     }

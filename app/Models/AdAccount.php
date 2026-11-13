@@ -36,6 +36,8 @@ use Illuminate\Support\Carbon;
  * @property string $name
  * @property string $currency
  * @property string|null $time_zone
+ * @property list<array{id: string, name: string}>|null $identities
+ * @property string|null $identity_id
  * @property string $access_token
  * @property string|null $refresh_token
  * @property Carbon|null $token_expires_at
@@ -49,6 +51,7 @@ use Illuminate\Support\Carbon;
  */
 #[Fillable([
     'project_id', 'platform', 'platform_app_id', 'external_id', 'external_ref', 'name', 'currency', 'time_zone',
+    'identities', 'identity_id',
     'access_token', 'refresh_token', 'token_expires_at',
     'enabled', 'has_conversion_tracking', 'status', 'last_error', 'metrics_synced_at',
 ])]
@@ -120,6 +123,15 @@ class AdAccount extends Model
     }
 
     /**
+     * Whether its network posts ads as someone (a Facebook Page on Meta) and
+     * nobody is picked yet: the account cannot be switched on until then.
+     */
+    public function needsIdentity(): bool
+    {
+        return $this->platform->client()->capabilities()->identity !== null && $this->identity_id === null;
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array
@@ -127,6 +139,7 @@ class AdAccount extends Model
         return [
             'platform' => AdPlatform::class,
             'external_ref' => 'array',
+            'identities' => 'array',
             'access_token' => EncryptedCredential::class,
             'refresh_token' => EncryptedCredential::class,
             'token_expires_at' => 'datetime',

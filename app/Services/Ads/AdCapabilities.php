@@ -12,6 +12,7 @@ final readonly class AdCapabilities
 {
     /**
      * @param  list<string>  $targeting  which of keywords, negative_keywords, countries, languages this network uses
+     * @param  string|null  $identity  what ads are posted as, e.g. "Facebook Page"; null when the network asks for nothing
      */
     public function __construct(
         public int $minHeadlines,
@@ -21,6 +22,7 @@ final readonly class AdCapabilities
         public int $maxDescriptions,
         public int $descriptionMaxLength,
         public array $targeting,
+        public ?string $identity = null,
     ) {}
 
     /**

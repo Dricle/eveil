@@ -45,4 +45,9 @@ return [
         'secret_key' => env('TURNSTILE_SECRET_KEY'),
     ],
 
+    'mail_tester' => [
+        'domain' => env('MAIL_TESTER_DOMAIN'),
+        'secret' => env('MAIL_TESTER_SECRET'),
+    ],
+
 ];

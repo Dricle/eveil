@@ -1,4 +1,4 @@
-@props(['title', 'description', 'canonical' => null, 'socialTitle' => null, 'type' => 'website'])
+@props(['title', 'description', 'canonical' => null, 'socialTitle' => null, 'type' => 'website', 'noindex' => false])
 @php($url = $canonical ?? url()->current())
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
@@ -9,6 +9,9 @@
         <title>{{ $title }}</title>
         <meta name="description" content="{{ $description }}">
         <link rel="canonical" href="{{ $url }}">
+        @if ($noindex)
+            <meta name="robots" content="noindex">
+        @endif
 
         {{-- `socialTitle` because a share card has no room for the " - Eveil"
              the <title> needs, and `canonical` because the blog answers the

@@ -1,0 +1,10 @@
+# Deploy with `npx wrangler deploy`, then set the secret the app also has:
+#   npx wrangler secret put MAIL_TESTER_SECRET
+# In the Email Routing settings of the test domain, point the catch-all
+# address at this worker.
+name = "eveil-mail-tester"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+
+[vars]
+INBOUND_URL = "https://eveil.cloud/tools/deliverability-tester/inbound"

@@ -16,6 +16,10 @@ use App\Services\Ads\AdProposals;
  *
  * It goes through `AdProposals` like any decision, so the journal says why
  * the campaigns stopped. A pause never waits for approval.
+ *
+ * "Spent" counts one hour of the running daily budgets ahead: the stop only
+ * runs after the hourly sync, so pausing at the exact line would let up to an
+ * hour more through before the next check.
  */
 class EnforceAdBudget
 {
@@ -24,7 +28,8 @@ class EnforceAdBudget
     public function handle(Project $project): void
     {
         $budget = $project->ads_monthly_budget_micros;
-        $exhausted = $budget === 0 || $project->adsSpentThisMonthMicros() >= $budget;
+        $nextHourMicros = intdiv($project->adsActiveDailyBudgetMicros(), 24);
+        $exhausted = $budget === 0 || $project->adsSpentThisMonthMicros() + $nextHourMicros >= $budget;
 
         $running = AdCampaign::query()
             ->whereIn('ad_account_id', $project->adAccounts()->select('id'))

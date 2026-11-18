@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\EmailAccountStatus;
 use App\Models\EmailAccount;
 use App\Services\Outreach\MailboxTester;
+use App\Services\Outreach\SenderAuthentication;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -20,7 +21,7 @@ use Illuminate\Http\Request;
  */
 class MailboxTestController extends Controller
 {
-    public function store(Request $request, MailboxTester $tester, int $mailbox): RedirectResponse
+    public function store(Request $request, MailboxTester $tester, SenderAuthentication $authentication, int $mailbox): RedirectResponse
     {
         $mailbox = EmailAccount::query()->ownedBy($request->user())->findOrFail($mailbox);
 
@@ -42,8 +43,40 @@ class MailboxTestController extends Controller
             ...($problem === null ? ['bounce_window_reset_at' => now()] : []),
         ]);
 
-        return $problem === null
-            ? back()->with('status', 'The mailbox answered on both SMTP and IMAP, and a test message has been sent to it. Anything short of sending one would miss a provider that refuses this from address, which it only says after the message body is on the wire.')
-            : back()->withErrors(['test' => $problem]);
+        if ($problem !== null) {
+            return back()->withErrors(['test' => $problem]);
+        }
+
+        $response = back()->with('status', 'The mailbox answered on both SMTP and IMAP, and a test message has been sent to it. Anything short of sending one would miss a provider that refuses this from address, which it only says after the message body is on the wire.');
+
+        $warnings = $this->authenticationWarnings($authentication, $mailbox);
+
+        // A warning, not a failure: the mailbox works, but cold mail from a
+        // domain without SPF or DMARC is what Gmail and Outlook now file as
+        // spam, and the owner should hear it before the first campaign does.
+        return $warnings === [] ? $response : $response->withErrors(['sender_auth' => implode(' ', $warnings)]);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function authenticationWarnings(SenderAuthentication $authentication, EmailAccount $mailbox): array
+    {
+        $domain = (string) str($mailbox->from_email)->after('@');
+        $warnings = [];
+
+        foreach ($authentication->check($domain) as $kind => $result) {
+            $label = mb_strtoupper($kind);
+
+            if ($result['record'] === null) {
+                $warnings[] = "{$domain} publishes no {$label} record. Add one, for example: {$result['suggestion']}";
+            }
+
+            foreach ($result['problems'] as $issue) {
+                $warnings[] = "{$label}: {$issue}";
+            }
+        }
+
+        return $warnings;
     }
 }

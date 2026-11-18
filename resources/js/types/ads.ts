@@ -9,6 +9,10 @@ export type AdAccount = {
     currency: string
     /** Whether Eveil may spend the project's ads budget here. */
     enabled: boolean
+    /** What the network posts ads as (e.g. "Facebook Page"), null when it asks for nothing. */
+    identity_label: string | null
+    identities: { id: string, name: string }[]
+    identity_id: string | null
     /** Enabled, connected, and billed in the budget's currency. */
     usable: boolean
     spent_this_month: number
@@ -35,6 +39,8 @@ export type Ad = {
     angle: string
     headlines: string[]
     descriptions: string[]
+    /** The picture the ad carries, on networks whose ads have one. */
+    image_url: string | null
     final_url: string
     impressions: number
     clicks: number

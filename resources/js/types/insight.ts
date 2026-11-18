@@ -5,6 +5,14 @@ export type CompetitorSignal = 'complaint' | 'comparison' | 'switching' | 'prais
 /**
  * One item of the Insights feed: something Eveil noticed while reading.
  */
+export type ArticleThread = {
+    title: string
+    url: string
+    subreddit?: string | null
+    /** A missing feature's thread: what people there say, in Eveil's words. */
+    evidence?: string
+}
+
 export type Insight = {
     id: number
     kind: InsightKind
@@ -21,7 +29,15 @@ export type Insight = {
         competitor?: string
         signal?: CompetitorSignal
         subreddit?: string | null
+        /** A feature idea's thread, whose own title is the idea. */
+        thread_title?: string | null
+        /** An article topic's or a missing feature's threads, every one that asked for it. */
+        threads?: ArticleThread[]
     }
+    /** How many threads asked for an article topic or a missing feature. 1 for everything else. */
+    mentions: number
+    /** Whether it shows in the mixed feed and counts as unread: a quiet article topic does not. */
+    in_feed: boolean
     read_at: string | null
     created_at: string | null
 }

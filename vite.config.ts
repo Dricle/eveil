@@ -36,6 +36,7 @@ export default defineConfig({
             ui: {
                 colors: {
                     primary: 'cyan',
+                    secondary: 'violet',
                     neutral: 'mist'
                 },
                 // Menus portal into <body> with no z-index of their own, so the

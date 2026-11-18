@@ -2,7 +2,7 @@
 
 Eveil can run your paid ads for you, inside one monthly budget you set for the project. You do not split it between networks: Eveil does, and keeps moving it toward whatever brings you users for less. Once a day it reviews every campaign's numbers, launches new tests, keeps what brings you users, cuts what does not, and tries what works on other networks. You decide how much it does on its own with the [Ads autonomy setting](/product/autonomy#ads). It never spends past the monthly budget, whatever that setting says.
 
-Two networks are supported: **Google Ads** and **Microsoft Advertising** (Bing, and Microsoft's other search results). Both run the same kind of campaign, search ads with responsive text ads, so a creative that works on one can be tried on the other.
+Three networks are supported: **Google Ads**, **Microsoft Advertising** (Bing, and Microsoft's other search results) and **Meta Ads** (Facebook and Instagram). Google and Microsoft run the same kind of campaign, search ads with responsive text ads, so a creative that works on one can be tried on the other. Meta shows link ads in people's feeds, on Facebook and Instagram: one headline, one short text and a square picture per ad. Eveil draws each picture when it proposes the ad, so in Supervised mode you see it before approving. A creative written for search is rewritten to fit before it goes to Meta.
 
 ## How it works
 
@@ -18,7 +18,7 @@ Eveil only ever touches the campaigns it created. Whatever you already run by ha
 
 **The month is the instance's.** Accounts can sit in different time zones, the budget has one: days and the month are counted in the Eveil instance's time zone.
 
-**Conversion tracking.** If your site carries the network's tag (the Google tag for Google Ads, a UET tag with a conversion goal for Microsoft Advertising), Eveil aims at signups. Without it, it can only aim at clicks, which is a weaker signal: the Ads page tells you when an account has no tracking.
+**Conversion tracking.** If your site carries the network's tag (the Google tag for Google Ads, a UET tag with a conversion goal for Microsoft Advertising, the Meta Pixel for Meta Ads), Eveil aims at signups. Without it, it can only aim at clicks, which is a weaker signal: the Ads page tells you when an account has no tracking. On Meta, campaigns are always delivered for link clicks, and the Pixel's sign-ups (the **CompleteRegistration** and **Lead** events) are what Eveil judges them by.
 
 ## Why you need your own app
 
@@ -131,3 +131,56 @@ The secret and the token are stored encrypted and never shown again. To change o
 - **"AADSTS50194" or a message about a single tenant.** The app was registered for your organization's accounts only: change **Supported account types** to include personal accounts and other tenants (step 1).
 - **An error mentioning invalid credentials or the developer token.** Check the token was copied whole, and that it is a production token, not the sandbox one.
 - **"Reconnect needed" on an account.** The client secret expired or was deleted: create a new one (step 2), paste it in Eveil, then connect again.
+
+## Meta Ads: getting an app ID and secret
+
+You need a Facebook account that manages your ad account and the Facebook Page your ads will show under, and about fifteen minutes. Every Meta ad is posted as a Facebook Page: it is the name and picture people see above the ad. If you have no Page yet, [create one](https://www.facebook.com/pages/create) first.
+
+You do not need Meta's App Review or Business Verification. An app that only manages the ad accounts of the people who have a role on it can stay in **Development mode** for good, and that is all Eveil needs to run your own ads.
+
+### 1. Create the app
+
+1. Open [Meta for Developers](https://developers.facebook.com/apps/) with the Facebook account that manages your ads, and click **Create app**. If you have never used it, Meta first asks you to register as a developer.
+2. Name it "Eveil" and give your contact email.
+3. When Meta asks for a use case, choose **Create & manage ads with Marketing API**.
+4. If Meta asks for a business portfolio, pick the one that owns your ad account, or skip it if you run ads from a personal ad account.
+5. Finish creating the app. It starts in **Development mode**: leave it there.
+
+### 2. Add the redirect URI
+
+1. In the app's dashboard, open the login product's **Settings** (**Facebook Login for Business → Settings**, or **Facebook Login → Settings**, depending on what Meta added for your use case).
+2. Under **Valid OAuth Redirect URIs**, paste the **Redirect URI** shown for Meta Ads in Eveil's **Settings → Ad platforms**, copied exactly. It looks like `https://your-eveil-domain/app/oauth/ads/meta_ads/callback`.
+3. Save.
+
+Meta only accepts HTTPS redirect URIs (plain `http://localhost` is allowed for testing). A self-hosted instance reached by any other address needs HTTPS for this to work.
+
+### 3. Copy the app ID and secret
+
+1. Open **App settings → Basic**.
+2. Copy the **App ID**: that is the client ID.
+3. Click **Show** next to **App secret** and copy it: that is the client secret.
+
+### 4. Paste them into Eveil and connect
+
+1. In Eveil, open **Settings → Ad platforms**, paste the **App ID** as the client ID and the **App secret** as the client secret under Meta Ads, and save.
+2. Open the **Ads** page and click **Connect Meta Ads**. Sign in with the Facebook account that has a role on the app, and accept every permission Meta asks for: Eveil needs to manage your ads and to post them as your Page.
+3. Back on the Ads page, look at **Ads posted as** under the account. If your Facebook account manages a single Page, it is already picked. If it manages several, pick the one that belongs to this product: the account cannot be switched on until you do.
+4. Check the account is switched on (**Use for ads**) and set the monthly budget if it is not set yet.
+
+The app secret is stored encrypted and never shown again. To change it, paste a new one; leaving the field blank keeps the current one.
+
+### Good to know
+
+- **Every ad gets its own picture.** Eveil describes what the picture should show and draws it in your product's style, from the logo and style examples under **Settings → Project → Visual identity** (see [Your visual identity](/product/social#your-visual-identity)): the more you give it, the more the ads look like yours. It often tests two pictures against each other with the same text, since on a feed the picture is what people notice first. On the hosted edition each picture costs credits, like the images of your social posts.
+- **Only people with a role on the app can connect.** That is what Development mode means: you, and anyone you add under **App roles** in the app dashboard. Someone else who manages the ad account must be added there before they can connect it.
+- **Meta's connection lasts 60 days.** Eveil renews it on its own while it still works. If nobody touches the account for that long, or you change your Facebook password, the account shows **Reconnect needed**: connect it again.
+- **Development mode is slower.** Meta allows an app in Development mode far fewer calls than an approved one. One account's daily review and hourly sync fit, but if Meta pauses the app for a few minutes, that sync is skipped and the next one reads the same days again.
+- **Changing the Page** on the Ads page applies to the ads Eveil creates from then on. Ads already running keep the Page they were created with.
+
+### If something goes wrong
+
+- **"URL blocked" or a message about the redirect URI when connecting.** The redirect URI in the app does not match Eveil's exactly. Copy it again from **Settings → Ad platforms**, including `https://` and with no trailing slash.
+- **"App not active" or "This app is not available".** You signed in with a Facebook account that has no role on the app. Sign in with the one that created it, or add yours under **App roles**.
+- **Connected, but no account is listed.** The Facebook account you signed in with does not manage an ad account. Check it in [Meta Ads Manager](https://adsmanager.facebook.com/).
+- **"No Facebook Page reachable" under the account.** Your Facebook account manages no Page, or you unticked it when Meta asked which Pages to share. Create a Page or give access to it, then connect again.
+- **A launch fails with a message about the DSA beneficiary or payer.** Meta requires both for ads shown in the European Union. Eveil sends your project's name for both: check it is your real business name in **Settings → Project**.

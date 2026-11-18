@@ -23,7 +23,9 @@ use Stringable;
 class RedditReplyWriter extends EveilAgent implements HasStructuredOutput
 {
     /**
-     * @param  string  $threadText  the post's own body, or the top-level context for a comment
+     * @param  string  $threadText  the post's own body, or the comment's own body when replying to a comment
+     * @param  string|null  $parentPost  for a comment, the post it sits under; null when replying to a post
+     * @param  string  $author  who wrote `$threadText`, the person the reply answers
      * @param  string  $toneSample  the thread's own top comments, plain text - the register to match
      * @param  Collection<int, string>  $ownWinners  bodies of this project's own promoted replies
      * @param  string  $sharedPoolDigest  `RedditReplyExample::promptDigest()`
@@ -33,6 +35,8 @@ class RedditReplyWriter extends EveilAgent implements HasStructuredOutput
         private ?string $subreddit,
         private string $threadTitle,
         private string $threadText,
+        private ?string $parentPost,
+        private string $author,
         private RedditReplySource $source,
         private ?string $searchQuery,
         private string $toneSample,
@@ -66,6 +70,14 @@ class RedditReplyWriter extends EveilAgent implements HasStructuredOutput
         get an empty body_soft_mention, body_direct_mention and body_dm_invite,
         value_comment only. A thread explicitly asking for a tool like this one is
         where body_direct_mention fits best.
+
+        When you are given a comment under a post, your reply sits directly under that
+        comment and answers its author, in the context of the post. Address what the
+        comment says, never the post as if the comment were not there.
+
+        Only build on what the post, the comment and the sample replies actually say.
+        Never invent facts about the person's situation (results they had, things
+        they tried, numbers) that nobody stated.
 
         Match the tone, length and register of the sample replies you are shown from
         this same thread - formal, casual, terse, meme-heavy, whatever it actually is.
@@ -122,6 +134,9 @@ class RedditReplyWriter extends EveilAgent implements HasStructuredOutput
         if ($this->source === RedditReplySource::SeoThread) {
             $sections[] = "## The thread (in {$subreddit}, ranks on a search engine for \"{$this->searchQuery}\")\n\n"
                 ."Title: {$this->threadTitle}\n\n{$this->threadText}";
+        } elseif ($this->parentPost !== null) {
+            $sections[] = "## The post (in {$subreddit})\n\n{$this->parentPost}";
+            $sections[] = "## The comment you are replying to, by u/{$this->author}\n\n{$this->threadText}";
         } else {
             $sections[] = "## The thread (in {$subreddit})\n\nTitle: {$this->threadTitle}\n\n{$this->threadText}";
         }

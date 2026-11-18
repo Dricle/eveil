@@ -29,6 +29,9 @@ class AdResource extends JsonResource
             'angle' => $this->creative->angle,
             'headlines' => $this->creative->headlines,
             'descriptions' => $this->creative->descriptions,
+            'image_url' => $this->creative->hasMedia('image')
+                ? route('ads.creatives.image', ['project' => $this->project->slug, 'adCreative' => $this->ad_creative_id])
+                : null,
             'final_url' => $this->creative->final_url,
             'impressions' => $impressions,
             'clicks' => $clicks,

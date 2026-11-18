@@ -20,17 +20,3 @@ export type Article = {
     published_at: string | null
     created_at: string | null
 }
-
-/**
- * A discussion the Reddit scan noted as worth an article, not written yet.
- */
-export type ArticleIdea = {
-    id: number
-    source: 'reddit'
-    /** The thread permalink. */
-    source_ref: string
-    title: string
-    /** What the article would answer or argue. */
-    angle: string
-    created_at: string | null
-}

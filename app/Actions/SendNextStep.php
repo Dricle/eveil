@@ -11,9 +11,11 @@ use App\Enums\OutreachStatus;
 use App\Models\CampaignLead;
 use App\Models\CampaignStep;
 use App\Models\Message;
+use App\Services\Outreach\PreSendCheck;
 use App\Services\Outreach\Sender;
 use App\Services\Outreach\SendFailure;
 use App\Services\Outreach\SuppressionList;
+use Illuminate\Support\Str;
 
 /**
  * One lead, one step forward: personalise the next mail, run the pre-send
@@ -35,6 +37,7 @@ class SendNextStep
         private PersonalizeMessage $personalize,
         private Sender $sender,
         private SuppressionList $suppressions,
+        private PreSendCheck $check,
     ) {}
 
     public function handle(CampaignLead $campaignLead): void
@@ -82,6 +85,16 @@ class SendNextStep
         }
 
         $written = $this->personalize->handle($step, $lead);
+
+        $problems = $this->check->problems($written['subject'], $written['body'], $account, $campaignLead->campaign->project);
+
+        // Held, not retried: a placeholder in the template itself would fail
+        // the same way every hour and spend a personalisation each time.
+        if ($problems !== []) {
+            $this->pause($campaignLead, Str::limit('blocked: '.implode('; ', $problems), 250));
+
+            return;
+        }
 
         // Threading: a follow-up answers our own previous mail to this person,
         // so it lands in that conversation instead of arriving as a second

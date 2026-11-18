@@ -38,6 +38,9 @@ it('drops removed/deleted posts and comments before they ever reach triage', fun
             ['body' => '[deleted]', 'author' => '[deleted]', 'link_id' => 't3_3', 'subreddit' => 'selfhosted', 'permalink' => '/r/selfhosted/comments/3/z/c1/'],
             ['body' => 'A real comment with content.', 'author' => 'real_commenter', 'link_id' => 't3_4', 'subreddit' => 'selfhosted', 'permalink' => '/r/selfhosted/comments/4/w/c2/'],
         ]]),
+        'arctic-shift.photon-reddit.com/api/posts/ids*' => Http::response(['data' => [
+            ['id' => '4', 'title' => 'The post that comment sits under', 'selftext' => ''],
+        ]]),
     ]);
 
     $candidates = app(OpportunityScanner::class)->find($project);

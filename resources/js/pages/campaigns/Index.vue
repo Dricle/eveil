@@ -21,6 +21,9 @@ type Campaign = {
     live_leads_count: number
     sent_count: number
     replies_count: number
+    discussion_count: number
+    won_count: number
+    days_to_close: number | null
     next_action_at: string | null
     updated_at: string
     target_profile: { id: number | null, name: string | null, type: string | null } | null
@@ -35,6 +38,7 @@ const props = defineProps<{
     writing: boolean
     writingError: string | null
     stats: { sent_this_week: number, replies: number, positive: number, awaiting: number }
+    bySource: { source: string, contacted: number, replied: number, interested: number }[]
     autonomyLevel: 'supervised' | 'semi_auto' | 'autonomous'
 }>()
 
@@ -49,6 +53,26 @@ const STATUS_META: Record<CampaignStatus, { label: string, color: 'success' | 'w
     paused: { label: 'Paused', color: 'warning' },
     completed: { label: 'Completed', color: 'neutral' },
     archived: { label: 'Archived', color: 'neutral' }
+}
+
+// Where a lead came from, as `leads.source` stores it: an import, or the
+// discovery source that found the company. Anything else shows as stored.
+const SOURCE_LABEL: Record<string, string> = {
+    'import': 'Imported',
+    'manual': 'Added by hand',
+    'web_search': 'Web search',
+    'degoog': 'Web search (degoog)',
+    'overpass': 'Map (OpenStreetMap)',
+    'registry': 'Company registry',
+    'reddit': 'Reddit',
+    'user-submitted': 'Link you submitted',
+    'reply': 'Referred in a reply',
+    'escalated': 'Referred in a reply',
+    'unknown': 'Unknown'
+}
+
+function rate (count: number, of: number): string {
+    return of === 0 ? '0%' : `${Math.round(count / of * 100)}%`
 }
 
 const inSequence = computed(() => props.campaigns.reduce((sum, campaign) => sum + campaign.live_leads_count, 0))
@@ -249,6 +273,54 @@ function timing (campaign: Campaign): string | null {
                 </div>
             </div>
 
+            <!-- Which way of finding people gets answers: only worth a table
+                 once there are two sources to compare. -->
+            <div
+                v-if="bySource.length > 1"
+                class="overflow-x-auto rounded-lg ring ring-default"
+            >
+                <table class="w-full text-sm">
+                    <thead class="text-xs text-muted">
+                        <tr class="border-b border-default">
+                            <th class="p-3 text-left font-normal">
+                                Where they came from
+                            </th>
+                            <th class="p-3 text-right font-normal">
+                                Written to
+                            </th>
+                            <th class="p-3 text-right font-normal">
+                                Replied
+                            </th>
+                            <th class="p-3 text-right font-normal">
+                                Interested
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr
+                            v-for="row in bySource"
+                            :key="row.source"
+                            class="border-b border-default last:border-0"
+                        >
+                            <td class="p-3 text-highlighted">
+                                {{ SOURCE_LABEL[row.source] ?? row.source }}
+                            </td>
+                            <td class="p-3 text-right font-mono text-toned">
+                                {{ row.contacted.toLocaleString() }}
+                            </td>
+                            <td class="p-3 text-right font-mono text-toned">
+                                {{ rate(row.replied, row.contacted) }}
+                                <span class="text-dimmed">({{ row.replied }})</span>
+                            </td>
+                            <td class="p-3 text-right font-mono text-success">
+                                {{ rate(row.interested, row.contacted) }}
+                                <span class="text-dimmed">({{ row.interested }})</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
             <!-- A folder per status, same pattern as the inbox's own filter
                  row: only statuses actually present get a chip. -->
             <div class="flex flex-wrap items-center gap-2">
@@ -348,6 +420,14 @@ function timing (campaign: Campaign): string | null {
                             <span class="text-muted"><span class="font-mono text-toned">{{ campaign.sent_count }}</span> sent</span>
                             <span class="text-dimmed opacity-40">·</span>
                             <span class="text-muted"><span class="font-mono text-toned">{{ campaign.replies_count }}</span> replies</span>
+                            <span class="text-dimmed opacity-40">·</span>
+                            <span class="text-muted"><span class="font-mono text-toned">{{ campaign.discussion_count }}</span> in discussion</span>
+                            <span class="text-dimmed opacity-40">·</span>
+                            <span :class="campaign.won_count ? 'text-success' : 'text-muted'"><span class="font-mono">{{ campaign.won_count }}</span> won</span>
+                            <template v-if="campaign.days_to_close !== null">
+                                <span class="text-dimmed opacity-40">·</span>
+                                <span class="text-muted"><span class="font-mono text-toned">{{ campaign.days_to_close }}</span>d to close</span>
+                            </template>
                         </template>
 
                         <span class="ml-auto flex flex-wrap items-center gap-2">

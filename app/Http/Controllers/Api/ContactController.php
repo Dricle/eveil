@@ -9,6 +9,7 @@ use App\Imports\LeadsImport;
 use App\Models\Lead;
 use App\Support\CurrentProject;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
@@ -17,10 +18,19 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  */
 class ContactController extends Controller
 {
-    public function index(): AnonymousResourceCollection
+    /**
+     * `?email=` finds one person whatever the case, for a CRM that knows
+     * people by address rather than by Eveil's id.
+     */
+    public function index(Request $request): AnonymousResourceCollection
     {
         return ContactResource::collection(
-            Lead::query()->with('company')->whereNull('erased_at')->orderBy('id')->paginate(50)
+            Lead::query()
+                ->with('company')
+                ->whereNull('erased_at')
+                ->when($request->string('email')->value(), fn ($query, string $email) => $query->where('email_hash', Lead::hashFor($email)))
+                ->orderBy('id')
+                ->paginate(50)
         );
     }
 

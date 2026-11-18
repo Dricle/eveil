@@ -19,6 +19,10 @@ use App\Services\Ads\AdTokens;
  *
  * Reconnecting refreshes the tokens of accounts already there and keeps
  * whether they are switched on.
+ *
+ * On a network that posts ads as someone (a Facebook Page on Meta), the one
+ * identity on offer is picked for the person; with several, nobody is, and
+ * the account stays off until a person picks one on the Ads page.
  */
 class ConnectAdAccounts
 {
@@ -36,8 +40,17 @@ class ConnectAdAccounts
                 $account->enabled = $accounts->count() === 1;
             }
 
+            $offered = array_column($data->identities, 'id');
+            $identityId = match (true) {
+                in_array($account->identity_id, $offered, true) => $account->identity_id,
+                count($offered) === 1 => $offered[0],
+                default => null,
+            };
+
             $account->fill([
                 'platform_app_id' => $app->id,
+                'identities' => $data->identities === [] ? null : $data->identities,
+                'identity_id' => $identityId,
                 'name' => $data->name,
                 'currency' => $data->currency,
                 'time_zone' => $data->timeZone,
@@ -47,7 +60,14 @@ class ConnectAdAccounts
                 'token_expires_at' => $tokens->expiresAt,
                 'status' => AdAccountStatus::Active,
                 'last_error' => null,
-            ])->save();
+            ]);
+
+            // A Page that disappeared takes the account's right to spend with it.
+            if ($account->needsIdentity()) {
+                $account->enabled = false;
+            }
+
+            $account->save();
         });
 
         // The budget's currency, until a person picks another: the first

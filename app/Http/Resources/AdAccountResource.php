@@ -26,6 +26,10 @@ class AdAccountResource extends JsonResource
             'external_id' => $this->external_id,
             'currency' => $this->currency,
             'enabled' => $this->enabled,
+            // Who the ads are posted as, on networks that ask: null otherwise.
+            'identity_label' => $this->platform->client()->capabilities()->identity,
+            'identities' => $this->identities ?? [],
+            'identity_id' => $this->identity_id,
             'usable' => $this->isUsable(),
             'spent_this_month' => $this->spentThisMonthMicros() / 1_000_000,
             'active_daily_budget' => $this->activeDailyBudgetMicros() / 1_000_000,

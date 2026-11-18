@@ -94,6 +94,16 @@ export const PROVIDER_PRESETS = [
         note: 'Needs an app password, not the account password: turn on 2-step verification first, then generate one. A Workspace admin can block app passwords for the whole organization.'
     },
     {
+        label: 'Fastmail',
+        smtp_host: 'smtp.fastmail.com',
+        smtp_port: 587,
+        smtp_encryption: 'starttls',
+        imap_host: 'imap.fastmail.com',
+        imap_port: 993,
+        imap_encryption: 'tls',
+        note: 'Needs an app password with IMAP and SMTP access (Settings, Privacy & Security). The account password is refused.'
+    },
+    {
         label: 'Microsoft 365',
         smtp_host: 'smtp.office365.com',
         smtp_port: 587,

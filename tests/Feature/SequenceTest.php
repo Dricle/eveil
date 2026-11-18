@@ -26,11 +26,13 @@ use App\Jobs\WriteCampaign;
 use App\Jobs\WriteStepVariant;
 use App\Models\AgentRun;
 use App\Models\Campaign;
+use App\Models\CampaignLead;
 use App\Models\CampaignStep;
 use App\Models\Company;
 use App\Models\CompanyTargetEvaluation;
 use App\Models\EmailExample;
 use App\Models\Lead;
+use App\Models\Message;
 use App\Models\Organization;
 use App\Models\Project;
 use App\Models\StepVariant;
@@ -654,6 +656,35 @@ it('sends the props the pages actually read', function () {
             ->has('campaign.steps', 1)
             ->has('campaign.steps.0.variants', 1)
             ->where('campaign.steps.0.variants.0.subject', 'vos commandes'));
+});
+
+it('reports wins, deals in discussion and days to close per sequence', function () {
+    [$user, $project] = sequencer();
+    $campaign = Campaign::factory()->create(['project_id' => $project->id]);
+
+    $enrol = function (OutreachStatus $status, ?int $wonAfterDays = null) use ($project, $campaign): void {
+        $lead = Lead::factory()->create([
+            'project_id' => $project->id,
+            'status' => $status,
+            'won_at' => $wonAfterDays === null ? null : now()->subDays(20 - $wonAfterDays),
+        ]);
+        $membership = CampaignLead::factory()->create(['campaign_id' => $campaign->id, 'lead_id' => $lead->id]);
+        Message::factory()->create(['lead_id' => $lead->id, 'campaign_lead_id' => $membership->id, 'sent_at' => now()->subDays(20)]);
+    };
+
+    $enrol(OutreachStatus::Won, wonAfterDays: 4);
+    $enrol(OutreachStatus::Won, wonAfterDays: 10);
+    $enrol(OutreachStatus::InDiscussion);
+    $enrol(OutreachStatus::Contacted);
+
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->get(route('campaigns.index'))
+        ->assertInertia(fn ($page) => $page
+            ->where('campaigns.0.sent_count', 4)
+            ->where('campaigns.0.discussion_count', 1)
+            ->where('campaigns.0.won_count', 2)
+            ->where('campaigns.0.days_to_close', 7));
 });
 
 it('never previews a lead the user has taken out of outreach', function () {

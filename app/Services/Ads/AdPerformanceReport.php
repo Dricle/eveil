@@ -212,6 +212,7 @@ class AdPerformanceReport
                 'target_profile' => $creative->targetProfile?->name,
                 'headlines' => $creative->headlines,
                 'descriptions' => $creative->descriptions,
+                'image_brief' => $creative->image_brief,
                 'final_url' => $creative->final_url,
                 'by_platform' => $ads
                     ->where('ad_creative_id', $creative->id)

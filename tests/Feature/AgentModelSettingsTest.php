@@ -166,6 +166,7 @@ it('lists every agent it finds in the code, not a hand-kept list', function () {
     // An enum would drift the day someone adds an agent and forgets the case.
     expect(app(AgentSettings::class)->known())->toBe([
         'ad-strategist',
+        'article-topic-matcher',
         'article-writer',
         'company-qualifier',
         'competitor-analyst',
@@ -173,6 +174,7 @@ it('lists every agent it finds in the code, not a hand-kept list', function () {
         'contact-page-finder',
         'discovery-planner',
         'evie',
+        'feature-topic-matcher',
         'image-generator',
         'listing-extractor',
         'message-personalizer',

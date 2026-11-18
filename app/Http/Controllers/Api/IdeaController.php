@@ -11,7 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 
 /**
- * The open article ideas on the SEO page. Write one with
+ * The open article topics on the SEO page, the most asked first. Write one with
  * `POST /articles {"idea_id": ...}`; dismissing one here takes it off the
  * list for good, as in the app.
  */
@@ -20,7 +20,7 @@ class IdeaController extends Controller
     public function index(): JsonResponse
     {
         return response()->json(['data' => InsightResource::collection(
-            Insight::query()->where('kind', InsightKind::Article)->where('status', InsightStatus::Open)->latest('id')->get()
+            Insight::query()->where('kind', InsightKind::Article)->where('status', InsightStatus::Open)->orderByDesc('mentions')->latest('id')->get()
         )]);
     }
 

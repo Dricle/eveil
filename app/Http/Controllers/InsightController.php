@@ -30,9 +30,15 @@ class InsightController extends Controller
 
         $insights = Insight::query()
             ->where('status', InsightStatus::Open)
+            // Their own tab lists every article topic, the quiet ones too:
+            // the SEO page no longer does. The mixed feed keeps the popular.
+            ->when($kind !== InsightKind::Article, fn ($query) => $query->inFeed())
             ->when($kind, fn ($query, InsightKind $kind) => $query->where('kind', $kind))
             ->when($competitor !== '' && $competitor !== 'all', fn ($query) => $query->where('details->competitor', $competitor))
             ->when($unread, fn ($query) => $query->whereNull('read_at'))
+            // A kind counted by how many threads ask ranks by that count on
+            // its own tab; the mixed feed stays newest first.
+            ->when(in_array($kind, [InsightKind::Feature, InsightKind::Article], true), fn ($query) => $query->orderByDesc('mentions'))
             ->latest('id')
             ->paginate(50)
             ->withQueryString();
@@ -46,7 +52,13 @@ class InsightController extends Controller
                 is_array($knowledgeBase['competitors'] ?? null) ? $knowledgeBase['competitors'] : [],
                 fn (mixed $name): bool => is_string($name) && trim($name) !== '',
             )),
-            'unreadCount' => Insight::query()->where('status', InsightStatus::Open)->whereNull('read_at')->count(),
+            'unreadCount' => Insight::query()->where('status', InsightStatus::Open)->inFeed()->whereNull('read_at')->count(),
+            // One tab per kind, each with what it lists, so 26 missing
+            // features never hide 3 acquisition ideas further down the feed.
+            'counts' => Insight::query()->where('status', InsightStatus::Open)
+                ->toBase()->selectRaw('kind, count(*) as total')->groupBy('kind')->pluck('total', 'kind')
+                ->map(fn (mixed $total): int => (int) $total),
+            'feedCount' => Insight::query()->where('status', InsightStatus::Open)->inFeed()->count(),
         ]);
     }
 

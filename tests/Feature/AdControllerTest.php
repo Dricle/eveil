@@ -1,8 +1,10 @@
 <?php
 
 use App\Enums\AdDecisionStatus;
+use App\Enums\AdPlatform;
 use App\Enums\AdStatus;
 use App\Enums\AutonomyLevel;
+use App\Enums\PlatformAppKind;
 use App\Jobs\ApplyAdDecision;
 use App\Jobs\ReviewAds;
 use App\Jobs\SyncAdAccount;
@@ -211,4 +213,22 @@ it('pauses every running campaign the moment ads are switched off, and reviews n
 
     $this->actingAs($user)->post(route('ads.reviews.store'))->assertSessionHasErrors('review');
     Queue::assertNotPushed(ReviewAds::class);
+});
+
+it('says per network whether this project has an app, accounts connected, or nothing yet', function () {
+    [$user, $project] = adOwner();
+    PlatformApp::factory()->create(['organization_id' => $project->organization_id, 'platform' => PlatformAppKind::MicrosoftAds]);
+    // A second Google account beside the one `adOwner()` connects.
+    AdAccount::factory()->create(['project_id' => $project->id, 'platform' => AdPlatform::GoogleAds]);
+    // Another project's account is not this one's.
+    AdAccount::factory()->create(['platform' => AdPlatform::MetaAds]);
+
+    $this->actingAs($user)->get(route('settings.ad-platforms.index', ['project' => $project]))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('settings/AdPlatforms')
+            ->where('platforms.0.connected_accounts', 2)
+            ->where('platforms.1.has_own_app', true)
+            ->where('platforms.1.connected_accounts', 0)
+            ->where('platforms.2.connected_accounts', 0)
+            ->where('platforms.2.docs_url', 'https://docs.eveil.cloud/product/ads#meta-ads-getting-an-app-id-and-secret'));
 });

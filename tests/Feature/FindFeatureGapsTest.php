@@ -37,6 +37,7 @@ function projectWithCompetitors(): array
     Insight::factory()->for($project)->recommendation('referral_program')->create();
     Insight::factory()->for($project)->recommendation('feature_csv_import', 'CSV import', InsightStatus::Dismissed, InsightKind::Feature)->create();
     Insight::factory()->for($project)->recommendation('feature_old_gap', 'Old gap', InsightStatus::Open, InsightKind::Feature)->create();
+    Insight::factory()->for($project)->recommendation('https://www.reddit.com/r/SaaS/comments/abc/', 'Offline mode', InsightStatus::Open, InsightKind::Feature)->create(['source' => 'reddit']);
 
     $run = AgentRun::create(['project_id' => $project->id, 'agent' => CompetitorAnalyst::slug(), 'status' => AgentRunStatus::Pending]);
 
@@ -67,7 +68,8 @@ it('writes feature gaps without touching open acquisition ideas or decided gaps'
 
     $recommendations = collect($project->fresh()->recommendations())->keyBy('key');
 
-    expect($recommendations->keys()->sort()->values()->all())->toBe(['feature_csv_import', 'feature_driver_app', 'referral_program'])
+    // The old competitor gap is replaced; the one Reddit noted is not this pass's to drop.
+    expect($recommendations->keys()->sort()->values()->all())->toBe(['feature_csv_import', 'feature_driver_app', 'https://www.reddit.com/r/SaaS/comments/abc/', 'referral_program'])
         ->and($recommendations['feature_driver_app'])->toMatchArray(['status' => 'proposed', 'kind' => 'feature'])
         // Archived never comes back (ADR-032).
         ->and($recommendations['feature_csv_import'])->toMatchArray(['status' => 'archived', 'idea' => 'CSV import'])
@@ -86,7 +88,7 @@ it('fails the run and writes nothing when no competitor site is found', function
     expect($run->fresh())
         ->status->toBe(AgentRunStatus::Failed)
         ->error->not->toBeNull()
-        ->and($project->fresh()->recommendations())->toHaveCount(3);
+        ->and($project->fresh()->recommendations())->toHaveCount(4);
 });
 
 it('reads what Redditors say about the competitors, even when no competitor site can be read', function () {

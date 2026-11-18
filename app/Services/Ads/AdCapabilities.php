@@ -2,6 +2,8 @@
 
 namespace App\Services\Ads;
 
+use App\Enums\ImageFormat;
+
 /**
  * A network's limits on one text ad, and which targeting fields it reads.
  * Checked in code before a creative is stored, so the agent hears "headline 3
@@ -12,6 +14,8 @@ final readonly class AdCapabilities
 {
     /**
      * @param  list<string>  $targeting  which of keywords, negative_keywords, countries, languages this network uses
+     * @param  string|null  $identity  what ads are posted as, e.g. "Facebook Page"; null when the network asks for nothing
+     * @param  ImageFormat|null  $image  the shape of the picture every ad carries; null when ads are text only
      */
     public function __construct(
         public int $minHeadlines,
@@ -21,6 +25,8 @@ final readonly class AdCapabilities
         public int $maxDescriptions,
         public int $descriptionMaxLength,
         public array $targeting,
+        public ?string $identity = null,
+        public ?ImageFormat $image = null,
     ) {}
 
     /**
@@ -50,6 +56,9 @@ final readonly class AdCapabilities
             'headlines' => "{$this->minHeadlines} to {$this->maxHeadlines}, at most {$this->headlineMaxLength} characters each",
             'descriptions' => "{$this->minDescriptions} to {$this->maxDescriptions}, at most {$this->descriptionMaxLength} characters each",
             'targeting' => $this->targeting,
+            'image' => $this->image === null
+                ? 'none, text only'
+                : "every new ad carries a {$this->image->describe()} picture: describe it in image_brief",
         ];
     }
 

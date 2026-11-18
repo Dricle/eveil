@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Casts\EncryptedCredential;
 use App\Enums\AdAccountStatus;
 use App\Enums\AdStatus;
+use App\Enums\AnalysisType;
 use App\Enums\ArticleFrequency;
 use App\Enums\AutonomyLevel;
 use App\Enums\BrandAssetKind;
@@ -115,6 +116,29 @@ class Project extends Model implements HasMedia, StoresMediaInterface
     public function logo(): ?Media
     {
         return $this->brandAssets(BrandAssetKind::Logo)->first();
+    }
+
+    /**
+     * What `ImageGenerator` draws from: the logo, the latest style examples,
+     * and the illustrations picked for this image. At most `$perKind`
+     * examples and illustrations each: with the logo, seven references,
+     * within what every image provider takes.
+     *
+     * @param  array<int, int>  $illustrationIds
+     * @return array<int, Media>
+     */
+    public function imageReferences(array $illustrationIds = [], int $perKind = 3): array
+    {
+        $illustrations = $this->brandAssets(BrandAssetKind::Illustration)
+            ->filter(fn (Media $media): bool => in_array($media->id, $illustrationIds, true))
+            ->take($perKind);
+
+        return collect([$this->logo()])
+            ->filter()
+            ->concat($this->brandAssets(BrandAssetKind::Example)->sortByDesc('id')->take($perKind))
+            ->concat($illustrations)
+            ->values()
+            ->all();
     }
 
     /**
@@ -272,6 +296,25 @@ class Project extends Model implements HasMedia, StoresMediaInterface
     public function analyses(): HasMany
     {
         return $this->hasMany(ProjectAnalysis::class);
+    }
+
+    /**
+     * What the site already covers, from the latest website reading: what
+     * an article must not repeat.
+     *
+     * @return Collection<int, array{url: string, title: string}>
+     */
+    public function sitePages(): Collection
+    {
+        $raw = $this->analyses()
+            ->where('type', AnalysisType::Website)
+            ->latest('id')
+            ->value('raw');
+
+        return collect(is_array($raw['pages'] ?? null) ? $raw['pages'] : [])
+            ->filter(fn (mixed $page): bool => is_array($page) && isset($page['url']))
+            ->map(fn (array $page): array => ['url' => (string) $page['url'], 'title' => (string) ($page['title'] ?? '')])
+            ->values();
     }
 
     /**
@@ -534,16 +577,60 @@ class Project extends Model implements HasMedia, StoresMediaInterface
     }
 
     /**
+     * Brings the knowledge base's key features up to date with the missing
+     * features marked done. Nothing to do before the first reading.
+     */
+    public function syncBuiltFeatures(): void
+    {
+        if ($this->knowledge_base === null) {
+            return;
+        }
+
+        $this->update(['knowledge_base' => [
+            ...$this->knowledge_base,
+            'key_features' => $this->withBuiltFeatures($this->knowledge_base['key_features'] ?? []),
+        ]]);
+    }
+
+    /**
+     * The key features, plus every missing feature the user marked done: it
+     * is built now, and the writers and the Reddit triage read the portrait
+     * to know what the product does. Applied when a feature is marked done
+     * and again on every re-reading of the site, which rewrites the list
+     * from the site alone and would otherwise drop it.
+     *
+     * @param  array<int, mixed>  $keyFeatures
+     * @return list<string>
+     */
+    public function withBuiltFeatures(array $keyFeatures): array
+    {
+        $features = array_values(array_filter($keyFeatures, fn (mixed $feature): bool => is_string($feature) && trim($feature) !== ''));
+        $known = array_map(mb_strtolower(...), $features);
+
+        foreach ($this->insights()->where('kind', InsightKind::Feature)->where('status', InsightStatus::Used)->oldest('updated_at')->pluck('title') as $built) {
+            if (! in_array(mb_strtolower($built), $known, true)) {
+                $features[] = $built;
+                $known[] = mb_strtolower($built);
+            }
+        }
+
+        return $features;
+    }
+
+    /**
      * A fresh reading's own recommendations of one kind replace the open ones
      * of that kind. A `done` or `archived` one is never rewritten or proposed
      * again (ADR-032's "archived never comes back"). An open one the reading
      * proposes again keeps its row, so it stays read if it was. Shared by the
      * full website analysis, the recommendations-only re-read
      * (`App\Actions\RefreshAcquisitionIdeas`) and the feature-gap pass
-     * (`App\Actions\FindFeatureGaps`): each touches only its own kind.
+     * (`App\Actions\FindFeatureGaps`): each touches only its own kind, and
+     * only what that writer itself proposed. A feature idea the Reddit scan
+     * noted, or one Evie added, is not a re-analysis's to drop.
      */
     public function replaceOpenRecommendations(mixed $recommendations, RecommendationKind $kind): void
     {
+        $source = $kind === RecommendationKind::Feature ? 'competitors' : 'website';
         $existing = $this->insights()->where('kind', $kind->toInsightKind())->get()->keyBy('source_ref');
 
         $fresh = collect(is_array($recommendations) ? $recommendations : [])
@@ -559,18 +646,28 @@ class Project extends Model implements HasMedia, StoresMediaInterface
             }
 
             $this->insights()->updateOrCreate(['kind' => $kind->toInsightKind(), 'source_ref' => (string) $key], [
-                'source' => $kind === RecommendationKind::Feature ? 'competitors' : 'website',
+                'source' => $source,
                 'title' => (string) $r['idea'],
                 'angle' => (string) $r['evidence'],
-                'details' => ['impact' => (string) $r['impact'], 'effort' => (string) $r['effort']],
+                // Reddit threads asking for the same feature joined it
+                // (`NoteFeatureIdeas`): a re-reading keeps them.
+                'details' => array_filter([
+                    'impact' => (string) $r['impact'],
+                    'effort' => (string) $r['effort'],
+                    'threads' => $idea?->details['threads'] ?? null,
+                ]),
                 'status' => InsightStatus::Open,
             ]);
         }
 
+        // Nor does a re-reading that no longer proposes a feature drop it
+        // while people on Reddit still ask for it.
         $this->insights()
             ->where('kind', $kind->toInsightKind())
+            ->where('source', $source)
             ->where('status', InsightStatus::Open)
             ->whereNotIn('source_ref', $fresh->keys()->map(fn (int|string $key): string => (string) $key)->all())
+            ->whereNull('details->threads')
             ->delete();
     }
 

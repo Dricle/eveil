@@ -91,8 +91,14 @@ class AdStrategist extends EveilAgent implements HasTools
 
         Writing ads:
         - Respect each account's copy limits exactly; they are in the report.
-        - Write in the site language, for the person searching, about their
-          problem first and the product second.
+        - When they say ads carry a picture, write an image_brief per ad: one
+          idea someone scrolling a feed grasps in a second, the person and
+          their problem rather than a screenshot of the product, and no text
+          in the picture unless a few words are the idea. The picture is
+          drawn when you propose, in the product's own visual style. A variant
+          may change the picture alone: that is often what wins on feeds.
+        - Write in the site language, for the person searching or scrolling,
+          about their problem first and the product second.
         - Only claims the product portrait supports. Never invent numbers,
           prices, guarantees, awards or customers.
         - Keywords carry clear intent from someone who needs this product, not

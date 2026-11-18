@@ -10,6 +10,7 @@ use App\Jobs\SendCampaignStep;
 use App\Models\CampaignLead;
 use App\Models\EmailAccount;
 use App\Notifications\MailboxPaused;
+use App\Services\Outreach\RecipientTimezone;
 use App\Support\Settings;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Notification;
@@ -28,19 +29,13 @@ use Illuminate\Support\Facades\Notification;
  */
 class DispatchDueSends
 {
-    public function __construct(private Settings $settings) {}
+    public function __construct(private Settings $settings, private RecipientTimezone $timezones) {}
 
     /**
      * How many sends were queued.
      */
     public function handle(): int
     {
-        // Outside working hours nothing leaves. A 04:00 mail from somebody's
-        // own mailbox reads as a machine before it reads as anything else.
-        if (! $this->windowIsOpen()) {
-            return 0;
-        }
-
         $queued = 0;
 
         // Random order: several accounts can serve the same unassigned lead
@@ -93,10 +88,15 @@ class DispatchDueSends
      * quiet, and asking the hour against the same setting somewhere else is how
      * a screen ends up disagreeing with what the scheduler actually does.
      */
-    public function windowIsOpen(): bool
+    /**
+     * The window on the instance clock, or on the recipient's when it is
+     * known: a 04:00 mail reads as a machine before it reads as anything else,
+     * and 04:00 in Montreal is 10:00 in Brussels.
+     */
+    public function windowIsOpen(?string $timezone = null): bool
     {
         $sending = $this->settings->array('sending');
-        $hour = (int) now()->format('G');
+        $hour = (int) now($timezone)->format('G');
 
         return $hour >= (int) $sending['window_start'] && $hour < (int) $sending['window_end'];
     }
@@ -142,7 +142,12 @@ class DispatchDueSends
                 ->withoutGlobalScopes()
                 ->where('status', CampaignStatus::Active))
             ->oldest('next_action_at')
-            ->first();
+            ->with('lead.company')
+            // ponytail: scans the 50 oldest due rows per tick; a stored
+            // timezone column filtered in SQL if backlogs grow past that.
+            ->limit(50)
+            ->get()
+            ->first(fn (CampaignLead $due): bool => $this->windowIsOpen($this->timezones->for($due->lead?->company)));
 
         if ($lead !== null && $lead->email_account_id === null) {
             $lead->update(['email_account_id' => $account->id]);

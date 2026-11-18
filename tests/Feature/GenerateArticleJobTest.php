@@ -18,6 +18,7 @@ use App\Models\User;
 use App\Notifications\ArticleDrafted;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
+use Laravel\Ai\Prompts\AgentPrompt;
 use Laravel\Ai\Responses\Data\Meta;
 use Laravel\Ai\Responses\Data\TextUsage;
 use Laravel\Ai\Responses\StructuredTextResponse;
@@ -76,6 +77,30 @@ it('shows the writer what the site and past articles already cover, and the open
         ->toContain('Best tool for widgets?')
         ->toContain('Choosing a widget tool in 2026.')
         ->not->toContain('Dismissed thread');
+});
+
+it('hands the writer the most asked topics first, and marks the one it wrote from any of its threads', function () {
+    $project = Project::factory()->create();
+    Insight::factory()->create(['project_id' => $project->id, 'angle' => 'A lone question.']);
+    $popular = Insight::factory()->create([
+        'project_id' => $project->id,
+        'angle' => 'The question everyone asks.',
+        'mentions' => 2,
+        'details' => ['threads' => [
+            ['title' => 'First asker', 'url' => 'https://www.reddit.com/r/a/comments/1/'],
+            ['title' => 'Second asker', 'url' => 'https://www.reddit.com/r/a/comments/2/'],
+        ]],
+    ]);
+    ArticleWriter::fake([fakeArticleResponse(['source_type' => 'reddit_thread', 'source_ref' => 'https://www.reddit.com/r/a/comments/2/'])]);
+
+    GenerateArticle::dispatchSync($project);
+
+    $prompt = AgentRun::sole()->input['prompt'];
+
+    expect(strpos($prompt, 'The question everyone asks. (asked in 2 threads)'))->toBeLessThan(strpos($prompt, 'A lone question.'))
+        ->and($prompt)->toContain('Second asker (https://www.reddit.com/r/a/comments/2/)')
+        ->and($popular->fresh()->status)->toBe(InsightStatus::Used)
+        ->and($popular->fresh()->article_id)->toBe(Article::sole()->id);
 });
 
 it('writes the idea the user clicked, and marks it used', function () {
@@ -141,4 +166,14 @@ it('queues only the projects whose article cadence is due, and moves them on', f
 
     Queue::assertPushed(GenerateArticle::class, fn (GenerateArticle $job): bool => $job->project->is($due));
     expect($due->fresh()->article_next_at->isAfter(now()->addDays(6)))->toBeTrue();
+});
+
+it('tells the writer to shape the article so AI answer engines can cite it', function () {
+    $project = Project::factory()->create();
+    ArticleWriter::fake([fakeArticleResponse([])]);
+
+    GenerateArticle::dispatchSync($project);
+
+    ArticleWriter::assertPrompted(fn (AgentPrompt $prompt): bool => str_contains((string) $prompt->agent->instructions(), 'AI answer engines')
+        && str_contains((string) $prompt->agent->instructions(), '## FAQ'));
 });

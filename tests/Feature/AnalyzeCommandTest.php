@@ -5,9 +5,11 @@ use App\Ai\Agents\WebsiteAnalyst;
 use App\Enums\AnalysisStatus;
 use App\Enums\ArticleFrequency;
 use App\Enums\BrandAssetKind;
+use App\Enums\InsightStatus;
 use App\Enums\RedditScanFrequency;
 use App\Enums\SocialPostFrequency;
 use App\Models\AgentRun;
+use App\Models\Insight;
 use App\Models\Organization;
 use App\Models\Project;
 use App\Models\ProjectAnalysis;
@@ -410,4 +412,16 @@ it('leaves alone a channel the user switched while the site was being read', fun
     expect($project->email_enabled)->toBeFalse()
         ->and($project->linkedin_post_frequency)->toBe(SocialPostFrequency::Daily)
         ->and($project->reddit_scan_frequency)->toBe(RedditScanFrequency::Weekly);
+});
+
+it('keeps a missing feature marked done among the key features when it reads the site again', function () {
+    fakeSite();
+    WebsiteAnalyst::fake([knowledgeBase(), knowledgeBase()]);
+
+    $this->artisan('eveil:analyze', ['url' => 'https://acme.test'])->assertSuccessful();
+    Insight::factory()->for(Project::sole())->featureRequest()->create(['title' => 'Export invoices to accounting software', 'status' => InsightStatus::Used]);
+
+    $this->artisan('eveil:analyze', ['url' => 'https://acme.test', '--fresh' => true])->assertSuccessful();
+
+    expect(Project::sole()->knowledge_base['key_features'])->toBe(['Next-day delivery', 'Bulk pricing', 'Export invoices to accounting software']);
 });

@@ -7,9 +7,11 @@ use App\Http\Controllers\Api\CampaignLeadController;
 use App\Http\Controllers\Api\CompanyBulkDeleteController;
 use App\Http\Controllers\Api\CompanyController;
 use App\Http\Controllers\Api\CompanyNoteController;
+use App\Http\Controllers\Api\CompanyStatusController;
 use App\Http\Controllers\Api\ContactBulkDeleteController;
 use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\ContactNoteController;
+use App\Http\Controllers\Api\ContactStatusController;
 use App\Http\Controllers\Api\DiscoveryRunController;
 use App\Http\Controllers\Api\IdeaController;
 use App\Http\Controllers\Api\InsightController;
@@ -58,6 +60,7 @@ Route::prefix('v1')
                 Route::get('companies', [CompanyController::class, 'index'])->name('companies.index');
                 Route::delete('companies', [CompanyBulkDeleteController::class, 'destroy'])->name('companies.destroy-all');
                 Route::get('companies/{company}', [CompanyController::class, 'show'])->name('companies.show');
+                Route::put('companies/{company}/status', [CompanyStatusController::class, 'update'])->name('companies.status.update');
                 Route::get('companies/{company}/notes', [CompanyNoteController::class, 'index'])->name('companies.notes.index');
                 Route::post('companies/{company}/notes', [CompanyNoteController::class, 'store'])->name('companies.notes.store');
                 Route::patch('companies/{company}/notes/{note}', [CompanyNoteController::class, 'update'])->name('companies.notes.update');
@@ -69,6 +72,7 @@ Route::prefix('v1')
                 Route::post('contacts', [ContactController::class, 'store'])->name('contacts.store');
                 Route::delete('contacts', [ContactBulkDeleteController::class, 'destroy'])->name('contacts.destroy-all');
                 Route::get('contacts/{contact}', [ContactController::class, 'show'])->name('contacts.show');
+                Route::put('contacts/{contact}/status', [ContactStatusController::class, 'update'])->name('contacts.status.update');
                 Route::get('contacts/{contact}/notes', [ContactNoteController::class, 'index'])->name('contacts.notes.index');
                 Route::post('contacts/{contact}/notes', [ContactNoteController::class, 'store'])->name('contacts.notes.store');
                 Route::patch('contacts/{contact}/notes/{note}', [ContactNoteController::class, 'update'])->name('contacts.notes.update');

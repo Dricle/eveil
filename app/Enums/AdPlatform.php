@@ -4,6 +4,7 @@ namespace App\Enums;
 
 use App\Services\Ads\AdClientInterface;
 use App\Services\Ads\GoogleAdsClient;
+use App\Services\Ads\MetaAdsClient;
 use App\Services\Ads\MicrosoftAdsClient;
 
 /**
@@ -17,12 +18,26 @@ enum AdPlatform: string
 {
     case GoogleAds = 'google_ads';
     case MicrosoftAds = 'microsoft_ads';
+    case MetaAds = 'meta_ads';
 
     public function label(): string
     {
         return match ($this) {
             self::GoogleAds => 'Google Ads',
             self::MicrosoftAds => 'Microsoft Advertising',
+            self::MetaAds => 'Meta Ads',
+        };
+    }
+
+    /**
+     * The guide to setting up this network's app, in the public docs.
+     */
+    public function docsUrl(): string
+    {
+        return 'https://docs.eveil.cloud/product/ads#'.match ($this) {
+            self::GoogleAds => 'google-ads-getting-a-client-id-and-secret',
+            self::MicrosoftAds => 'microsoft-advertising-getting-a-client-id-secret-and-developer-token',
+            self::MetaAds => 'meta-ads-getting-an-app-id-and-secret',
         };
     }
 
@@ -34,6 +49,7 @@ enum AdPlatform: string
         return match ($this) {
             self::GoogleAds => PlatformAppKind::GoogleAds,
             self::MicrosoftAds => PlatformAppKind::MicrosoftAds,
+            self::MetaAds => PlatformAppKind::MetaAds,
         };
     }
 
@@ -42,6 +58,7 @@ enum AdPlatform: string
         return app(match ($this) {
             self::GoogleAds => GoogleAdsClient::class,
             self::MicrosoftAds => MicrosoftAdsClient::class,
+            self::MetaAds => MetaAdsClient::class,
         });
     }
 }

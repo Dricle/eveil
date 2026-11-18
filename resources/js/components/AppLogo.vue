@@ -1,0 +1,47 @@
+<!-- The Eveil mark: a sun rising over the horizon. -->
+<template>
+    <svg
+        viewBox="0 0 64 64"
+        aria-hidden="true"
+    >
+        <rect
+            width="64"
+            height="64"
+            rx="14"
+            class="fill-primary"
+        />
+        <g fill="oklch(16.5% 0.006 228)">
+            <path d="M20 40 A12 12 0 0 1 44 40 Z" />
+            <rect
+                x="9"
+                y="39.5"
+                width="46"
+                height="5"
+                rx="2.5"
+            />
+            <rect
+                x="29.5"
+                y="14"
+                width="5"
+                height="9"
+                rx="2.5"
+            />
+            <rect
+                x="19"
+                y="15"
+                width="5"
+                height="9"
+                rx="2.5"
+                transform="rotate(-30 21.5 19.5)"
+            />
+            <rect
+                x="40"
+                y="15"
+                width="5"
+                height="9"
+                rx="2.5"
+                transform="rotate(30 42.5 19.5)"
+            />
+        </g>
+    </svg>
+</template>

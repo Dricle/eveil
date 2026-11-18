@@ -106,6 +106,17 @@ function verdict (mailbox: Mailbox) {
             :description="String(page.props.errors.test)"
         />
 
+        <!-- The mailbox works; its domain just is not set up to be trusted
+             by Gmail and Outlook yet. -->
+        <UAlert
+            v-if="page.props.errors?.sender_auth"
+            color="warning"
+            variant="subtle"
+            icon="i-lucide-shield-alert"
+            title="Your sending domain is missing authentication"
+            :description="String(page.props.errors.sender_auth)"
+        />
+
         <div
             v-for="mailbox in mailboxes"
             :key="mailbox.id"

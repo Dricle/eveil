@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\HarvestRedditReplyExamples;
+use App\Actions\NoteArticleIdeas;
 use App\Ai\Agents\RedditExampleTriage;
 use App\Ai\Agents\RedditOpportunityTriage;
 use App\Ai\Agents\RedditReplyWriter;
@@ -51,6 +52,11 @@ function scannableProject(): Project
 beforeEach(function () {
     Http::fake([
         'arctic-shift.photon-reddit.com/api/posts/search*' => Http::response(['data' => []]),
+        'arctic-shift.photon-reddit.com/api/posts/ids*' => Http::response(['data' => [[
+            'id' => 'xyz789',
+            'title' => 'What do you use to keep track of this?',
+            'selftext' => 'Looking for something simple, spreadsheets stopped scaling.',
+        ]]]),
         'arctic-shift.photon-reddit.com/api/comments/search*' => Http::response(['data' => [[
             'permalink' => '/r/SaaS/comments/xyz789/what_do_you_use/def456/',
             'subreddit' => 'SaaS',
@@ -305,6 +311,57 @@ it('feeds the full product portrait, not just what_it_does, into both agent prom
     }
 });
 
+it('reads a comment under its own post, in both prompts, and replies to the comment', function () {
+    $project = scannableProject();
+
+    RedditOpportunityTriage::fake([[
+        'items' => [[
+            'permalink' => 'https://www.reddit.com/r/SaaS/comments/xyz789/what_do_you_use/def456/',
+            'is_opportunity' => true,
+            'reason' => 'The commenter asks for a tool too.',
+        ]],
+    ]]);
+    RedditReplyWriter::fake([[
+        'body_value_comment' => 'A reply.',
+        'body_soft_mention' => '',
+        'body_dm_invite' => '',
+    ]]);
+
+    ScanRedditOpportunities::dispatchSync($project);
+
+    $triagePrompt = AgentRun::where('agent', RedditOpportunityTriage::slug())->sole()->input['prompt'];
+    $writerPrompt = AgentRun::where('agent', RedditReplyWriter::slug())->sole()->input['prompt'];
+
+    expect($triagePrompt)->toContain('Under the post: What do you use to keep track of this?')
+        ->and($triagePrompt)->toContain('u/buildercorp commented: Does anyone know a good tool for this?')
+        ->and($writerPrompt)->toContain("## The post (in r/SaaS)\n\nWhat do you use to keep track of this?\n\nLooking for something simple")
+        ->and($writerPrompt)->toContain("## The comment you are replying to, by u/buildercorp\n\nDoes anyone know a good tool for this?")
+        ->and(RedditReply::sole()->thread_title)->toBe('What do you use to keep track of this?');
+});
+
+it('skips a comment whose post cannot be read, so it is never judged as the thread itself', function () {
+    $project = scannableProject();
+
+    Http::swap(new Factory);
+    Http::fake([
+        'arctic-shift.photon-reddit.com/api/posts/search*' => Http::response(['data' => []]),
+        'arctic-shift.photon-reddit.com/api/posts/ids*' => Http::response(['data' => []]),
+        'arctic-shift.photon-reddit.com/api/comments/search*' => Http::response(['data' => [[
+            'permalink' => '/r/SaaS/comments/xyz789/what_do_you_use/def456/',
+            'subreddit' => 'SaaS',
+            'author' => 'buildercorp',
+            'body' => 'Does anyone know a good tool for this?',
+            'link_id' => 't3_xyz789',
+            'id' => 'def456',
+        ]]]),
+    ]);
+
+    ScanRedditOpportunities::dispatchSync($project);
+
+    expect(AgentRun::count())->toBe(0)
+        ->and(RedditTriagedThread::count())->toBe(0);
+});
+
 it('feeds this project\'s own promoted replies into the writer prompt', function () {
     $project = scannableProject();
     RedditReply::factory()->create([
@@ -434,6 +491,38 @@ it('notes a competitor mention under the knowledge base spelling', function () {
         ->and($mention->read_at)->toBeNull();
 });
 
+it('notes a feature people ask for as a feature recommendation, once per thread', function () {
+    $project = scannableProject();
+
+    $verdict = [[
+        'items' => [[
+            'permalink' => 'https://www.reddit.com/r/SaaS/comments/xyz789/what_do_you_use/def456/',
+            'is_opportunity' => false,
+            'reason' => 'x',
+            'article_angle' => '',
+            'competitor' => '',
+            'competitor_signal' => 'none',
+            'competitor_summary' => '',
+            'feature_idea' => 'Export invoices to accounting software',
+            'feature_evidence' => 'Several people say they retype every invoice into their accounting tool.',
+        ]],
+    ]];
+
+    RedditOpportunityTriage::fake([...$verdict, ...$verdict]);
+
+    ScanRedditOpportunities::dispatchSync($project);
+    RedditTriagedThread::query()->delete();
+    ScanRedditOpportunities::dispatchSync($project);
+
+    $idea = Insight::sole();
+
+    expect($idea->kind)->toBe(InsightKind::Feature)
+        ->and($idea->source)->toBe('reddit')
+        ->and($idea->title)->toBe('Export invoices to accounting software')
+        ->and($idea->url)->toBe('https://www.reddit.com/r/SaaS/comments/xyz789/what_do_you_use/def456/')
+        ->and($project->openRecommendations()[0])->toMatchArray(['kind' => 'feature', 'impact' => null]);
+});
+
 it('notes no mention of a competitor the knowledge base does not name', function () {
     $project = scannableProject();
     $project->update(['knowledge_base' => ['competitors' => ['RouteCo']]]);
@@ -471,6 +560,11 @@ it('keeps a high-scoring product mention off a thread it was already reading', f
     Http::swap(new Factory);
     Http::fake([
         'arctic-shift.photon-reddit.com/api/posts/search*' => Http::response(['data' => []]),
+        'arctic-shift.photon-reddit.com/api/posts/ids*' => Http::response(['data' => [[
+            'id' => 'xyz789',
+            'title' => 'What do you use to keep track of this?',
+            'selftext' => 'Looking for something simple, spreadsheets stopped scaling.',
+        ]]]),
         'arctic-shift.photon-reddit.com/api/comments/search*' => Http::response(['data' => [$comment]]),
     ]);
 
@@ -502,10 +596,11 @@ it('keeps a high-scoring product mention off a thread it was already reading', f
         ->and($example->reddit_comment_id)->toBe('def456')
         ->and($example->score)->toBe(40);
 
-    // The harvest reads the tone sample the writer was already given. Two
-    // calls go out per cycle - the subreddit's posts and its comments - and
-    // the tone sample for the one accepted thread. Nothing extra for this.
-    expect(count(Http::recorded(fn ($request) => str_contains($request->url(), 'arctic-shift'))))->toBe(3);
+    // The harvest reads the tone sample the writer was already given. Three
+    // calls go out per cycle - the subreddit's posts, its comments and the
+    // posts those comments sit under - and the tone sample for the one
+    // accepted thread. Nothing extra for this.
+    expect(count(Http::recorded(fn ($request) => str_contains($request->url(), 'arctic-shift'))))->toBe(4);
 });
 
 it('harvests nothing from a scan whose top comments all sit at no score', function () {
@@ -545,6 +640,11 @@ it('splits a large scan into several triage calls so the prompt stays within the
     Http::swap(new Factory);
     Http::fake([
         'arctic-shift.photon-reddit.com/api/posts/search*' => Http::response(['data' => []]),
+        'arctic-shift.photon-reddit.com/api/posts/ids*' => Http::response(['data' => [[
+            'id' => 'xyz789',
+            'title' => 'What do you use to keep track of this?',
+            'selftext' => 'Looking for something simple, spreadsheets stopped scaling.',
+        ]]]),
         'arctic-shift.photon-reddit.com/api/comments/search*' => Http::response(['data' => $comments]),
     ]);
 
@@ -627,5 +727,31 @@ it('still announces its drafts when the harvest fails', function () {
     ScanRedditOpportunities::dispatchSync($project);
 
     Notification::assertSentTo($project->users, RedditRepliesDrafted::class);
+    Exceptions::assertReported(RuntimeException::class);
+});
+
+it('still drafts its replies when grouping the article ideas fails', function () {
+    $project = scannableProject();
+    Exceptions::fake();
+
+    $this->mock(NoteArticleIdeas::class, fn ($mock) => $mock->shouldReceive('handle')->andThrow(new RuntimeException('provider timed out')));
+
+    RedditOpportunityTriage::fake([[
+        'items' => [[
+            'permalink' => 'https://www.reddit.com/r/SaaS/comments/xyz789/what_do_you_use/def456/',
+            'is_opportunity' => true,
+            'reason' => 'e',
+            'article_angle' => 'An article worth writing.',
+        ]],
+    ]]);
+    RedditReplyWriter::fake([[
+        'body_value_comment' => 'A reply.',
+        'body_soft_mention' => '',
+        'body_dm_invite' => '',
+    ]]);
+
+    ScanRedditOpportunities::dispatchSync($project);
+
+    expect(RedditReply::count())->toBe(1);
     Exceptions::assertReported(RuntimeException::class);
 });

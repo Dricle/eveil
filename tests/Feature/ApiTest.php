@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\CampaignStatus;
+use App\Enums\OutreachStatus;
 use App\Enums\SocialPlatform;
 use App\Jobs\GenerateSocialPost;
 use App\Models\Campaign;
@@ -57,6 +58,50 @@ it('reads one project at a time and 404s outside the organization or the project
     $this->withToken($token)->getJson(route('api.companies.show', [$mine, $siblingCompany->id]))->assertNotFound();
     $this->withToken($token)->getJson(route('api.companies.index', $theirs))->assertNotFound();
     $this->withToken($token)->getJson('/api/v1/projects/no-such-project/companies')->assertNotFound();
+});
+
+it('lets a CRM write back a deal won months after the outreach', function () {
+    $project = Project::factory()->create();
+    $company = Company::factory()->for($project)->create();
+    $lead = Lead::factory()->for($project)->for($company)->create();
+    Lead::factory()->for($project)->create();
+    $token = apiToken($project);
+
+    $this->withToken($token)
+        ->putJson(route('api.contacts.status.update', [$project, $lead->id]), ['status' => 'won'])
+        ->assertNoContent();
+
+    $this->withToken($token)
+        ->getJson(route('api.contacts.index', [$project, 'email' => strtoupper($lead->email)]))
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.id', $lead->id);
+
+    expect($lead->fresh()->status)->toBe(OutreachStatus::Won)
+        ->and($lead->fresh()->won_at)->not->toBeNull()
+        ->and($company->fresh()->status)->toBe(OutreachStatus::Won);
+
+    $this->withToken($token)
+        ->putJson(route('api.companies.status.update', [$project, $company->id]), ['status' => 'lost'])
+        ->assertNoContent();
+
+    expect($lead->fresh()->status)->toBe(OutreachStatus::Lost)
+        ->and($lead->fresh()->won_at)->toBeNull();
+
+    $this->withToken($token)->putJson(route('api.contacts.status.update', [$project, $lead->id]), ['status' => 'closed'])->assertUnprocessable();
+});
+
+it('never writes a status on another project or on an erased contact', function () {
+    $project = Project::factory()->create();
+    $foreign = Lead::factory()->for(Company::factory())->create();
+    $erased = Lead::factory()->for($project)->create(['erased_at' => now(), 'status' => OutreachStatus::Suppressed]);
+    $token = apiToken($project);
+
+    $this->withToken($token)->putJson(route('api.contacts.status.update', [$project, $foreign->id]), ['status' => 'won'])->assertNotFound();
+    $this->withToken($token)->putJson(route('api.companies.status.update', [$project, $foreign->company_id]), ['status' => 'won'])->assertNotFound();
+    $this->withToken($token)->putJson(route('api.contacts.status.update', [$project, $erased->id]), ['status' => 'won'])->assertNotFound();
+
+    expect($foreign->fresh()->status)->not->toBe(OutreachStatus::Won)
+        ->and($erased->fresh()->status)->toBe(OutreachStatus::Suppressed);
 });
 
 it('adds contacts through the import rules and reports every row', function () {

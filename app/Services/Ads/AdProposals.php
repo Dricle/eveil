@@ -2,6 +2,7 @@
 
 namespace App\Services\Ads;
 
+use App\Ai\Agents\ImageGenerator;
 use App\Enums\AdDecisionStatus;
 use App\Enums\AdDecisionType;
 use App\Enums\AdStatus;
@@ -14,6 +15,8 @@ use App\Models\AdDecision;
 use App\Models\Project;
 use App\Support\Url;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Throwable;
 
 /**
  * The one way a decision comes into existence, for the agent's tools and for
@@ -73,7 +76,13 @@ class AdProposals
             $creatives[] = $creative;
         }
 
-        $campaign = DB::transaction(function () use ($project, $account, $name, $hypothesis, $targetProfileId, $dailyBudget, $targeting, $creatives): AdCampaign {
+        $images = $this->drawImages($project, $account, $creatives);
+
+        if (is_string($images)) {
+            return $images;
+        }
+
+        $campaign = DB::transaction(function () use ($project, $account, $name, $hypothesis, $targetProfileId, $dailyBudget, $targeting, $creatives, $images): AdCampaign {
             $campaign = AdCampaign::create([
                 'project_id' => $project->id,
                 'ad_account_id' => $account->id,
@@ -85,8 +94,9 @@ class AdProposals
                 'status' => AdStatus::Draft,
             ]);
 
-            foreach ($creatives as $creative) {
+            foreach ($creatives as $index => $creative) {
                 $creative->save();
+                $this->attachImage($creative, $images[$index] ?? null);
 
                 Ad::create([
                     'project_id' => $project->id,
@@ -122,7 +132,14 @@ class AdProposals
             return $creative;
         }
 
+        $images = $this->drawImages($project, $campaign->account, [$creative]);
+
+        if (is_string($images)) {
+            return $images;
+        }
+
         $creative->save();
+        $this->attachImage($creative, $images[0] ?? null);
 
         $ad = Ad::create([
             'project_id' => $project->id,
@@ -238,6 +255,10 @@ class AdProposals
             // Reused as is: the same row, so its record spans networks.
             $problem = $account->platform->client()->capabilities()->problemsWith($existing->headlines, $existing->descriptions);
 
+            if ($problem === null && $account->platform->client()->capabilities()->image !== null && ! $existing->hasMedia('image')) {
+                $problem = "Ads on {$account->platform->label()} carry a picture and this creative has none.";
+            }
+
             return $problem === null
                 ? $existing
                 : "Creative {$existing->id} does not fit {$account->platform->label()}: {$problem} Write an adapted copy with parent_id {$existing->id} instead.";
@@ -261,6 +282,12 @@ class AdProposals
             return "final_url must be on the product's own site ({$productHost}).";
         }
 
+        $imageBrief = trim((string) ($spec['image_brief'] ?? ''));
+
+        if ($account->platform->client()->capabilities()->image !== null && $imageBrief === '') {
+            return "Ads on {$account->platform->label()} carry a picture: describe it in image_brief.";
+        }
+
         $parentId = isset($spec['parent_id'])
             ? AdCreative::query()->where('project_id', $project->id)->whereKey((int) $spec['parent_id'])->value('id')
             : null;
@@ -272,8 +299,57 @@ class AdProposals
             'angle' => trim((string) ($spec['angle'] ?? '')),
             'headlines' => $headlines,
             'descriptions' => $descriptions,
+            'image_brief' => $imageBrief === '' ? null : $imageBrief,
             'final_url' => $finalUrl,
         ]);
+    }
+
+    /**
+     * The picture of every new creative, as JPEG bytes keyed like the
+     * creatives, on networks whose ads carry one; or why one could not be
+     * drawn. Drawn before anything is stored, so a failed picture leaves no
+     * half-made campaign behind, and drawn now rather than at launch, so a
+     * person approving sees what will run.
+     *
+     * @param  array<int, AdCreative>  $creatives
+     * @return array<int, string>|string
+     */
+    private function drawImages(Project $project, AdAccount $account, array $creatives): array|string
+    {
+        $format = $account->platform->client()->capabilities()->image;
+
+        if ($format === null) {
+            return [];
+        }
+
+        $images = [];
+
+        foreach ($creatives as $index => $creative) {
+            if ($creative->exists) {
+                continue;
+            }
+
+            try {
+                $images[$index] = (new ImageGenerator(
+                    $project,
+                    "a {$account->platform->label()} ad whose headline reads \"{$creative->headlines[0]}\"",
+                    (string) $creative->image_brief,
+                    format: $format,
+                    references: $project->imageReferences(),
+                ))->generate();
+            } catch (Throwable $e) {
+                return 'The picture for ad '.($index + 1)." could not be drawn: {$e->getMessage()}";
+            }
+        }
+
+        return $images;
+    }
+
+    private function attachImage(AdCreative $creative, ?string $bytes): void
+    {
+        if ($bytes !== null) {
+            $creative->addMediaFromString($bytes)->usingFileName(Str::uuid().'.jpg')->toMediaCollection('image');
+        }
     }
 
     private function campaign(Project $project, int $campaignId): ?AdCampaign

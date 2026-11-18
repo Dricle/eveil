@@ -3,6 +3,8 @@
 namespace App\Jobs;
 
 use App\Actions\HarvestRedditReplyExamples;
+use App\Actions\NoteArticleIdeas;
+use App\Actions\NoteFeatureIdeas;
 use App\Ai\Agents\RedditOpportunityTriage;
 use App\Ai\Agents\RedditReplyWriter;
 use App\Ai\OutOfCredit;
@@ -50,8 +52,9 @@ class ScanRedditOpportunities implements ShouldQueue
     private const TONE_SAMPLE_LIMIT = 5;
 
     /**
-     * ~1500 chars per candidate (3000 for SEO threads) keeps a batch of 40
-     * well under 50k tokens, a quarter of the 200k context window.
+     * ~1500 chars per candidate (2500 for a comment with its post, 3000 for
+     * SEO threads) keeps a batch of 40 well under 50k tokens, a quarter of
+     * the 200k context window.
      */
     private const TRIAGE_BATCH_SIZE = 40;
 
@@ -65,9 +68,11 @@ class ScanRedditOpportunities implements ShouldQueue
         SeoThreadFinder $seoThreadFinder,
         TopComments $topComments,
         HarvestRedditReplyExamples $harvester,
+        NoteArticleIdeas $noteArticleIdeas,
+        NoteFeatureIdeas $noteFeatureIdeas,
         CurrentProject $currentProject,
     ): void {
-        $currentProject->run($this->project, function () use ($scanner, $seoThreadFinder, $topComments, $harvester): void {
+        $currentProject->run($this->project, function () use ($scanner, $seoThreadFinder, $topComments, $harvester, $noteArticleIdeas, $noteFeatureIdeas): void {
             $candidates = $scanner->find($this->project)
                 ->merge($seoThreadFinder->find($this->project))
                 ->unique(fn (OpportunityCandidate $candidate): string => $candidate->permalink)
@@ -84,8 +89,9 @@ class ScanRedditOpportunities implements ShouldQueue
             /** @var Collection<string, OpportunityCandidate> $byPermalink */
             $byPermalink = $candidates->keyBy(fn (OpportunityCandidate $candidate): string => $candidate->permalink);
 
-            $this->noteArticleIdeas($verdicts, $byPermalink);
+            $this->noteArticleIdeas($noteArticleIdeas, $verdicts, $byPermalink);
             $this->noteCompetitorMentions($verdicts, $byPermalink);
+            $this->noteFeatureIdeas($noteFeatureIdeas, $verdicts, $byPermalink);
             $this->rememberRejected($verdicts, $byPermalink);
 
             /** @var Collection<int, array{0: OpportunityCandidate, 1: string}> $accepted */
@@ -168,7 +174,7 @@ class ScanRedditOpportunities implements ShouldQueue
      * get a reply row once drafted, and one whose drafting failed must come
      * back next scan. Expired rejections are pruned here, on the only write.
      *
-     * @param  Collection<int, array{permalink?: string, is_opportunity?: bool, reason?: string, article_angle?: string, competitor?: string, competitor_signal?: string, competitor_summary?: string}>  $verdicts
+     * @param  Collection<int, array{permalink?: string, is_opportunity?: bool, reason?: string, article_angle?: string, competitor?: string, competitor_signal?: string, competitor_summary?: string, feature_idea?: string, feature_evidence?: string}>  $verdicts
      * @param  Collection<string, OpportunityCandidate>  $byPermalink
      */
     private function rememberRejected(Collection $verdicts, Collection $byPermalink): void
@@ -192,33 +198,76 @@ class ScanRedditOpportunities implements ShouldQueue
     }
 
     /**
-     * Threads the triage judged worth an article, reply opportunity or not.
-     * A thread already noted (open, used or dismissed) is left alone: the
-     * user's "no" sticks, and one thread is one idea.
+     * Threads the triage judged worth an article, reply opportunity or not,
+     * handed to `NoteArticleIdeas` to group into topics.
      *
-     * @param  Collection<int, array{permalink?: string, is_opportunity?: bool, reason?: string, article_angle?: string, competitor?: string, competitor_signal?: string, competitor_summary?: string}>  $verdicts
+     * @param  Collection<int, array{permalink?: string, is_opportunity?: bool, reason?: string, article_angle?: string, competitor?: string, competitor_signal?: string, competitor_summary?: string, feature_idea?: string, feature_evidence?: string}>  $verdicts
      * @param  Collection<string, OpportunityCandidate>  $byPermalink
      */
-    private function noteArticleIdeas(Collection $verdicts, Collection $byPermalink): void
+    private function noteArticleIdeas(NoteArticleIdeas $noteArticleIdeas, Collection $verdicts, Collection $byPermalink): void
     {
-        foreach ($verdicts as $verdict) {
-            $angle = trim((string) ($verdict['article_angle'] ?? ''));
-            $candidate = $byPermalink->get(trim((string) ($verdict['permalink'] ?? '')));
+        $threads = $verdicts
+            ->map(function (array $verdict) use ($byPermalink): ?array {
+                $angle = trim((string) ($verdict['article_angle'] ?? ''));
+                $candidate = $byPermalink->get(trim((string) ($verdict['permalink'] ?? '')));
 
-            if ($angle === '' || $candidate === null) {
-                continue;
-            }
-
-            Insight::query()->firstOrCreate(
-                ['project_id' => $this->project->id, 'kind' => InsightKind::Article, 'source_ref' => $candidate->permalink],
-                [
-                    'source' => 'reddit',
-                    'title' => $candidate->threadTitle ?? Str::limit($candidate->text, 120),
+                return $angle === '' || $candidate === null ? null : [
                     'angle' => $angle,
+                    'title' => $candidate->threadTitle ?? Str::limit($candidate->text, 120),
                     'url' => $candidate->permalink,
-                    'status' => InsightStatus::Open,
-                ],
-            );
+                    'subreddit' => $candidate->subreddit,
+                ];
+            })
+            ->filter()
+            ->values();
+
+        // A side benefit of the scan, like the harvest: never a reason to
+        // lose the reply drafts still to come.
+        try {
+            $noteArticleIdeas->handle($this->project, $threads);
+        } catch (OutOfCredit) {
+            // Not a failure: the spend guard already told the owners.
+        } catch (Throwable $e) {
+            report($e);
+        }
+    }
+
+    /**
+     * Capabilities people on a thread ask for and this product lacks, noted
+     * as `feature` recommendations next to the competitor gaps: same list,
+     * same done/dismissed lifecycle. Handed to `NoteFeatureIdeas`, which
+     * files each under the feature already asking for it. No impact or
+     * effort guess: a thread says a need exists, not how big it is.
+     *
+     * @param  Collection<int, array{permalink?: string, is_opportunity?: bool, reason?: string, article_angle?: string, competitor?: string, competitor_signal?: string, competitor_summary?: string, feature_idea?: string, feature_evidence?: string}>  $verdicts
+     * @param  Collection<string, OpportunityCandidate>  $byPermalink
+     */
+    private function noteFeatureIdeas(NoteFeatureIdeas $noteFeatureIdeas, Collection $verdicts, Collection $byPermalink): void
+    {
+        $threads = $verdicts
+            ->map(function (array $verdict) use ($byPermalink): ?array {
+                $idea = trim((string) ($verdict['feature_idea'] ?? ''));
+                $evidence = trim((string) ($verdict['feature_evidence'] ?? ''));
+                $candidate = $byPermalink->get(trim((string) ($verdict['permalink'] ?? '')));
+
+                return $idea === '' || $evidence === '' || $candidate === null ? null : [
+                    'idea' => $idea,
+                    'evidence' => $evidence,
+                    'title' => $candidate->threadTitle ?? Str::limit($candidate->text, 120),
+                    'url' => $candidate->permalink,
+                    'subreddit' => $candidate->subreddit,
+                ];
+            })
+            ->filter()
+            ->values();
+
+        // Same as the article ideas: never a reason to lose the drafts.
+        try {
+            $noteFeatureIdeas->handle($this->project, $threads);
+        } catch (OutOfCredit) {
+            // Not a failure: the spend guard already told the owners.
+        } catch (Throwable $e) {
+            report($e);
         }
     }
 
@@ -229,7 +278,7 @@ class ScanRedditOpportunities implements ShouldQueue
      * feed's competitor filter never grows a name nobody chose. One thread is
      * one mention, the first reading wins.
      *
-     * @param  Collection<int, array{permalink?: string, is_opportunity?: bool, reason?: string, article_angle?: string, competitor?: string, competitor_signal?: string, competitor_summary?: string}>  $verdicts
+     * @param  Collection<int, array{permalink?: string, is_opportunity?: bool, reason?: string, article_angle?: string, competitor?: string, competitor_signal?: string, competitor_summary?: string, feature_idea?: string, feature_evidence?: string}>  $verdicts
      * @param  Collection<string, OpportunityCandidate>  $byPermalink
      */
     private function noteCompetitorMentions(Collection $verdicts, Collection $byPermalink): void
@@ -264,7 +313,7 @@ class ScanRedditOpportunities implements ShouldQueue
 
     /**
      * @param  Collection<int, OpportunityCandidate>  $candidates
-     * @return Collection<int, array{permalink?: string, is_opportunity?: bool, reason?: string, article_angle?: string, competitor?: string, competitor_signal?: string, competitor_summary?: string}>
+     * @return Collection<int, array{permalink?: string, is_opportunity?: bool, reason?: string, article_angle?: string, competitor?: string, competitor_signal?: string, competitor_summary?: string, feature_idea?: string, feature_evidence?: string}>
      */
     private function triage(Collection $candidates): Collection
     {
@@ -303,6 +352,8 @@ class ScanRedditOpportunities implements ShouldQueue
             $candidate->subreddit,
             (string) $candidate->threadTitle,
             $candidate->text,
+            $candidate->parentPost,
+            $candidate->author,
             $candidate->source,
             $candidate->searchQuery,
             $toneSample,

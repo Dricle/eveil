@@ -3,7 +3,6 @@
 namespace App\Actions;
 
 use App\Ai\Agents\ImageGenerator;
-use App\Enums\BrandAssetKind;
 use App\Enums\SocialPlatform;
 use App\Models\Project;
 use App\Models\SocialPost;
@@ -22,12 +21,6 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  */
 class AddSocialPostImage
 {
-    /**
-     * At most this many style examples and illustrations each per image: with
-     * the logo, seven references, within what every image provider takes.
-     */
-    private const MAX_PER_KIND = 3;
-
     public function handle(SocialPost $post, ?string $note = null): Media
     {
         $brief = trim($post->image_brief ?? '') ?: $post->body;
@@ -56,17 +49,6 @@ class AddSocialPostImage
      */
     public function draw(Project $project, SocialPlatform $platform, string $brief, ?string $note = null, array $illustrationIds = []): string
     {
-        $illustrations = $project->brandAssets(BrandAssetKind::Illustration)
-            ->filter(fn (Media $media): bool => in_array($media->id, $illustrationIds, true))
-            ->take(self::MAX_PER_KIND);
-
-        $references = collect([$project->logo()])
-            ->filter()
-            ->concat($project->brandAssets(BrandAssetKind::Example)->sortByDesc('id')->take(self::MAX_PER_KIND))
-            ->concat($illustrations)
-            ->values()
-            ->all();
-
         return (new ImageGenerator(
             $project,
             "a {$platform->label()} post",
@@ -74,7 +56,7 @@ class AddSocialPostImage
             $note,
             $platform->imageFormat(),
             $project->getAttribute($platform->instructionsColumn()),
-            $references,
+            $project->imageReferences($illustrationIds),
         ))->generate();
     }
 }

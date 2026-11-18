@@ -12,7 +12,10 @@ const page = usePage()
 </script>
 
 <template>
-    <AuthCard title="Log in">
+    <AuthCard
+        title="Welcome back"
+        description="Log in to pick up where Eveil left off."
+    >
         <Head title="Log in" />
 
         <UAlert
@@ -26,7 +29,7 @@ const page = usePage()
         <Form
             v-slot="{ errors, processing }"
             v-bind="store.form()"
-            class="space-y-4"
+            class="space-y-5"
         >
             <UFormField
                 label="Email"
@@ -37,6 +40,9 @@ const page = usePage()
                     name="email"
                     type="email"
                     autocomplete="username"
+                    placeholder="you@company.com"
+                    icon="i-lucide-mail"
+                    size="lg"
                     required
                     autofocus
                     class="w-full"
@@ -48,10 +54,20 @@ const page = usePage()
                 name="password"
                 :error="errors.password"
             >
+                <template #hint>
+                    <Link
+                        :href="request.url()"
+                        class="text-xs text-muted transition-colors hover:text-highlighted"
+                    >
+                        Forgot it?
+                    </Link>
+                </template>
                 <UInput
                     name="password"
                     type="password"
                     autocomplete="current-password"
+                    icon="i-lucide-lock"
+                    size="lg"
                     required
                     class="w-full"
                 />
@@ -60,30 +76,31 @@ const page = usePage()
             <UCheckbox
                 name="remember"
                 value="1"
-                label="Remember me"
+                label="Keep me logged in"
             />
 
             <UButton
                 type="submit"
                 :loading="processing"
+                size="lg"
                 block
+                trailing-icon="i-lucide-arrow-right"
+                :ui="{ trailingIcon: 'ms-0' }"
                 label="Log in"
             />
-
-            <Link
-                :href="request.url()"
-                class="block text-center text-sm text-neutral-500 underline"
-            >
-                Forgot your password?
-            </Link>
-
-            <Link
-                v-if="page.props.registerUrl"
-                :href="page.props.registerUrl"
-                class="block text-center text-sm text-neutral-500 underline"
-            >
-                No account yet? Register
-            </Link>
         </Form>
+
+        <p
+            v-if="page.props.registerUrl"
+            class="mt-8 text-sm text-muted"
+        >
+            No account yet?
+            <Link
+                :href="page.props.registerUrl"
+                class="font-medium text-highlighted underline underline-offset-2"
+            >
+                Create one
+            </Link>
+        </p>
     </AuthCard>
 </template>

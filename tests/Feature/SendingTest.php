@@ -11,10 +11,12 @@ use App\Enums\EmailStatus;
 use App\Enums\MessageDirection;
 use App\Enums\MessageStatus;
 use App\Enums\OutreachStatus;
+use App\Enums\ReplyClassification;
 use App\Enums\SuppressionLayer;
 use App\Jobs\SendCampaignStep;
 use App\Models\Campaign;
 use App\Models\CampaignLead;
+use App\Models\Company;
 use App\Models\EmailAccount;
 use App\Models\Lead;
 use App\Models\Message;
@@ -23,7 +25,10 @@ use App\Models\Suppression;
 use App\Models\User;
 use App\Notifications\MailboxPaused;
 use App\Services\Outreach\MailboxTester;
+use App\Services\Outreach\PreSendCheck;
+use App\Services\Outreach\RecipientTimezone;
 use App\Services\Outreach\Sender;
+use App\Services\Outreach\SenderAuthentication;
 use App\Services\Outreach\SuppressionList;
 use App\Support\CurrentProject;
 use Illuminate\Support\Facades\Notification;
@@ -43,6 +48,25 @@ beforeEach(function () {
         })
         ->byDefault();
 });
+
+/**
+ * DNS answers for the sender's domain, so a mailbox test never asks the real
+ * internet about a domain the factory made up.
+ *
+ * @param  array<string, list<string>>  $txt
+ */
+function senderDns(array $txt = []): void
+{
+    app()->instance(SenderAuthentication::class, new class($txt) extends SenderAuthentication
+    {
+        public function __construct(private array $records) {}
+
+        protected function txt(string $host): array
+        {
+            return $this->records[$host] ?? [];
+        }
+    });
+}
 
 it('enrols only the people who may actually be written to', function () {
     [, $project] = sender();
@@ -186,6 +210,46 @@ it('refuses to send to somebody suppressed after they were enrolled', function (
     ))->toBeFalse();
 });
 
+it('holds back a mail that a machine plainly wrote, and sends nothing', function () {
+    [, $project, $mailbox] = sender();
+
+    $fake = fakeSender();
+    contactable($project);
+    $campaign = sequence($project);
+
+    $campaign->steps()->first()->variants()->first()->update([
+        'body' => "Bonjour {{first_name}},\n\nVoyez https://tracker.example/x\n\nRépondez STOP.",
+    ]);
+
+    enrolPinned($campaign, $mailbox);
+
+    app(SendNextStep::class)->handle(CampaignLead::query()->firstOrFail());
+
+    $membership = CampaignLead::query()->firstOrFail();
+
+    expect($fake->sent)->toBeEmpty()
+        ->and(Message::query()->count())->toBe(0)
+        ->and($membership->status)->toBe(CampaignLeadStatus::Paused)
+        ->and($membership->pause_reason)->toContain('{{first_name}}')
+        ->and($membership->pause_reason)->toContain('tracker.example');
+});
+
+it('judges links and placeholders the way a reader would', function () {
+    [, $project, $mailbox] = sender();
+
+    $project->update(['url' => 'https://www.friterie.test']);
+    $mailbox->update(['from_email' => 'marcel@mail.friterie.test']);
+
+    $check = app(PreSendCheck::class);
+
+    expect($check->problems('vos commandes', 'Voyez https://app.friterie.test/demo et www.mail.friterie.test.', $mailbox, $project))->toBe([])
+        // Text that looks dotted is not a link, and guessing would block good mail.
+        ->and($check->problems('vos commandes', 'On tourne sous Node.js.', $mailbox, $project))->toBe([])
+        ->and($check->problems('vos commandes', 'Bonjour [First Name],', $mailbox, $project))->toHaveCount(1)
+        ->and($check->problems('', '', $mailbox, $project))->toBe(['the subject is empty', 'the body is empty'])
+        ->and($check->problems('x', str_repeat('mot ', PreSendCheck::MAX_BODY_WORDS + 1), $mailbox, $project))->toHaveCount(1);
+});
+
 it('suppresses an address the server called dead, and never retries it', function () {
     [, $project, $mailbox] = sender();
 
@@ -315,6 +379,43 @@ it('queues one mail per mailbox per tick, and nothing outside the sending window
     ]);
 
     expect(app(DispatchDueSends::class)->handle())->toBe(0);
+});
+
+it('opens the window on the recipient clock when discovery says where they are', function () {
+    [, $project] = sender();
+
+    Queue::fake();
+
+    $lead = contactable($project);
+    app(EnrolCampaign::class)->handle(sequence($project));
+
+    $lead->update(['company_id' => Company::factory()->create([
+        'project_id' => $project->id,
+        'location' => 'Toronto, Ontario, Canada',
+    ])->id]);
+
+    // 03:00 on the instance clock, 22:00 or 23:00 in Toronto: still closed.
+    $this->travelTo(now()->setTimezone('UTC')->setTime(3, 0));
+    CampaignLead::query()->update(['next_action_at' => now()->subMinutes(10)]);
+
+    expect(app(DispatchDueSends::class)->handle())->toBe(0);
+
+    // 16:00 UTC is mid-morning in Toronto: it leaves, whatever the instance thinks.
+    $this->travelTo(now()->setTime(16, 0));
+
+    expect(app(DispatchDueSends::class)->handle())->toBe(1);
+});
+
+it('places a recipient from the location text, then the country domain, and admits when it cannot', function () {
+    $zone = fn (array $attributes): ?string => app(RecipientTimezone::class)->for(Company::factory()->make($attributes));
+
+    expect($zone(['location' => 'Heist-op-den-Berg, Belgique', 'domain' => 'x.com']))->toBe('Europe/Brussels')
+        ->and($zone(['location' => 'Erlangen, Deutschland', 'domain' => 'x.com']))->toBe('Europe/Berlin')
+        ->and($zone(['location' => 'Madrid, España', 'domain' => 'x.com']))->toBe('Europe/Madrid')
+        ->and($zone(['location' => null, 'domain' => 'evpaalfix.nl']))->toBe('Europe/Amsterdam')
+        ->and($zone(['location' => 'Atlanta, Georgia, United States', 'domain' => 'x.com']))->toBeNull()
+        ->and($zone(['location' => 'Chicago, Illinois, United States', 'domain' => 'x.com']))->toBe('America/Chicago')
+        ->and($zone(['location' => 'Unknown', 'domain' => 'thinkrevops.com']))->toBeNull();
 });
 
 it('pauses a mailbox whose recent sends are bouncing, whatever the autonomy level', function () {
@@ -632,8 +733,12 @@ it('names the cause when a mailbox refuses the login, instead of saying it faile
 it('records what a connection test found, and clears the error when it works', function () {
     [$user, , $mailbox] = sender();
 
-    $mailbox->update(['status' => EmailAccountStatus::Error, 'last_error' => 'SMTP: something old']);
+    $mailbox->update(['status' => EmailAccountStatus::Error, 'last_error' => 'SMTP: something old', 'from_email' => 'marcel@friterie.test']);
 
+    senderDns([
+        'friterie.test' => ['v=spf1 include:_spf.friterie.test ~all'],
+        '_dmarc.friterie.test' => ['v=DMARC1; p=none'],
+    ]);
     $this->mock(MailboxTester::class)->shouldReceive('test')->once()->andReturn(null);
 
     $this->actingAs($user)->post(route('settings.mailboxes.test', $mailbox))->assertRedirect();
@@ -981,6 +1086,23 @@ it('never mentions a mailbox belonging to another project', function () {
         ->assertInertia(fn ($page) => $page->has('setup.broken', 0));
 });
 
+it('warns, without failing the test, when the sending domain has no SPF or DMARC', function () {
+    [$user, , $mailbox] = sender();
+
+    $mailbox->update(['from_email' => 'marcel@friterie.test']);
+
+    senderDns();
+    $this->mock(MailboxTester::class)->shouldReceive('test')->once()->andReturn(null);
+
+    $this->actingAs($user)->post(route('settings.mailboxes.test', $mailbox))
+        ->assertSessionHas('status')
+        ->assertSessionHasErrors(['sender_auth'])
+        ->assertSessionDoesntHaveErrors(['test']);
+
+    expect(session('errors')->first('sender_auth'))->toContain('friterie.test publishes no SPF record')
+        ->and($mailbox->refresh()->status)->toBe(EmailAccountStatus::Active);
+});
+
 it('sends a real message when testing a mailbox, because the refusal comes after the body', function () {
     [, , $mailbox] = sender();
 
@@ -1082,4 +1204,34 @@ it('says nothing at all when the sequence actually filled', function () {
         ->assertSessionMissing('status');
 
     expect(CampaignLead::query()->count())->toBe(1);
+});
+
+it('compares reply rates by where the people written to came from', function () {
+    [$user, $project] = sender();
+
+    $write = function (string $source, ?ReplyClassification $reply = null) use ($project): void {
+        $lead = Lead::factory()->create(['project_id' => $project->id, 'source' => $source]);
+        Message::factory()->create(['lead_id' => $lead->id]);
+
+        if ($reply !== null) {
+            Message::factory()->create(['lead_id' => $lead->id, 'direction' => MessageDirection::Inbound, 'classification' => $reply]);
+        }
+    };
+
+    $write('import', ReplyClassification::Interested);
+    $write('import');
+    $write('overpass', ReplyClassification::AutoReply);
+    $write('overpass', ReplyClassification::NotInterested);
+    $write('overpass');
+    // Found, never written to: not part of any rate.
+    Lead::factory()->create(['project_id' => $project->id, 'source' => 'registry']);
+
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->get(route('campaigns.index'))
+        ->assertInertia(fn ($page) => $page
+            ->where('bySource', [
+                ['source' => 'overpass', 'contacted' => 3, 'replied' => 1, 'interested' => 0],
+                ['source' => 'import', 'contacted' => 2, 'replied' => 1, 'interested' => 1],
+            ]));
 });

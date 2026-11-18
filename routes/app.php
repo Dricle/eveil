@@ -11,6 +11,7 @@ use App\Http\Controllers\Account\TwoFactorController;
 use App\Http\Controllers\AdAccountController;
 use App\Http\Controllers\AdBudgetController;
 use App\Http\Controllers\AdController;
+use App\Http\Controllers\AdCreativeImageController;
 use App\Http\Controllers\AdDecisionController;
 use App\Http\Controllers\AdOAuthController;
 use App\Http\Controllers\AdReviewController;
@@ -512,7 +513,8 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             Route::post('reviews', [AdReviewController::class, 'store'])->name('reviews.store');
             Route::put('budget', [AdBudgetController::class, 'update'])->name('budget.update');
 
-            Route::whereNumber(['adAccount', 'adDecision'])->group(function (): void {
+            Route::whereNumber(['adAccount', 'adDecision', 'adCreative'])->group(function (): void {
+                Route::get('creatives/{adCreative}/image', [AdCreativeImageController::class, 'show'])->name('creatives.image');
                 Route::put('accounts/{adAccount}', [AdAccountController::class, 'update'])->name('accounts.update');
                 Route::delete('accounts/{adAccount}', [AdAccountController::class, 'destroy'])->name('accounts.destroy');
                 Route::put('decisions/{adDecision}', [AdDecisionController::class, 'update'])->name('decisions.update');

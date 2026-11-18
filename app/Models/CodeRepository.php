@@ -22,10 +22,11 @@ use Illuminate\Support\Carbon;
  * @property int $project_id
  * @property string $url
  * @property string $name
+ * @property int|null $last_release_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['project_id', 'url', 'name'])]
+#[Fillable(['project_id', 'url', 'name', 'last_release_id'])]
 class CodeRepository extends Model
 {
     /** @use HasFactory<CodeRepositoryFactory> */

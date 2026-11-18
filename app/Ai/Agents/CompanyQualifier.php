@@ -177,7 +177,10 @@ class CompanyQualifier extends EveilAgent implements HasStructuredOutput
     private function evidence(): string
     {
         if ($this->page !== null) {
-            return "Company website ({$this->candidate->website}):\n".mb_substr($this->page->text, 0, 8_000);
+            $roles = $this->candidate->facts['open_roles'] ?? [];
+            $hiring = $roles === [] ? '' : "\n\nRoles they are hiring for right now, from their own job board: ".implode('; ', $roles);
+
+            return "Company website ({$this->candidate->website}):\n".mb_substr($this->page->text, 0, 8_000).$hiring;
         }
 
         $facts = (string) json_encode($this->candidate->facts, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);

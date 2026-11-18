@@ -19,8 +19,12 @@ use Stringable;
  *
  * Batches BOTH of that job's discovery mechanisms in one call, distinguished
  * by `source` on each item:
- * - `subreddit_scan`: `text` is one live post or comment. The question is
- *   "does the author describe a problem this product solves."
+ * - `subreddit_scan`: `text` is one live post or comment. For a post the
+ *   question is "does the author describe a problem this product solves."
+ *   A comment is shown under its own post (`parentPost`) and the question
+ *   is whether a reply belongs under THAT comment: sometimes the comment is
+ *   the better place (a follow-up question, a second person with the same
+ *   need), sometimes the need is only the post's and the post is.
  * - `seo_thread`: `text` is a thread's title, selftext and a handful of its
  *   top comments - a thread that already ranks on Google for a buyer-intent
  *   search (`App\Services\Reddit\SeoThreadFinder`). The question is "is this
@@ -32,12 +36,13 @@ use Stringable;
  * judgment - "would replying here genuinely help, with this product as the
  * reason" - is the same question either way.
  *
- * The same pass also asks two things a researcher notices while reading,
+ * The same pass also asks three things a researcher notices while reading,
  * independently of whether a thread is worth a reply: whether it would make
- * a blog article (`article_angle`), and whether it says something about one
- * of the named competitors (`competitor`, `competitor_signal`,
- * `competitor_summary`). Both become `Insight` rows in the Insights feed, at no
- * extra model call.
+ * a blog article (`article_angle`), whether it says something about one of
+ * the named competitors (`competitor`, `competitor_signal`,
+ * `competitor_summary`), and whether people ask for a capability this
+ * product lacks (`feature_idea`, `feature_evidence`). All become `Insight`
+ * rows in the Insights feed, at no extra model call.
  */
 class RedditOpportunityTriage extends EveilAgent implements HasStructuredOutput
 {
@@ -73,10 +78,24 @@ class RedditOpportunityTriage extends EveilAgent implements HasStructuredOutput
 
         Two kinds of item, told apart by their "source" line:
 
-        - subreddit_scan: one live post or comment. Genuine means the AUTHOR is
-          describing a real problem, need or question this specific product solves -
-          not a passing mention, not a topic that is merely adjacent. A generic
-          discussion with no real problem stated is NOT an opportunity.
+        - subreddit_scan: one live post or comment. For a post, genuine means the
+          AUTHOR is describing a real problem, need or question this specific product
+          solves - not a passing mention, not a topic that is merely adjacent. A
+          generic discussion with no real problem stated is NOT an opportunity.
+
+          A comment is shown under the post it replies to, and the reply you are
+          judging would sit directly under THAT comment, answering its author. So the
+          question is whether this comment is the right place to reply, not whether
+          the post is. It is when the comment itself carries the need: its author
+          shares the same problem, asks a follow-up, pushes back on an answer, or asks
+          how to actually do what was suggested. It can also be when the comment
+          recommends an approach this product carries out and a reply building on it
+          would genuinely help both the commenter and the original asker. It is NOT
+          when the comment is a complete answer that leaves nothing to add, or when
+          the need is only the post's and replying under someone else's answer would
+          just talk past them: the post itself is the place for that, and it is
+          judged on its own. Write the reason about the comment and who the reply
+          would address, never as if the comment were the post.
         - seo_thread: a thread's title, selftext and some of its top comments, already
           ranking on a search engine for a buyer-intent query (visible on its own
           "search_query" line, e.g. "best invoicing software" or "Notion alternative").
@@ -115,6 +134,16 @@ class RedditOpportunityTriage extends EveilAgent implements HasStructuredOutput
         one sentence saying what users think of it here, specific enough to be read
         on its own. Otherwise leave competitor and competitor_summary empty and set
         competitor_signal to none.
+
+        And as the founder deciding what to build next: do the people in this item ask
+        for, or clearly miss, a capability this product does not have yet? Only a
+        concrete capability counts, named as a developer would build it ("export
+        invoices to accounting software", never "better integrations"), and only one
+        the portrait does not already list. When it does, set feature_idea to that
+        capability and feature_evidence to a short brief a developer can decide from:
+        who asks, the problem behind it, how they cope today, and what they would
+        expect the feature to do, quoting the item when a few words say it best.
+        Otherwise leave both empty. Most items have none.
         PROMPT;
     }
 
@@ -132,6 +161,8 @@ class RedditOpportunityTriage extends EveilAgent implements HasStructuredOutput
                 'competitor' => $schema->string()->description('The competitor from the portrait this item gives an opinion on, spelled as the portrait spells it. Empty when none.')->required(),
                 'competitor_signal' => $schema->string()->enum(['none', ...array_column(CompetitorSignal::cases(), 'value')])->description('What the item says about that competitor. none when competitor is empty.')->required(),
                 'competitor_summary' => $schema->string()->description('One sentence: what users think of that competitor here. Empty when competitor is empty.')->required(),
+                'feature_idea' => $schema->string()->description('A capability people here ask for that this product lacks, named as a developer would build it. Empty when none.')->required(),
+                'feature_evidence' => $schema->string()->description('Two to four sentences: who asks, the problem, how they cope today, what they expect it to do. Empty when feature_idea is empty.')->required(),
             ]))->description('One entry per item you were given, none missing.')->required(),
         ];
     }
@@ -151,6 +182,12 @@ class RedditOpportunityTriage extends EveilAgent implements HasStructuredOutput
         $lines = $this->items->map(function (OpportunityCandidate $item): string {
             $query = $item->searchQuery !== null ? "\nsearch_query: {$item->searchQuery}" : '';
             $subreddit = $item->subreddit !== null ? "r/{$item->subreddit}" : 'unknown subreddit';
+
+            if ($item->parentPost !== null) {
+                return "[{$item->permalink}] source: {$item->source->value}, a comment ({$subreddit})\n"
+                    ."Under the post: {$item->parentPost}\n"
+                    ."u/{$item->author} commented: {$item->text}";
+            }
 
             return "[{$item->permalink}] source: {$item->source->value} ({$subreddit}){$query}\nu/{$item->author}: {$item->text}";
         })->implode("\n\n");

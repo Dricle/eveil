@@ -290,6 +290,18 @@ it('pauses everything once the month is spent', function () {
     Queue::assertPushed(ApplyAdDecision::class, fn (ApplyAdDecision $job): bool => $job->decision->reasoning === 'The monthly ads budget is spent.');
 });
 
+it('pauses an hour before the month is spent, since the stop only runs after the hourly sync', function () {
+    Queue::fake([ApplyAdDecision::class]);
+    [, $account] = adSetup();
+    // 300 for the month, 299.80 spent, 10 a day running: the next hour (0.42) crosses the line.
+    $ad = Ad::factory()->active()->create(['ad_campaign_id' => AdCampaign::factory()->active()->create(['ad_account_id' => $account->id])->id]);
+    AdMetric::factory()->create(['ad_id' => $ad->id, 'cost_micros' => 299_800_000]);
+
+    app(EnforceAdBudget::class)->handle($account->project);
+
+    Queue::assertPushed(ApplyAdDecision::class, fn (ApplyAdDecision $job): bool => $job->decision->reasoning === 'The monthly ads budget is spent.');
+});
+
 it('counts spend on every account against the month', function () {
     Queue::fake([ApplyAdDecision::class]);
     [$project, $account] = adSetup();

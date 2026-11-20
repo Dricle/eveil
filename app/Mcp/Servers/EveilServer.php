@@ -7,9 +7,12 @@ use App\Mcp\Methods\CallProjectTool;
 use App\Mcp\Tools\AddContacts;
 use App\Mcp\Tools\AiTool;
 use App\Mcp\Tools\EnrolCampaignLeads;
+use App\Mcp\Tools\EnrolContacts;
+use App\Mcp\Tools\GetCampaignSending;
 use App\Mcp\Tools\ListCampaignLeads;
 use App\Mcp\Tools\ListContacts;
 use App\Mcp\Tools\ListProjects;
+use App\Mcp\Tools\RemoveCampaignLeads;
 use Laravel\Mcp\Server;
 use Laravel\Mcp\Server\Attributes\Instructions;
 use Laravel\Mcp\Server\Attributes\Name;
@@ -22,11 +25,12 @@ use Laravel\Mcp\Server\Attributes\Version;
  *
  * The whole `Toolbelt` (`AiTool`), so an assistant can do what Evie can,
  * plus what only an integration needs: finding the projects, paging
- * through every contact or campaign member, adding contacts, enrolling.
+ * through every contact or campaign member, adding contacts, enrolling or
+ * taking people out, and seeing why a campaign is not sending.
  */
 #[Name('Eveil')]
 #[Version('1.0.0')]
-#[Instructions('Eveil finds companies that fit a target profile, finds the people to write to, and runs email campaigns, for one or more projects (products or businesses). Call list-projects first: every other tool takes a project slug as `project`. Read a project\'s companies, contacts and campaigns, add contacts, add newly found people to a running campaign, or ask for a social post.')]
+#[Instructions('Eveil finds companies that fit a target profile, finds the people to write to, and runs email campaigns, for one or more projects (products or businesses). Call list-projects first: every other tool takes a project slug as `project`. Read a project\'s companies, contacts and campaigns, add contacts, add newly found or hand-picked people to a running campaign, take people out of one, see why a campaign is not sending, or ask for a social post.')]
 class EveilServer extends Server
 {
     /**
@@ -43,6 +47,9 @@ class EveilServer extends Server
         AddContacts::class,
         ListCampaignLeads::class,
         EnrolCampaignLeads::class,
+        EnrolContacts::class,
+        RemoveCampaignLeads::class,
+        GetCampaignSending::class,
     ];
 
     protected function boot(): void

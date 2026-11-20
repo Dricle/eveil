@@ -14,6 +14,7 @@ function competitorExclusionVerdict(): array
 {
     return [
         'is_a_prospect' => true,
+        'within_geography' => true,
         'fit_score' => 80,
         'fit_reason' => 'Fits.',
         'company_name' => 'Acme',
@@ -91,6 +92,23 @@ it('reads the open roles off the job board a company links to, and judges it wit
     expect($company->facts['open_roles'])->toBe(['Office Manager', 'First Account Executive']);
 
     CompanyQualifier::assertPrompted(fn (AgentPrompt $prompt): bool => str_contains((string) $prompt->prompt, 'First Account Executive'));
+});
+
+it('drops a company the qualifier places outside the profile\'s geography', function () {
+    $project = Project::factory()->create();
+    $targetProfile = TargetProfile::factory()->for($project)->create();
+    $run = DiscoveryRun::factory()->for($project)->create();
+
+    CompanyQualifier::fake([[...competitorExclusionVerdict(), 'within_geography' => false, 'location' => 'Berlin, Germany']]);
+
+    $company = app(Qualifier::class)->qualify(
+        $targetProfile,
+        $run,
+        new Candidate(name: 'Acme', website: null, source: 'web_search', facts: ['name' => 'Acme']),
+    );
+
+    expect($company)->toBeNull()
+        ->and($project->companies()->count())->toBe(0);
 });
 
 it('never guesses a job board the company does not link to', function () {

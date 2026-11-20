@@ -43,6 +43,26 @@ const activeTab = ref('draft')
 
 const threads = computed(() => groupThreads(props.replies.filter(reply => reply.status === activeTab.value)))
 
+// Reddit's spam filter flags accounts whose comments keep pushing the same
+// product. `replies` already holds every row, so this reads the last 7 days
+// of posted replies here instead of a dedicated prop. `user_written` is left
+// out of the mention count: there is no way to know whether it named the product.
+// ponytail: fixed 7 day window and threshold of 2, make them settings if users ask.
+const MENTION_ANGLES = ['soft_mention', 'direct_mention', 'dm_invite']
+const MENTION_WARNING_THRESHOLD = 2
+
+const recentPosting = computed(() => {
+    const since = Date.now() - 7 * 24 * 60 * 60 * 1000
+    const posted = props.replies.filter(reply => reply.status === 'published' && reply.published_at && Date.parse(reply.published_at) >= since)
+    const mentions = posted.filter(reply => MENTION_ANGLES.includes(reply.angle))
+
+    return {
+        posted: posted.length,
+        mentions: mentions.length,
+        subreddits: [...new Set(mentions.map(reply => reply.subreddit).filter(Boolean))]
+    }
+})
+
 const selectedPermalink = ref<string | null>(null)
 
 // Falls back to the first thread whenever the selected one leaves the list
@@ -121,6 +141,17 @@ function scan () {
             variant="subtle"
             icon="i-lucide-check"
             :description="String(page.props.status)"
+        />
+
+        <UAlert
+            v-if="recentPosting.posted"
+            :color="recentPosting.mentions > MENTION_WARNING_THRESHOLD ? 'warning' : 'neutral'"
+            variant="subtle"
+            :icon="recentPosting.mentions > MENTION_WARNING_THRESHOLD ? 'i-lucide-triangle-alert' : 'i-lucide-activity'"
+            :title="`Last 7 days: ${recentPosting.posted} posted, ${recentPosting.mentions} mentioning the product`"
+            :description="recentPosting.mentions > MENTION_WARNING_THRESHOLD
+                ? `Reddit flags accounts that keep promoting the same product. Stick to value comments for a while${recentPosting.subreddits.length ? `, and avoid mentions in r/${recentPosting.subreddits.join(', r/')}` : ''}.`
+                : recentPosting.subreddits.length ? `Already mentioned in r/${recentPosting.subreddits.join(', r/')} this week.` : undefined"
         />
 
         <UTabs

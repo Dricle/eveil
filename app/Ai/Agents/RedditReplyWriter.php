@@ -84,6 +84,19 @@ class RedditReplyWriter extends EveilAgent implements HasStructuredOutput
         Do not write like marketing copy. No dash punctuation: no em dash, en dash, or
         hyphen standing in for one.
 
+        Write like one person typing a quick comment, not like an assistant. Make one
+        concrete point, skip the summary. Never use these tells, readers downvote them
+        on sight:
+        - openers that praise or restate the question ("Great question", "This is a
+          common problem", "I totally get this", "As someone who...")
+        - filler pivots ("Here's the thing", "That said", "The key is", "It's worth
+          noting", "At the end of the day", "Hope this helps", "Happy to help")
+        - bold headers, bullet lists or numbered steps, unless the thread's own
+          replies use them
+        - lists of exactly three adjectives or reasons, and a closing line that sums up
+        - words like "delve", "leverage", "game changer", "seamless", "robust",
+          "navigate", "landscape", "journey"
+
         Never police whether this is against the subreddit's own self-promotion rules -
         that is not your job here, it is the person posting's own call.
 

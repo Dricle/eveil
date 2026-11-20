@@ -3,26 +3,28 @@ import { wayfinder } from '@laravel/vite-plugin-wayfinder'
 import ui from '@nuxt/ui/vite'
 import vue from '@vitejs/plugin-vue'
 import laravel from 'laravel-vite-plugin'
-import { bunny } from 'laravel-vite-plugin/fonts'
+import { local } from 'laravel-vite-plugin/fonts'
 import { defineConfig } from 'vite'
+
+// One variant per committed file: `local()` given a directory merges every
+// file into a single 400 weight face.
+const localFont = (family: string, slug: string, weights: (400 | 500 | 600 | 700)[]) => local(family, {
+    variants: weights.map(weight => ({ src: `resources/fonts/${slug}/${slug}-${weight}-normal.woff2`, weight }))
+})
 
 export default defineConfig({
     plugins: [
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.ts'],
             refresh: true,
+            // Committed woff2 files (latin subset, from Fontsource) rather than a
+            // font CDN fetched at build time: a CDN outage used to fail every build.
             fonts: [
-                bunny('Geist', {
-                    weights: [400, 500, 600, 700]
-                }),
+                localFont('Geist', 'geist', [400, 500, 600, 700]),
                 // Marketing site only (resources/views/marketing/**): Sora for
                 // headings, Geist Mono for the eyebrow/label/tabular-number look.
-                bunny('Sora', {
-                    weights: [400, 600, 700]
-                }),
-                bunny('Geist Mono', {
-                    weights: [400, 500]
-                })
+                localFont('Sora', 'sora', [400, 600, 700]),
+                localFont('Geist Mono', 'geist-mono', [400, 500])
             ]
         }),
         inertia(),

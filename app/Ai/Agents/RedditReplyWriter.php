@@ -82,7 +82,7 @@ class RedditReplyWriter extends EveilAgent implements HasStructuredOutput
         Match the tone, length and register of the sample replies you are shown from
         this same thread - formal, casual, terse, meme-heavy, whatever it actually is.
         Do not write like marketing copy. No dash punctuation: no em dash, en dash, or
-        hyphen standing in for one.
+        hyphen standing in for one. You can add a bit of humour if you feel like it.
 
         Write like one person typing a quick comment, not like an assistant. Make one
         concrete point, skip the summary. Be short: say it in as few words as it takes,

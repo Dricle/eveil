@@ -755,3 +755,37 @@ it('still drafts its replies when grouping the article ideas fails', function ()
     expect(RedditReply::count())->toBe(1);
     Exceptions::assertReported(RuntimeException::class);
 });
+
+it('shows the writer the replies the person wrote themselves, as the voice to imitate', function () {
+    $project = scannableProject();
+    RedditReply::factory()->for($project)->create([
+        'angle' => RedditReplyAngle::UserWritten,
+        'status' => RedditReplyStatus::Published,
+        'body' => 'tbh just use a spreadsheet till it hurts',
+        'published_at' => now(),
+    ]);
+    RedditReply::factory()->for($project)->create([
+        'angle' => RedditReplyAngle::ValueComment,
+        'body' => 'A drafted reply nobody rewrote.',
+    ]);
+
+    RedditOpportunityTriage::fake([[
+        'items' => [[
+            'permalink' => 'https://www.reddit.com/r/SaaS/comments/xyz789/what_do_you_use/def456/',
+            'is_opportunity' => true,
+            'reason' => 'e',
+        ]],
+    ]]);
+    RedditReplyWriter::fake([[
+        'body_value_comment' => 'A reply.',
+        'body_soft_mention' => '',
+        'body_dm_invite' => '',
+    ]]);
+
+    ScanRedditOpportunities::dispatchSync($project);
+
+    $writerPrompt = AgentRun::where('agent', RedditReplyWriter::slug())->sole()->input['prompt'];
+
+    expect($writerPrompt)->toContain("write like this: same length, words, habits and quirks\n\ntbh just use a spreadsheet till it hurts")
+        ->and($writerPrompt)->not->toContain('A drafted reply nobody rewrote.');
+});

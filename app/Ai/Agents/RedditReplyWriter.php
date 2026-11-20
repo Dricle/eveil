@@ -28,6 +28,7 @@ class RedditReplyWriter extends EveilAgent implements HasStructuredOutput
      * @param  string  $author  who wrote `$threadText`, the person the reply answers
      * @param  string  $toneSample  the thread's own top comments, plain text - the register to match
      * @param  Collection<int, string>  $ownWinners  bodies of this project's own promoted replies
+     * @param  Collection<int, string>  $ownVoice  bodies the person wrote themselves ("I wrote my own"), the voice to imitate
      * @param  string  $sharedPoolDigest  `RedditReplyExample::promptDigest()`
      */
     public function __construct(
@@ -42,6 +43,7 @@ class RedditReplyWriter extends EveilAgent implements HasStructuredOutput
         private string $toneSample,
         private Collection $ownWinners,
         private string $sharedPoolDigest,
+        private Collection $ownVoice,
     ) {
         parent::__construct($project);
     }
@@ -163,6 +165,10 @@ class RedditReplyWriter extends EveilAgent implements HasStructuredOutput
 
         if ($this->ownWinners->isNotEmpty()) {
             $sections[] = "## This project's own replies that performed well\n\n".$this->ownWinners->implode("\n\n---\n\n");
+        }
+
+        if ($this->ownVoice->isNotEmpty()) {
+            $sections[] = "## Replies this person wrote themselves, write like this: same length, words, habits and quirks\n\n".$this->ownVoice->implode("\n\n---\n\n");
         }
 
         if ($this->sharedPoolDigest !== '') {

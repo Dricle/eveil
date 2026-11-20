@@ -123,6 +123,7 @@ class ScanRedditOpportunities implements ShouldQueue
 
             $ownWinners = $this->project->redditReplies()->whereNotNull('promoted_at')->latest('promoted_at')->limit(5)->pluck('body');
             $sharedPoolDigest = RedditReplyExample::promptDigest();
+            $ownVoice = $this->project->redditReplies()->where('angle', RedditReplyAngle::UserWritten)->latest('published_at')->limit(5)->pluck('body');
 
             $drafted = false;
 
@@ -136,7 +137,7 @@ class ScanRedditOpportunities implements ShouldQueue
                     $read = $read->merge($comments);
                 }
 
-                if ($this->draft($candidate, $reason, $comments, $ownWinners, $sharedPoolDigest)) {
+                if ($this->draft($candidate, $reason, $comments, $ownWinners, $sharedPoolDigest, $ownVoice)) {
                     $drafted = true;
                 }
             }
@@ -335,9 +336,10 @@ class ScanRedditOpportunities implements ShouldQueue
     /**
      * @param  Collection<int, TopComment>  $comments  this thread's own top comments, the register to match
      * @param  Collection<int, string>  $ownWinners
+     * @param  Collection<int, string>  $ownVoice
      * @return bool whether at least one angle was actually drafted
      */
-    private function draft(OpportunityCandidate $candidate, string $reason, Collection $comments, Collection $ownWinners, string $sharedPoolDigest): bool
+    private function draft(OpportunityCandidate $candidate, string $reason, Collection $comments, Collection $ownWinners, string $sharedPoolDigest, Collection $ownVoice): bool
     {
         $toneSample = $comments->map(fn (TopComment $comment): string => $comment->body)->implode("\n\n");
 
@@ -359,6 +361,7 @@ class ScanRedditOpportunities implements ShouldQueue
             $toneSample,
             $ownWinners,
             $sharedPoolDigest,
+            $ownVoice,
         );
 
         $response = $agent->recordInto($run)->draft();

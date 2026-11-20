@@ -85,8 +85,11 @@ class RedditReplyWriter extends EveilAgent implements HasStructuredOutput
         hyphen standing in for one.
 
         Write like one person typing a quick comment, not like an assistant. Make one
-        concrete point, skip the summary. Never use these tells, readers downvote them
-        on sight:
+        concrete point, skip the summary. Be short: say it in as few words as it takes,
+        then stop. Short sentences, plain everyday words, the simple word over the
+        fancy one. If a sentence says something simple, it should be simple. Cut every
+        sentence that only sets up, softens or repeats another one. Never use these
+        tells, readers downvote them on sight:
         - openers that praise or restate the question ("Great question", "This is a
           common problem", "I totally get this", "As someone who...")
         - filler pivots ("Here's the thing", "That said", "The key is", "It's worth

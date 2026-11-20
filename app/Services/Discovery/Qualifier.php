@@ -78,7 +78,11 @@ class Qualifier
 
         $verdict = $agent->qualify();
 
-        if (! ($verdict['is_a_prospect'] ?? false)) {
+        // Checked apart from `is_a_prospect` because the profile's geography
+        // sits in the criteria the model reads, and was being weighed as one
+        // signal among others, so a company in the wrong country could still
+        // come out a prospect. A verdict without the field is not refused on its account.
+        if (! ($verdict['is_a_prospect'] ?? false) || ! ($verdict['within_geography'] ?? true)) {
             return null;
         }
 

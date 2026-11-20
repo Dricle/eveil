@@ -28,6 +28,7 @@ class RedditReplyWriter extends EveilAgent implements HasStructuredOutput
      * @param  string  $author  who wrote `$threadText`, the person the reply answers
      * @param  string  $toneSample  the thread's own top comments, plain text - the register to match
      * @param  Collection<int, string>  $ownWinners  bodies of this project's own promoted replies
+     * @param  Collection<int, string>  $ownVoice  bodies the person wrote themselves ("I wrote my own"), the voice to imitate
      * @param  string  $sharedPoolDigest  `RedditReplyExample::promptDigest()`
      */
     public function __construct(
@@ -42,6 +43,7 @@ class RedditReplyWriter extends EveilAgent implements HasStructuredOutput
         private string $toneSample,
         private Collection $ownWinners,
         private string $sharedPoolDigest,
+        private Collection $ownVoice,
     ) {
         parent::__construct($project);
     }
@@ -82,7 +84,23 @@ class RedditReplyWriter extends EveilAgent implements HasStructuredOutput
         Match the tone, length and register of the sample replies you are shown from
         this same thread - formal, casual, terse, meme-heavy, whatever it actually is.
         Do not write like marketing copy. No dash punctuation: no em dash, en dash, or
-        hyphen standing in for one.
+        hyphen standing in for one. You can add a bit of humour if you feel like it.
+
+        Write like one person typing a quick comment, not like an assistant. Make one
+        concrete point, skip the summary. Be short: say it in as few words as it takes,
+        then stop. Short sentences, plain everyday words, the simple word over the
+        fancy one. If a sentence says something simple, it should be simple. Cut every
+        sentence that only sets up, softens or repeats another one. Never use these
+        tells, readers downvote them on sight:
+        - openers that praise or restate the question ("Great question", "This is a
+          common problem", "I totally get this", "As someone who...")
+        - filler pivots ("Here's the thing", "That said", "The key is", "It's worth
+          noting", "At the end of the day", "Hope this helps", "Happy to help")
+        - bold headers, bullet lists or numbered steps, unless the thread's own
+          replies use them
+        - lists of exactly three adjectives or reasons, and a closing line that sums up
+        - words like "delve", "leverage", "game changer", "seamless", "robust",
+          "navigate", "landscape", "journey"
 
         Never police whether this is against the subreddit's own self-promotion rules -
         that is not your job here, it is the person posting's own call.
@@ -147,6 +165,10 @@ class RedditReplyWriter extends EveilAgent implements HasStructuredOutput
 
         if ($this->ownWinners->isNotEmpty()) {
             $sections[] = "## This project's own replies that performed well\n\n".$this->ownWinners->implode("\n\n---\n\n");
+        }
+
+        if ($this->ownVoice->isNotEmpty()) {
+            $sections[] = "## Replies this person wrote themselves, write like this: same length, words, habits and quirks\n\n".$this->ownVoice->implode("\n\n---\n\n");
         }
 
         if ($this->sharedPoolDigest !== '') {

@@ -42,6 +42,12 @@ class SendNextStep
 
     public function handle(CampaignLead $campaignLead): void
     {
+        // Queued before somebody stopped it (`remove-campaign-leads`, a reply,
+        // a pause): the job reloads the row, and the row now says no.
+        if (! $campaignLead->status->isLive()) {
+            return;
+        }
+
         $lead = $campaignLead->lead;
         $account = $campaignLead->emailAccount;
 

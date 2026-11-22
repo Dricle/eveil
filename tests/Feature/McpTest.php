@@ -1,8 +1,13 @@
 <?php
 
+use App\Actions\EnrolCampaign;
 use App\Ai\Tools\Toolbelt;
+use App\Enums\CampaignLeadStatus;
 use App\Enums\CampaignStatus;
+use App\Enums\EmailAccountStatus;
+use App\Enums\EmailStatus;
 use App\Models\Campaign;
+use App\Models\CampaignLead;
 use App\Models\Company;
 use App\Models\Lead;
 use App\Models\Project;
@@ -36,7 +41,7 @@ it('lists every tool to a valid token', function () {
     $this->withToken(Str::after(Project::factory()->create()->organization->createToken('test')->plainTextToken, '|'))
         ->postJson('/mcp', ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/list'])
         ->assertOk()
-        ->assertJsonCount(5 + count(Toolbelt::TOOLS), 'result.tools');
+        ->assertJsonCount(8 + count(Toolbelt::TOOLS), 'result.tools');
 });
 
 it('acts on the project a call names, among its organization only', function () {
@@ -105,4 +110,52 @@ it('refuses to enrol into a campaign that is not running', function () {
     callMcpTool($project, 'enrol-campaign-leads', ['campaign_id' => $campaign->id])
         ->assertOk()
         ->assertJsonPath('result.isError', true);
+});
+
+it('enrols the chosen contacts only, and names the ones it left out', function () {
+    [, $project] = sender();
+    $campaign = sequence($project);
+    $campaign->update(['status' => CampaignStatus::Active]);
+
+    $chosen = contactable($project, 'chosen@friterie.test');
+    contactable($project, 'other@friterie.test');
+    $invalid = contactable($project, 'invalid@friterie.test');
+    $invalid->update(['email_status' => EmailStatus::Invalid]);
+
+    callMcpTool($project, 'enrol-contacts', ['campaign_id' => $campaign->id, 'contact_ids' => [$chosen->id, $invalid->id]])
+        ->assertOk()
+        ->assertJsonPath('result.structuredContent.enrolled', 1)
+        ->assertJsonPath('result.structuredContent.not_enrolled', [$invalid->id]);
+
+    expect(CampaignLead::query()->pluck('lead_id')->all())->toBe([$chosen->id]);
+});
+
+it('takes the named contacts out of a campaign without deleting anything', function () {
+    [, $project] = sender();
+    $campaign = sequence($project);
+    $removed = contactable($project, 'removed@friterie.test');
+    $kept = contactable($project, 'kept@friterie.test');
+    app(EnrolCampaign::class)->handle($campaign);
+
+    callMcpTool($project, 'remove-campaign-leads', ['campaign_id' => $campaign->id, 'contact_ids' => [$removed->id]])
+        ->assertOk()
+        ->assertJsonPath('result.structuredContent.removed', 1);
+
+    expect(CampaignLead::query()->where('lead_id', $removed->id)->first())
+        ->status->toBe(CampaignLeadStatus::Stopped)
+        ->next_action_at->toBeNull()
+        ->and(CampaignLead::query()->where('lead_id', $kept->id)->value('status'))->toBe(CampaignLeadStatus::Pending)
+        ->and($removed->fresh())->not->toBeNull();
+});
+
+it('says why a campaign cannot send when its only mailbox is paused', function () {
+    [, $project, $mailbox] = sender();
+    $campaign = sequence($project);
+    $mailbox->update(['status' => EmailAccountStatus::Paused, 'last_error' => 'Bounce rate above 5%.']);
+
+    callMcpTool($project, 'get-campaign-sending', ['campaign_id' => $campaign->id])
+        ->assertOk()
+        ->assertJsonPath('result.structuredContent.can_send', false)
+        ->assertJsonPath('result.structuredContent.mailboxes.0.status', 'paused')
+        ->assertJsonPath('result.structuredContent.mailboxes.0.last_error', 'Bounce rate above 5%.');
 });

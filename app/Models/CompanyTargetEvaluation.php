@@ -29,6 +29,12 @@ class CompanyTargetEvaluation extends Model
     use HasFactory;
 
     /**
+     * The lowest score a campaign enrols automatically. Below it the company
+     * is kept, and can still be enrolled by hand.
+     */
+    public const int MINIMUM_FIT_SCORE = 50;
+
+    /**
      * @return BelongsTo<Company, $this>
      */
     public function company(): BelongsTo

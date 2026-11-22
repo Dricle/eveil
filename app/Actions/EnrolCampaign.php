@@ -44,44 +44,68 @@ class EnrolCampaign
      */
     public function handle(Campaign $campaign): int
     {
+        return count($this->enrol($campaign, $this->eligible($campaign)));
+    }
+
+    /**
+     * Hand-picked people, by contact id: the ids of those who joined.
+     *
+     * The segment, the fit score and the company go-ahead are left out on
+     * purpose: whoever names a person has made exactly the call those three
+     * stand in for. What stays is everything that says a person must not be
+     * written to at all, and the one-live-sequence rule.
+     *
+     * @param  list<int>  $leadIds
+     * @return list<int>
+     */
+    public function handleChosen(Campaign $campaign, array $leadIds): array
+    {
+        return $this->enrol($campaign, $this->reachable()->whereIn('id', $leadIds)->orderBy('id'));
+    }
+
+    /**
+     * @param  Builder<Lead>  $leads
+     * @return list<int>
+     */
+    private function enrol(Campaign $campaign, Builder $leads): array
+    {
         $probe = $this->probe($campaign);
 
         // No mailbox attached to this project, so there is nothing to send
         // from. Deliberately not an exception: the campaign stays active and
         // starts sending by itself once a mailbox is attached.
         if ($probe === null) {
-            return 0;
+            return [];
         }
 
-        $enrolled = 0;
+        $enrolled = [];
 
-        $this->eligible($campaign)
-            ->each(function (Lead $lead) use ($campaign, $probe, &$enrolled): void {
-                if (! $lead->isSendable() || $this->suppressions->suppresses($lead, $probe)) {
-                    return;
-                }
+        $leads->each(function (Lead $lead) use ($campaign, $probe, &$enrolled): void {
+            if (! $lead->isSendable() || $this->suppressions->suppresses($lead, $probe)) {
+                return;
+            }
 
-                try {
-                    CampaignLead::query()->create([
-                        'campaign_id' => $campaign->id,
-                        'lead_id' => $lead->id,
-                        'current_step_position' => 0,
-                        'status' => CampaignLeadStatus::Pending,
-                        // Spread from the outset rather than all at once: the
-                        // dispatcher paces the day, and this keeps a thousand
-                        // rows from all claiming the same minute.
-                        'next_action_at' => $this->stagger($enrolled),
-                    ]);
+            try {
+                CampaignLead::query()->create([
+                    'campaign_id' => $campaign->id,
+                    'lead_id' => $lead->id,
+                    'current_step_position' => 0,
+                    'status' => CampaignLeadStatus::Pending,
+                    // Spread from the outset rather than all at once: the
+                    // dispatcher paces the day, and this keeps a thousand
+                    // rows from all claiming the same minute.
+                    'next_action_at' => $this->stagger(count($enrolled)),
+                ]);
 
-                    $enrolled++;
-                } catch (QueryException) {
-                    // The one-live-campaign-per-lead index said no: this person
-                    // is already in a sequence, and being found twice is not a
-                    // reason to write to them twice.
-                }
-            });
+                $enrolled[] = $lead->id;
+            } catch (QueryException) {
+                // The one-live-campaign-per-lead index said no: this person
+                // is already in a sequence, and being found twice is not a
+                // reason to write to them twice.
+            }
+        });
 
-        if ($enrolled > 0 && $campaign->status !== CampaignStatus::Active) {
+        if ($enrolled !== [] && $campaign->status !== CampaignStatus::Active) {
             $campaign->update(['status' => CampaignStatus::Active]);
         }
 
@@ -116,20 +140,17 @@ class EnrolCampaign
     /**
      * Who this campaign may take, in the order they should go out.
      *
-     * Three filters, and each one is a bug that was there before it:
+     * Four filters, and each one is a bug that was there before it:
      * the campaign's own segment (a lead found for the partner profile was
-     * being sent the customer sequence), the user's go-ahead on the company,
-     * and the addresses nobody has confirmed, which go last rather than not at
-     * all.
+     * being sent the customer sequence), a fit score high enough to be worth a
+     * mail, the user's go-ahead on the company, and the addresses nobody has
+     * confirmed, which go last rather than not at all.
      *
      * @return Builder<Lead>
      */
     private function eligible(Campaign $campaign): Builder
     {
-        return Lead::query()
-            ->contactable()
-            ->whereNotNull('email')
-            ->whereDoesntHave('campaignLeads', fn ($query) => $query->whereIn('status', CampaignLeadStatus::live()))
+        return $this->reachable()
             // A sequence is written for one segment, from that segment's own
             // fit reason. Sending it to somebody another profile found makes
             // the opener talk about the wrong thing.
@@ -144,6 +165,10 @@ class EnrolCampaign
                     ->whereNull('company_id')
                     ->orWhereIn('company_id', CompanyTargetEvaluation::query()
                         ->where('target_profile_id', $campaign->target_profile_id)
+                        // A company the qualifier itself scored as a weak
+                        // fit stays on file, but nobody is written to there
+                        // unless a person enrols them by hand.
+                        ->where('fit_score', '>=', CompanyTargetEvaluation::MINIMUM_FIT_SCORE)
                         ->select('company_id'))))
             ->when($this->needsApproval($campaign), fn ($query) => $query
                 ->where(fn ($lead) => $lead
@@ -160,7 +185,20 @@ class EnrolCampaign
                     else 1
                 end
                 SQL, [EmailSource::Inferred->value])
-            ->orderBy('id')
+            ->orderBy('id');
+    }
+
+    /**
+     * Everyone who may be written to at all and is not already in a sequence.
+     *
+     * @return Builder<Lead>
+     */
+    private function reachable(): Builder
+    {
+        return Lead::query()
+            ->contactable()
+            ->whereNotNull('email')
+            ->whereDoesntHave('campaignLeads', fn ($query) => $query->whereIn('status', CampaignLeadStatus::live()))
             ->with('project');
     }
 

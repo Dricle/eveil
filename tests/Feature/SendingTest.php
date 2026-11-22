@@ -210,6 +210,23 @@ it('refuses to send to somebody suppressed after they were enrolled', function (
     ))->toBeFalse();
 });
 
+it('sends nothing for a lead stopped after its send was queued', function () {
+    [, $project, $mailbox] = sender();
+
+    $fake = fakeSender();
+    contactable($project);
+    enrolPinned(sequence($project), $mailbox);
+
+    $campaignLead = CampaignLead::query()->firstOrFail();
+    $campaignLead->update(['status' => CampaignLeadStatus::Stopped, 'pause_reason' => 'removed']);
+
+    app(SendNextStep::class)->handle($campaignLead);
+
+    expect($fake->sent)->toBeEmpty()
+        ->and(Message::query()->count())->toBe(0)
+        ->and($campaignLead->fresh()->pause_reason)->toBe('removed');
+});
+
 it('holds back a mail that a machine plainly wrote, and sends nothing', function () {
     [, $project, $mailbox] = sender();
 

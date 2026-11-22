@@ -61,6 +61,12 @@ class CompanyQualifier extends EveilAgent implements HasStructuredOutput
         sites, marketplaces, news articles, public bodies, and pages belonging to a
         competitor of the product itself.
 
+        When the profile names a geography, it is a hard limit, not a preference. A
+        company that operates outside it is not a prospect, however well it fits
+        otherwise: set within_geography to false. Judge from where the company says it
+        operates, its address, its phone prefix or its domain. When the profile names
+        no geography, or nothing tells you where the company is, set it to true.
+
         Score honestly and use the whole range. Above 70 means a salesperson would be
         glad to have it; below 40 means the profile does not really match. Inflating
         scores wastes someone's sending reputation on the wrong people.
@@ -104,6 +110,10 @@ class CompanyQualifier extends EveilAgent implements HasStructuredOutput
         return [
             'is_a_prospect' => $schema->boolean()
                 ->description('False for directories, marketplaces, news, public bodies or competitors.')
+                ->required(),
+
+            'within_geography' => $schema->boolean()
+                ->description('False when the profile names a geography and the company plainly operates outside it. True otherwise, including when its location is unknown.')
                 ->required(),
 
             'fit_score' => $schema->integer()->min(0)->max(100)

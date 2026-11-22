@@ -86,10 +86,10 @@ it('only takes the people its own segment found', function () {
     $theirs = Company::factory()->create(['project_id' => $project->id, 'approved_at' => now()]);
 
     CompanyTargetEvaluation::factory()->create([
-        'company_id' => $mine->id, 'target_profile_id' => $profile->id,
+        'company_id' => $mine->id, 'target_profile_id' => $profile->id, 'fit_score' => 80,
     ]);
     CompanyTargetEvaluation::factory()->create([
-        'company_id' => $theirs->id, 'target_profile_id' => $other->id,
+        'company_id' => $theirs->id, 'target_profile_id' => $other->id, 'fit_score' => 80,
     ]);
 
     atCompany($project, $mine, 'mine@friterie.test');
@@ -105,6 +105,35 @@ it('only takes the people its own segment found', function () {
     // thing, and with one campaign the mistake is invisible.
     expect(CampaignLead::query()->with('lead')->get()->pluck('lead.email')->all())
         ->toBe(['mine@friterie.test']);
+});
+
+it('leaves a weak fit on file but out of the sequence', function () {
+    [, $project] = sender();
+
+    $profile = TargetProfile::factory()->create(['project_id' => $project->id]);
+    $strong = Company::factory()->create(['project_id' => $project->id, 'approved_at' => now()]);
+    $weak = Company::factory()->create(['project_id' => $project->id, 'approved_at' => now()]);
+
+    CompanyTargetEvaluation::factory()->create([
+        'company_id' => $strong->id, 'target_profile_id' => $profile->id, 'fit_score' => CompanyTargetEvaluation::MINIMUM_FIT_SCORE,
+    ]);
+    CompanyTargetEvaluation::factory()->create([
+        'company_id' => $weak->id, 'target_profile_id' => $profile->id, 'fit_score' => CompanyTargetEvaluation::MINIMUM_FIT_SCORE - 1,
+    ]);
+
+    atCompany($project, $strong, 'strong@friterie.test');
+    $weakLead = atCompany($project, $weak, 'weak@friterie.test');
+
+    $campaign = sequence($project);
+    $campaign->update(['target_profile_id' => $profile->id]);
+
+    app(EnrolCampaign::class)->handle($campaign);
+
+    expect(CampaignLead::query()->with('lead')->get()->pluck('lead.email')->all())
+        ->toBe(['strong@friterie.test']);
+
+    // Named by hand, the score no longer decides.
+    expect(app(EnrolCampaign::class)->handleChosen($campaign, [$weakLead->id]))->toBe([$weakLead->id]);
 });
 
 it('sends the addresses nobody confirmed out last', function () {

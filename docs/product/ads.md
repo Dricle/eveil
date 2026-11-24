@@ -83,7 +83,7 @@ The client secret is stored encrypted and never shown again. To change it, paste
 ### If something goes wrong
 
 - **"redirect_uri_mismatch" when connecting.** The redirect URI in Google does not match Eveil's exactly. Copy it again from **Settings → Ad platforms**, including `https://` and with no trailing slash.
-- **Connected, but no account is listed.** The Google account you signed in with has no direct access to an ad account. Accounts reached only through a manager (MCC) account are not supported yet: give your Google user direct access to the ad account in Google Ads, under **Admin → Access and security**.
+- **Connected, but no account is listed.** The Google account you signed in with has no access to an ad account, directly or through a manager (MCC) account. The ad accounts under a manager are listed in its place, but only active ones: a cancelled or suspended account does not show. Check access in Google Ads, under **Admin → Access and security**.
 - **An error mentioning `CLOUD_PROJECT_NOT_APPROVED_FOR_PRODUCTION`.** The project still has Test access only: apply for Explorer access (step 5), and check that the client ID comes from the same project.
 - **"Reconnect needed" on an account a week later.** The consent screen is still in Testing: publish it (step 3), then connect again.
 

@@ -83,31 +83,68 @@ class GoogleAdsClient implements AdClientInterface
         $response = Http::withToken($tokens->accessToken)->get(self::API.'/customers:listAccessibleCustomers');
         $this->throwUnless($response);
 
-        return collect((array) $response->json('resourceNames'))
+        $customers = collect((array) $response->json('resourceNames'))
             ->map(fn (string $resourceName): string => str($resourceName)->afterLast('/')->value())
-            ->map(function (string $customerId) use ($tokens): ?AdAccountData {
+            ->map(function (string $customerId) use ($tokens): ?array {
                 $response = Http::withToken($tokens->accessToken)->post(self::API."/customers/{$customerId}/googleAds:search", [
                     'query' => 'SELECT customer.id, customer.descriptive_name, customer.currency_code, customer.time_zone, customer.manager FROM customer',
                 ]);
-
                 $customer = $response->json('results.0.customer');
 
-                // ponytail: manager accounts are skipped, so a client account
-                // reached only through one (agency setup) is not listed.
-                // Storing a login-customer-id per account lifts that.
-                if (! $response->successful() || ! is_array($customer) || ($customer['manager'] ?? false)) {
-                    return null;
-                }
-
-                return new AdAccountData(
-                    externalId: $customerId,
-                    name: (string) ($customer['descriptiveName'] ?? $customerId),
-                    currency: (string) $customer['currencyCode'],
-                    timeZone: $customer['timeZone'] ?? null,
-                );
+                return $response->successful() && is_array($customer) ? ['id' => $customerId, ...$customer] : null;
             })
-            ->filter()
+            ->filter();
+
+        // A manager (MCC) account runs no ads itself: the accounts under it
+        // are listed instead, each called through the manager from then on.
+        // One the grant also reaches directly keeps the direct route.
+        return $customers
+            ->reject(fn (array $customer): bool => (bool) ($customer['manager'] ?? false))
+            ->map(fn (array $customer): AdAccountData => $this->accountData($customer))
+            ->concat($customers
+                ->filter(fn (array $customer): bool => (bool) ($customer['manager'] ?? false))
+                ->flatMap(fn (array $manager): Collection => $this->clientsOf($tokens, $manager['id'])))
+            ->unique(fn (AdAccountData $account): string => $account->externalId)
             ->values();
+    }
+
+    /**
+     * The client accounts under a manager, at any depth, that can run ads.
+     *
+     * @return Collection<int, AdAccountData>
+     */
+    private function clientsOf(AdTokens $tokens, string $managerId): Collection
+    {
+        // ponytail: first page only (10,000 rows); page through it if an
+        // agency ever manages more accounts than that.
+        $response = Http::withToken($tokens->accessToken)
+            ->withHeaders(['login-customer-id' => $managerId])
+            ->post(self::API."/customers/{$managerId}/googleAds:search", [
+                'query' => "SELECT customer_client.id, customer_client.descriptive_name, customer_client.currency_code, customer_client.time_zone FROM customer_client WHERE customer_client.manager = false AND customer_client.status = 'ENABLED'",
+            ]);
+
+        if (! $response->successful()) {
+            return collect();
+        }
+
+        return collect((array) $response->json('results', []))
+            ->map(fn (array $row): AdAccountData => $this->accountData($row['customerClient'], loginCustomerId: $managerId));
+    }
+
+    /**
+     * @param  array<string, mixed>  $customer  a `customer` or `customer_client` row
+     */
+    private function accountData(array $customer, ?string $loginCustomerId = null): AdAccountData
+    {
+        $id = (string) $customer['id'];
+
+        return new AdAccountData(
+            externalId: $id,
+            name: (string) ($customer['descriptiveName'] ?? $id),
+            currency: (string) $customer['currencyCode'],
+            timeZone: $customer['timeZone'] ?? null,
+            ref: $loginCustomerId === null ? [] : ['login_customer_id' => $loginCustomerId],
+        );
     }
 
     public function hasConversionTracking(AdAccount $account): bool
@@ -355,7 +392,12 @@ class GoogleAdsClient implements AdClientInterface
 
     private function request(AdAccount $account): PendingRequest
     {
-        return Http::withToken($this->tokens->for($account))->acceptJson();
+        $request = Http::withToken($this->tokens->for($account))->acceptJson();
+
+        // An account reached through a manager is only callable as that manager.
+        $loginCustomerId = $account->external_ref['login_customer_id'] ?? null;
+
+        return $loginCustomerId === null ? $request : $request->withHeaders(['login-customer-id' => $loginCustomerId]);
     }
 
     private function idOf(string $resourceName): string

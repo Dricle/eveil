@@ -15,6 +15,8 @@ use App\Models\Organization;
 use App\Models\PlatformApp;
 use App\Models\Project;
 use App\Models\User;
+use App\Services\Ads\GoogleAdsClient;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -124,7 +126,7 @@ it('starts a review on demand only once the project has an ads budget', function
     Queue::assertPushed(ReviewAds::class);
 });
 
-it('connects every ad account the grant reaches, skipping manager accounts', function () {
+it('connects every ad account the grant reaches, through a manager account too', function () {
     Http::preventStrayRequests();
     [$user, $project] = adOwner();
     $app = PlatformApp::query()->sole();
@@ -133,7 +135,15 @@ it('connects every ad account the grant reaches, skipping manager accounts', fun
         'oauth2.googleapis.com/token' => Http::response(['access_token' => 'at', 'refresh_token' => 'rt', 'expires_in' => 3599]),
         'googleads.googleapis.com/v25/customers:listAccessibleCustomers' => Http::response(['resourceNames' => ['customers/111', 'customers/222']]),
         'googleads.googleapis.com/v25/customers/111/googleAds:search' => Http::response(['results' => [['customer' => ['id' => '111', 'descriptiveName' => 'Acme', 'currencyCode' => 'EUR', 'timeZone' => 'Europe/Paris', 'manager' => false]]]]),
-        'googleads.googleapis.com/v25/customers/222/googleAds:search' => Http::response(['results' => [['customer' => ['id' => '222', 'descriptiveName' => 'Agency', 'currencyCode' => 'EUR', 'manager' => true]]]]),
+        // The manager answers both its own row and the clients under it.
+        'googleads.googleapis.com/v25/customers/222/googleAds:search' => fn (Request $request) => str_contains($request['query'], 'customer_client')
+            ? Http::response(['results' => [
+                ['customerClient' => ['id' => '333', 'descriptiveName' => 'Client', 'currencyCode' => 'USD', 'timeZone' => 'America/New_York']],
+                // Also reached directly: stays called directly.
+                ['customerClient' => ['id' => '111', 'descriptiveName' => 'Acme', 'currencyCode' => 'EUR']],
+            ]])
+            : Http::response(['results' => [['customer' => ['id' => '222', 'descriptiveName' => 'Agency', 'currencyCode' => 'EUR', 'manager' => true]]]]),
+        'googleads.googleapis.com/v25/customers/333/googleAds:search' => Http::response(['results' => []]),
     ]);
 
     $this->actingAs($user)
@@ -141,13 +151,19 @@ it('connects every ad account the grant reaches, skipping manager accounts', fun
         ->get(route('oauth.ads.callback', ['platform' => 'google_ads', 'code' => 'a-code', 'state' => 'the-state']))
         ->assertRedirect(route('ads.index', ['project' => $project]));
 
-    $connected = AdAccount::query()->where('project_id', $project->id)->where('external_id', '111')->sole();
-    expect($connected)
-        ->name->toBe('Acme')
-        ->access_token->toBe('at')
-        // The only account the grant reached: obviously the one meant.
-        ->enabled->toBeTrue();
-    expect(AdAccount::query()->where('external_id', '222')->exists())->toBeFalse();
+    $accounts = AdAccount::query()->where('project_id', $project->id)->whereIn('external_id', ['111', '222', '333'])->get()->keyBy('external_id');
+    // The manager itself runs no ads, so it is not connected.
+    expect($accounts->keys()->sort()->values()->all())->toBe([111, 333])
+        ->and($accounts['111'])->name->toBe('Acme')->access_token->toBe('at')->external_ref->toBeNull()
+        ->and($accounts['333'])->name->toBe('Client')->currency->toBe('USD')->external_ref->toBe(['login_customer_id' => '222']);
+
+    // Every later call on the managed account goes through the manager.
+    app(GoogleAdsClient::class)->hasConversionTracking($accounts['333']);
+    Http::assertSent(fn (Request $request): bool => str_contains($request->url(), 'customers/333/')
+        && $request->hasHeader('login-customer-id', '222'));
+    app(GoogleAdsClient::class)->hasConversionTracking($accounts['111']);
+    Http::assertSent(fn (Request $request): bool => str_contains($request->url(), 'customers/111/googleAds:search')
+        && ! $request->hasHeader('login-customer-id'));
 });
 
 it('refuses a callback whose state does not match', function () {

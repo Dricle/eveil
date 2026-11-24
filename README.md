@@ -44,18 +44,6 @@ Slower to start than buying a list. Honest the whole way through.
 Self-hostable, AGPL-3.0, and the free edition has no artificial limits:
 unlimited mailboxes, unlimited leads, your data on your own machine.
 
-> **Status: v1** The whole outbound loop works end to end:
-> site analysis, lead discovery, sequences, sending, replies, plus
-> organizations, roles, and pay-as-you-go billing for the cloud edition.
-> LinkedIn posting (personal profile, official API) is in too, X, Bluesky and
-> Instagram posting (Bluesky and Instagram published for you, Instagram with a
-> generated image, X copied and posted by you), and so is
-> Reddit reply drafting - manual-publish only for now, since Reddit is
-> currently blocking new API app registration - and SEO articles for your own
-> blog, plus a public API, an MCP server and CRM webhooks for the rest of your stack. Not built yet: ad
-> management (next up), commenting on someone else's LinkedIn post. See
-> [Issues](https://github.com/Dricle/eveil/issues) for exactly what's left.
-
 ---
 
 <p align="center">

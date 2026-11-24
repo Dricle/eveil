@@ -3,16 +3,22 @@
 use App\Actions\ReviewAds;
 use App\Actions\SyncAdMetrics;
 use App\Ai\Agents\AdStrategist;
+use App\Enums\AdDecisionStatus;
+use App\Enums\AdDecisionType;
 use App\Enums\AdVerdict;
 use App\Models\Ad;
 use App\Models\AdAccount;
 use App\Models\AdCampaign;
+use App\Models\AdDecision;
 use App\Models\AdMetric;
 use App\Models\Project;
+use App\Models\User;
+use App\Notifications\AdDecisionsAwaiting;
 use App\Services\Ads\AdClassifier;
 use App\Services\Ads\AdPerformanceReport;
 use App\Support\CurrentProject;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Notification;
 use Laravel\Ai\Prompts\AgentPrompt;
 
 function reportedAd(AdAccount $account, array $metrics): Ad
@@ -105,4 +111,50 @@ it('costs no model call without an ads budget', function () {
     app(ReviewAds::class)->handle($project);
 
     AdStrategist::assertNeverPrompted();
+});
+
+it('mails the project once when a review leaves decisions waiting', function () {
+    Notification::fake();
+    $account = AdAccount::factory()->create();
+    $project = $account->project;
+    $project->users()->attach(User::factory()->create());
+    app(CurrentProject::class)->set($project);
+    // Waiting since an earlier review: already told about it.
+    AdDecision::factory()->create(['ad_campaign_id' => AdCampaign::factory()->active()->create(['ad_account_id' => $account->id])->id]);
+    AdStrategist::fake(function () use ($account): string {
+        $campaign = AdCampaign::factory()->create(['ad_account_id' => $account->id, 'name' => 'Founders Q4']);
+        AdDecision::factory()->create(['ad_campaign_id' => $campaign->id, 'type' => AdDecisionType::LaunchCampaign]);
+        AdDecision::factory()->create(['ad_campaign_id' => $campaign->id, 'type' => AdDecisionType::AddAd]);
+        AdDecision::factory()->create(['ad_campaign_id' => $campaign->id, 'status' => AdDecisionStatus::Applied]);
+
+        return 'Proposed a launch.';
+    });
+
+    app(ReviewAds::class)->handle($project);
+
+    Notification::assertSentTimes(AdDecisionsAwaiting::class, 1);
+    Notification::assertSentTo(
+        $project->users,
+        AdDecisionsAwaiting::class,
+        fn (AdDecisionsAwaiting $notification): bool => $notification->decisions === ['Launch campaign: Founders Q4', 'Add ad: Founders Q4'],
+    );
+});
+
+it('mails nobody when every decision applied on its own', function () {
+    Notification::fake();
+    $account = AdAccount::factory()->create();
+    $account->project->users()->attach(User::factory()->create());
+    app(CurrentProject::class)->set($account->project);
+    AdStrategist::fake(function () use ($account): string {
+        AdDecision::factory()->create([
+            'ad_campaign_id' => AdCampaign::factory()->active()->create(['ad_account_id' => $account->id])->id,
+            'status' => AdDecisionStatus::Applied,
+        ]);
+
+        return 'Paused a loser.';
+    });
+
+    app(ReviewAds::class)->handle($account->project);
+
+    Notification::assertNothingSent();
 });

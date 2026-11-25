@@ -289,13 +289,13 @@ it('keeps the profiles already derived unless replacing was asked for', function
     // The test queue is synchronous, so each dispatch runs the job here and now.
     DeriveTargets::dispatch($project, pendingDerivation($project), replace: false);
 
-    expect(TargetProfile::query()->withoutGlobalScopes()->pluck('name')->all())
+    expect(TargetProfile::query()->withoutGlobalScopes()->orderBy('id')->pluck('name')->all())
         ->toBe(['Derived earlier', 'Newly derived']);
 
     DeriveTargets::dispatch($project, pendingDerivation($project), replace: true);
 
     // Both of the agent's own profiles went; a human one would have survived.
-    expect(TargetProfile::query()->withoutGlobalScopes()->pluck('name')->all())
+    expect(TargetProfile::query()->withoutGlobalScopes()->orderBy('id')->pluck('name')->all())
         ->toBe(['After the replacement'])
         ->and($kept->exists())->toBeTrue()
         ->and(TargetProfile::query()->withoutGlobalScopes()->find($kept->id))->toBeNull();

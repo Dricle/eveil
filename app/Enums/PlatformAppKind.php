@@ -7,6 +7,11 @@ namespace App\Enums;
  * an organization's own Meta app for Instagram is a developer app like its
  * Google Ads one, registered by hand and resolved the same way (its own row
  * first, else the instance's), but Instagram is no ad network.
+ *
+ * LinkedIn's two apps (posting, and the Community Management one for post
+ * stats, which LinkedIn refuses on the same app) are instance only for now:
+ * `LinkedinCredentials` reads the instance rows, and an organization cannot
+ * save its own (`bringYourOwn()`).
  */
 enum PlatformAppKind: string
 {
@@ -14,6 +19,18 @@ enum PlatformAppKind: string
     case MicrosoftAds = 'microsoft_ads';
     case MetaAds = 'meta_ads';
     case Instagram = 'instagram';
+    case LinkedinPosting = 'linkedin_posting';
+    case LinkedinStats = 'linkedin_stats';
+
+    /**
+     * The kinds an organization may save its own app for.
+     *
+     * @return list<self>
+     */
+    public static function bringYourOwn(): array
+    {
+        return [self::GoogleAds, self::MicrosoftAds, self::MetaAds, self::Instagram];
+    }
 
     public function label(): string
     {
@@ -22,6 +39,8 @@ enum PlatformAppKind: string
             self::MicrosoftAds => 'Microsoft Advertising',
             self::MetaAds => 'Meta Ads',
             self::Instagram => 'Meta (Instagram)',
+            self::LinkedinPosting => 'LinkedIn',
+            self::LinkedinStats => 'LinkedIn Community Management',
         };
     }
 
@@ -35,6 +54,8 @@ enum PlatformAppKind: string
             self::MicrosoftAds => route('oauth.ads.callback', AdPlatform::MicrosoftAds),
             self::MetaAds => route('oauth.ads.callback', AdPlatform::MetaAds),
             self::Instagram => route('oauth.instagram.callback'),
+            self::LinkedinPosting => route('oauth.linkedin.callback'),
+            self::LinkedinStats => route('oauth.linkedin.stats.callback'),
         };
     }
 

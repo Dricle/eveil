@@ -3,6 +3,7 @@
 use App\Actions\ReviewAds;
 use App\Actions\SyncAdMetrics;
 use App\Ai\Agents\AdStrategist;
+use App\Ai\Tools\GetAdPerformance;
 use App\Enums\AdDecisionStatus;
 use App\Enums\AdDecisionType;
 use App\Enums\AdVerdict;
@@ -20,6 +21,7 @@ use App\Support\CurrentProject;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Ai\Prompts\AgentPrompt;
+use Laravel\Ai\Tools\Request;
 
 function reportedAd(AdAccount $account, array $metrics): Ad
 {
@@ -157,4 +159,21 @@ it('mails nobody when every decision applied on its own', function () {
     app(ReviewAds::class)->handle($account->project);
 
     Notification::assertNothingSent();
+});
+
+it('lets Evie read the ads report and its decisions', function () {
+    $account = AdAccount::factory()->create();
+    app(CurrentProject::class)->set($account->project);
+    $ad = reportedAd($account, ['impressions' => 1000, 'clicks' => 40, 'cost_micros' => 20_000_000]);
+    AdDecision::factory()->create([
+        'project_id' => $account->project_id,
+        'ad_campaign_id' => $ad->ad_campaign_id,
+        'reasoning' => 'CTR well under the account baseline.',
+    ]);
+
+    $report = json_decode((string) (new GetAdPerformance($account->project))->handle(new Request([])), true);
+
+    expect($report['accounts'][0]['campaigns'][0]['lifetime']['clicks'])->toBe(40)
+        ->and($report['recent_decisions'][0]['reasoning'])->toBe('CTR well under the account baseline.')
+        ->and((string) (new GetAdPerformance(Project::factory()->create()))->handle(new Request([])))->toBe('No ad account is connected to this project yet.');
 });

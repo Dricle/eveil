@@ -64,6 +64,7 @@ class Toolbelt
         UpdateInsight::class,
         GetRedditReply::class,
         UpdateRedditReply::class,
+        GetAdPerformance::class,
     ];
 
     /**

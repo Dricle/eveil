@@ -20,7 +20,7 @@ class AdDecisionsAwaiting extends Notification implements ShouldQueue
     use Queueable;
 
     /**
-     * @param  list<string>  $decisions  one line per waiting decision
+     * @param  array<int, string>  $decisions  one line per waiting decision
      */
     public function __construct(public string $projectName, public string $projectSlug, public array $decisions) {}
 

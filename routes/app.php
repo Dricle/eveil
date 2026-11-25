@@ -111,6 +111,7 @@ use App\Http\Controllers\StepVariantGenerationController;
 use App\Http\Controllers\TargetProfileActivationController;
 use App\Http\Controllers\TargetProfileController;
 use App\Http\Controllers\TargetProfileDerivationController;
+use App\Http\Controllers\TargetProfileSubredditController;
 use App\Http\Controllers\TargetProfileSubredditsController;
 use App\Http\Controllers\VideoAssetController;
 use App\Http\Controllers\VideoRuntimeController;
@@ -604,6 +605,10 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
                 ->name('targets.activation');
             Route::post('targets/{target}/subreddits', [TargetProfileSubredditsController::class, 'store'])
                 ->name('targets.subreddits');
+            Route::post('targets/{target}/subreddit', [TargetProfileSubredditController::class, 'store'])
+                ->name('targets.subreddit.store');
+            Route::delete('targets/{target}/subreddit/{subreddit}', [TargetProfileSubredditController::class, 'destroy'])
+                ->name('targets.subreddit.destroy');
 
             /*
              * One flag stops a run and one dispatch replays a single node,

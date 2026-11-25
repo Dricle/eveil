@@ -2,6 +2,7 @@
 
 namespace App\Ai\Tools;
 
+use App\Actions\EditTargetProfileSubreddits;
 use App\Enums\TargetProfileSource;
 use App\Enums\TargetProfileType;
 use App\Models\Project;
@@ -20,7 +21,9 @@ use Stringable;
  * A list criteria field (sectors, geography, job_titles, technologies,
  * trigger_signals, search_queries), when given, REPLACES the whole list,
  * same as UpdateSequence replaces a campaign's steps: read the current one
- * with GetTargetProfile first.
+ * with GetTargetProfile first. Subreddits are the exception: added and
+ * removed by name (`EditTargetProfileSubreddits`), since each added one is
+ * checked against Reddit first.
  */
 class UpdateTargetProfile implements Tool
 {
@@ -32,7 +35,11 @@ class UpdateTargetProfile implements Tool
         Corrects one target profile. Give only the fields that change; anything
         omitted is left as it is. A list field, when given, REPLACES the whole
         list, so read it first with GetTargetProfile and include the entries
-        that should stay.
+        that should stay. Subreddits are added or removed by name instead
+        (add_subreddits, remove_subreddits): they are what discovery searches
+        for this segment AND what the Reddit reply scan reads, so a community
+        where the project wants to draft replies goes on the profile whose
+        buyers are there.
         TEXT;
     }
 
@@ -64,7 +71,12 @@ class UpdateTargetProfile implements Tool
             'source' => TargetProfileSource::Human,
         ]);
 
-        return "Target profile \"{$profile->name}\" updated.";
+        $add = array_map(strval(...), (array) ($request->all()['add_subreddits'] ?? []));
+        $remove = array_map(strval(...), (array) ($request->all()['remove_subreddits'] ?? []));
+        $refused = $add === [] && $remove === [] ? [] : app(EditTargetProfileSubreddits::class)->handle($profile, $add, $remove);
+
+        return "Target profile \"{$profile->name}\" updated."
+            .($refused === [] ? '' : ' Not added, unknown on Reddit or under 1000 subscribers: '.implode(', ', $refused).'.');
     }
 
     /**
@@ -105,6 +117,8 @@ class UpdateTargetProfile implements Tool
             'technologies' => $schema->array()->items($schema->string())->description('The full list of technologies, replacing whatever is there now.'),
             'trigger_signals' => $schema->array()->items($schema->string())->description('The full list of trigger signals, replacing whatever is there now.'),
             'search_queries' => $schema->array()->items($schema->string())->description('The full list of search queries, replacing whatever is there now.'),
+            'add_subreddits' => $schema->array()->items($schema->string())->description('Subreddit names to add (with or without "r/"), each checked against Reddit first.'),
+            'remove_subreddits' => $schema->array()->items($schema->string())->description('Subreddit names to remove.'),
         ];
     }
 }

@@ -23,12 +23,18 @@ class FindSubreddits
         $topics = $this->topics($targetProfile);
         $guesses = $this->strings($targetProfile, 'subreddit_guesses');
 
+        $found = $topics === [] && $guesses === [] ? [] : $this->finder->find($topics, $guesses);
+
         $targetProfile->update([
             'criteria' => [
                 ...$targetProfile->criteria,
-                'subreddits' => $topics === [] && $guesses === []
-                    ? []
-                    : $this->finder->find($topics, $guesses),
+                // Merged, never replaced: what is already there stays (hand-added
+                // ones included) until removed by hand, and the cap only bounds
+                // what one lookup adds.
+                'subreddits' => collect([...$targetProfile->criteria['subreddits'] ?? [], ...$found])
+                    ->unique(fn (array $subreddit): string => mb_strtolower($subreddit['name']))
+                    ->values()
+                    ->all(),
             ],
         ]);
 

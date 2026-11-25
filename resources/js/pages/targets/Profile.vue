@@ -60,6 +60,45 @@ function resolveSubreddits (): void {
     })
 }
 
+const newSubreddit = ref('')
+const addingSubreddit = ref(false)
+const subredditError = ref<string | undefined>()
+const removingSubreddit = ref<string | null>(null)
+
+// Manual calls, not a `<Form>`: this field sits inside the profile's own form.
+function addSubreddit (): void {
+    if (!props.profile || !newSubreddit.value.trim()) {
+        return
+    }
+
+    addingSubreddit.value = true
+    subredditError.value = undefined
+
+    router.post(targets.subreddit.store.url({ project: page.props.currentProject!.slug, target: props.profile.id }), { name: newSubreddit.value }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            toast.add({ title: `r/${newSubreddit.value.replace(/^\/?r\//i, '')} added`, color: 'success' })
+            newSubreddit.value = ''
+        },
+        onError: (errors) => { subredditError.value = errors.name },
+        onFinish: () => { addingSubreddit.value = false }
+    })
+}
+
+function removeSubreddit (name: string): void {
+    if (!props.profile) {
+        return
+    }
+
+    removingSubreddit.value = name
+
+    router.delete(targets.subreddit.destroy.url({ project: page.props.currentProject!.slug, target: props.profile.id, subreddit: name }), {
+        preserveScroll: true,
+        onSuccess: () => toast.add({ title: `r/${name} removed`, color: 'neutral' }),
+        onFinish: () => { removingSubreddit.value = null }
+    })
+}
+
 // Every field is bound, never left to `default-value`: Nuxt UI reads that prop
 // once at mount, and Vue then patches a form element's value against what the
 // DOM holds, so every later render writes the frozen first value back over what
@@ -313,33 +352,63 @@ watch(() => props.profile, (profile) => {
                         />
                     </UFormField>
 
-                    <!-- Resolved automatically, not typed: read-only here, and
-                         never bound into `draftList` alongside the fields
-                         above. -->
+                    <!-- Never bound into `draftList` alongside the fields above:
+                         each name added here is checked against Reddit first. -->
                     <UFormField
                         v-if="profile"
                         label="Reddit communities"
-                        help="Looked up from the segment above - never typed by hand, so a wrong name can't slip in unverified."
+                        help="Where discovery looks for this segment, and where Reddit replies get drafted. Looked up from the segment above, or added by name: every name is checked against Reddit."
+                        :error="subredditError"
                     >
                         <div class="flex flex-wrap items-center gap-2">
-                            <UButton
+                            <UFieldGroup
                                 v-for="subreddit in profile.criteria.subreddits"
                                 :key="subreddit.name"
-                                :to="`https://reddit.com/r/${subreddit.name}`"
-                                external
-                                target="_blank"
-                                variant="soft"
-                                color="neutral"
                                 size="sm"
-                                icon="i-lucide-message-circle"
-                                :label="`r/${subreddit.name} · ${subreddit.subscribers.toLocaleString()}`"
-                            />
+                            >
+                                <UButton
+                                    :to="`https://reddit.com/r/${subreddit.name}`"
+                                    external
+                                    target="_blank"
+                                    variant="soft"
+                                    color="neutral"
+                                    icon="i-lucide-message-circle"
+                                    :label="`r/${subreddit.name} · ${subreddit.subscribers.toLocaleString()}`"
+                                />
+                                <UButton
+                                    type="button"
+                                    variant="soft"
+                                    color="neutral"
+                                    icon="i-lucide-x"
+                                    :aria-label="`Remove r/${subreddit.name}`"
+                                    :loading="removingSubreddit === subreddit.name"
+                                    @click="removeSubreddit(subreddit.name)"
+                                />
+                            </UFieldGroup>
                             <p
                                 v-if="!profile.criteria.subreddits?.length"
                                 class="text-sm text-muted"
                             >
                                 None resolved yet.
                             </p>
+                            <UFieldGroup size="sm">
+                                <UInput
+                                    v-model="newSubreddit"
+                                    placeholder="r/micro_saas"
+                                    class="w-40"
+                                    @keydown.enter.prevent="addSubreddit"
+                                />
+                                <UButton
+                                    type="button"
+                                    color="neutral"
+                                    variant="subtle"
+                                    icon="i-lucide-plus"
+                                    label="Add"
+                                    :loading="addingSubreddit"
+                                    :disabled="!newSubreddit.trim()"
+                                    @click="addSubreddit"
+                                />
+                            </UFieldGroup>
                             <UButton
                                 type="button"
                                 variant="ghost"

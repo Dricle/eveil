@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\DescribeCampaignSending;
 use App\Actions\DispatchDueSends;
 use App\Actions\EnrolCampaign;
 use App\Actions\PersonalizeMessage;
@@ -424,6 +425,31 @@ it('opens the window on the recipient clock when discovery says where they are',
     expect(app(DispatchDueSends::class)->handle())->toBe(1);
 });
 
+it('tells the delivery screen the window is open on the clock of whoever is owed a mail', function () {
+    [, $project] = sender();
+
+    Queue::fake();
+
+    $lead = contactable($project);
+    $campaign = sequence($project);
+    app(EnrolCampaign::class)->handle($campaign);
+    $lead->update(['company_id' => Company::factory()->create(['project_id' => $project->id, 'location' => 'Indonesia'])->id]);
+
+    // 03:00 UTC is 10:00 in Jakarta: the scheduler sends, and the screen
+    // must not say it is outside the window.
+    $this->travelTo(now()->setTimezone('UTC')->setTime(3, 0));
+    CampaignLead::query()->update(['next_action_at' => now()->subMinutes(10)]);
+    $open = fn (): bool => app(DescribeCampaignSending::class)->handle($campaign, app(DispatchDueSends::class))['window_open'];
+
+    expect($open())->toBeTrue()
+        ->and(app(DispatchDueSends::class)->handle())->toBe(1);
+
+    // 14:00 UTC is 21:00 there.
+    $this->travelTo(now()->setTime(14, 0));
+
+    expect($open())->toBeFalse();
+});
+
 it('places a recipient from the location text, then the country domain, and admits when it cannot', function () {
     $zone = fn (array $attributes): ?string => app(RecipientTimezone::class)->for(Company::factory()->make($attributes));
 
@@ -431,7 +457,11 @@ it('places a recipient from the location text, then the country domain, and admi
         ->and($zone(['location' => 'Erlangen, Deutschland', 'domain' => 'x.com']))->toBe('Europe/Berlin')
         ->and($zone(['location' => 'Madrid, España', 'domain' => 'x.com']))->toBe('Europe/Madrid')
         ->and($zone(['location' => null, 'domain' => 'evpaalfix.nl']))->toBe('Europe/Amsterdam')
-        ->and($zone(['location' => 'Atlanta, Georgia, United States', 'domain' => 'x.com']))->toBeNull()
+        // A country spread over several hours, with no city to settle it:
+        // its main zone rather than the instance clock.
+        ->and($zone(['location' => 'Atlanta, Georgia, United States', 'domain' => 'x.com']))->toBe('America/New_York')
+        ->and($zone(['location' => 'Indonesia', 'domain' => 'x.com']))->toBe('Asia/Jakarta')
+        ->and($zone(['location' => null, 'domain' => 'itung.id']))->toBe('Asia/Jakarta')
         ->and($zone(['location' => 'Chicago, Illinois, United States', 'domain' => 'x.com']))->toBe('America/Chicago')
         ->and($zone(['location' => 'Unknown', 'domain' => 'thinkrevops.com']))->toBeNull();
 });

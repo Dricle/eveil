@@ -13,8 +13,10 @@ use Locale;
  * A campaign reaching Brussels and Montreal from one mailbox should land in
  * office hours in both, and the instance clock only knows one of them. Only a
  * country with a single zone answers outright; a country with several needs a
- * city that names one of its zones ("Chicago", "Toronto"), and anything vaguer
- * returns null, which leaves the mail on the instance's own window, as before.
+ * city that names one of its zones ("Chicago", "Toronto"); anything vaguer
+ * falls back on the country's main zone, where most of its offices are.
+ * Null only when the country itself is unknown, which leaves the mail on the
+ * instance's own window.
  */
 class RecipientTimezone
 {
@@ -26,6 +28,25 @@ class RecipientTimezone
      * "Belgique", "Deutschland", "Nederland".
      */
     private const LANGUAGES = ['en', 'fr', 'de', 'nl', 'es', 'it', 'pt'];
+
+    /**
+     * Where a country spread over more than an hour does business when
+     * nothing names the city: a few hours off at worst for the far side of
+     * it, where the instance clock was up to half a day off.
+     */
+    private const MAIN_ZONES = [
+        'AU' => 'Australia/Sydney',
+        'BR' => 'America/Sao_Paulo',
+        'CA' => 'America/Toronto',
+        'CL' => 'America/Santiago',
+        'CN' => 'Asia/Shanghai',
+        'GL' => 'America/Nuuk',
+        'ID' => 'Asia/Jakarta',
+        'KI' => 'Pacific/Tarawa',
+        'MX' => 'America/Mexico_City',
+        'RU' => 'Europe/Moscow',
+        'US' => 'America/New_York',
+    ];
 
     public function for(?Company $company): ?string
     {
@@ -61,10 +82,9 @@ class RecipientTimezone
             return (string) $offsets->filter(fn (int $offset): bool => $offset === $common)->keys()->first();
         }
 
-        // ponytail: zone city names and the one-hour rule only, so "Austin,
-        // Texas" stays unresolved; a state/province map is the upgrade if US
-        // and Canadian volume ever matters.
-        return null;
+        // ponytail: "Austin, Texas" lands on New York, two hours early; a
+        // state/province map is the upgrade if US and Canadian volume matters.
+        return self::MAIN_ZONES[$country] ?? null;
     }
 
     private function countryIn(string $location): ?string

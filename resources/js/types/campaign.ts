@@ -9,6 +9,7 @@ export type CampaignStatus = 'draft' | 'active' | 'paused' | 'completed' | 'arch
  */
 export type SendingState = {
     next_action_at: string | null
+    /** Whether at least one person owed a mail right now is inside the window on their own clock. */
     window_open: boolean
     window: { start: number, end: number }
     mailboxes: Pick<Mailbox, 'id' | 'name' | 'from_email' | 'status' | 'sent_today' | 'allowance_today' | 'remaining_today' | 'ready_at'>[]

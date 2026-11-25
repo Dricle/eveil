@@ -23,7 +23,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
  * out of today's allowance, or not attached to the project at all.
  */
 #[IsReadOnly]
-#[Description('Why a campaign is or is not sending: the project\'s mailboxes with their status, last error and remaining allowance today, the sending window, and when the next email is due. can_send is false when no active mailbox is attached to the project. blocked_by_credits says why nothing goes out when the organization has no credits left, null otherwise.')]
+#[Description('Why a campaign is or is not sending: the project\'s mailboxes with their status, last error and remaining allowance today, the sending window (window_open: whether anyone owed a mail right now is inside it on their own clock), and when the next email is due. can_send is false when no active mailbox is attached to the project. blocked_by_credits says why nothing goes out when the organization has no credits left, null otherwise.')]
 class GetCampaignSending extends Tool
 {
     use ActsOnProject;

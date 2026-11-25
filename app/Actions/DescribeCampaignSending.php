@@ -7,6 +7,8 @@ use App\Ai\Contracts\SpendGuardInterface;
 use App\Enums\CampaignLeadStatus;
 use App\Http\Resources\MailboxResource;
 use App\Models\Campaign;
+use App\Models\CampaignLead;
+use App\Services\Outreach\RecipientTimezone;
 use App\Support\AggregateDate;
 use App\Support\Settings;
 
@@ -21,7 +23,7 @@ use App\Support\Settings;
  */
 class DescribeCampaignSending
 {
-    public function __construct(private Settings $settings, private SpendGuardInterface $spendGuard) {}
+    public function __construct(private Settings $settings, private SpendGuardInterface $spendGuard, private RecipientTimezone $timezones) {}
 
     /**
      * @return array<string, mixed>
@@ -40,7 +42,16 @@ class DescribeCampaignSending
             'next_action_at' => AggregateDate::parse($campaign->campaignLeads()
                 ->whereIn('status', CampaignLeadStatus::live())
                 ->min('next_action_at')),
-            'window_open' => $dispatcher->windowIsOpen(),
+            // On each recipient's own clock, as `DispatchDueSends::due()`
+            // judges it: open when at least one person owed a mail right now
+            // is inside office hours where they are.
+            'window_open' => $campaign->campaignLeads()
+                ->whereIn('status', CampaignLeadStatus::live())
+                ->where('next_action_at', '<=', now())
+                ->with('lead.company')
+                ->limit(50)
+                ->get()
+                ->contains(fn (CampaignLead $due): bool => $dispatcher->windowIsOpen($this->timezones->for($due->lead?->company))),
             'window' => [
                 'start' => (int) $this->settings->array('sending')['window_start'],
                 'end' => (int) $this->settings->array('sending')['window_end'],

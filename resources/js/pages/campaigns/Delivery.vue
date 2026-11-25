@@ -66,16 +66,18 @@ const blocker = computed(() => {
         return `${props.sending.blocked_by_credits} Nothing is sent until then, and the sequence picks up where it stopped.`
     }
 
-    if (!props.sending.window_open) {
-        return `Outside the sending window (${props.sending.window.start}:00 to ${props.sending.window.end}:00). Nothing leaves before then.`
-    }
-
     if (props.sending.next_action_at === null) {
         return 'Nothing is owed right now. The next mail is scheduled when the current step\'s wait is over.'
     }
 
     if (new Date(props.sending.next_action_at).getTime() > Date.now()) {
         return `Next mail due at ${moment(props.sending.next_action_at)}.`
+    }
+
+    // Judged on each recipient's clock, so it only means something once a
+    // mail is actually owed.
+    if (!props.sending.window_open) {
+        return `Due now, but it is outside ${props.sending.window.start}:00 to ${props.sending.window.end}:00 where every recipient owed a mail is. Each one goes out once their working day starts.`
     }
 
     if (props.sending.mailboxes.every(box => box.remaining_today < 1)) {
@@ -156,7 +158,8 @@ const blocker = computed(() => {
                     </p>
                     <p class="text-sm text-dimmed">
                         Sending is paced: one mail per mailbox per tick, never outside
-                        {{ sending.window.start }}:00 to {{ sending.window.end }}:00.
+                        {{ sending.window.start }}:00 to {{ sending.window.end }}:00
+                        in the recipient's own time zone whenever Eveil can tell where they are.
                     </p>
 
                     <!-- The two blockers on this screen whose fix is on

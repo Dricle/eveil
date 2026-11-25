@@ -394,7 +394,7 @@ watch(() => props.profile, (profile) => {
                             <UFieldGroup size="sm">
                                 <UInput
                                     v-model="newSubreddit"
-                                    placeholder="r/micro_saas"
+                                    placeholder="r/subreddit"
                                     class="w-40"
                                     @keydown.enter.prevent="addSubreddit"
                                 />

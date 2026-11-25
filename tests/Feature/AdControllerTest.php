@@ -248,3 +248,12 @@ it('says per network whether this project has an app, accounts connected, or not
             ->where('platforms.2.connected_accounts', 0)
             ->where('platforms.2.docs_url', 'https://docs.eveil.cloud/product/ads#meta-ads-getting-an-app-id-and-secret'));
 });
+
+it('does not let an organization save its own LinkedIn app', function () {
+    [$user] = adOwner();
+
+    $this->actingAs($user)->putJson(str_replace('google_ads', 'linkedin_posting', route('settings.platform-apps.update', 'google_ads')), ['client_id' => 'own-id', 'client_secret' => 'own-secret'])
+        ->assertNotFound();
+
+    expect(PlatformApp::query()->where('platform', PlatformAppKind::LinkedinPosting)->exists())->toBeFalse();
+});

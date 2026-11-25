@@ -5,6 +5,7 @@ use App\Cloud\Http\Controllers\BillingPortalController;
 use App\Cloud\Http\Controllers\CheckoutController;
 use App\Cloud\Http\Controllers\OrganizationBillingController;
 use App\Cloud\Http\Controllers\PaymentMethodController;
+use App\Enums\PlatformAppKind;
 use App\Http\Controllers\Account\AccountDeletionController;
 use App\Http\Controllers\Account\ConnectedAssistantController;
 use App\Http\Controllers\Account\TwoFactorController;
@@ -381,8 +382,10 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
             // An organization's own OAuth apps: the ad networks' are listed
             // on their page, the Meta app for Instagram on Instagram's.
             Route::get('ad-platforms', [PlatformAppController::class, 'index'])->name('ad-platforms.index');
-            Route::put('platform-apps/{platform}', [PlatformAppController::class, 'update'])->name('platform-apps.update');
-            Route::delete('platform-apps/{platform}', [PlatformAppController::class, 'destroy'])->name('platform-apps.destroy');
+            Route::put('platform-apps/{platform}', [PlatformAppController::class, 'update'])->name('platform-apps.update')
+                ->whereIn('platform', array_column(PlatformAppKind::bringYourOwn(), 'value'));
+            Route::delete('platform-apps/{platform}', [PlatformAppController::class, 'destroy'])->name('platform-apps.destroy')
+                ->whereIn('platform', array_column(PlatformAppKind::bringYourOwn(), 'value'));
 
             Route::put('social-accounts/{socialAccount}', [SocialAccountController::class, 'update'])
                 ->name('social-accounts.update');

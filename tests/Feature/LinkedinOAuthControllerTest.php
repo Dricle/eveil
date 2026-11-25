@@ -3,11 +3,13 @@
 use App\Enums\SocialAccountStatus;
 use App\Enums\SocialPlatform;
 use App\Models\Organization;
+use App\Models\PlatformApp;
 use App\Models\Project;
 use App\Models\SocialAccount;
 use App\Models\User;
 use App\Support\CurrentProject;
 use App\Support\LinkedinCredentials;
+use App\Support\Settings;
 use Illuminate\Support\Facades\Http;
 
 beforeEach(function () {
@@ -82,4 +84,25 @@ it('sends a callback with no project in session to the app home', function () {
 
     expect(SocialAccount::count())->toBe(0);
     Http::assertNothingSent();
+});
+
+it('moves the LinkedIn apps out of settings onto instance platform apps', function () {
+    PlatformApp::query()->delete();
+    $settings = app(Settings::class);
+    $settings->set('linkedin.client_id', 'posting-id');
+    $settings->set('linkedin.client_secret', 'posting-secret', encrypted: true);
+    $settings->set('linkedin.stats_client_id', 'stats-id');
+    $settings->set('linkedin.stats_client_secret', 'stats-secret', encrypted: true);
+
+    (require database_path('migrations/2026_11_25_173024_move_linkedin_apps_to_platform_apps.php'))->up();
+    $settings->flush();
+
+    $credentials = app(LinkedinCredentials::class);
+    expect($credentials->clientId())->toBe('posting-id')
+        ->and($credentials->clientSecret())->toBe('posting-secret')
+        ->and($credentials->statsClientId())->toBe('stats-id')
+        ->and($credentials->statsClientSecret())->toBe('stats-secret')
+        ->and(PlatformApp::query()->whereNotNull('organization_id')->exists())->toBeFalse()
+        ->and($settings->get('linkedin.client_id'))->toBeNull()
+        ->and($settings->hasSecret('linkedin.stats_client_secret'))->toBeFalse();
 });

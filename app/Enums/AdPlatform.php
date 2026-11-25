@@ -42,6 +42,19 @@ enum AdPlatform: string
     }
 
     /**
+     * The query parameter this network adds to the landing URL on every click,
+     * which the user's site keeps and reports back with a goal.
+     */
+    public function clickIdParameter(): string
+    {
+        return match ($this) {
+            self::GoogleAds => 'gclid',
+            self::MicrosoftAds => 'msclkid',
+            self::MetaAds => 'fbclid',
+        };
+    }
+
+    /**
      * Which `platform_apps` row this network connects through.
      */
     public function appKind(): PlatformAppKind

@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\ContactBulkDeleteController;
 use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\ContactNoteController;
 use App\Http\Controllers\Api\ContactStatusController;
+use App\Http\Controllers\Api\ConversionController;
 use App\Http\Controllers\Api\DiscoveryRunController;
 use App\Http\Controllers\Api\IdeaController;
 use App\Http\Controllers\Api\InsightController;
@@ -67,6 +68,8 @@ Route::prefix('v1')
                 Route::delete('companies/{company}/notes/{note}', [CompanyNoteController::class, 'destroy'])->name('companies.notes.destroy');
 
                 Route::post('known-clients', [KnownClientController::class, 'store'])->name('known-clients.store');
+
+                Route::post('conversions', [ConversionController::class, 'store'])->name('conversions.store');
 
                 Route::get('contacts', [ContactController::class, 'index'])->name('contacts.index');
                 Route::post('contacts', [ContactController::class, 'store'])->name('contacts.store');

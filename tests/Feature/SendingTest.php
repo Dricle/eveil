@@ -4,6 +4,7 @@ use App\Actions\DispatchDueSends;
 use App\Actions\EnrolCampaign;
 use App\Actions\PersonalizeMessage;
 use App\Actions\SendNextStep;
+use App\Ai\Contracts\SpendGuardInterface;
 use App\Enums\CampaignLeadStatus;
 use App\Enums\CampaignStatus;
 use App\Enums\EmailAccountStatus;
@@ -922,6 +923,7 @@ it('says when the next mail is owed and what is standing in its way', function (
             ->where('sending.mailboxes.0.sent_today', 0)
             ->where('sending.mailboxes.0.remaining_today', $mailbox->allowanceForToday())
             ->where('sending.mailboxes.0.ready_at', null)
+            ->where('sending.blocked_by_credits', null)
             ->where('leadsTotal', 1)
             // Enrolled and not yet written to.
             ->where('leads.0.last_step', 0)
@@ -1251,4 +1253,27 @@ it('compares reply rates by where the people written to came from', function () 
                 ['source' => 'overpass', 'contacted' => 3, 'replied' => 1, 'interested' => 0],
                 ['source' => 'import', 'contacted' => 2, 'replied' => 1, 'interested' => 1],
             ]));
+});
+
+it('queues nothing while the organization cannot pay for the personalisation, and says so', function () {
+    $this->mock(SpendGuardInterface::class, fn ($mock) => $mock->shouldReceive('refusal')->andReturn('This project has no credits left.'));
+    [$user, $project] = sender();
+
+    Queue::fake();
+
+    contactable($project);
+    $campaign = sequence($project);
+    app(EnrolCampaign::class)->handle($campaign);
+    $this->travelTo(now()->setTime(10, 0));
+    CampaignLead::query()->update(['next_action_at' => now()->subMinutes(10)]);
+
+    // Left where it is, not queued to fail every tick, and not pinned either.
+    expect(app(DispatchDueSends::class)->handle())->toBe(0)
+        ->and(CampaignLead::query()->sole()->email_account_id)->toBeNull();
+    Queue::assertNothingPushed();
+
+    $this->actingAs($user)
+        ->withSession(['current_project_id' => $project->id])
+        ->get(route('campaigns.delivery', $campaign))
+        ->assertInertia(fn ($page) => $page->where('sending.blocked_by_credits', 'This project has no credits left.'));
 });

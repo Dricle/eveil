@@ -2,6 +2,8 @@
 
 namespace App\Actions;
 
+use App\Ai\Agents\MessagePersonalizer;
+use App\Ai\Contracts\SpendGuardInterface;
 use App\Enums\CampaignLeadStatus;
 use App\Http\Resources\MailboxResource;
 use App\Models\Campaign;
@@ -19,7 +21,7 @@ use App\Support\Settings;
  */
 class DescribeCampaignSending
 {
-    public function __construct(private Settings $settings) {}
+    public function __construct(private Settings $settings, private SpendGuardInterface $spendGuard) {}
 
     /**
      * @return array<string, mixed>
@@ -44,6 +46,10 @@ class DescribeCampaignSending
                 'end' => (int) $this->settings->array('sending')['window_end'],
             ],
             'mailboxes' => MailboxResource::collection($mailboxes),
+            // Every email is personalised first, so an organization out of
+            // credits sends nothing at all; `DispatchDueSends` asks the same
+            // question before queueing. Null when sends can go ahead.
+            'blocked_by_credits' => $this->spendGuard->refusal($campaign->project, MessagePersonalizer::slug()),
         ];
     }
 }

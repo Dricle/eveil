@@ -12,6 +12,8 @@ export type SendingState = {
     window_open: boolean
     window: { start: number, end: number }
     mailboxes: Pick<Mailbox, 'id' | 'name' | 'from_email' | 'status' | 'sent_today' | 'allowance_today' | 'remaining_today' | 'ready_at'>[]
+    /** Why nothing can be personalised, so nothing sent: the organization is out of credits. Null when sends can go ahead. */
+    blocked_by_credits: string | null
 }
 
 /** One person's place in one sequence. */

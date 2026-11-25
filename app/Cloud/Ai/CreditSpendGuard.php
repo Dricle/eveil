@@ -53,7 +53,7 @@ class CreditSpendGuard implements SpendGuardInterface
         if ($project->organization->credits_balance < $price) {
             $this->notifyOwnersOnce($project);
 
-            return 'This project has no credits left. Top up to keep the searches running.';
+            return 'Your organization has no credits left. Top up to keep Eveil running.';
         }
 
         return null;

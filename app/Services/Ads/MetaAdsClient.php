@@ -7,6 +7,7 @@ use App\Enums\ImageFormat;
 use App\Models\Ad;
 use App\Models\AdAccount;
 use App\Models\AdCampaign;
+use App\Models\AdConversion;
 use App\Models\PlatformApp;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\PendingRequest;
@@ -299,6 +300,42 @@ class MetaAdsClient implements AdClientInterface
 
         // Keyed by a file name Meta makes up: the one entry is ours.
         return (string) collect((array) $response->json('images'))->first()['hash'];
+    }
+
+    public function uploadConversion(AdAccount $account, AdConversion $conversion): void
+    {
+        $occurredAt = $conversion->occurred_at;
+
+        $this->post($account, "{$this->pixel($account)}/events", [
+            'data' => [array_filter([
+                // Lead is one of the CONVERSION_ACTIONS the metrics count.
+                'event_name' => 'Lead',
+                'event_time' => $occurredAt->getTimestamp(),
+                'event_id' => "eveil-{$conversion->id}",
+                // ponytail: "website" would also want the visitor's user
+                // agent and page URL; ask the backend for them if Meta
+                // attributes "other" events poorly.
+                'action_source' => 'other',
+                // The click id in the cookie format Meta's own pixel writes.
+                'user_data' => ['fbc' => "fb.1.{$occurredAt->getTimestampMs()}.{$conversion->click_id}"],
+                'custom_data' => $conversion->value_micros === null ? null : [
+                    'value' => $conversion->value_micros / 1_000_000,
+                    'currency' => $conversion->currency,
+                ],
+            ], fn (mixed $value): bool => $value !== null)],
+        ]);
+    }
+
+    /**
+     * The account's pixel, which server events are sent to, created the
+     * first time a goal is reported to an account that has none.
+     */
+    private function pixel(AdAccount $account): string
+    {
+        $response = $this->request($account)->get(self::API."/act_{$account->external_id}/adspixels", ['fields' => 'id', 'limit' => 1]);
+        $this->throwUnless($response);
+
+        return (string) ($response->json('data.0.id') ?? $this->post($account, "act_{$account->external_id}/adspixels", ['name' => 'Eveil']));
     }
 
     /**

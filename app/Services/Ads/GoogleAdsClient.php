@@ -6,6 +6,7 @@ use App\Enums\AdStatus;
 use App\Models\Ad;
 use App\Models\AdAccount;
 use App\Models\AdCampaign;
+use App\Models\AdConversion;
 use App\Models\PlatformApp;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\PendingRequest;
@@ -29,6 +30,11 @@ class GoogleAdsClient implements AdClientInterface
     private const API = 'https://googleads.googleapis.com/v25';
 
     private const SCOPE = 'https://www.googleapis.com/auth/adwords';
+
+    /**
+     * What the goals reported through Eveil are counted as on the account.
+     */
+    private const CONVERSION_ACTION = 'Eveil goal';
 
     public function __construct(private AdAccessTokens $tokens) {}
 
@@ -295,6 +301,57 @@ class GoogleAdsClient implements AdClientInterface
             conversions: (float) ($row['metrics']['conversions'] ?? 0),
             conversionValue: (float) ($row['metrics']['conversionsValue'] ?? 0),
         ));
+    }
+
+    public function uploadConversion(AdAccount $account, AdConversion $conversion): void
+    {
+        $response = $this->request($account)->post(self::API."/customers/{$account->external_id}:uploadClickConversions", [
+            'conversions' => [array_filter([
+                'gclid' => $conversion->click_id,
+                'conversionAction' => $this->conversionAction($account),
+                'conversionDateTime' => $conversion->occurred_at->format('Y-m-d H:i:sP'),
+                'conversionValue' => $conversion->value_micros === null ? null : $conversion->value_micros / 1_000_000,
+                'currencyCode' => $conversion->currency,
+            ], fn (mixed $value): bool => $value !== null)],
+            // Google only takes this call with partial failure on, and then
+            // answers 200 with the refusal in the body.
+            'partialFailure' => true,
+        ]);
+        $this->throwUnless($response);
+
+        $refusal = $response->json('partialFailureError.message');
+
+        if (is_string($refusal) && $refusal !== '') {
+            throw new AdPlatformException("Google Ads: {$refusal}");
+        }
+    }
+
+    /**
+     * The resource name of the upload action goals are counted on, created
+     * the first time one is reported.
+     */
+    private function conversionAction(AdAccount $account): string
+    {
+        $name = self::CONVERSION_ACTION;
+        $existing = $this->search($account, "SELECT conversion_action.resource_name FROM conversion_action WHERE conversion_action.name = '{$name}' AND conversion_action.type = 'UPLOAD_CLICKS' AND conversion_action.status = 'ENABLED'")
+            ->first();
+
+        if ($existing !== null) {
+            return (string) $existing['conversionAction']['resourceName'];
+        }
+
+        $response = $this->request($account)->post(self::API."/customers/{$account->external_id}/conversionActions:mutate", [
+            'operations' => [['create' => [
+                'name' => $name,
+                'type' => 'UPLOAD_CLICKS',
+                'category' => 'DEFAULT',
+                'status' => 'ENABLED',
+                'valueSettings' => ['defaultValue' => 0, 'alwaysUseDefaultValue' => false],
+            ]]],
+        ]);
+        $this->throwUnless($response);
+
+        return (string) $response->json('results.0.resourceName');
     }
 
     /**

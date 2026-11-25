@@ -232,6 +232,16 @@ Any status is accepted (`in_discussion`, `won`, `lost`, `client`, `rejected`...)
 
 The answer is `202` straight away: the post is written in the background and appears in the network's queue in the app a minute or so later.
 
+## Ad conversions
+
+`POST /conversions` reports a goal reached on your site (a sign-up, a purchase, whatever you advertise for) with the ad click id the visitor landed with. Eveil hands it to the network the click came from, so its bidding learns from it. Call it from your backend, never from the page: the token can do everything the API does.
+
+```json
+{ "gclid": "Cj0KCQ...", "occurred_at": "2026-11-25T10:42:00Z", "value": 49.90, "currency": "EUR" }
+```
+
+Exactly one of `gclid` (Google Ads), `msclkid` (Microsoft Advertising) or `fbclid` (Meta Ads). `occurred_at` defaults to now; `value` is optional, and `currency` defaults to the project's ads budget currency. The answer is `202` with `{ "id": 12, "platform": "google_ads", "duplicate": false }`; the same click reported again answers `200` with `duplicate: true` and is counted once. See [Reporting goals from your backend](/product/ads#reporting-goals-from-your-backend) for how to keep the click id until the goal happens.
+
 ## Everything else
 
 The rest of what you can do in the app, and what [Evie](/product/evie) can do for you, has an endpoint too. Bodies and answers use the same fields the app shows; each endpoint below is under the project, as above.

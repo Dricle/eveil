@@ -6,6 +6,7 @@ use App\Enums\AdStatus;
 use App\Models\Ad;
 use App\Models\AdAccount;
 use App\Models\AdCampaign;
+use App\Models\AdConversion;
 use App\Models\PlatformApp;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\PendingRequest;
@@ -42,6 +43,11 @@ class MicrosoftAdsClient implements AdClientInterface
     private const OAUTH = 'https://login.microsoftonline.com/common/oauth2/v2.0';
 
     private const SCOPE = 'https://ads.microsoft.com/msads.manage offline_access';
+
+    /**
+     * What the goals reported through Eveil are counted as on the account.
+     */
+    private const CONVERSION_GOAL = 'Eveil goal';
 
     /**
      * The ad languages a search campaign accepts, by their English name.
@@ -373,6 +379,56 @@ class MicrosoftAdsClient implements AdClientInterface
             // Ids come back in the order the ads went out.
             adExternalIds: $ads->mapWithKeys(fn (Ad $ad, int $index): array => [$ad->id => $adIds[$index]])->all(),
         );
+    }
+
+    public function uploadConversion(AdAccount $account, AdConversion $conversion): void
+    {
+        $this->ensureOfflineGoal($account);
+
+        $response = $this->request($account)->post(self::CAMPAIGN_API.'/OfflineConversions/Apply', [
+            'OfflineConversions' => [array_filter([
+                'ConversionName' => self::CONVERSION_GOAL,
+                'ConversionTime' => $conversion->occurred_at->utc()->format('Y-m-d\TH:i:s\Z'),
+                'MicrosoftClickId' => $conversion->click_id,
+                'ConversionValue' => $conversion->value_micros === null ? null : $conversion->value_micros / 1_000_000,
+                'ConversionCurrencyCode' => $conversion->currency,
+            ], fn (mixed $value): bool => $value !== null)],
+        ]);
+
+        // Microsoft refuses clicks on a goal younger than two hours: the
+        // job's retries carry the first goals past that.
+        $this->throwUnlessComplete($response);
+    }
+
+    /**
+     * Creates the offline goal goals are counted on, the first time one is
+     * reported. Offline conversions are matched to it by name.
+     */
+    private function ensureOfflineGoal(AdAccount $account): void
+    {
+        $response = $this->request($account)->post(self::CAMPAIGN_API.'/ConversionGoals/QueryByIds', [
+            'ConversionGoalIds' => null,
+            'ConversionGoalTypes' => 'OfflineConversion',
+        ]);
+        $this->throwUnless($response);
+
+        $exists = collect((array) $response->json('ConversionGoals', []))
+            ->contains(fn (?array $goal): bool => ($goal['Name'] ?? null) === self::CONVERSION_GOAL);
+
+        if ($exists) {
+            return;
+        }
+
+        $this->ids($this->request($account)->post(self::CAMPAIGN_API.'/ConversionGoals', [
+            'ConversionGoals' => [[
+                'Type' => 'OfflineConversion',
+                'Name' => self::CONVERSION_GOAL,
+                'CountType' => 'All',
+                'Revenue' => ['Type' => 'VariableValue', 'Value' => 0],
+                'Scope' => 'Account',
+                'Status' => 'Active',
+            ]],
+        ]), 'ConversionGoalIds');
     }
 
     /**

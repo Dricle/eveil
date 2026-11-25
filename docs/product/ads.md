@@ -18,7 +18,42 @@ Eveil only ever touches the campaigns it created. Whatever you already run by ha
 
 **The month is the instance's.** Accounts can sit in different time zones, the budget has one: days and the month are counted in the Eveil instance's time zone.
 
-**Conversion tracking.** If your site carries the network's tag (the Google tag for Google Ads, a UET tag with a conversion goal for Microsoft Advertising, the Meta Pixel for Meta Ads), Eveil aims at signups. Without it, it can only aim at clicks, which is a weaker signal: the Ads page tells you when an account has no tracking. On Meta, campaigns are always delivered for link clicks, and the Pixel's sign-ups (the **CompleteRegistration** and **Lead** events) are what Eveil judges them by.
+**Conversion tracking.** If your site carries the network's tag (the Google tag for Google Ads, a UET tag with a conversion goal for Microsoft Advertising, the Meta Pixel for Meta Ads), Eveil aims at signups. Without it, it can only aim at clicks, which is a weaker signal: the Ads page tells you when an account has no tracking. On Meta, campaigns are always delivered for link clicks, and the Pixel's sign-ups (the **CompleteRegistration** and **Lead** events) are what Eveil judges them by. Instead of a tag per network, you can also [report your goals to Eveil](#reporting-goals-from-your-backend), once for every network.
+
+## Reporting goals from your backend
+
+Every ad click lands on your site with a click id in the URL: `gclid` from Google Ads, `msclkid` from Microsoft Advertising, `fbclid` from Meta Ads. If your site keeps it until the visitor reaches your goal (signs up, buys, books a demo: Eveil does not need to know which), your backend can report it to Eveil, and Eveil hands it to the network the click came from. That network then knows exactly which campaign, ad and keyword brought that person, and starts bidding for more of them.
+
+1. **Keep the click id.** When a visitor lands with one of those parameters, store it in a first-party cookie (90 days is enough: Google refuses clicks older than that). When they reach your goal, save it with them.
+2. **Report the goal** from your backend: `POST /api/v1/projects/{project}/conversions` with the click id, as described in the [API](/product/api#ad-conversions). A visitor with no click id did not come from an ad: skip the call.
+
+The first goal reported to an account creates what the network needs to receive it: an **Eveil goal** conversion action on Google Ads, an offline conversion goal of the same name on Microsoft Advertising, and a pixel named **Eveil** on Meta when the account has none. From then on the account counts as tracking conversions, tag or not. Microsoft refuses clicks for the first two hours of a new goal, so the first goals can take a few hours to show up there: Eveil keeps trying for about a day.
+
+**Ready to paste.** Hand this to whoever builds your site, or to their AI coding agent:
+
+```text
+Report ad conversions to Eveil.
+
+1. On every page load, if the URL has a gclid, msclkid or fbclid query
+   parameter, store its name and value in a first-party cookie named
+   eveil_click that lasts 90 days. A newer click replaces an older one.
+2. When a visitor reaches our goal (GOAL: describe it, e.g. "creates an
+   account" or "completes checkout"), read the eveil_click cookie on the
+   server and save the click id with that user or order.
+3. Right after, from the backend only, send:
+   POST https://EVEIL_URL/api/v1/projects/PROJECT_SLUG/conversions
+   Authorization: Bearer EVEIL_API_TOKEN
+   Content-Type: application/json
+   { "<gclid|msclkid|fbclid>": "<the value>",
+     "occurred_at": "<ISO 8601 time of the goal>",
+     "value": <amount, only for a purchase>, "currency": "<ISO code>" }
+   Skip the call when there is no click id. Never send it from the
+   browser: the token must stay on the server. Read the token from an
+   environment variable. A failed call must not break the goal itself:
+   log it and move on, or retry it from a queue.
+```
+
+Replace `EVEIL_URL`, `PROJECT_SLUG` and the goal, and create the token under **Settings → API**. The API allows 60 calls a minute per organization; above that, queue the calls on your side.
 
 ## Why you need your own app
 

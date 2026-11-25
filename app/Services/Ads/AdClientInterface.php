@@ -6,6 +6,7 @@ use App\Enums\AdStatus;
 use App\Models\Ad;
 use App\Models\AdAccount;
 use App\Models\AdCampaign;
+use App\Models\AdConversion;
 use App\Models\PlatformApp;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -70,4 +71,13 @@ interface AdClientInterface
      * @return Collection<int, AdMetricRow>
      */
     public function metrics(AdAccount $account, CarbonImmutable $from, CarbonImmutable $to): Collection;
+
+    /**
+     * Hands a goal the user's backend reported to the network, as an offline
+     * conversion on the click id it carries, creating whatever the network
+     * needs to receive it on first use (a conversion action, a goal, a
+     * pixel). Throws when the network refuses it, including when the click
+     * belongs to another account.
+     */
+    public function uploadConversion(AdAccount $account, AdConversion $conversion): void;
 }

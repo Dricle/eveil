@@ -5,6 +5,7 @@ import CampaignHeader from '@/components/CampaignHeader.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { relativeUrl } from '@/lib/utils'
 import mailboxRoutes from '@/routes/settings/mailboxes'
+import organizationBilling from '@/routes/settings/organization/billing'
 import type { CampaignLead, CampaignStatus, Pipeline, SendingState } from '@/types'
 
 defineOptions({ layout: AppLayout })
@@ -57,6 +58,12 @@ const blocker = computed(() => {
     // enrolment one. People went looking at their leads for it.
     if (noMailbox.value) {
         return 'No mailbox is connected to this project, so nothing can be sent. The sequence is kept as it is and starts by itself once one is connected.'
+    }
+
+    // Every mail is personalised before it leaves, so no credits means no
+    // mail at all, however healthy the mailboxes look.
+    if (props.sending.blocked_by_credits !== null) {
+        return `${props.sending.blocked_by_credits} Nothing is sent until then, and the sequence picks up where it stopped.`
     }
 
     if (!props.sending.window_open) {
@@ -152,7 +159,7 @@ const blocker = computed(() => {
                         {{ sending.window.start }}:00 to {{ sending.window.end }}:00.
                     </p>
 
-                    <!-- The only blocker on this screen whose fix is on
+                    <!-- The two blockers on this screen whose fix is on
                          another one. -->
                     <UButton
                         v-if="noMailbox"
@@ -163,6 +170,16 @@ const blocker = computed(() => {
                         icon="i-lucide-mail"
                         label="Connect a mailbox"
                         :to="relativeUrl(mailboxRoutes.index.url({ project: page.props.currentProject!.slug }))"
+                    />
+                    <UButton
+                        v-else-if="campaign.status === 'active' && sending.blocked_by_credits !== null"
+                        class="mt-2"
+                        color="neutral"
+                        variant="subtle"
+                        size="sm"
+                        icon="i-lucide-coins"
+                        label="Top up credits"
+                        :to="relativeUrl(organizationBilling.edit.url({ project: page.props.currentProject!.slug }))"
                     />
                 </div>
             </div>

@@ -2,6 +2,8 @@
 
 namespace App\Actions;
 
+use App\Ai\Agents\MessagePersonalizer;
+use App\Ai\Contracts\SpendGuardInterface;
 use App\Enums\CampaignLeadStatus;
 use App\Enums\CampaignStatus;
 use App\Enums\EmailAccountStatus;
@@ -29,7 +31,7 @@ use Illuminate\Support\Facades\Notification;
  */
 class DispatchDueSends
 {
-    public function __construct(private Settings $settings, private RecipientTimezone $timezones) {}
+    public function __construct(private Settings $settings, private RecipientTimezone $timezones, private SpendGuardInterface $spendGuard) {}
 
     /**
      * How many sends were queued.
@@ -122,9 +124,15 @@ class DispatchDueSends
      * every mailbox the project has instead of all landing on whichever one
      * enrolment happened to see first. Oldest first so a follow-up promised
      * for Tuesday is not overtaken by a lead enrolled this morning.
+     *
+     * A lead whose organization cannot pay for the personalisation is left
+     * where it is rather than queued to fail: it goes out on the first tick
+     * after a top-up.
      */
     private function due(EmailAccount $account): ?CampaignLead
     {
+        $affordable = [];
+
         $lead = CampaignLead::query()
             ->where(fn (Builder $query) => $query
                 ->where('email_account_id', $account->id)
@@ -142,12 +150,15 @@ class DispatchDueSends
                 ->withoutGlobalScopes()
                 ->where('status', CampaignStatus::Active))
             ->oldest('next_action_at')
-            ->with('lead.company')
+            ->with(['lead.company', 'campaign' => fn ($campaign) => $campaign->withoutGlobalScopes()->with(['project' => fn ($project) => $project->withoutGlobalScopes()])])
             // ponytail: scans the 50 oldest due rows per tick; a stored
             // timezone column filtered in SQL if backlogs grow past that.
             ->limit(50)
             ->get()
-            ->first(fn (CampaignLead $due): bool => $this->windowIsOpen($this->timezones->for($due->lead?->company)));
+            ->first(function (CampaignLead $due) use (&$affordable): bool {
+                return $this->windowIsOpen($this->timezones->for($due->lead?->company))
+                    && ($affordable[$due->campaign->project_id] ??= $this->spendGuard->refusal($due->campaign->project, MessagePersonalizer::slug()) === null);
+            });
 
         if ($lead !== null && $lead->email_account_id === null) {
             $lead->update(['email_account_id' => $account->id]);

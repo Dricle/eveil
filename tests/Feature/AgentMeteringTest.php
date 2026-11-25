@@ -101,7 +101,7 @@ it('never calls the provider when the guard refuses, and says why on the row', f
     {
         public function refusal(Project $project, string $agent): ?string
         {
-            return 'This project has no credits left. Top up to keep the searches running.';
+            return 'Your organization has no credits left. Top up to keep Eveil running.';
         }
 
         public function charge(Project $project, string $agent, int $agentRunId): void {}

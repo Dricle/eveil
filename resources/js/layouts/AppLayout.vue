@@ -14,6 +14,7 @@ import adRoutes from '@/routes/ads'
 import campaigns from '@/routes/campaigns'
 import companies from '@/routes/companies'
 import insightRoutes from '@/routes/insights'
+import launchRoutes from '@/routes/launch'
 import redditReplies from '@/routes/reddit/replies'
 import seo from '@/routes/seo'
 import socialPosts from '@/routes/social/posts'
@@ -182,6 +183,13 @@ const items = computed<NavigationMenuItem[]>(() => {
             badge: navCounts.value?.seo
                 ? { label: navCounts.value.seo, color: 'primary', variant: 'solid' }
                 : undefined
+        },
+
+        {
+            label: 'Launch',
+            icon: 'i-lucide-rocket',
+            to: relativeUrl(launchRoutes.index.url({ project: project.slug })),
+            active: page.url.startsWith(`/app/${project.slug}/launch`)
         },
 
         {

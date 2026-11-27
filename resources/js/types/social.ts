@@ -21,6 +21,8 @@ export type SocialAccount = {
     /** Instagram only: which way in publishes right now; the Meta app wins while its token lives. */
     publishes_through?: 'meta' | 'composio' | null
     meta_token_expires_at?: string | null
+    /** LinkedIn only: when the posting token dies; reconnecting is the only renewal. */
+    linkedin_token_expires_at?: string | null
     /** The projects granted this account, as ids, because it is a checkbox list. */
     projects?: number[]
 }

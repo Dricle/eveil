@@ -72,12 +72,30 @@ const STATUS = {
                         <p class="font-medium">
                             {{ account.display_name }}
                         </p>
+                        <p
+                            v-if="account.linkedin_token_expires_at"
+                            class="text-xs text-dimmed"
+                        >
+                            {{ account.status === 'expired' ? 'Expired' : 'Expires' }}
+                            {{ new Date(account.linkedin_token_expires_at).toLocaleDateString() }}.
+                            LinkedIn connections last 60 days, then need a reconnect.
+                        </p>
                     </div>
 
                     <UBadge
                         :color="STATUS[account.status].color"
                         variant="subtle"
                         :label="STATUS[account.status].label"
+                    />
+
+                    <UButton
+                        icon="i-lucide-refresh-cw"
+                        :color="account.status === 'active' ? 'neutral' : 'primary'"
+                        :variant="account.status === 'active' ? 'ghost' : 'solid'"
+                        size="xs"
+                        label="Reconnect"
+                        :href="linkedinRoutes.connect.url({ project: page.props.currentProject!.slug })"
+                        external
                     />
 
                     <UButton

@@ -53,6 +53,12 @@ class LinkedinClient implements SocialClientInterface
                 ...($video !== null ? ['content' => ['media' => ['id' => $this->uploadVideo($account, $video)]]] : []),
             ]);
 
+        // An expired or revoked token is the account's problem, not this
+        // post's: flag it so Settings asks for a reconnect and the cadence stops.
+        if ($response->status() === 401) {
+            $account->update(['status' => SocialAccountStatus::Expired, 'last_error' => 'LinkedIn no longer accepts this connection: reconnect the account.']);
+        }
+
         if (! $response->successful()) {
             throw new RuntimeException("LinkedIn refused the post: HTTP {$response->status()} {$response->body()}");
         }

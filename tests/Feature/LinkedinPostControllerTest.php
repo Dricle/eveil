@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\SocialAccountStatus;
 use App\Enums\SocialPostSourceType;
 use App\Enums\SocialPostStatus;
 use App\Enums\SocialPostVariant;
@@ -101,6 +102,19 @@ it('keeps a draft as draft with the error visible when publishing fails', functi
     expect($post->fresh())
         ->status->toBe(SocialPostStatus::Draft)
         ->last_error->toContain('LinkedIn refused the post');
+});
+
+it('marks the account expired when LinkedIn refuses its token', function () {
+    [$user, $project, $account] = linkedinSetup();
+    Http::fake(['api.linkedin.com/rest/posts' => Http::response(['code' => 'EXPIRED_ACCESS_TOKEN'], 401)]);
+
+    $post = SocialPost::factory()->linkedin()->create(['project_id' => $project->id]);
+
+    $this->actingAs($user)->from(route('social.posts.index', 'linkedin'))
+        ->post(route('social.posts.approve', $post), ['social_account_id' => $account->id]);
+
+    expect($post->fresh()->status)->toBe(SocialPostStatus::Draft)
+        ->and($account->fresh()->status)->toBe(SocialAccountStatus::Expired);
 });
 
 it('rejects the other side of a pair when an X post is marked posted', function () {

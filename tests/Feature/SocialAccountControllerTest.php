@@ -130,6 +130,18 @@ it('lists only this organization\'s accounts on the network the page is for', fu
         ->assertInertia(fn ($page) => $page->component('settings/Bluesky')->has('accounts', 1)->missing('statsConfigured'));
 });
 
+it('shows a LinkedIn account past its token expiry as expired, even before a publish finds out', function () {
+    [$user, $project] = socialAccountSetup();
+
+    SocialAccount::factory()->linkedin()->create([
+        'organization_id' => $project->organization_id,
+        'secret_expires_at' => now()->subDay(),
+    ]);
+
+    $this->actingAs($user)->get(route('settings.linkedin.index'))
+        ->assertInertia(fn ($page) => $page->where('accounts.0.status', 'expired')->whereNot('accounts.0.linkedin_token_expires_at', null));
+});
+
 it('grants a connected account to chosen projects only', function () {
     $user = User::factory()->create();
     $organization = Organization::factory()->create();

@@ -6,6 +6,8 @@ Eveil can publish to your own LinkedIn profile — personal-profile posting only
 
 From **Settings → LinkedIn**, under the Organization group alongside Mailboxes, connect your profile (LinkedIn's own sign-in screen, then back to Eveil — no password ever touches this app). A connected account belongs to your organization, the same way a mailbox does: grant it to whichever projects should be able to post through it. The posting cadence (off, daily, weekly, every two weeks, or monthly) is set from the **LinkedIn** posts queue instead, right above the queue itself.
 
+A LinkedIn connection lasts 60 days and LinkedIn does not let Eveil renew it on its own. The settings screen shows when each account's connection expires; once it has, the account shows **Expired** and its drafts wait. Click **Reconnect** on the account, sign in to LinkedIn as that same profile, and it picks up where it left off, its project grants kept.
+
 Tone is separate from cadence: **Settings → AI instructions** has its own "How LinkedIn posts are written" box, next to the one for emails. A public feed post under your name often wants to sound different from a cold email, so it doesn't inherit the email box's tone by default — set it explicitly if you want one.
 
 ## Where the content comes from

@@ -269,8 +269,12 @@ The rest of what you can do in the app, and what [Evie](/product/evie) can do fo
 | `GET /article-ideas`, `DELETE /article-ideas/{id}` | The open article ideas, the most asked first (`mentions` is how many threads asked, `details.threads` lists them), and dismissing one for good. |
 | `GET /insights`, `PATCH /insights/{id}` | The open items of the Insights feed, newest first, article ideas only once five threads asked them (`?kind=competitor_mention`, `feature`, `acquisition` or `article`; `?unread=1`), and marking one: `read` `true` or `false`, or `status` `used` or `dismissed`. |
 | `GET /reddit-replies`, `GET /reddit-replies/{id}`, `PATCH /reddit-replies/{id}`, `DELETE /reddit-replies/{id}` | The Reddit replies drafted for you, a draft's `body`, and deleting one. Posting stays in the app. |
+| `GET /launch-venues`, `PATCH /launch-venues/{id}` | The [launch checklist](/product/launch), one row per place with its `state` (`todo`, `posted`, `dismissed`), copy and posts, and changing one: `dismissed` `true` or `false`, or its `draft`. |
+| `POST /launch-venues` | Add a place the list does not have: `name`, `url`, `kind` (`launch_platform`, `community`, `review_site`, `deal_marketplace`, `directory`), and optionally `is_paid`, `price_note`, `cooldown_days`, `rules`. |
+| `POST /launch-venues/{id}/submissions` | Record a post made there, by its `url`. |
+| `GET /launch-tags`, `PUT /launch-tags` | What the product is, which decides the catalog places on the checklist: `tags`, any of `software`, `ai`, `dev`, `open_source`, `nocode`, `b2b`, `bitcoin`, and `chosen_by_user`, false while they are the website analysis's guess. `PUT` replaces the list. |
 
-Lists of things that grow (runs, posts, articles, replies, insights) are paginated like the others; the short ones (profiles, recommendations, ideas) come whole. A post, article or reply that is no longer a draft answers `409` to an edit. Publishing, approving and activating stay in the app, where you see what will go out.
+Lists of things that grow (runs, posts, articles, replies, insights, launch venues) are paginated like the others; the short ones (profiles, recommendations, ideas) come whole. A post, article or reply that is no longer a draft answers `409` to an edit. Publishing, approving and activating stay in the app, where you see what will go out.
 
 ## MCP
 

@@ -64,6 +64,10 @@ class Toolbelt
         UpdateInsight::class,
         GetRedditReply::class,
         UpdateRedditReply::class,
+        ListLaunchVenues::class,
+        SetLaunchTags::class,
+        UpdateLaunchVenue::class,
+        AddLaunchVenue::class,
         GetAdPerformance::class,
     ];
 

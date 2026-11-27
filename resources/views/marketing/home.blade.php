@@ -9,6 +9,7 @@
         ['icon' => 'instagram', 'name' => 'Instagram'],
         ['icon' => 'arrow-big-up', 'name' => 'Reddit'],
         ['icon' => 'file-text', 'name' => 'SEO articles'],
+        ['icon' => 'rocket', 'name' => 'Launch'],
         ['icon' => 'megaphone', 'name' => 'Ads'],
     ];
 
@@ -74,7 +75,7 @@
     ];
 
     $faqs = [
-        ['q' => 'Is Eveil only for cold email?', 'a' => 'No. Cold email is where it started and still the deepest channel, but the same agents now post on LinkedIn, X, Bluesky and Instagram, write SEO articles for your blog, find Reddit threads worth answering, and run your paid ads inside a monthly budget you set.'],
+        ['q' => 'Is Eveil only for cold email?', 'a' => 'No. Cold email is where it started and still the deepest channel, but the same agents now post on LinkedIn, X, Bluesky and Instagram, write SEO articles for your blog, find Reddit threads worth answering, list the launch platforms and directories worth posting your product to (with the copy for each), and run your paid ads inside a monthly budget you set.'],
         ['q' => 'Whose mailbox does it send from?', 'a' => 'Yours. Plain SMTP, no relay and no shared sending domain, so replies land where you already read mail. Presets cover Infomaniak, OVH, Gandi, Zoho, Gmail and Microsoft 365.'],
         ['q' => 'Where do the leads come from?', 'a' => 'A bundled search engine and the companies\' own pages, read live at qualification time. No purchased database, and no paid data API needed to start.'],
         ['q' => 'Can I see and change what the AI decided?', 'a' => 'At every step. The product portrait comes back for correction before anything is written, target profiles are editable, every draft can be rewritten, and your edits are never overwritten.'],

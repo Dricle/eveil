@@ -38,6 +38,10 @@ Asking it to change something already there ("update the post about the pricing 
 
 Tell Evie about something worth writing about and she offers an article alongside the LinkedIn post: it's written in the background and lands on the [SEO page](/product/seo) as a draft a few minutes later. The **Rework with Evie** button on any draft opens the chat on it: say what to change and she rewrites that draft in place, keeping everything you didn't ask to change. Only a draft can be reworked; a published article is already live on your site. She can also list the article ideas the Reddit scan noted, write one of them, or dismiss one for good.
 
+## Launching your product from chat
+
+Evie can change what your product is for the [launch list](/product/launch), which decides the places on it, tell you which places are left to do, write the copy for one, mark a place posted (she asks for the link to your post), dismiss or restore a place, and add one the list does not have.
+
 ## Managing target profiles from chat
 
 Evie can list, read, create, correct and delete target profiles — the same segments you'd otherwise manage from the Targets screen. Already know the segment you want? Tell it directly ("also target dental clinics under 10 people") rather than asking it to work one out from the knowledge base. Deleting one takes its discovery run history with it and cannot be undone, so it stops for your approval first, same as starting a real discovery run.

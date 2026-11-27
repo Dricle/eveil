@@ -26,6 +26,9 @@ markets it for you across every channel a small team can't staff by hand:
 - **SEO articles** for your own blog, on what your buyers search for and your
   site doesn't answer yet.
 - **Reddit replies** in the threads where your buyers already ask for help.
+- **Launch venues**: the launch platforms, communities, review sites and
+  directories worth posting your product to, out of about 800, with the copy
+  for each and a record of where you posted.
 - **Paid ads** on your ad accounts, run inside a monthly budget you set: new
   tests launched, what works kept, what doesn't cut.
 
@@ -92,6 +95,11 @@ unlimited mailboxes, unlimited leads, your data on your own machine.
   "best X" threads already ranking on Google, drafted in the thread's own
   tone. Copy, post it yourself, mark it posted - no OAuth, since Reddit is
   currently blocking new API app registration.
+- **Keeps your launch checklist.** Product Hunt, Show HN, BetaList, the
+  subreddits your buyers read and hundreds of directories, filtered to the ones
+  that suit your product. Copy written to each venue's rules; post it
+  yourself, paste the link back, and a venue you can post to again comes back
+  on its own. [Docs](https://docs.eveil.cloud/product/launch).
 - **Writes SEO articles for your blog.** On a feature your site never
   explains, a competitor comparison, a question buyers ask on Reddit, a client
   win: always something Eveil actually found. Copy it into your blog, give the

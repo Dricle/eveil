@@ -3,6 +3,7 @@
 namespace App\Ai\Agents;
 
 use App\Enums\Channel;
+use App\Models\LaunchVenue;
 use App\Models\Project;
 use App\Support\ParsedPage;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -111,6 +112,11 @@ class WebsiteAnalyst extends EveilAgent implements HasStructuredOutput
 
             'product_category' => $schema->string()
                 ->description('Short, generic category a buyer would search for - "CRM", "invoicing software" - never the product\'s own name.')
+                ->required(),
+
+            'launch_tags' => $schema->array()
+                ->items($schema->string()->enum(array_keys(LaunchVenue::TAGS)))
+                ->description('Every tag that applies, for picking the places to launch it: '.collect(LaunchVenue::TAGS)->map(fn (string $meaning, string $tag): string => "{$tag}: {$meaning}")->implode('; ').'.')
                 ->required(),
 
             'key_features' => $schema->array()

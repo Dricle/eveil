@@ -27,6 +27,7 @@ export default defineConfig({
                         { text: 'Posting to X, Bluesky and Instagram', link: '/product/social' },
                         { text: 'Replying on Reddit', link: '/product/reddit' },
                         { text: 'SEO articles', link: '/product/seo' },
+                        { text: 'Launching your product', link: '/product/launch' },
                         { text: 'Running ads', link: '/product/ads' },
                         { text: 'API', link: '/product/api' },
                         { text: 'Webhooks and CRM sync', link: '/product/webhooks' },

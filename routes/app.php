@@ -77,6 +77,12 @@ use App\Http\Controllers\InsightReadController;
 use App\Http\Controllers\InstagramConnectionController;
 use App\Http\Controllers\InstagramOAuthController;
 use App\Http\Controllers\KnownClientController;
+use App\Http\Controllers\LaunchController;
+use App\Http\Controllers\LaunchDraftController;
+use App\Http\Controllers\LaunchItemController;
+use App\Http\Controllers\LaunchSubmissionController;
+use App\Http\Controllers\LaunchTagsController;
+use App\Http\Controllers\LaunchVenueController;
 use App\Http\Controllers\LeadImportController;
 use App\Http\Controllers\LeadNoteController;
 use App\Http\Controllers\LinkedinOAuthController;
@@ -585,6 +591,22 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
                 ->name('replies.destroy');
             Route::post('replies/{reddit_reply}/promote', [RedditReplyController::class, 'promote'])
                 ->name('replies.promote');
+        });
+
+        /*
+         * The launch checklist: venues the product gets posted to by hand
+         * (launch platforms, directories, communities), their copy and the
+         * URL of every post. Rows are project-scoped, so ids are looked up
+         * in the controllers, never bound.
+         */
+        Route::prefix('launch')->name('launch.')->group(function (): void {
+            Route::get('/', [LaunchController::class, 'index'])->name('index');
+            Route::put('tags', [LaunchTagsController::class, 'update'])->name('tags.update');
+            Route::post('venues', [LaunchVenueController::class, 'store'])->name('venues.store');
+            Route::delete('items/{launch_item}/venue', [LaunchVenueController::class, 'destroy'])->name('venues.destroy');
+            Route::patch('items/{launch_item}', [LaunchItemController::class, 'update'])->name('items.update');
+            Route::post('items/{launch_item}/draft', [LaunchDraftController::class, 'store'])->name('items.draft');
+            Route::post('items/{launch_item}/submissions', [LaunchSubmissionController::class, 'store'])->name('items.submissions.store');
         });
 
         /*

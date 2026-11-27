@@ -43,9 +43,9 @@ class LaunchVenue extends Model
     use HasFactory, SoftDeletes;
 
     /**
-     * What the launch planner may say a product is, and what a venue may
-     * require. A venue suits a project when the project has every tag the
-     * venue lists.
+     * What a product may be, as the website analysis guesses it and the
+     * user ticks it, and what a venue may require. A venue suits a project
+     * when the project has every tag the venue lists.
      */
     public const TAGS = [
         'software' => 'Software, an app or an online service people sign up to (not a local business, a shop or a physical product)',

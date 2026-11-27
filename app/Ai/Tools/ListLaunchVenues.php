@@ -2,6 +2,7 @@
 
 namespace App\Ai\Tools;
 
+use App\Actions\RefreshLaunchList;
 use App\Enums\LaunchVenueKind;
 use App\Models\LaunchItem;
 use App\Models\LaunchVenue;
@@ -24,11 +25,13 @@ class ListLaunchVenues implements Tool
 
     public function description(): Stringable|string
     {
-        return 'Lists the launch checklist: places to post the product (launch platforms, communities, review sites, deal marketplaces, directories), each with its id, name, address, whether it is paid, its rules, its draft copy if any, and the links of past posts. Filter by state (todo, posted, dismissed) and kind; 30 per page, best known venues first. Also says how many venues of each kind are in that state.';
+        return 'Lists the launch checklist: places to post the product (launch platforms, communities, review sites, deal marketplaces, directories), each with its id, name, address, whether it is paid, its rules, its draft copy if any, and the links of past posts. Filter by state (todo, posted, dismissed) and kind; 30 per page, best known venues first. Also says how many venues of each kind are in that state, and the product\'s launch tags, which decide which catalog venues are on the list (change them with SetLaunchTags).';
     }
 
     public function handle(Request $request): Stringable|string
     {
+        app(RefreshLaunchList::class)->handle($this->project);
+
         $state = $request->string('state', 'todo')->toString();
         $kind = $request->string('kind')->toString();
 
@@ -43,10 +46,10 @@ class ListLaunchVenues implements Tool
                 default => $item->dismissed_at === null && ! $item->isPosted(),
             });
 
+        $tags = $this->project->launchTags();
+
         if ($items->isEmpty()) {
-            return LaunchItem::query()->where('project_id', $this->project->id)->exists()
-                ? "Nothing is {$state} on the launch checklist."
-                : 'The launch checklist is empty: call PrepareLaunch to fill it.';
+            return "Nothing is {$state} on the launch checklist. The product's launch tags: ".implode(', ', $tags).'.';
         }
 
         $counts = $items->countBy(fn (LaunchItem $item): string => $item->venue->kind->value);
@@ -69,7 +72,7 @@ class ListLaunchVenues implements Tool
             ], fn (mixed $value): bool => $value !== null))
             ->values();
 
-        return (string) json_encode(['counts_by_kind' => $counts, 'page' => $page, 'venues' => $listed]);
+        return (string) json_encode(['launch_tags' => $tags, 'counts_by_kind' => $counts, 'page' => $page, 'venues' => $listed]);
     }
 
     /**

@@ -11,18 +11,18 @@ defineOptions({ layout: AppLayout })
 const props = defineProps<{
     items: LaunchItem[]
     kinds: { value: string, label: string }[]
-    tags: string[] | null
-    preparing: boolean
-    preparation: { status: string, since: string | null, error: string | null } | null
+    tags: string[]
+    tagsChosen: boolean
+    tagOptions: { value: string }[]
 }>()
 
 const page = usePage()
 const toast = useToast()
 const slug = computed(() => page.props.currentProject!.slug)
 
-// Preparing and drafting both finish on a worker: reread while either runs.
-const working = computed(() => props.preparing || props.items.some(item => item.drafting))
-const { start, stop } = usePoll(4000, { only: ['items', 'tags', 'preparing', 'preparation'] }, { autoStart: false })
+// Copy is written on a worker: reread while any is.
+const working = computed(() => props.items.some(item => item.drafting))
+const { start, stop } = usePoll(4000, { only: ['items'] }, { autoStart: false })
 watch(working, value => value ? start() : stop(), { immediate: true })
 
 const TABS = [
@@ -43,15 +43,22 @@ const groups = computed(() => props.kinds
     .map(kind => ({ ...kind, items: props.items.filter(item => item.venue.kind === kind.value && item.state === activeTab.value) }))
     .filter(group => group.items.length > 0))
 
-const preparingClicked = ref(false)
+const TAG_LABELS: Record<string, string> = {
+    software: 'Software',
+    ai: 'AI',
+    dev: 'For developers',
+    open_source: 'Open source',
+    nocode: 'No-code',
+    b2b: 'B2B',
+    bitcoin: 'Bitcoin'
+}
 
-function prepare () {
-    preparingClicked.value = true
-    router.post(launchRoutes.preparation.store.url({ project: slug.value }), {}, {
-        preserveScroll: true,
-        onSuccess: () => toast.add({ title: 'Preparing your launch. Venues appear here in a moment.', color: 'success' }),
-        onFinish: () => preparingClicked.value = false
-    })
+const tagItems = computed(() => props.tagOptions.map(tag => ({ value: tag.value, label: TAG_LABELS[tag.value] ?? tag.value })))
+const selectedTags = ref<string[]>([])
+watch(() => props.tags, value => selectedTags.value = [...value], { immediate: true })
+
+function saveTags (tags: string[]) {
+    router.put(launchRoutes.tags.update.url({ project: slug.value }), { tags }, { preserveScroll: true })
 }
 
 const addOpen = ref(false)
@@ -82,44 +89,36 @@ const venue = reactive({ name: '', url: '', kind: 'directory', is_paid: false, p
                     variant="subtle"
                     @click="addOpen = true"
                 />
-                <UButton
-                    :label="tags === null ? 'Prepare my launch' : 'Look for new venues'"
-                    icon="i-lucide-rocket"
-                    :loading="preparing || preparingClicked"
-                    @click="prepare"
-                />
             </div>
         </div>
 
-        <UAlert
-            v-if="preparing"
-            icon="i-lucide-loader-circle"
-            color="neutral"
-            variant="subtle"
-            title="Picking the venues that suit your product..."
-        />
-        <UAlert
-            v-else-if="preparation?.error"
-            color="error"
-            variant="subtle"
-            title="The launch could not be prepared"
-            :description="preparation.error"
-        />
+        <div class="space-y-2">
+            <p class="text-sm text-muted">
+                Your product is
+                <span v-if="!tagsChosen">(our guess from your website, tick what fits)</span>
+            </p>
+            <UCheckboxGroup
+                v-model="selectedTags"
+                :items="tagItems"
+                orientation="horizontal"
+                @update:model-value="saveTags"
+            />
+        </div>
 
         <div
-            v-if="items.length === 0 && !preparing"
+            v-if="items.length === 0"
             class="rounded-lg border border-dashed border-default p-10 text-center"
         >
             <p class="font-medium">
-                No venues yet
+                No venues
             </p>
             <p class="mt-1 text-sm text-muted">
-                "Prepare my launch" reads what your product is and lists the places worth posting it,
-                out of hundreds, plus the subreddits your target profiles found.
+                Tick what your product is above: the venues that suit it appear here,
+                with the subreddits your target profiles found.
             </p>
         </div>
 
-        <template v-else-if="items.length > 0">
+        <template v-else>
             <UTabs
                 v-model="activeTab"
                 :items="tabs"

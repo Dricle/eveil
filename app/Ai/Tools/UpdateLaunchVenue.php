@@ -2,10 +2,7 @@
 
 namespace App\Ai\Tools;
 
-use App\Ai\Agents\LaunchCopywriter;
-use App\Enums\AgentRunStatus;
-use App\Jobs\DraftLaunchCopy;
-use App\Models\AgentRun;
+use App\Actions\DraftLaunchCopy;
 use App\Models\LaunchItem;
 use App\Models\Project;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -57,11 +54,9 @@ class UpdateLaunchVenue implements Tool
 
                 return "{$name} restored.";
             case 'write_copy':
-                $run = AgentRun::create(['project_id' => $this->project->id, 'agent' => LaunchCopywriter::slug(), 'status' => AgentRunStatus::Pending]);
-                $item->update(['agent_run_id' => $run->id]);
-                DraftLaunchCopy::dispatch($item, $run);
-
-                return "Writing the copy for {$name}. It appears on the Launch page in a moment.";
+                return app(DraftLaunchCopy::class)->request($item)
+                    ? "Copy for {$name}, the project's directory listing:\n{$item->draft}"
+                    : "Writing the copy for {$name}. It appears on the Launch page in a moment.";
             case 'set_draft':
                 $item->update(['draft' => $request->string('draft')->toString()]);
 

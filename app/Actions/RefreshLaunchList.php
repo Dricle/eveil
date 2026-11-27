@@ -2,56 +2,46 @@
 
 namespace App\Actions;
 
-use App\Ai\Agents\LaunchPlanner;
 use App\Enums\LaunchVenueKind;
 use App\Enums\LaunchVenueOrigin;
-use App\Models\AgentRun;
 use App\Models\LaunchItem;
 use App\Models\LaunchVenue;
 use App\Models\Project;
 
 /**
- * "Prepare my launch": fills a project's launch checklist with every venue
- * that suits it. The planner says what the product is in a few tags, the
- * catalog is filtered on them, and the subreddits the project's target
- * profiles found join as venues of their own.
+ * Brings a project's launch checklist in line with what the product is: every
+ * catalog venue its tags suit, plus the subreddits its target profiles found.
+ * No model: the catalog is tagged, the project's tags come from the website
+ * analysis or the user (`Project::launchTags()`), so it runs on every read:
+ * one insert-select and one delete, writing only what changed.
  *
- * Safe to run again: it only adds. A venue already on the checklist keeps
- * its state, its draft and its posts, and one the product no longer suits is
- * left for the user to dismiss rather than vanishing with its history.
+ * A venue the tags no longer suit leaves the list only while untouched: one
+ * that was posted to, given copy or dismissed keeps its row and history.
  */
-class PrepareLaunch
+class RefreshLaunchList
 {
-    public function __construct(private SyncLaunchCatalog $sync) {}
-
-    public function handle(Project $project, ?AgentRun $run = null): void
+    public function handle(Project $project): void
     {
-        $this->sync->handle();
-
-        $agent = new LaunchPlanner($project);
-
-        if ($run !== null) {
-            $agent->recordInto($run);
-        }
-
-        $tags = array_values(array_intersect($agent->plan()->structured['tags'] ?? [], array_keys(LaunchVenue::TAGS)));
-        $project->update(['launch_tags' => $tags]);
-
         $this->addSubreddits($project);
 
-        $now = now();
+        $tags = json_encode($project->launchTags());
 
-        LaunchItem::query()->insertOrIgnore(LaunchVenue::query()
-            ->where(fn ($query) => $query->whereNull('project_id')->orWhere('project_id', $project->id))
-            ->whereRaw('tags <@ ?::jsonb', [json_encode($tags)])
-            ->pluck('id')
-            ->map(fn (int $venueId): array => [
-                'project_id' => $project->id,
-                'launch_venue_id' => $venueId,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ])
-            ->all());
+        LaunchItem::query()->insertOrIgnoreUsing(
+            ['project_id', 'launch_venue_id', 'created_at', 'updated_at'],
+            LaunchVenue::query()
+                ->selectRaw('?, id, now(), now()', [$project->id])
+                ->where(fn ($query) => $query
+                    ->where('project_id', $project->id)
+                    ->orWhere(fn ($query) => $query->whereNull('project_id')->whereRaw('tags <@ ?::jsonb', [$tags]))),
+        );
+
+        LaunchItem::query()
+            ->where('project_id', $project->id)
+            ->whereNull('dismissed_at')
+            ->whereNull('draft')
+            ->whereDoesntHave('submissions')
+            ->whereHas('venue', fn ($query) => $query->whereNull('project_id')->whereRaw('not (tags <@ ?::jsonb)', [$tags]))
+            ->delete();
     }
 
     /**

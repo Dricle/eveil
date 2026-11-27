@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Actions\AddLaunchVenue;
+use App\Actions\RefreshLaunchList;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LaunchItemRequest;
 use App\Http\Requests\LaunchVenueRequest;
@@ -14,13 +15,15 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
  * The launch checklist: one row per venue, with its state, copy and posts.
- * Preparing it and writing copy run a model, so they stay in the app and
- * with Evie; this is the checklist itself.
+ * Writing copy runs a model, so it stays in the app and with Evie; this is
+ * the checklist itself, which follows the project's launch tags.
  */
 class LaunchVenueController extends Controller
 {
-    public function index(): AnonymousResourceCollection
+    public function index(CurrentProject $currentProject, RefreshLaunchList $refresh): AnonymousResourceCollection
     {
+        $refresh->handle($currentProject->getOrFail());
+
         return LaunchItemResource::collection(LaunchItem::query()
             ->whereIn('launch_venue_id', LaunchVenue::query()->select('id'))
             ->with(['venue', 'submissions', 'latestSubmission', 'agentRun'])

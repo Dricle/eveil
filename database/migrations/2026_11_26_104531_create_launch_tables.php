@@ -11,8 +11,8 @@ use Illuminate\Support\Facades\Schema;
  * every post made there. Posting stays manual: most venues have no API, or a
  * captcha.
  *
- * `launch_venues` holds the shared catalog (`project_id` null, synced from
- * `database/data/launch-venues.php`) and each project's own venues (added by
+ * `launch_venues` holds the shared catalog (`project_id` null, inserted here
+ * from `database/data/launch-venues.php`) and each project's own venues (added by
  * the user, or the subreddits its target profiles found) in one table, so a
  * checklist row never has to know which kind it points at.
  */
@@ -79,40 +79,70 @@ return new class extends Migration
         });
 
         Schema::table('projects', function (Blueprint $table) {
-            // What the launch planner decided the product is, from the
-            // vocabulary in `LaunchVenue::TAGS`. Null until the launch is
-            // prepared.
+            // What the product is, from the vocabulary in `LaunchVenue::TAGS`,
+            // as the user ticked it. Null until they touch it: the website
+            // analysis's guess stands in (`Project::launchTags()`).
             $table->jsonb('launch_tags')->nullable();
+            // The listing every directory without rules of its own gets:
+            // written once, pasted everywhere.
+            $table->text('launch_kit')->nullable();
         });
 
-        foreach (['launch-planner' => ['claude-haiku-4-5', 60], 'launch-copywriter' => ['claude-opus-5', 300]] as $agent => [$model, $timeout]) {
-            DB::table('settings')->updateOrInsert(
-                ['key' => "agents.{$agent}"],
-                [
-                    'value' => json_encode(['provider' => 'anthropic', 'model' => $model, 'timeout' => $timeout]),
-                    'is_encrypted' => false,
-                    'updated_at' => now(),
-                    'created_at' => now(),
-                ],
-            );
+        // The catalog, inserted once. The file stays because a fresh database
+        // (a new install, the test suite) runs this again; change the catalog
+        // with a new migration, never by editing the file, or installs that
+        // already ran this one would never see the change.
+        $now = now();
+        /** @var list<array{key: string, name: string, url: string, kind: string, tags?: list<string>, is_paid?: bool, price_note?: string, cooldown_days?: int, rules?: string}> $catalog */
+        $catalog = require database_path('data/launch-venues.php');
+
+        foreach (array_chunk(array_map(fn (array $venue, int $position): array => [
+            'key' => $venue['key'],
+            'origin' => 'catalog',
+            'name' => $venue['name'],
+            'url' => $venue['url'],
+            'kind' => $venue['kind'],
+            'tags' => json_encode($venue['tags'] ?? []),
+            'is_paid' => $venue['is_paid'] ?? false,
+            'price_note' => $venue['price_note'] ?? null,
+            'rules' => $venue['rules'] ?? null,
+            'cooldown_days' => $venue['cooldown_days'] ?? null,
+            'position' => $position,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ], $catalog, array_keys($catalog)), 500) as $rows) {
+            DB::table('launch_venues')->insert($rows);
         }
 
-        // A planner reads the portrait and answers a few tags, on Haiku. A
-        // copywriter writes a few hundred words on Opus, sized like
-        // `variant-writer`. Without a price the cloud spend guard refuses.
+        // Fresh statistics, or the planner takes the table for empty and
+        // joins every checklist row against the whole catalog until
+        // autovacuum comes by.
+        DB::statement('analyze launch_venues');
+
+        DB::table('settings')->updateOrInsert(
+            ['key' => 'agents.launch-copywriter'],
+            [
+                'value' => json_encode(['provider' => 'anthropic', 'model' => 'claude-opus-5', 'timeout' => 300]),
+                'is_encrypted' => false,
+                'updated_at' => now(),
+                'created_at' => now(),
+            ],
+        );
+
+        // A few hundred words on Opus, sized like `variant-writer`. Without a
+        // price the cloud spend guard refuses.
         DB::table('credit_prices')->insert([
-            ['agent' => 'launch-planner', 'credits' => 5, 'effective_from' => now(), 'created_at' => now(), 'updated_at' => now()],
-            ['agent' => 'launch-copywriter', 'credits' => 40, 'effective_from' => now(), 'created_at' => now(), 'updated_at' => now()],
+            'agent' => 'launch-copywriter', 'credits' => 40, 'effective_from' => now(), 'created_at' => now(), 'updated_at' => now(),
         ]);
     }
 
     public function down(): void
     {
-        DB::table('credit_prices')->whereIn('agent', ['launch-planner', 'launch-copywriter'])->delete();
-        DB::table('settings')->whereIn('key', ['agents.launch-planner', 'agents.launch-copywriter'])->delete();
+        DB::table('credit_prices')->where('agent', 'launch-copywriter')->delete();
+        DB::table('settings')->where('key', 'agents.launch-copywriter')->delete();
 
         Schema::table('projects', function (Blueprint $table) {
-            $table->dropColumn('launch_tags');
+            $table->dropColumn(['launch_tags', 'launch_kit']);
         });
 
         Schema::dropIfExists('launch_submissions');

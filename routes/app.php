@@ -80,8 +80,8 @@ use App\Http\Controllers\KnownClientController;
 use App\Http\Controllers\LaunchController;
 use App\Http\Controllers\LaunchDraftController;
 use App\Http\Controllers\LaunchItemController;
-use App\Http\Controllers\LaunchPreparationController;
 use App\Http\Controllers\LaunchSubmissionController;
+use App\Http\Controllers\LaunchTagsController;
 use App\Http\Controllers\LaunchVenueController;
 use App\Http\Controllers\LeadImportController;
 use App\Http\Controllers\LeadNoteController;
@@ -601,7 +601,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
          */
         Route::prefix('launch')->name('launch.')->group(function (): void {
             Route::get('/', [LaunchController::class, 'index'])->name('index');
-            Route::post('preparation', [LaunchPreparationController::class, 'store'])->name('preparation.store');
+            Route::put('tags', [LaunchTagsController::class, 'update'])->name('tags.update');
             Route::post('venues', [LaunchVenueController::class, 'store'])->name('venues.store');
             Route::delete('items/{launch_item}/venue', [LaunchVenueController::class, 'destroy'])->name('venues.destroy');
             Route::patch('items/{launch_item}', [LaunchItemController::class, 'update'])->name('items.update');

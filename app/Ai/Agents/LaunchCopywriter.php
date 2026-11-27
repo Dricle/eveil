@@ -13,7 +13,8 @@ use Stringable;
  * Writes what the user pastes into one launch venue's submit form: a Product
  * Hunt tagline and maker comment, a Show HN title and text, a post fitted to
  * a subreddit, or a directory listing. The venue's own rules lead; a venue
- * with none gets the fields every directory asks for.
+ * with none gets the fields every directory asks for, the project's listing
+ * kit that `DraftLaunchCopy` reuses across all of them.
  */
 class LaunchCopywriter extends EveilAgent implements HasStructuredOutput
 {
@@ -37,7 +38,8 @@ class LaunchCopywriter extends EveilAgent implements HasStructuredOutput
         its limit in max_characters and write well under it. A venue with no rules
         is a directory: write a name, a tagline of 60 characters at most, a short
         description of 160 characters at most, a long description of two short
-        paragraphs, and three to five categories.
+        paragraphs, and three to five categories. That listing is pasted into every
+        directory, so never name or address the venue in it.
 
         On a community, write as the founder talking to peers: the problem, why you
         built it, what is different, what you want feedback on. Never an ad.

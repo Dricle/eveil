@@ -50,6 +50,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  * @property array{colors: array<int, string>, fonts: array<int, string>}|null $brand_style
  * @property string|null $default_language
  * @property list<string>|null $launch_tags
+ * @property string|null $launch_kit
  * @property string|null $prompt_instructions
  * @property string|null $linkedin_prompt_instructions
  * @property AutonomyLevel $email_autonomy_level
@@ -81,7 +82,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['organization_id', 'name', 'slug', 'url', 'github_token', 'knowledge_base', 'knowledge_base_edited_by_user', 'brand_style', 'default_language', 'prompt_instructions', 'linkedin_prompt_instructions', 'email_autonomy_level', 'email_enabled', 'linkedin_autonomy_level', 'daily_lead_limit', 'lead_limit', 'linkedin_post_frequency', 'linkedin_next_post_at', 'reddit_scan_frequency', 'reddit_next_scan_at', 'article_frequency', 'article_next_at', 'x_post_frequency', 'x_next_post_at', 'bluesky_post_frequency', 'bluesky_next_post_at', 'bluesky_autonomy_level', 'ads_autonomy_level', 'ads_enabled', 'ads_monthly_budget_micros', 'ads_currency', 'x_prompt_instructions', 'bluesky_prompt_instructions', 'instagram_post_frequency', 'instagram_next_post_at', 'instagram_autonomy_level', 'instagram_prompt_instructions', 'launch_tags'])]
+#[Fillable(['organization_id', 'name', 'slug', 'url', 'github_token', 'knowledge_base', 'knowledge_base_edited_by_user', 'brand_style', 'default_language', 'prompt_instructions', 'linkedin_prompt_instructions', 'email_autonomy_level', 'email_enabled', 'linkedin_autonomy_level', 'daily_lead_limit', 'lead_limit', 'linkedin_post_frequency', 'linkedin_next_post_at', 'reddit_scan_frequency', 'reddit_next_scan_at', 'article_frequency', 'article_next_at', 'x_post_frequency', 'x_next_post_at', 'bluesky_post_frequency', 'bluesky_next_post_at', 'bluesky_autonomy_level', 'ads_autonomy_level', 'ads_enabled', 'ads_monthly_budget_micros', 'ads_currency', 'x_prompt_instructions', 'bluesky_prompt_instructions', 'instagram_post_frequency', 'instagram_next_post_at', 'instagram_autonomy_level', 'instagram_prompt_instructions', 'launch_tags', 'launch_kit'])]
 #[Hidden(['github_token'])]
 class Project extends Model implements HasMedia, StoresMediaInterface
 {
@@ -288,6 +289,28 @@ class Project extends Model implements HasMedia, StoresMediaInterface
     public function launchItems(): HasMany
     {
         return $this->hasMany(LaunchItem::class);
+    }
+
+    /**
+     * What the product is, for picking its launch venues: the tags the user
+     * ticked, or else the website analysis's guess, with `dev` added when a
+     * repository is linked. Plain software before any analysis.
+     *
+     * @return list<string>
+     */
+    public function launchTags(): array
+    {
+        if ($this->launch_tags !== null) {
+            return $this->launch_tags;
+        }
+
+        $guessed = $this->knowledge_base['launch_tags'] ?? ['software'];
+
+        if (! empty($this->knowledge_base['repositories'])) {
+            $guessed[] = 'dev';
+        }
+
+        return array_values(array_unique(array_intersect($guessed, array_keys(LaunchVenue::TAGS))));
     }
 
     /**

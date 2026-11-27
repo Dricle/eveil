@@ -177,7 +177,6 @@ it('lists every agent it finds in the code, not a hand-kept list', function () {
         'feature-topic-matcher',
         'image-generator',
         'launch-copywriter',
-        'launch-planner',
         'listing-extractor',
         'message-personalizer',
         'reddit-example-triage',

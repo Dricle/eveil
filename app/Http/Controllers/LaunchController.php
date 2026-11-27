@@ -2,11 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Ai\Agents\LaunchPlanner;
+use App\Actions\RefreshLaunchList;
 use App\Enums\LaunchVenueKind;
-use App\Http\Resources\AgentRunStatusResource;
 use App\Http\Resources\LaunchItemResource;
-use App\Models\AgentRun;
 use App\Models\LaunchItem;
 use App\Models\LaunchVenue;
 use App\Support\CurrentProject;
@@ -19,10 +17,10 @@ use Inertia\Response;
  */
 class LaunchController extends Controller
 {
-    public function index(CurrentProject $currentProject): Response
+    public function index(CurrentProject $currentProject, RefreshLaunchList $refresh): Response
     {
         $project = $currentProject->getOrFail();
-        $preparation = AgentRun::query()->latestFor(LaunchPlanner::slug())->first();
+        $refresh->handle($project);
         $kinds = array_column(LaunchVenueKind::cases(), 'value');
 
         $items = LaunchItem::query()
@@ -40,9 +38,9 @@ class LaunchController extends Controller
         return Inertia::render('launch/Index', [
             'items' => LaunchItemResource::collection($items),
             'kinds' => array_map(fn (LaunchVenueKind $kind): array => ['value' => $kind->value, 'label' => $kind->label()], LaunchVenueKind::cases()),
-            'tags' => $project->launch_tags,
-            'preparing' => $preparation?->isInFlight() ?? false,
-            'preparation' => $preparation === null ? null : AgentRunStatusResource::make($preparation),
+            'tags' => $project->launchTags(),
+            'tagsChosen' => $project->launch_tags !== null,
+            'tagOptions' => array_map(fn (string $tag): array => ['value' => $tag], array_keys(LaunchVenue::TAGS)),
         ]);
     }
 }

@@ -2,10 +2,10 @@
 
 /**
  * The launch venue catalog every project picks from: launch platforms,
- * directories, review sites, deal marketplaces and communities. Synced into
- * `launch_venues` (rows with no project) by `App\Actions\SyncLaunchCatalog`,
- * upserting on `key`, so editing an entry here reaches every instance on its
- * next sync, and removing one retires it.
+ * directories, review sites, deal marketplaces and communities. Inserted once
+ * into `launch_venues` (rows with no project) by the migration that creates
+ * the table. Frozen from then on: editing it changes fresh databases only, so
+ * a change to the catalog is a new migration.
  *
  * `url` is where to start: the submit page when it is known, the homepage
  * otherwise. `tags` say which projects a venue suits (all of them must match

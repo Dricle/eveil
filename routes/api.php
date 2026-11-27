@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\InsightController;
 use App\Http\Controllers\Api\KnowledgeBaseController;
 use App\Http\Controllers\Api\KnownClientController;
 use App\Http\Controllers\Api\LaunchSubmissionController;
+use App\Http\Controllers\Api\LaunchTagsController;
 use App\Http\Controllers\Api\LaunchVenueController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\RecommendationController;
@@ -118,5 +119,7 @@ Route::prefix('v1')
                 Route::post('launch-venues', [LaunchVenueController::class, 'store'])->name('launch-venues.store');
                 Route::patch('launch-venues/{launch_venue}', [LaunchVenueController::class, 'update'])->name('launch-venues.update');
                 Route::post('launch-venues/{launch_venue}/submissions', [LaunchSubmissionController::class, 'store'])->name('launch-venues.submissions.store');
+                Route::get('launch-tags', [LaunchTagsController::class, 'show'])->name('launch-tags.show');
+                Route::put('launch-tags', [LaunchTagsController::class, 'update'])->name('launch-tags.update');
             });
     });

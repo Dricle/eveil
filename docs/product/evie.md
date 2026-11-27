@@ -40,7 +40,7 @@ Tell Evie about something worth writing about and she offers an article alongsid
 
 ## Launching your product from chat
 
-Evie can prepare the [launch list](/product/launch), tell you which places are left to do, write the copy for one, mark a place posted (she asks for the link to your post), dismiss or restore a place, and add one the list does not have.
+Evie can change what your product is for the [launch list](/product/launch), which decides the places on it, tell you which places are left to do, write the copy for one, mark a place posted (she asks for the link to your post), dismiss or restore a place, and add one the list does not have.
 
 ## Managing target profiles from chat
 

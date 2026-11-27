@@ -1,16 +1,13 @@
 <?php
 
 use App\Actions\DraftLaunchCopy;
-use App\Actions\PrepareLaunch;
-use App\Actions\SyncLaunchCatalog;
+use App\Actions\RefreshLaunchList;
 use App\Ai\Agents\LaunchCopywriter;
-use App\Ai\Agents\LaunchPlanner;
 use App\Ai\Tools\ListLaunchVenues;
+use App\Ai\Tools\SetLaunchTags;
 use App\Ai\Tools\UpdateLaunchVenue;
-use App\Enums\AgentRunStatus;
 use App\Enums\LaunchVenueOrigin;
 use App\Jobs\DraftLaunchCopy as DraftLaunchCopyJob;
-use App\Jobs\PrepareLaunch as PrepareLaunchJob;
 use App\Models\AgentRun;
 use App\Models\LaunchItem;
 use App\Models\LaunchSubmission;
@@ -26,10 +23,17 @@ use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Ai\Tools\Request;
 
 /**
+ * The migrations insert the real catalog, 800 venues: cleared unless the
+ * test is about it.
+ *
  * @return array{0: User, 1: Project}
  */
-function launchSetup(): array
+function launchSetup(bool $catalog = false): array
 {
+    if (! $catalog) {
+        LaunchVenue::query()->whereNull('project_id')->forceDelete();
+    }
+
     $user = User::factory()->create();
     $organization = Organization::factory()->create();
     $organization->users()->attach($user, ['role' => 'owner']);
@@ -49,21 +53,20 @@ function launchItemFor(Project $project, array $venue = []): LaunchItem
     ]);
 }
 
-describe('preparing a launch', function () {
+describe('the checklist', function () {
     it('lists the catalog venues whose tags the product has, and the subreddits its profiles found', function () {
-        [, $project] = launchSetup();
+        [, $project] = launchSetup(catalog: true);
+        $project->update(['launch_tags' => ['software', 'b2b']]);
         TargetProfile::factory()->create([
             'project_id' => $project->id,
             'criteria' => ['subreddits' => [['name' => 'selfhosted'], ['name' => 'SaaS']]],
         ]);
-        LaunchPlanner::fake([['reason' => 'A web app for teams.', 'tags' => ['software', 'b2b']]]);
 
-        app(PrepareLaunch::class)->handle($project);
+        app(RefreshLaunchList::class)->handle($project);
 
         $keys = LaunchItem::query()->with('venue')->get()->pluck('venue.key');
 
-        expect($project->fresh()->launch_tags)->toBe(['software', 'b2b'])
-            ->and($keys)->toContain('producthunt.com', 'g2.com', 'reddit.com/r/selfhosted', 'reddit.com/r/saas')
+        expect($keys)->toContain('producthunt.com', 'g2.com', 'reddit.com/r/selfhosted', 'reddit.com/r/saas')
             ->and($keys)->not->toContain('futuretools.io', 'devhunt.org')
             ->and($keys->filter(fn (string $key): bool => $key === 'reddit.com/r/saas'))->toHaveCount(1);
 
@@ -72,49 +75,42 @@ describe('preparing a launch', function () {
             ->and($subreddit->cooldown_days)->toBe(LaunchVenue::SUBREDDIT_COOLDOWN_DAYS);
     });
 
-    it('keeps what was done on a venue when prepared again', function () {
+    it('takes the tags from the website analysis, with dev for a linked repository, until the user ticks their own', function () {
         [, $project] = launchSetup();
-        LaunchPlanner::fake([
-            ['reason' => 'A web app.', 'tags' => ['software']],
-            ['reason' => 'A web app.', 'tags' => ['software']],
-        ]);
+        expect($project->launchTags())->toBe(['software']);
 
-        app(PrepareLaunch::class)->handle($project);
-        $item = LaunchItem::query()->whereRelation('venue', 'key', 'producthunt.com')->sole();
-        $item->update(['draft' => 'My tagline', 'dismissed_at' => now()]);
+        $project->update(['knowledge_base' => ['launch_tags' => ['software', 'ai', 'made_up'], 'repositories' => [['name' => 'app']]]]);
+        expect($project->launchTags())->toBe(['software', 'ai', 'dev']);
 
-        app(PrepareLaunch::class)->handle($project);
-
-        expect(LaunchItem::query()->whereRelation('venue', 'key', 'producthunt.com')->sole())
-            ->id->toBe($item->id)
-            ->draft->toBe('My tagline')
-            ->dismissed_at->not->toBeNull();
+        $project->update(['launch_tags' => ['b2b']]);
+        expect($project->launchTags())->toBe(['b2b']);
     });
 
-    it('queues the planner with a pending run', function () {
-        [$user] = launchSetup();
-        Queue::fake();
+    it('drops the venues a tag change no longer suits, unless something was done on them', function () {
+        [, $project] = launchSetup();
+        $project->update(['launch_tags' => ['ai']]);
+        $untouched = launchItemFor($project, ['tags' => ['ai']]);
+        $drafted = launchItemFor($project, ['tags' => ['ai']]);
+        $drafted->update(['draft' => 'My tagline']);
+        $everyone = launchItemFor($project, ['tags' => []]);
 
-        $this->actingAs($user)->from(route('launch.index'))->post(route('launch.preparation.store'))
+        $project->update(['launch_tags' => []]);
+        app(RefreshLaunchList::class)->handle($project);
+
+        expect(LaunchItem::query()->pluck('id')->sort()->values()->all())->toBe([$drafted->id, $everyone->id]);
+    });
+
+    it('saves the tags ticked on the page', function () {
+        [$user, $project] = launchSetup();
+
+        $this->actingAs($user)->from(route('launch.index'))->put(route('launch.tags.update'), ['tags' => ['software', 'dev']])
             ->assertRedirect(route('launch.index'));
+        expect($project->fresh()->launch_tags)->toBe(['software', 'dev']);
 
-        expect(AgentRun::query()->sole())
-            ->agent->toBe('launch-planner')
-            ->status->toBe(AgentRunStatus::Pending);
-        Queue::assertPushed(PrepareLaunchJob::class);
+        $this->actingAs($user)->from(route('launch.index'))->put(route('launch.tags.update'), ['tags' => ['crypto']])
+            ->assertSessionHasErrors('tags.0');
+        expect($project->fresh()->launch_tags)->toBe(['software', 'dev']);
     });
-});
-
-it('retires a catalog venue the catalog file no longer lists, and leaves project venues alone', function () {
-    [, $project] = launchSetup();
-    $retired = LaunchVenue::factory()->create(['key' => 'gone.example']);
-    $custom = LaunchVenue::factory()->custom($project)->create();
-
-    app(SyncLaunchCatalog::class)->handle();
-
-    expect($retired->fresh()->trashed())->toBeTrue()
-        ->and($custom->fresh()->trashed())->toBeFalse()
-        ->and(LaunchVenue::query()->whereNull('project_id')->where('key', 'producthunt.com')->exists())->toBeTrue();
 });
 
 describe('posting', function () {
@@ -247,6 +243,29 @@ describe('copy', function () {
         Queue::assertPushed(DraftLaunchCopyJob::class);
     });
 
+    it('hands a directory without rules the listing kit, with no model call', function () {
+        [$user, $project] = launchSetup();
+        Queue::fake();
+        $project->update(['launch_kit' => "Tagline:\nCold email from your inbox"]);
+        $item = launchItemFor($project, ['rules' => null]);
+
+        $this->actingAs($user)->from(route('launch.index'))->post(route('launch.items.draft', $item));
+
+        expect($item->fresh()->draft)->toBe("Tagline:\nCold email from your inbox")
+            ->and(AgentRun::query()->count())->toBe(0);
+        Queue::assertNothingPushed();
+    });
+
+    it('keeps the copy written for a directory without rules as the listing kit', function () {
+        [, $project] = launchSetup();
+        $item = launchItemFor($project, ['rules' => null]);
+        LaunchCopywriter::fake([['fields' => [['name' => 'Tagline', 'text' => 'Cold email from your inbox', 'max_characters' => 60]]]]);
+
+        app(DraftLaunchCopy::class)->handle($item);
+
+        expect($project->fresh()->launch_kit)->toBe("Tagline:\nCold email from your inbox");
+    });
+
     it('keeps the written copy on the row, one block per field', function () {
         [, $project] = launchSetup();
         $item = launchItemFor($project, ['rules' => 'A tagline of 60 characters at most.']);
@@ -301,6 +320,14 @@ describe('tools', function () {
             ->and($result['venues'][0])->toMatchArray(['id' => $todo->id, 'name' => 'Todo list', 'rules' => 'Short tagline.']);
     });
 
+    it('sets the launch tags, keeping only known ones', function () {
+        [, $project] = launchSetup();
+
+        (new SetLaunchTags($project))->handle(new Request(['tags' => ['software', 'crypto']]));
+
+        expect($project->fresh()->launch_tags)->toBe(['software']);
+    });
+
     it('marks a venue posted only with a link', function () {
         [, $project] = launchSetup();
         $item = launchItemFor($project);
@@ -325,9 +352,10 @@ describe('tools', function () {
 });
 
 it('serves the checklist over the API, and records a post on it', function () {
+    LaunchVenue::query()->whereNull('project_id')->forceDelete();
     $project = Project::factory()->create();
     $item = launchItemFor($project, ['name' => 'Niche list']);
-    $foreign = launchItemFor(Project::factory()->create());
+    $foreign = launchItemFor(Project::factory()->create(), ['tags' => ['bitcoin']]);
     $token = Str::after($project->organization->createToken('test')->plainTextToken, '|');
 
     $this->withToken($token)->getJson(route('api.launch-venues.index', $project))
@@ -337,4 +365,16 @@ it('serves the checklist over the API, and records a post on it', function () {
         ->assertJsonPath('state', 'posted');
     $this->withToken($token)->patchJson(route('api.launch-venues.update', [$project, $foreign->id]), ['dismissed' => true])
         ->assertNotFound();
+});
+
+it('reads and sets the launch tags over the API', function () {
+    $project = Project::factory()->create();
+    $token = Str::after($project->organization->createToken('test')->plainTextToken, '|');
+
+    $this->withToken($token)->getJson(route('api.launch-tags.show', $project))
+        ->assertExactJson(['data' => ['tags' => ['software'], 'chosen_by_user' => false]]);
+    $this->withToken($token)->putJson(route('api.launch-tags.update', $project), ['tags' => ['software', 'ai']])
+        ->assertExactJson(['data' => ['tags' => ['software', 'ai'], 'chosen_by_user' => true]]);
+    $this->withToken($token)->putJson(route('api.launch-tags.update', $project), ['tags' => ['crypto']])
+        ->assertJsonValidationErrors('tags.0');
 });
